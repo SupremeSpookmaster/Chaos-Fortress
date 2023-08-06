@@ -1,0 +1,9 @@
+*.dat
+*.exe
+*.smx
+*.inc
+*.vscode
+*.code-workspace
+[Cc]compiled/
+[Dd]esktop.ini
+[Tt]humbs.db
