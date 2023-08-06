@@ -18,6 +18,8 @@
   - **Look at [FILE PENDING] to see an example of a *Chaos Fortress* character CFG.**
   - **Look at [FILE PENDING] to see an example of a *Chaos Fortress* character plugin.**
   - **Please note that FF2 plugins and configs will *not* work for *Chaos Fortress* characters.**
+  - **I *HIGHLY* recommend you refer to the *Developer Forwards and Natives (WIKI PAGE PENDING)* wiki page and follow its guidance if you intend to write character plugins.
+    - Ignoring this wiki page will not break ***Chaos Fortress***, but it will result in unorganized plugins and may result in awkward issues stemming from plugin run order. ***Ignore at your own peril!***
 
 ## Configuring Active Characters and Packs
 Let's say you want to add or remove a character, or you have a handful of characters you want to be able to activate or deactivate on demand. This is exactly what the character pack system is for.
