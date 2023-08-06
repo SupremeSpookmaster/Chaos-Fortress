@@ -9,8 +9,17 @@
 - [TF2Attributes 1.7.0+](https://github.com/FlaminSarge/tf2attributes)
 - [TF2Items](https://github.com/asherkin/TF2Items)
 
-## Custom Characters
+## Making Custom Characters
 ***Chaos Fortress*** comes with a number of pre-made custom characters, but what if that's not enough? What if you want *more*? Don't worry, because Chaos Fortress has you covered: ***if you know how to make a Freak Fortress boss, you'll know how to make a Chaos Fortress character!*** And even if you don't, don't worry; it's not very difficult to figure out if you're experienced with SourceMod development. Most of my experience as a SourceMod developer comes from making Freak Fortress bosses, and I knew most of the developers who might take an interest in this game mode would be similar, so I was very careful to keep the development process for ***Chaos Fortress*** characters as close to that of ***Freak Fortress*** characters as possible.
   - **Look at [FILE PENDING] to see an example of a *Chaos Fortress* character CFG.**
   - **Look at [FILE PENDING] to see an example of a *Chaos Fortress* character plugin.**
   - **Please note that FF2 plugins and configs will *not* work for *Chaos Fortress* characters.**
+
+## Configuring Active Characters and Packs
+Let's say you want to add or remove a character, or you have a handful of characters you want to be able to activate or deactivate on demand. This is exactly what the character pack system is for.
+  - **Look at [characters.cfg](addons/sourcemod/data/chaos_fortress/characters.cfg) for an example.**
+  - **All characters must be located in addons/sourcemod/configs/chaos_fortress.**
+      - **Sub-directories *are* allowed.**
+   
+## Game Mode Configuration Options
+All configurable options specific to this game mode can be controlled in [game_rules.cfg](addons/sourcemod/data/chaos_fortress/game_rules.cfg).
