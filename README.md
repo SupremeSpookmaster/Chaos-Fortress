@@ -2,7 +2,11 @@
 ***Chaos Fortress*** is a game mode inspired by one of my previous developer ventures: **Boss VS Boss**. It was an old, private game mode, centered around **[the highly talented Batfoxkid's _FF2 Rewrite_](https://github.com/Batfoxkid/Freak-Fortress-2-Rewrite)**, in which every player was a Freak Fortress boss. In addition to being every bit as insane as it sounds, most of the bosses in BvB could get VERY complex, which made the game mode nightmarishly unfriendly to beginners. This, in addition to many other issues such as lag and a plethora of bugs, eventually drove me to take the concept a step further and turn it into something more akin to a modern class-based shooter. And so, ***Chaos Fortress*** was born!
 
 ## Installation Guide:
-  1. [GUIDE PENDING]
+  1. Install all of the prerequisites (see below).
+  2. Download the latest release. (LINK PENDING)
+  3. Extract the zip file directly to your server's sourcemod folder.
+  4. ***Chaos Fortress*** should now be installed on your server!
+  5. Configure the game mode to your heart's content. *(Optional)* 
 
 ## Prerequisites:
 - [SourceMod 1.11+](https://www.sourcemod.net/downloads.php)
