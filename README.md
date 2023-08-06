@@ -1,12 +1,19 @@
 # *Introducing Chaos Fortress: TF2 with custom classes!*
-***Chaos Fortress*** is a game mode inspired by one of my previous developer ventures: **Boss VS Boss**. It was an old, private game mode, centered around **[the highly talented Batfoxkid's _FF2 Rewrite_](https://github.com/Batfoxkid/Freak-Fortress-2-Rewrite)**, in which every player was a Freak Fortress boss. In addition to being every bit as insane as it sounds, most of the bosses in BvB could get VERY complex, which made the game mode nightmarishly unfriendly to beginners. This, in addition to many other issues such as lag and a plethora of bugs, eventually drove me to take the concept a step further and turn it into something simpler and more akin to a modern class-based shooter. And so, ***Chaos Fortress*** was born!
+***Chaos Fortress*** is just like normal TF2, but with a twist: instead of playing as one of the nine mercenaries, players step into the shoes of one of many custom characters, each with their own unique kit. Some of these characters are designed to function like souped up versions of the nine mercenaries, while others act more as wildcards, going their own directions entirely. To top it all off, all of these characters have access to powerful Ultimate Abilities, which charge very slowly over time, or by dealing damage. In short: **it's a lot like *Overwatch*, but in TF2 and with different characters, on top of also being very dev-friendly for those who want to make their own characters**.
+
+***Chaos Fortress*** is a game mode inspired by one of my previous developer ventures: **Boss VS Boss**. It was an old, private game mode, centered around **[the highly talented Batfoxkid's _FF2 Rewrite_](https://github.com/Batfoxkid/Freak-Fortress-2-Rewrite)**, in which every player took control of a Freak Fortress boss and fought alongside their team to kill everybody on the enemy team in the Arena game mode. In addition to being every bit as insane as it sounds, most of the bosses in BvB could get VERY complex, which made the game mode nightmarishly unfriendly to beginners. This, in addition to many other issues such as lag, a plethora of bugs, and a ton of poor game design practices, eventually drove me to wipe the slate clean, taking the concept a step further to turn it into something simpler and more akin to a modern class-based shooter. And so, ***Chaos Fortress*** was born!
 
 ## *Installation Guide:*
-  1. Install all of the **prerequisites** (see below).
-  2. Download the **latest release. (LINK PENDING)**
+  1. Install all of the **[prerequisites](https://github.com/SupremeSpookmaster/Chaos-Fortress/edit/main/README.md#introducing-chaos-fortress-tf2-with-custom-classes)**.
+  2. Download the **latest release Installation Build. (LINK PENDING)**
   3. Extract the zip file directly to your server's sourcemod folder.
   4. ***Chaos Fortress*** should now be installed on your server!
-  5. Configure the game mode to your heart's content. *(Optional)* 
+  5. Configure the game mode to your heart's content. *(Optional)*
+
+## *Update Guide*
+  1. Download the **latest release Update Build. (LINK PENDING)**
+  2. Extract the zip file directly to your server's sourcemod folder.
+  3. ***Chaos Fortress*** should now be updated on your server!
 
 ## *Prerequisites:*
 - **[SourceMod 1.11+](https://www.sourcemod.net/downloads.php)**
@@ -32,4 +39,8 @@ Let's say you want to add or remove a character, or you have a handful of charac
       - *Sub-directories **are** allowed.*
    
 ## *Game Mode Configuration Options*
-All configurable options specific to this game mode can be controlled in **[game_rules.cfg](addons/sourcemod/data/chaos_fortress/game_rules.cfg)**.
+All configurable options specific to this game mode are described in and can be controlled in **[game_rules.cfg](addons/sourcemod/data/chaos_fortress/game_rules.cfg)**.
+
+## *Credits*
+In order of most to least contribution:
+  - **[Spookmaster](https://github.com/SupremeSpookmaster)** (Lead Dev, Game Mode Creator, All Default Characters)
