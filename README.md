@@ -13,4 +13,4 @@
 ***Chaos Fortress*** comes with a number of pre-made custom characters, but what if that's not enough? What if you want *more*? Don't worry, because Chaos Fortress has you covered: ***if you know how to make a Freak Fortress boss, you'll know how to make a Chaos Fortress character!*** Most of my experience as a SourceMod developer comes from making Freak Fortress bosses, and I knew most of the developers who might take an interest in this game mode would be similar, so I was very careful to keep the development process for ***Chaos Fortress*** characters as close to that of ***Freak Fortress*** characters as possible.
   - **Look at [FILE PENDING] to see an example of a *Chaos Fortress* character CFG.**
   - **Look at [FILE PENDING] to see an example of a *Chaos Fortress* character plugin.**
-  - **Please note that FF2 plugins will *not* work for *Chaos Fortress* characters.**
+  - **Please note that FF2 plugins and configs will *not* work for *Chaos Fortress* characters.**
