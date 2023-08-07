@@ -29,7 +29,7 @@
   - Character plugins do not require a special file extension or directory. Just drop the compiled SMX in your server's plugins folder and it will work.
     - *For the sake of organization, you are recommended to put your character plugins in a sub-folder, such as plugins/chaos_fortress. Again, this is just a recommendation, and is not mandatory.*
   - Please note that despite the similarities in their development process, FF2 plugins and configs will ***not*** work for ***Chaos Fortress*** characters.
-  - **I *HIGHLY* recommend you refer to the *Developer Forwards and Natives (WIKI PAGE PENDING)* wiki page and follow its guidance if you intend to write character plugins.**
+  - **I *HIGHLY* recommend you refer to the *[Developer Forwards and Natives* wiki page](https://github.com/SupremeSpookmaster/Chaos-Fortress/wiki/Developer-Forwards-and-Natives) and follow its guidance if you intend to write character plugins.**
     - *Ignoring this wiki page will not break ***Chaos Fortress***, but it will harm your server's organization and may result in awkward issues stemming from plugin execution order. **Ignore at your own peril!***
 
 ## *Configuring Active Characters and Packs*
