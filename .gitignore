@@ -12,4 +12,5 @@
 
 # Excluded Files:
 !cf_stocks.inc
+!cf_core.inc
 !chaos_fortress.sp
