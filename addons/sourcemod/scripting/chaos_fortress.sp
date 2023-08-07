@@ -16,3 +16,34 @@ public Plugin myinfo =
 	url = PLUGIN_URL
 };
 
+#include <cf_stocks>
+
+public void OnPluginStart()
+{
+	HookEvent("player_death", PlayerKilled);
+	HookEvent("teamplay_round_win", RoundEnd);
+}
+
+public OnMapStart()
+{
+	
+}
+
+public Action PlayerKilled(Event hEvent, const char[] sEvName, bool bDontBroadcast)
+{
+	int victim = GetClientOfUserId(hEvent.GetInt("userid"));
+	
+	if(GetEventInt(hEvent, "death_flags") & TF_DEATHFLAG_DEADRINGER) //Ignore Dead Ringers
+	return Plugin_Continue;
+	
+	if (IsValidClient(victim))
+	{
+		
+	}
+	
+	return Plugin_Continue;
+}
+
+public void RoundEnd(Event hEvent, const char[] sEvName, bool bDontBroadcast)
+{
+}

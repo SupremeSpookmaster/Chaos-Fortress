@@ -4,6 +4,12 @@
 *.inc
 *.vscode
 *.code-workspace
+*.sp
+*.sql
 [Cc]compiled/
 [Dd]esktop.ini
 [Tt]humbs.db
+
+# Excluded Files:
+!cf_stocks.inc
+!chaos_fortress.sp
