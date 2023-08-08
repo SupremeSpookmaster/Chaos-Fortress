@@ -4,15 +4,62 @@
 #define _cf_included_
 
 #include <cf_stocks>
+#include <cf_killstreak>
+#include <cf_damage>
+#include <cf_buttons>
 
-public int CF_RoundState = 0;
+int i_CFRoundState = 0;						//The current round state.
 
+char s_CharacterConfig[MAXPLAYERS+1][255];	//The config currently used for this player's character. If empty: that player is not a character.
+
+/**
+ * Retrieves the current round state.
+ *
+ * @return The current round state. 0: pre-game, 1: round in progress, 2: round has ended.
+ */
 native CF_GetRoundState();
 
-//Creates all of Chaos Fortress' natives.
+/**
+ * Retrieves the client's current character config.
+ *
+ * @param client		The client whose config to retrieve.
+ * @param buffer		Output buffer.
+ *
+ * @return The config used by the client's current character, stored in the buffer. Returns an empty string is the client is invalid, or not currently a character. 
+ */
+native CF_GetPlayerConfig(int client, char[] buffer);
+
+/**
+ * Determines whether or not the chosen client is a character.
+ *
+ * @param client		The client to check.
+ *
+ * @return True if the client is a character, false if they are invalid or not a character.
+ */
+native bool CF_IsPlayerCharacter(int client);
+
+/**
+ * Creates all of Chaos Fortress' natives.
+ */
 public void CF_MakeNatives()
 {
+	RegPluginLibrary("chaos_fortress");
+	
 	CreateNative("CF_GetRoundState", Native_CF_GetRoundState);
+	CreateNative("CF_GetPlayerConfig", Native_CF_GetPlayerConfig);
+	CreateNative("CF_IsPlayerCharacter", Native_CF_IsPlayerCharacter);
+	
+	CFKS_MakeNatives();
+	CFB_MakeNatives();
+}
+
+/**
+ * Creates all of Chaos Fortress forwards.
+ */
+public void CF_MakeForwards()
+{
+	CFDMG_MakeForwards();
+	CFB_MakeForwards();
 }
 
 /**
@@ -20,9 +67,22 @@ public void CF_MakeNatives()
  */
  public void CF_MapStart()
  {
- 	CF_RoundState = 0;
+ 	CF_SetRoundState(0);
+
  	CF_SetGameRules();
+ 	
  	CF_LoadCharacters();
+ 	
+ 	CF_PrecacheAnnouncerDialogue();
+ }
+ 
+ /**
+ * Precaches the dialogue used for announcers.
+ */
+ public void CF_PrecacheAnnouncerDialogue()
+ {
+ 	//TODO: After reading game_rules, add a check here to only precache files which will be needed.
+ 	CFKS_Precache(0);
  }
  
 /**
@@ -57,16 +117,23 @@ public void CF_MakeNatives()
  public void CF_MakeCharacter(int client)
  {
  	//TODO: Write the code for this, also write a forward called CF_OnCharacterSpawned and have this call it.
+ 	//For now we have this temporary debug code.
+ 	s_CharacterConfig[client] = "Test Config Name";
+ 	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  }
  
 /**
  * Disables the player's active Chaos Fortress character.
  *
  * @param client			The client to disable.
+ * @param isCharacterChange			Is this just a character change? If true: reduce ultimate charge instead of completely removing it.
  */
- public void CF_UnmakeCharacter(int client)
+ public void CF_UnmakeCharacter(int client, bool isCharacterChange)
  {
  	//TODO: Write the code for this, also write a forward called CF_OnCharacterUnmade and have this call it.
+ 	//For now we have this temporary debug code.
+ 	s_CharacterConfig[client] = "";
+ 	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  }
  
 /**
@@ -81,31 +148,75 @@ public void CF_MakeNatives()
  {
  	if (!deadRinger)
  	{
- 		CF_UnmakeCharacter(victim);
+ 		CF_UnmakeCharacter(victim, false);
  		//TODO: Write a forward called CF_OnPlayerKilled and call it here.
  	}
+ 	
+ 	CFKS_PlayerKilled(victim, attacker, deadRinger);
  }
  
 /**
  * Called when the round starts.
  */
- public void CF_RoundStart()
+ void CF_RoundStart()
  {
- 	CF_RoundState = 1;
+ 	CF_SetRoundState(1);
  }
  
 /**
  * Called when the round ends.
  */
- public void CF_RoundEnd()
+ void CF_RoundEnd()
  {
- 	CF_RoundState = 2;
+ 	CF_SetRoundState(2);
  }
  
-/**
- * @return The current round state. 0: pre-game, 1: round in progress, 2: round has ended.
+ /**
+ * Sets the current round state.
+ *
+ * @param state		The round state to set. 0: pre-game, 1: round in progress, 2: round has ended.
  */
+ void CF_SetRoundState(int state)
+ {
+ 	i_CFRoundState = state;
+ 	
+ 	#if defined DEBUG_ROUND_STATE
+ 	CPrintToChatAll("The current round state is %i.", i_CFRoundState);
+ 	#endif
+ }
+ 
 public Native_CF_GetRoundState(Handle plugin, int numParams)
 {
-	return CF_RoundState;
+	return i_CFRoundState;
+}
+
+public Native_CF_GetPlayerConfig(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	int size; GetNativeStringLength(1, size);
+	
+	if (IsValidClient(client))
+	{
+		SetNativeString(1, s_CharacterConfig[client], size + 1, false);
+		return;
+	}
+	
+	SetNativeString(1, "", size + 1, false);
+}
+
+public Native_CF_IsPlayerCharacter(Handle plugin, int numParams)
+{
+	bool ReturnValue = false;
+	
+	int client = GetNativeCell(1);
+	
+	if (IsValidClient(client))
+	{
+		char buffer[255] = "";
+		CF_GetPlayerConfig(client, buffer);
+		
+		ReturnValue = !StrEqual(buffer, "");
+	}
+	
+	return ReturnValue;
 }

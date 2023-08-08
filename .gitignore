@@ -11,6 +11,10 @@
 [Tt]humbs.db
 
 # Excluded Files:
-!cf_stocks.inc
-!cf_core.inc
+!addons/sourcemod/plugins/chaos_fortress.smx
 !chaos_fortress.sp
+!cf_buttons.inc
+!cf_core.inc
+!cf_damage.inc
+!cf_killstreak.inc
+!cf_stocks.inc

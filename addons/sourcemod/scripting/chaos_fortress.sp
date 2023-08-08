@@ -1,3 +1,9 @@
+#define DEBUG_CHARACTER_CREATION
+#define DEBUG_ROUND_STATE
+#define DEBUG_KILLSTREAKS
+#define DEBUG_ONTAKEDAMAGE
+#define DEBUG_BUTTONS
+
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
 #define PLUGIN_AUTHOR         "Spookmaster"
@@ -31,6 +37,8 @@ public void OnPluginStart()
 	HookEvent("teamplay_round_start", RoundStart);
 	HookEvent("arena_round_start", RoundStart);
 	HookEvent("teamplay_round_win", RoundEnd);
+	
+	CF_MakeForwards();
 }
 
 public OnMapStart()
@@ -77,4 +85,91 @@ public void PlayerReset(Event gEvent, const char[] sEvName, bool bDontBroadcast)
 	{
 		CF_MakeCharacter(client);
 	}
+	
+	#if defined DEBUG_CHARACTER_CREATION
+	if (CF_IsPlayerCharacter(client))
+	{
+		char buffer[255];
+		CF_GetPlayerConfig(client, buffer);
+		
+		CPrintToChatAll("%N spawned with the following character config: %s.", client, buffer);
+	}
+	else
+	{
+		CPrintToChatAll("%N spawned but is not a character, and therefore does not have a config.");
+	}
+	#endif
 }
+
+#if defined DEBUG_ONTAKEDAMAGE
+
+public void CF_OnTakeDamageAlive_Pre(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, float damageForce[3], float damagePosition[3], int damagecustom)
+{
+	CPrintToChatAll("Called CF_OnTakeDamageAlive_Pre. Damage is currently %i.", RoundFloat(damage));
+}
+
+public void CF_OnTakeDamageAlive_Bonus(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, float damageForce[3], float damagePosition[3], int damagecustom)
+{
+	CPrintToChatAll("Called CF_OnTakeDamageAlive_Bonus. Damage is currently %i.", RoundFloat(damage));
+	
+	damage *= 2.0;
+	
+	CPrintToChatAll("Damage is now %i after attempting to double it.", RoundFloat(damage));
+}
+
+public void CF_OnTakeDamageAlive_Resistance(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, float damageForce[3], float damagePosition[3], int damagecustom)
+{
+	CPrintToChatAll("Called CF_OnTakeDamageAlive_Resistance. Damage is currently %i.", RoundFloat(damage));
+	
+	damage *= 0.66;
+	
+	CPrintToChatAll("Damage is now %i after attempting to reduce it by 33%.", RoundFloat(damage));
+}
+
+public void CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, float damageForce[3], float damagePosition[3], int damagecustom)
+{
+	CPrintToChatAll("Called CF_OnTakeDamageAlive_Post. Damage is currently %i.", RoundFloat(damage));
+	
+	CPrintToChatAll("Gained %i imaginary tokens for dealing %i damage", RoundFloat(damage * 40), RoundFloat(damage));
+}
+
+#endif
+
+#if defined DEBUG_BUTTONS
+
+float DebugButtonGameTimeToPreventLotsOfAnnoyingSpam = 0.0;
+public Action CF_OnPlayerRunCmd(int client, int &buttons, int &impulse, int &weapon)
+{
+	if (GetGameTime() >= DebugButtonGameTimeToPreventLotsOfAnnoyingSpam)
+	{
+		CPrintToChatAll("Detected a button press (this will run every half second instead of every frame to prevent chat spam).");
+		DebugButtonGameTimeToPreventLotsOfAnnoyingSpam = GetGameTime() + 0.5;
+	}
+	
+	return Plugin_Continue;
+}
+
+public Action CF_OnPlayerM2(int client, int &buttons, int &impulse, int &weapon)
+{
+	CPrintToChatAll("Detected a right-click, but we're going to block it to test.");
+	
+	buttons &= ~IN_ATTACK2;
+	
+	return Plugin_Changed;
+}
+
+public Action CF_OnPlayerM3(int client, int &buttons, int &impulse, int &weapon)
+{
+	CPrintToChatAll("Detected a mouse3.");
+	
+	return Plugin_Continue;
+}
+
+public Action CF_OnPlayerReload(int client, int &buttons, int &impulse, int &weapon)
+{
+	CPrintToChatAll("Detected a reload.");
+	
+	return Plugin_Continue;
+}
+
+#endif
