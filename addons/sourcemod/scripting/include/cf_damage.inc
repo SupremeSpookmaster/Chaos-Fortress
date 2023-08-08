@@ -91,11 +91,7 @@ public void CFDMG_MakeForwards()
 
 public Action CFDMG_OnTakeDamageAlive(victim, &attacker, &inflictor, &Float:damage, &damagetype, &weapon,
 	Float:damageForce[3], Float:damagePosition[3], damagecustom)
-{
-	//Don't even bother if either client is invalid or not a character:
-	if (!CF_IsPlayerCharacter(attacker) || !CF_IsPlayerCharacter(victim))
-	return Plugin_Continue;
-	
+{	
 	//First, we call PreDamage:
 	CFDMG_CallDamageForward(g_PreDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
 	

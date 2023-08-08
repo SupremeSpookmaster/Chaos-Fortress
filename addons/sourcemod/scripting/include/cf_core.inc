@@ -60,6 +60,7 @@ public void CF_MakeForwards()
 {
 	CFDMG_MakeForwards();
 	CFB_MakeForwards();
+	CFKS_MakeForwards();
 }
 
 /**

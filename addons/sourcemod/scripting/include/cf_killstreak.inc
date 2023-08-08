@@ -70,6 +70,8 @@ public const char CFKS_Announcer_Merasmus_EndedOwnKS[][] =
 
 int i_CFKillstreak[MAXPLAYERS+1] = {0, ...};
 
+float f_CFKillstreakForwardTime[MAXPLAYERS + 1] = { 0.0, ... };
+
 /**
  * Retrieves the killstreak of a given client.
  *
@@ -88,14 +90,29 @@ native CF_GetKillstreak(int client);
  */
 native CF_SetKillstreak(int client, int kills, int killer)
 
+/**
+ * Called when a player's Chaos Fortress killstreak is changed.
+ *
+ * @param client			The client whose killstreak was changed.
+ * @param kills				The new killstreak.
+ */
+forward void CF_OnKillstreakChanged(int client, int kills)
+
+GlobalForward g_OnKillstreakChanged;
+
 public void CFKS_MakeNatives()
 {
 	CreateNative("CF_GetKillstreak", Native_CF_GetKillstreak);
 	CreateNative("CF_SetKillstreak", Native_CF_SetKillstreak);
 }
 
+public void CFKS_MakeForwards()
+{
+	g_OnKillstreakChanged = new GlobalForward("CF_OnKillstreakChanged", ET_Ignore, Param_Cell, Param_Cell);
+}
+
 /**
- * Retrieves the client's current character config.
+ * Precaches announcer dialogue for killstreaks.
  *
  * @param announcer		The announcer currently in-use. 0: Administrator, 1: Merasmus
  */
@@ -176,6 +193,18 @@ public Native_CF_SetKillstreak(Handle plugin, int numParams) //TODO: Make this s
  		}
  		
 	 	i_CFKillstreak[client] = kills;
+	 	
+	 	if (f_CFKillstreakForwardTime[client] < GetGameTime()) //Prevent infinite loops from happening if people call CF_SetKillstreak on the client in this forward.
+	 	{
+	 		f_CFKillstreakForwardTime[client] = GetGameTime() + 0.2;
+	 		
+		 	Call_StartForward(g_OnKillstreakChanged);
+		
+			Call_PushCell(client);
+			Call_PushCell(kills);
+	
+			Call_Finish();
+		}
 	 	
 	 	#if defined DEBUG_KILLSTREAKS
 	 	CPrintToChatAll("Attempted to change %N's killstreak to %i.", client, kills);
