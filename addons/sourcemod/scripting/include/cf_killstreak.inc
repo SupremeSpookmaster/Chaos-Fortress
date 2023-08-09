@@ -162,7 +162,7 @@ public void CFKS_Precache(int announcer)
 	PrecacheSound(CFKS_SFX_EndedOwnKS);
 	PrecacheSound(CFKS_SFX_KSEnded);
 	
-	if (announcer == 1)
+	if (announcer == 1 || (announcer >= 3 && !TF2_IsHolidayActive(TFHoliday_HalloweenOrFullMoon)))
 	{
 		i_CFCurrentAnnouncer = 0;
 		for (int i = 0; i < (sizeof(CFKS_Announcer_Administrator_KS));       i++) { PrecacheSound(CFKS_Announcer_Administrator_KS[i]);       }
