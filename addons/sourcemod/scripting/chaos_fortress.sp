@@ -1,7 +1,7 @@
 //#define DEBUG_CHARACTER_CREATION
 //#define DEBUG_ROUND_STATE
 //#define DEBUG_KILLSTREAKS
-#define DEBUG_ONTAKEDAMAGE
+//#define DEBUG_ONTAKEDAMAGE
 //#define DEBUG_BUTTONS
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
@@ -144,7 +144,7 @@ public Action CF_OnTakeDamageAlive_Post(int victim, int &attacker, int &inflicto
 {
 	CPrintToChatAll("Called CF_OnTakeDamageAlive_Post. Damage is currently %i.", RoundFloat(damage));
 	
-	CPrintToChatAll("Gained %i imaginary tokens for dealing %i damage", RoundFloat(damage * 40), RoundFloat(damage));
+	CPrintToChatAll("Gained %i imaginary tokens for dealing %i damage", RoundFloat(damage / 40.0), RoundFloat(damage));
 	
 	return Plugin_Continue;
 }

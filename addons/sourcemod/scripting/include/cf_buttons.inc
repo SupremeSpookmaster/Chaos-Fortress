@@ -168,14 +168,14 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	return ReturnValue;
 }
 
-public Action CFB_CallForward(GlobalForward forwardToCall, int client, int &buttons, int &impulse, int &weapon)
+public Action CFB_CallForward(GlobalForward forwardToCall, int &client, int &buttons, int &impulse, int &weapon)
 {
 	Call_StartForward(forwardToCall);
 	
-	Call_PushCell(client);
-	Call_PushCell(buttons);
-	Call_PushCell(impulse);
-	Call_PushCell(weapon);
+	Call_PushCellRef(client);
+	Call_PushCellRef(buttons);
+	Call_PushCellRef(impulse);
+	Call_PushCellRef(weapon);
 	
 	Action ReturnValue;
 	Call_Finish(ReturnValue);

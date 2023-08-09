@@ -184,7 +184,7 @@ public Native_CF_GetKillstreak(Handle plugin, int numParams)
  	return ReturnValue;
 }
 
-public Native_CF_SetKillstreak(Handle plugin, int numParams) //TODO: Make this set the killstreak property on the player as well, can't look it up rn because no wifi so can't look at other plugins' source code...
+public Native_CF_SetKillstreak(Handle plugin, int numParams)
 {
 	int ReturnValue = -1;
  	
@@ -198,26 +198,28 @@ public Native_CF_SetKillstreak(Handle plugin, int numParams) //TODO: Make this s
  		
  		if (kills > 0 && kills % 5 == 0)
 	 	{
+	 		CPrintToChatAll("%N is on a %i-player killstreak!", client, kills);
+	 		
 	 		if (i_CFCurrentAnnouncer == 0)
 	 		{
-	 			if (kills >= 20)
+	 			if (kills >= 20 && kills % 20 == 0)
 	 			{
-	 				EmitSoundToAll(CFKS_Announcer_Administrator_KS[GetRandomInt(0, sizeof(CFKS_Announcer_Administrator_KS_Godlike) - 1)], _, _, 120);
+	 				EmitSoundToAll(CFKS_Announcer_Administrator_KS_Godlike[GetRandomInt(0, sizeof(CFKS_Announcer_Administrator_KS_Godlike) - 1)], _, _, 110);
 	 			}
 	 			else
 	 			{
-	 				EmitSoundToAll(CFKS_Announcer_Administrator_KS[GetRandomInt(0, sizeof(CFKS_Announcer_Administrator_KS) - 1)], _, _, 120);
+	 				EmitSoundToAll(CFKS_Announcer_Administrator_KS[GetRandomInt(0, sizeof(CFKS_Announcer_Administrator_KS) - 1)], _, _, 110);
 	 			}
 	 		}
 	 		else
 	 		{
-	 			if (kills >= 20)
+	 			if (kills >= 20 && kills % 20 == 0)
 	 			{
-	 				EmitSoundToAll(CFKS_Announcer_Merasmus_KS[GetRandomInt(0, sizeof(CFKS_Announcer_Merasmus_KS_Godlike) - 1)], _, _, 120);
+	 				EmitSoundToAll(CFKS_Announcer_Merasmus_KS_Godlike[GetRandomInt(0, sizeof(CFKS_Announcer_Merasmus_KS_Godlike) - 1)], _, _, 110);
 	 			}
 	 			else
 	 			{
-	 				EmitSoundToAll(CFKS_Announcer_Merasmus_KS[GetRandomInt(0, sizeof(CFKS_Announcer_Merasmus_KS) - 1)], _, _, 120);
+	 				EmitSoundToAll(CFKS_Announcer_Merasmus_KS[GetRandomInt(0, sizeof(CFKS_Announcer_Merasmus_KS) - 1)], _, _, 110);
 	 			}
 	 		}
 	 		
@@ -228,28 +230,30 @@ public Native_CF_SetKillstreak(Handle plugin, int numParams) //TODO: Make this s
  		{
  			if (IsValidClient(killer) && killer != client)
  			{
-	 			//EmitSoundToAll(CFKS_SFX_KSEnded, _, _, 110);
+	 			CPrintToChatAll("%N finally ended %N's %i-player killstreak!", killer, client, i_CFKillstreak[client]);
 	 			
 	 			if (i_CFCurrentAnnouncer == 0)
 		 		{
-		 			EmitSoundToAll(CFKS_Announcer_Administrator_KSEnded[GetRandomInt(0, sizeof(CFKS_Announcer_Administrator_KSEnded) - 1)], _, _, 120);
+		 			EmitSoundToAll(CFKS_Announcer_Administrator_KSEnded[GetRandomInt(0, sizeof(CFKS_Announcer_Administrator_KSEnded) - 1)], _, _, 110);
 		 		}
 		 		else
 		 		{
-		 			EmitSoundToAll(CFKS_Announcer_Merasmus_KSEnded[GetRandomInt(0, sizeof(CFKS_Announcer_Merasmus_KSEnded) - 1)], _, _, 120);
+		 			EmitSoundToAll(CFKS_Announcer_Merasmus_KSEnded[GetRandomInt(0, sizeof(CFKS_Announcer_Merasmus_KSEnded) - 1)], _, _, 110);
 		 		}
 	 		}
 	 		else
 	 		{
+	 			CPrintToChatAll("%N brought an end to their own %i-player killstreak...", client, i_CFKillstreak[client]);
+	 			
 	 			EmitSoundToAll(CFKS_SFX_EndedOwnKS, _, _, 110);
 	 			
 	 			if (i_CFCurrentAnnouncer == 0)
 		 		{
-		 			EmitSoundToAll(CFKS_Announcer_Administrator_EndedOwnKS[GetRandomInt(0, sizeof(CFKS_Announcer_Administrator_EndedOwnKS) - 1)], _, _, 120);
+		 			EmitSoundToAll(CFKS_Announcer_Administrator_EndedOwnKS[GetRandomInt(0, sizeof(CFKS_Announcer_Administrator_EndedOwnKS) - 1)], _, _, 110);
 		 		}
 		 		else
 		 		{
-		 			EmitSoundToAll(CFKS_Announcer_Merasmus_EndedOwnKS[GetRandomInt(0, sizeof(CFKS_Announcer_Merasmus_EndedOwnKS) - 1)], _, _, 120);
+		 			EmitSoundToAll(CFKS_Announcer_Merasmus_EndedOwnKS[GetRandomInt(0, sizeof(CFKS_Announcer_Merasmus_EndedOwnKS) - 1)], _, _, 110);
 		 		}
 	 		}
  		}
