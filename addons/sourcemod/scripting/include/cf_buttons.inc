@@ -84,10 +84,10 @@ GlobalForward g_OnReload;
 
 public void CFB_MakeForwards()
 {
-	g_OnRunCmd = new GlobalForward("CF_OnPlayerRunCmd", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
-	g_OnM2 = new GlobalForward("CF_OnPlayerM2", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
-	g_OnM3 = new GlobalForward("CF_OnPlayerM3", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
-	g_OnReload = new GlobalForward("CF_OnPlayerReload", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
+	g_OnRunCmd = new GlobalForward("CF_OnPlayerRunCmd", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);
+	g_OnM2 = new GlobalForward("CF_OnPlayerM2", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);
+	g_OnM3 = new GlobalForward("CF_OnPlayerM3", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);
+	g_OnReload = new GlobalForward("CF_OnPlayerReload", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);
 }
 
 public void CFB_MakeNatives()
@@ -141,24 +141,37 @@ public Native_CF_GetReloadStatus(Handle plugin, int numParams)
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
 {
-	if (!CF_IsPlayerCharacter(client))
+	if (!IsValidClient(client))
 		return Plugin_Continue;
 	
 	Action ReturnValue = CFB_CallForward(g_OnRunCmd, client, buttons, impulse, weapon); //NOTE TO SELF: This might be a very, very bad idea since it means we're calling a forward every frame for every player. Could get VERY expensive. The rest of the game mode is fairly light so it shouldn't be en enormous problem, but if it starts to get bad later on in development then definitely REMOVE this.
+	Action newValue;
 	
 	if (ReturnValue != Plugin_Handled && ReturnValue != Plugin_Stop && (buttons & IN_ATTACK2 != 0) && !CF_GetM2Status(client))
 	{
-		ReturnValue = CFB_CallForward(g_OnM2, client, buttons, impulse, weapon);
+		newValue = CFB_CallForward(g_OnM2, client, buttons, impulse, weapon);
+		if (newValue > ReturnValue)
+		{
+			ReturnValue = newValue;
+		}
 	}
 	
 	if (ReturnValue != Plugin_Handled && ReturnValue != Plugin_Stop && (buttons & IN_ATTACK3 != 0) && !CF_GetM3Status(client))
 	{
-		ReturnValue = CFB_CallForward(g_OnM3, client, buttons, impulse, weapon);
+		newValue = CFB_CallForward(g_OnM3, client, buttons, impulse, weapon);
+		if (newValue > ReturnValue)
+		{
+			ReturnValue = newValue;
+		}
 	}
 	
 	if (ReturnValue != Plugin_Handled && ReturnValue != Plugin_Stop && (buttons & IN_RELOAD != 0) && !CF_GetReloadStatus(client))
 	{
-		ReturnValue = CFB_CallForward(g_OnReload, client, buttons, impulse, weapon);
+		newValue = CFB_CallForward(g_OnReload, client, buttons, impulse, weapon);
+		if (newValue > ReturnValue)
+		{
+			ReturnValue = newValue;
+		}
 	}
 	
 	b_M2Down[client] = (buttons & IN_ATTACK2 != 0);

@@ -30,6 +30,14 @@ native CF_GetRoundState();
 native CF_GetPlayerConfig(int client, char[] buffer);
 
 /**
+ * Sets the client's current character config.
+ *
+ * @param client		The client whose config to set.
+ * @param confName		The new config.
+ */
+native CF_SetPlayerConfig(int client, char[] confName);
+
+/**
  * Determines whether or not the chosen client is a character.
  *
  * @param client		The client to check.
@@ -47,6 +55,7 @@ public void CF_MakeNatives()
 	
 	CreateNative("CF_GetRoundState", Native_CF_GetRoundState);
 	CreateNative("CF_GetPlayerConfig", Native_CF_GetPlayerConfig);
+	CreateNative("CF_SetPlayerConfig", Native_CF_SetPlayerConfig);
 	CreateNative("CF_IsPlayerCharacter", Native_CF_IsPlayerCharacter);
 	
 	CFKS_MakeNatives();
@@ -122,7 +131,7 @@ public void CF_MakeForwards()
  		
  	//TODO: Write the code for this, also write a forward called CF_OnCharacterSpawned and have this call it.
  	//For now we have this temporary debug code.
- 	s_CharacterConfig[client] = "Test Config Name";
+ 	CF_SetPlayerConfig(client, "Test Config");
  	
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
@@ -138,7 +147,7 @@ public void CF_MakeForwards()
  {
  	//TODO: Write the code for this, also write a forward called CF_OnCharacterUnmade and have this call it.
  	//For now we have this temporary debug code.
- 	s_CharacterConfig[client] = "";
+ 	CF_SetPlayerConfig(client, "");
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  }
  
@@ -207,15 +216,52 @@ public Native_CF_GetRoundState(Handle plugin, int numParams)
 public Native_CF_GetPlayerConfig(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
-	int size; GetNativeStringLength(2, size);
+	int len;
+	GetNativeStringLength(2, len);
+ 
+	if (len <= 0)
+	{
+		return;
+	}
+ 
+	char[] str = new char[len + 1];
+	GetNativeString(2, str, len + 1);
 	
 	if (IsValidClient(client))
 	{
-		SetNativeString(2, s_CharacterConfig[client], size + 1, false);
-		return;
+		SetNativeString(2, s_CharacterConfig[client], len+1, false);
+		
+		#if defined DEBUG_CHARACTER_CREATION
+		char debugStr[255];
+		GetNativeString(2, debugStr, 255);
+		
+		CPrintToChatAll("%N's PlayerConfig is currently %s.", client, debugStr);
+		#endif
 	}
+	else
+	{
+		SetNativeString(2, "", len+1, false);
+	}
+}
 
-	SetNativeString(2, "", size + 1, false);
+public Native_CF_SetPlayerConfig(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	char newConf[255];
+	GetNativeString(2, newConf, sizeof(newConf));
+	
+	if (IsValidClient(client))
+	{
+		Format(s_CharacterConfig[client], 255, newConf);
+		
+		#if defined DEBUG_CHARACTER_CREATION
+		CPrintToChatAll("Attempted to set %N's PlayerConfig to %s.", client, newConf)
+		CPrintToChatAll("{orange}%s", s_CharacterConfig[client]);
+		
+		char debugStr[255];
+		CF_GetPlayerConfig(client, debugStr);
+		#endif
+	}
 }
 
 public Native_CF_IsPlayerCharacter(Handle plugin, int numParams)
@@ -230,6 +276,10 @@ public Native_CF_IsPlayerCharacter(Handle plugin, int numParams)
 		CF_GetPlayerConfig(client, buffer);
 		
 		ReturnValue = !StrEqual(buffer, "");
+		
+		#if defined DEBUG_CHARACTER_CREATION
+		CPrintToChatAll("%N's PlayerConfig was returned to CF_IsPlayerCharacter() as %s. Returning %i.", client, buffer, view_as<int>(ReturnValue));
+		#endif
 	}
 	
 	return ReturnValue;

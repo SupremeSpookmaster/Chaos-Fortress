@@ -1,4 +1,4 @@
-//#define DEBUG_CHARACTER_CREATION
+#define DEBUG_CHARACTER_CREATION
 //#define DEBUG_ROUND_STATE
 //#define DEBUG_KILLSTREAKS
 //#define DEBUG_ONTAKEDAMAGE
@@ -153,13 +153,13 @@ public Action CF_OnTakeDamageAlive_Post(int victim, int &attacker, int &inflicto
 
 #if defined DEBUG_BUTTONS
 
-float DebugButtonGameTimeToPreventLotsOfAnnoyingSpam = 0.0;
+float DebugButtonsGameTimeToPreventLotsOfAnnoyingSpam = 0.0;
 public Action CF_OnPlayerRunCmd(int client, int &buttons, int &impulse, int &weapon)
 {
-	if (GetGameTime() >= DebugButtonGameTimeToPreventLotsOfAnnoyingSpam)
+	if (GetGameTime() >= DebugButtonsGameTimeToPreventLotsOfAnnoyingSpam)
 	{
-		CPrintToChatAll("Detected a button press (this will run every half second instead of every frame to prevent chat spam).");
-		DebugButtonGameTimeToPreventLotsOfAnnoyingSpam = GetGameTime() + 0.5;
+		CPrintToChatAll("Detected a button press (this will run every half second instead of every frame to prevent excessive chat spam).");
+		DebugButtonsGameTimeToPreventLotsOfAnnoyingSpam = GetGameTime() + 0.5;
 	}
 	
 	return Plugin_Continue;
