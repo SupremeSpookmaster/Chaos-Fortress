@@ -91,32 +91,6 @@ float f_CFKillstreakForwardTime[MAXPLAYERS + 1] = { 0.0, ... };
 
 bool b_AnnounceKillstreaks = false;
 
-/**
- * Retrieves the killstreak of a given client.
- *
- * @param client		The client whose killstreak to retrieve.
- *
- * @return The player's current killstreak. 0 if dead, -1 if invalid client.
- */
-native CF_GetKillstreak(int client);
-
-/**
- * Sets the killstreak of a given client.
- *
- * @param client		The client whose killstreak to set.
- * @param kills			The new killstreak.
- * @param killer		The player who scored the kill. Used for announcing the end of a long killstreak.
- */
-native CF_SetKillstreak(int client, int kills, int killer)
-
-/**
- * Called when a player's Chaos Fortress killstreak is changed.
- *
- * @param client			The client whose killstreak was changed.
- * @param kills				The new killstreak.
- */
-forward void CF_OnKillstreakChanged(int client, int kills)
-
 GlobalForward g_OnKillstreakChanged;
 
 public void CFKS_MakeNatives()

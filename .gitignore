@@ -13,8 +13,10 @@
 # Excluded Files:
 !addons/sourcemod/plugins/chaos_fortress.smx
 !chaos_fortress.sp
+!cf_plugin_template.sp
 !cf_buttons.inc
 !cf_core.inc
 !cf_damage.inc
+!cf_include.inc
 !cf_killstreak.inc
 !cf_stocks.inc

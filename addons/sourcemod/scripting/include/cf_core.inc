@@ -7,6 +7,7 @@
 #include <cf_killstreak>
 #include <cf_damage>
 #include <cf_buttons>
+#include <cf_include>
 
 int i_CFRoundState = 0;						//The current round state.
 
