@@ -198,7 +198,7 @@ public Native_CF_SetKillstreak(Handle plugin, int numParams)
  		
  		if (kills > 0 && kills % 5 == 0)
 	 	{
-	 		CPrintToChatAll("%N is on a %i-player killstreak!", client, kills);
+	 		PrintCenterTextAll("%N is on a %i-player killstreak!", client, kills);
 	 		
 	 		if (i_CFCurrentAnnouncer == 0)
 	 		{
@@ -230,7 +230,7 @@ public Native_CF_SetKillstreak(Handle plugin, int numParams)
  		{
  			if (IsValidClient(killer) && killer != client)
  			{
-	 			CPrintToChatAll("%N finally ended %N's %i-player killstreak!", killer, client, i_CFKillstreak[client]);
+	 			PrintCenterTextAll("%N finally ended %N's %i-player killstreak!", killer, client, i_CFKillstreak[client]);
 	 			
 	 			if (i_CFCurrentAnnouncer == 0)
 		 		{
@@ -243,7 +243,7 @@ public Native_CF_SetKillstreak(Handle plugin, int numParams)
 	 		}
 	 		else
 	 		{
-	 			CPrintToChatAll("%N brought an end to their own %i-player killstreak...", client, i_CFKillstreak[client]);
+	 			PrintCenterTextAll("%N brought an end to their own %i-player killstreak...", client, i_CFKillstreak[client]);
 	 			
 	 			EmitSoundToAll(CFKS_SFX_EndedOwnKS, _, _, 110);
 	 			
