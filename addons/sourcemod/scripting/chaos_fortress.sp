@@ -1,4 +1,4 @@
-#define DEBUG_CHARACTER_CREATION
+//#define DEBUG_CHARACTER_CREATION
 //#define DEBUG_ROUND_STATE
 //#define DEBUG_KILLSTREAKS
 //#define DEBUG_ONTAKEDAMAGE
@@ -35,8 +35,10 @@ public void OnPluginStart()
 	HookEvent("post_inventory_application", PlayerReset);
 	HookEvent("player_death", PlayerKilled);
 	HookEvent("teamplay_waiting_begins", Waiting);
+	HookEvent("teamplay_round_start", Waiting);
 	HookEvent("teamplay_setup_finished", RoundStart);
 	HookEvent("teamplay_round_win", RoundEnd);
+	HookEvent("teamplay_round_stalemate", RoundEnd);
 	
 	CF_MakeForwards();
 }
@@ -49,7 +51,6 @@ public OnMapStart()
 public Action PlayerKilled(Event hEvent, const char[] sEvName, bool bDontBroadcast)
 {
 	int victim = GetClientOfUserId(hEvent.GetInt("userid"));
-	//int vicEnt = hEvent.GetInt("victim_entindex");
 	int inflictor = hEvent.GetInt("inflictor_entindex");
 	int attacker = GetClientOfUserId(hEvent.GetInt("attacker"));
 	
@@ -95,7 +96,7 @@ public void PlayerReset(Event gEvent, const char[] sEvName, bool bDontBroadcast)
 	if (CF_IsPlayerCharacter(client))
 	{
 		char buffer[255];
-		CF_GetPlayerConfig(client, buffer);
+		CF_GetPlayerConfig(client, buffer, 255);
 		
 		CPrintToChatAll("%N spawned with the following character config: %s.", client, buffer);
 	}

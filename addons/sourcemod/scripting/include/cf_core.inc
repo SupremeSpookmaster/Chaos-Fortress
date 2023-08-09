@@ -10,12 +10,14 @@
 
 int i_CFRoundState = 0;						//The current round state.
 
+bool b_CharacterApplied[MAXPLAYERS + 1] = { false, ... };		//Whether or not the client's character has been applied to them already. If true: skip MakeCharacter for that client. Set to false automatically on death, round end, disconnect, and if the player changes their character selection.
+
 char s_CharacterConfig[MAXPLAYERS+1][255];	//The config currently used for this player's character. If empty: that player is not a character.
 
 /**
  * Retrieves the current round state.
  *
- * @return The current round state. 0: pre-game, 1: round in progress, 2: round has ended.
+ * @return The current round state. 0: pre-game/waiting for players/setup, 1: round in progress, 2: round has ended.
  */
 native CF_GetRoundState();
 
@@ -24,10 +26,11 @@ native CF_GetRoundState();
  *
  * @param client		The client whose config to retrieve.
  * @param buffer		Output buffer.
+ * @param size			Output buffer size.
  *
  * @return The config used by the client's current character, stored in the buffer. Returns an empty string is the client is invalid, or not currently a character. 
  */
-native CF_GetPlayerConfig(int client, char[] buffer);
+native CF_GetPlayerConfig(int client, char[] buffer, int size);
 
 /**
  * Sets the client's current character config.
@@ -128,10 +131,14 @@ public void CF_MakeForwards()
  {
  	if (!IsValidClient(client))
  		return;
- 		
+
+	if (b_CharacterApplied[client])
+		return;
+
  	//TODO: Write the code for this, also write a forward called CF_OnCharacterSpawned and have this call it.
  	//For now we have this temporary debug code.
  	CF_SetPlayerConfig(client, "Test Config");
+ 	b_CharacterApplied[client] = true;
  	
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
@@ -149,6 +156,7 @@ public void CF_MakeForwards()
  	//For now we have this temporary debug code.
  	CF_SetPlayerConfig(client, "");
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
+ 	b_CharacterApplied[client] = false;
  }
  
 /**
@@ -216,31 +224,22 @@ public Native_CF_GetRoundState(Handle plugin, int numParams)
 public Native_CF_GetPlayerConfig(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
-	int len;
-	GetNativeStringLength(2, len);
- 
-	if (len <= 0)
-	{
-		return;
-	}
- 
-	char[] str = new char[len + 1];
-	GetNativeString(2, str, len + 1);
+	int size = GetNativeCell(3);
 	
 	if (IsValidClient(client))
 	{
-		SetNativeString(2, s_CharacterConfig[client], len+1, false);
+		SetNativeString(2, s_CharacterConfig[client], size, false);
 		
 		#if defined DEBUG_CHARACTER_CREATION
-		char debugStr[255];
-		GetNativeString(2, debugStr, 255);
+		char debugStrGet[255];
+		GetNativeString(2, debugStrGet, 255);
 		
-		CPrintToChatAll("%N's PlayerConfig is currently %s.", client, debugStr);
+		CPrintToChatAll("%N's PlayerConfig is currently %s.", client, debugStrGet);
 		#endif
 	}
 	else
 	{
-		SetNativeString(2, "", len+1, false);
+		SetNativeString(2, "", size + 1, false);
 	}
 }
 
@@ -259,7 +258,7 @@ public Native_CF_SetPlayerConfig(Handle plugin, int numParams)
 		CPrintToChatAll("{orange}%s", s_CharacterConfig[client]);
 		
 		char debugStr[255];
-		CF_GetPlayerConfig(client, debugStr);
+		CF_GetPlayerConfig(client, debugStr, 255);
 		#endif
 	}
 }
@@ -273,7 +272,7 @@ public Native_CF_IsPlayerCharacter(Handle plugin, int numParams)
 	if (IsValidClient(client))
 	{
 		char buffer[255] = "";
-		CF_GetPlayerConfig(client, buffer);
+		CF_GetPlayerConfig(client, buffer, 255);
 		
 		ReturnValue = !StrEqual(buffer, "");
 		
