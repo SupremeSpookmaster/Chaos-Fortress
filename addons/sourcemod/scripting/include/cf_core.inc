@@ -10,9 +10,13 @@
 
 int i_CFRoundState = 0;						//The current round state.
 
+float f_ChargeRetain = 0.0;
+
 bool b_CharacterApplied[MAXPLAYERS + 1] = { false, ... };		//Whether or not the client's character has been applied to them already. If true: skip MakeCharacter for that client. Set to false automatically on death, round end, disconnect, and if the player changes their character selection.
+bool b_IgnoreCharacterDefaults = false;
 
 char s_CharacterConfig[MAXPLAYERS+1][255];	//The config currently used for this player's character. If empty: that player is not a character.
+char s_DefaultCharacter[255];
 
 /**
  * Retrieves the current round state.
@@ -95,7 +99,6 @@ public void CF_MakeForwards()
  public void CF_PrecacheAnnouncerDialogue()
  {
  	//TODO: After reading game_rules, add a check here to only precache files which will be needed.
- 	CFKS_Precache(1);
  }
  
 /**
@@ -103,7 +106,85 @@ public void CF_MakeForwards()
  */
  public void CF_SetGameRules()
  {
- 	//TODO: Read game_rules here and apply them to variables. Also make an admin command for this that lets people do this at any time.
+ 	//TODO: Make an admin command for this that lets people do this at any time.
+ 	
+ 	char filepath[255];
+	BuildPath(Path_SM, filepath, PLATFORM_MAX_PATH, "data/chaos_fortress/game_rules.cfg");
+	KeyValues kv = new KeyValues("");
+	FileToKeyValues(kv, filepath);
+ 	
+ 	if (!kv.GotoFirstSubKey())
+ 	{
+ 		delete kv;
+ 		ThrowError("FATAL ERROR: COULD NOT READ FILE ''data/chaos_fortress/game_rules.cfg''.");
+ 		return;
+ 	}
+
+	char intStr[255];
+
+	#if defined DEBUG_GAMERULES
+	PrintToServer("//////////////////////////////////////////////");
+	PrintToServer("CHAOS FORTRESS GAME_RULES DEBUG MESSAGES BELOW");
+	PrintToServer("//////////////////////////////////////////////");
+	#endif
+
+	do //TODO: Probably a good idea to abstract this to a method instead of copy/pasting it every time and making small changes...
+	{
+		char section[255];
+		kv.GetSectionName(section, 255);
+		
+		if (StrEqual(section, "general_rules"))
+		{
+			#if defined DEBUG_GAMERULES
+	        PrintToServer("Now reading general_rules...");
+	        #endif
+	        
+	        kv.GetString("default_character", s_DefaultCharacter, 255);
+	        f_ChargeRetain = kv.GetFloat("charge_retain");
+	        kv.GetString("ignore_defaults", intStr, 255);
+	        b_IgnoreCharacterDefaults = !(StringToInt(intStr) == 0);
+	        
+	        #if defined DEBUG_GAMERULES
+	        PrintToServer("Default Character: %s", s_DefaultCharacter);
+	        PrintToServer("Charge Retain: %.2f", f_ChargeRetain);
+	        PrintToServer("Ignore Defaults: %i", view_as<int>(b_IgnoreCharacterDefaults));
+	        #endif
+		}
+		
+		if (StrEqual(section, "killstreak_settings"))
+		{
+			#if defined DEBUG_GAMERULES
+	        PrintToServer("Now reading killstreak_settings...");
+	        #endif
+	        
+	        kv.GetString("killstreak_announcements", intStr, 255);
+	        int announcer = StringToInt(intStr);
+	        kv.GetString("killstreak_interval", intStr, 255);
+	        int interval = StringToInt(intStr);
+	        kv.GetString("killstreak_ended", intStr, 255);
+	        int ended = StringToInt(intStr);
+	        kv.GetString("killstreak_godlike", intStr, 255);
+	        int godlike = StringToInt(intStr);
+	        
+	        CFKS_Prepare(announcer, interval, ended, godlike);
+	        
+	        #if defined DEBUG_GAMERULES
+	        PrintToServer("Announcer: %i", announcer);
+	        PrintToServer("Interval: %i", interval);
+	        PrintToServer("Ended: %i", ended);
+	        PrintToServer("Godlike: %i", godlike);
+	        #endif
+		}
+		
+	} while (kv.GotoNextKey());
+	
+	#if defined DEBUG_GAMERULES
+	PrintToServer("//////////////////////////////////////////////");
+	PrintToServer("CHAOS FORTRESS GAME_RULES DEBUG MESSAGES ABOVE");
+	PrintToServer("//////////////////////////////////////////////");
+	#endif
+	
+    delete kv;
  }
  
 /**

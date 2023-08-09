@@ -82,9 +82,14 @@ public const char CFKS_Announcer_Merasmus_EndedOwnKS[][] =
 #define CFKS_SFX_KSEnded		"misc/ks_tier_01_death.wav"
 
 int i_CFCurrentAnnouncer = 0;
+int i_KillstreakInterval = 0;
+int i_KillstreakEnded = 0;
+int i_KillstreakGodlike = 0;
 int i_CFKillstreak[MAXPLAYERS+1] = {0, ...};
 
 float f_CFKillstreakForwardTime[MAXPLAYERS + 1] = { 0.0, ... };
+
+bool b_AnnounceKillstreaks = false;
 
 /**
  * Retrieves the killstreak of a given client.
@@ -126,6 +131,27 @@ public void CFKS_MakeForwards()
 }
 
 /**
+ * Prepares game rules for killstreak system.
+ *
+ * @param announcer		The announcer to be used. 0: don't announce killfeeds, 1: Use the Administrator, 2: Use Merasmus, 3: Choose based on whether or not Halloween mode is active.
+ * @param interval		The number of kills between each killstreak announcement.
+ * @param ended			The number of kills required to announce the end of a killstreak.
+ * @param godlike		The number of kills needed to trigger godlike killstreak announcements.
+ */
+public void CFKS_Prepare(int announcer, int interval, int ended, int godlike)
+{
+	if (announcer <= 0)
+		return;
+		
+	b_AnnounceKillstreaks = true;
+	i_KillstreakInterval = interval;
+	i_KillstreakEnded = ended;
+	i_KillstreakGodlike = godlike;
+	
+	CFKS_Precache(announcer);
+}
+
+/**
  * Precaches announcer dialogue for killstreaks.
  *
  * @param announcer		The announcer currently in-use. 0: Administrator, 1: Merasmus
@@ -136,27 +162,27 @@ public void CFKS_Precache(int announcer)
 	PrecacheSound(CFKS_SFX_EndedOwnKS);
 	PrecacheSound(CFKS_SFX_KSEnded);
 	
-	if (announcer == 0)
+	if (announcer == 1)
 	{
+		i_CFCurrentAnnouncer = 0;
 		for (int i = 0; i < (sizeof(CFKS_Announcer_Administrator_KS));       i++) { PrecacheSound(CFKS_Announcer_Administrator_KS[i]);       }
 		for (int i = 0; i < (sizeof(CFKS_Announcer_Administrator_KS_Godlike));       i++) { PrecacheSound(CFKS_Announcer_Administrator_KS_Godlike[i]);       }
 		for (int i = 0; i < (sizeof(CFKS_Announcer_Administrator_KSEnded));       i++) { PrecacheSound(CFKS_Announcer_Administrator_KSEnded[i]);       }
 		for (int i = 0; i < (sizeof(CFKS_Announcer_Administrator_EndedOwnKS));       i++) { PrecacheSound(CFKS_Announcer_Administrator_EndedOwnKS[i]);       }
 	}
-	else
+	else if (announcer == 2 || (announcer >= 3 && TF2_IsHolidayActive(TFHoliday_HalloweenOrFullMoon)))
 	{
+		i_CFCurrentAnnouncer = 1;
 		for (int i = 0; i < (sizeof(CFKS_Announcer_Merasmus_KS));       i++) { PrecacheSound(CFKS_Announcer_Merasmus_KS[i]);       }
 		for (int i = 0; i < (sizeof(CFKS_Announcer_Merasmus_KS_Godlike));       i++) { PrecacheSound(CFKS_Announcer_Merasmus_KS_Godlike[i]);       }
 		for (int i = 0; i < (sizeof(CFKS_Announcer_Merasmus_KSEnded));       i++) { PrecacheSound(CFKS_Announcer_Merasmus_KSEnded[i]);       }
 		for (int i = 0; i < (sizeof(CFKS_Announcer_Merasmus_EndedOwnKS));       i++) { PrecacheSound(CFKS_Announcer_Merasmus_EndedOwnKS[i]);       }
 	}
-	
-	i_CFCurrentAnnouncer = announcer;
 }
 
 public void CFKS_PlayerKilled(int victim, int attacker, bool deadRinger)
 {
-	if (!IsValidClient(victim))
+	if (!IsValidClient(victim) || !b_AnnounceKillstreaks)
 		return;
 		
 	if (!deadRinger)
@@ -196,13 +222,13 @@ public Native_CF_SetKillstreak(Handle plugin, int numParams)
  	{
  		bool ksMessage = false;
  		
- 		if (kills > 0 && kills % 5 == 0)
+ 		if (kills > 0 && kills % i_KillstreakInterval == 0)
 	 	{
 	 		PrintCenterTextAll("%N is on a %i-player killstreak!", client, kills);
 	 		
 	 		if (i_CFCurrentAnnouncer == 0)
 	 		{
-	 			if (kills >= 20 && kills % 20 == 0)
+	 			if (kills >= i_KillstreakGodlike && kills % i_KillstreakGodlike == 0)
 	 			{
 	 				EmitSoundToAll(CFKS_Announcer_Administrator_KS_Godlike[GetRandomInt(0, sizeof(CFKS_Announcer_Administrator_KS_Godlike) - 1)], _, _, 110);
 	 			}
@@ -213,7 +239,7 @@ public Native_CF_SetKillstreak(Handle plugin, int numParams)
 	 		}
 	 		else
 	 		{
-	 			if (kills >= 20 && kills % 20 == 0)
+	 			if (kills >= i_KillstreakGodlike && kills % i_KillstreakGodlike == 0)
 	 			{
 	 				EmitSoundToAll(CFKS_Announcer_Merasmus_KS_Godlike[GetRandomInt(0, sizeof(CFKS_Announcer_Merasmus_KS_Godlike) - 1)], _, _, 110);
 	 			}
@@ -226,7 +252,7 @@ public Native_CF_SetKillstreak(Handle plugin, int numParams)
 	 		ksMessage = true;
 	 	}
  		
- 		if (kills == 0 && i_CFKillstreak[client] >= 10 && !ksMessage)
+ 		if (kills == 0 && i_CFKillstreak[client] >= i_KillstreakEnded && !ksMessage)
  		{
  			if (IsValidClient(killer) && killer != client)
  			{

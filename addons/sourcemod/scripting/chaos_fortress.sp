@@ -3,6 +3,7 @@
 //#define DEBUG_KILLSTREAKS
 //#define DEBUG_ONTAKEDAMAGE
 //#define DEBUG_BUTTONS
+#define DEBUG_GAMERULES
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
