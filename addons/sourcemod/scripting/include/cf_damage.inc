@@ -17,9 +17,11 @@
  * @param damageForce				The force of the damage, used for ragdolls.
  * @param damagePosition			The position from which damageForce is applied to ragdolls.
  * @param damagecustom				Custom damage flags such as backstabs.
+ *
+ * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */
-forward void CF_OnTakeDamageAlive_Pre(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon,
-	float damageForce[3], float damagePosition[3], int damagecustom)
+forward Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+	float damageForce[3], float damagePosition[3], int &damagecustom)
 	
 /**
  * Called when a character takes damage, after CF_OnTakeDamageAlive_Pre has been called.
@@ -34,9 +36,11 @@ forward void CF_OnTakeDamageAlive_Pre(int victim, int attacker, int inflictor, f
  * @param damageForce				The force of the damage, used for ragdolls.
  * @param damagePosition			The position from which damageForce is applied to ragdolls.
  * @param damagecustom				Custom damage flags such as backstabs.
+ *
+ * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */
-forward void CF_OnTakeDamageAlive_Bonus(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon,
-	float damageForce[3], float damagePosition[3], int damagecustom)
+forward Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+	float damageForce[3], float damagePosition[3], int &damagecustom)
 
 /**
  * Called when a character takes damage, after CF_OnTakeDamageAlive_Pre and CF_OnTakeDamageAlive_Bonus have been called.
@@ -51,9 +55,11 @@ forward void CF_OnTakeDamageAlive_Bonus(int victim, int attacker, int inflictor,
  * @param damageForce				The force of the damage, used for ragdolls.
  * @param damagePosition			The position from which damageForce is applied to ragdolls.
  * @param damagecustom				Custom damage flags such as backstabs.
+ *
+ * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */
-forward void CF_OnTakeDamageAlive_Resistance(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon,
-	float damageForce[3], float damagePosition[3], int damagecustom)
+forward Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+	float damageForce[3], float damagePosition[3], int &damagecustom)
 	
 /**
  * Called when a character takes damage, after all of Chaos Fortress' other OnTakeDamageAlive forwards have been called.
@@ -68,9 +74,11 @@ forward void CF_OnTakeDamageAlive_Resistance(int victim, int attacker, int infli
  * @param damageForce				The force of the damage, used for ragdolls.
  * @param damagePosition			The position from which damageForce is applied to ragdolls.
  * @param damagecustom				Custom damage flags such as backstabs.
+ *
+ * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */
-forward void CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon,
-	float damageForce[3], float damagePosition[3], int damagecustom)
+forward Action CF_OnTakeDamageAlive_Post(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+	float damageForce[3], float damagePosition[3], int &damagecustom)
 
 GlobalForward g_PreDamageForward;
 GlobalForward g_BonusDamageForward;
@@ -79,36 +87,46 @@ GlobalForward g_PostDamageForward;
 
 public void CFDMG_MakeForwards()
 {
-	g_PreDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Pre", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Float,
+	g_PreDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Pre", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Float,
 											Param_Cell, Param_Cell, Param_Array, Param_Array, Param_Cell);
-	g_BonusDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Bonus", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Float,
+	g_BonusDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Bonus", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Float,
 											Param_Cell, Param_Cell, Param_Array, Param_Array, Param_Cell);
-	g_ResistanceDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Resistance", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Float,
+	g_ResistanceDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Resistance", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Float,
 											Param_Cell, Param_Cell, Param_Array, Param_Array, Param_Cell);
-	g_PostDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Post", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Float,
+	g_PostDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Post", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Float,
 											Param_Cell, Param_Cell, Param_Array, Param_Array, Param_Cell);
 }
 
 public Action CFDMG_OnTakeDamageAlive(victim, &attacker, &inflictor, &Float:damage, &damagetype, &weapon,
 	Float:damageForce[3], Float:damagePosition[3], damagecustom)
 {	
+	Action ReturnValue = Plugin_Continue;
+	
 	//First, we call PreDamage:
-	CFDMG_CallDamageForward(g_PreDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
+	ReturnValue = CFDMG_CallDamageForward(g_PreDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
 	
 	//Next, we call BonusDamage:
-	CFDMG_CallDamageForward(g_BonusDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
+	if (ReturnValue != Plugin_Handled && ReturnValue != Plugin_Stop)
+	{
+		CFDMG_CallDamageForward(g_BonusDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
+	}
 	
 	//After that, we call ResistanceDamage:
-	CFDMG_CallDamageForward(g_ResistanceDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
+	if (ReturnValue != Plugin_Handled && ReturnValue != Plugin_Stop)
+	{
+		CFDMG_CallDamageForward(g_ResistanceDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
+	}
 	
 	//Finally, we call PostDamage:
-	CFDMG_CallDamageForward(g_PostDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
-	
-	//Always return Plugin_Changed to save on complexity:
-	return Plugin_Changed;
+	if (ReturnValue != Plugin_Handled && ReturnValue != Plugin_Stop)
+	{
+		CFDMG_CallDamageForward(g_PostDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
+	}
+
+	return ReturnValue;
 }
 
-public void CFDMG_CallDamageForward(GlobalForward forwardToCall, &victim, &attacker, &inflictor, &Float:damage, &damagetype, &weapon,
+public Action CFDMG_CallDamageForward(GlobalForward forwardToCall, victim, &attacker, &inflictor, &Float:damage, &damagetype, &weapon,
 	Float:damageForce[3], Float:damagePosition[3], &damagecustom)
 {
 	Call_StartForward(forwardToCall);
@@ -123,7 +141,8 @@ public void CFDMG_CallDamageForward(GlobalForward forwardToCall, &victim, &attac
 	Call_PushArray(damagePosition, sizeof(damagePosition));
 	Call_PushCell(damagecustom);
 	
-	Call_Finish();
+	Action ReturnValue;
+	Call_Finish(ReturnValue);
 	
-	return;
+	return ReturnValue;
 }

@@ -25,6 +25,14 @@ public const char CFKS_Announcer_Administrator_KS[][] =
 	"vo/killstreak/announcer_ks_26.mp3"
 };
 
+public const char CFKS_Announcer_Administrator_KS_Godlike[][] =
+{
+	"vo/compmode/cm_admin_teamwipe_05.mp3",
+	"vo/compmode/cm_admin_teamwipe_12.mp3",
+	"vo/compmode/cm_admin_teamwipe_14.mp3",
+	"vo/announcer_plr_racegeneral14.mp3"
+};
+
 public const char CFKS_Announcer_Administrator_KSEnded[][] =
 {
 	"vo/announced_sd_monkeynaut_end_crash01.mp3",
@@ -43,7 +51,12 @@ public const char CFKS_Announcer_Merasmus_KS[][] =
 {
 	"vo/halloween_merasmus/sf14_merasmus_general_purpose_18.mp3",
 	"vo/halloween_merasmus/sf14_merasmus_general_purpose_17.mp3",
-	"vo/halloween_merasmus/sf14_merasmus_general_purpose_16.mp3",
+	"vo/halloween_merasmus/sf14_merasmus_general_purpose_16.mp3"
+};
+
+public const char CFKS_Announcer_Merasmus_KS_Godlike[][] =
+{
+	"vo/halloween_merasmus/sf14_merasmus_minigame_all_otherteamdead_03.mp3",
 	"vo/halloween_merasmus/sf14_merasmus_minigame_all_otherteamdead_04.mp3",
 	"vo/halloween_merasmus/sf14_merasmus_minigame_all_otherteamdead_05.mp3"
 };
@@ -68,6 +81,7 @@ public const char CFKS_Announcer_Merasmus_EndedOwnKS[][] =
 #define CFKS_SFX_EndedOwnKS		"music/trombonetauntv2.mp3"
 #define CFKS_SFX_KSEnded		"misc/ks_tier_01_death.wav"
 
+int i_CFCurrentAnnouncer = 0;
 int i_CFKillstreak[MAXPLAYERS+1] = {0, ...};
 
 float f_CFKillstreakForwardTime[MAXPLAYERS + 1] = { 0.0, ... };
@@ -118,7 +132,26 @@ public void CFKS_MakeForwards()
  */
 public void CFKS_Precache(int announcer)
 {
-	//TODO: Precache killstreak dialogue for whichever announcer is in-use.
+	PrecacheSound(CFKS_SFX_Killstreak);
+	PrecacheSound(CFKS_SFX_EndedOwnKS);
+	PrecacheSound(CFKS_SFX_KSEnded);
+	
+	if (announcer == 0)
+	{
+		for (int i = 0; i < (sizeof(CFKS_Announcer_Administrator_KS));       i++) { PrecacheSound(CFKS_Announcer_Administrator_KS[i]);       }
+		for (int i = 0; i < (sizeof(CFKS_Announcer_Administrator_KS_Godlike));       i++) { PrecacheSound(CFKS_Announcer_Administrator_KS_Godlike[i]);       }
+		for (int i = 0; i < (sizeof(CFKS_Announcer_Administrator_KSEnded));       i++) { PrecacheSound(CFKS_Announcer_Administrator_KSEnded[i]);       }
+		for (int i = 0; i < (sizeof(CFKS_Announcer_Administrator_EndedOwnKS));       i++) { PrecacheSound(CFKS_Announcer_Administrator_EndedOwnKS[i]);       }
+	}
+	else
+	{
+		for (int i = 0; i < (sizeof(CFKS_Announcer_Merasmus_KS));       i++) { PrecacheSound(CFKS_Announcer_Merasmus_KS[i]);       }
+		for (int i = 0; i < (sizeof(CFKS_Announcer_Merasmus_KS_Godlike));       i++) { PrecacheSound(CFKS_Announcer_Merasmus_KS_Godlike[i]);       }
+		for (int i = 0; i < (sizeof(CFKS_Announcer_Merasmus_KSEnded));       i++) { PrecacheSound(CFKS_Announcer_Merasmus_KSEnded[i]);       }
+		for (int i = 0; i < (sizeof(CFKS_Announcer_Merasmus_EndedOwnKS));       i++) { PrecacheSound(CFKS_Announcer_Merasmus_EndedOwnKS[i]);       }
+	}
+	
+	i_CFCurrentAnnouncer = announcer;
 }
 
 public void CFKS_PlayerKilled(int victim, int attacker, bool deadRinger)
@@ -165,34 +198,64 @@ public Native_CF_SetKillstreak(Handle plugin, int numParams) //TODO: Make this s
  		
  		if (kills > 0 && kills % 5 == 0)
 	 	{
-	 		PrintCenterTextAll("%N is on a %i-player killstreak!", client, kills);
-	 		EmitSoundToAll(CFKS_SFX_Killstreak, _, _, 110);
+	 		if (i_CFCurrentAnnouncer == 0)
+	 		{
+	 			if (kills >= 20)
+	 			{
+	 				EmitSoundToAll(CFKS_Announcer_Administrator_KS[GetRandomInt(0, sizeof(CFKS_Announcer_Administrator_KS_Godlike) - 1)], _, _, 120);
+	 			}
+	 			else
+	 			{
+	 				EmitSoundToAll(CFKS_Announcer_Administrator_KS[GetRandomInt(0, sizeof(CFKS_Announcer_Administrator_KS) - 1)], _, _, 120);
+	 			}
+	 		}
+	 		else
+	 		{
+	 			if (kills >= 20)
+	 			{
+	 				EmitSoundToAll(CFKS_Announcer_Merasmus_KS[GetRandomInt(0, sizeof(CFKS_Announcer_Merasmus_KS_Godlike) - 1)], _, _, 120);
+	 			}
+	 			else
+	 			{
+	 				EmitSoundToAll(CFKS_Announcer_Merasmus_KS[GetRandomInt(0, sizeof(CFKS_Announcer_Merasmus_KS) - 1)], _, _, 120);
+	 			}
+	 		}
+	 		
 	 		ksMessage = true;
 	 	}
  		
  		if (kills == 0 && i_CFKillstreak[client] >= 10 && !ksMessage)
  		{
- 			if (IsValidClient(killer))
+ 			if (IsValidClient(killer) && killer != client)
  			{
-	 			if (client == killer)
-	 			{
-	 				PrintCenterTextAll("%N put an end to their own %i-player killstreak...", client, i_CFKillstreak[client]);
-	 				EmitSoundToAll(CFKS_SFX_EndedOwnKS, _, _, 110);
-	 			}
-	 			else
-	 			{
-	 				PrintCenterTextAll("%N's %i-player killstreak was finally ended by %N!", client, i_CFKillstreak[client], killer);
-	 				EmitSoundToAll(CFKS_SFX_KSEnded, _, _, 110);
-	 			}
+	 			//EmitSoundToAll(CFKS_SFX_KSEnded, _, _, 110);
+	 			
+	 			if (i_CFCurrentAnnouncer == 0)
+		 		{
+		 			EmitSoundToAll(CFKS_Announcer_Administrator_KSEnded[GetRandomInt(0, sizeof(CFKS_Announcer_Administrator_KSEnded) - 1)], _, _, 120);
+		 		}
+		 		else
+		 		{
+		 			EmitSoundToAll(CFKS_Announcer_Merasmus_KSEnded[GetRandomInt(0, sizeof(CFKS_Announcer_Merasmus_KSEnded) - 1)], _, _, 120);
+		 		}
 	 		}
 	 		else
 	 		{
-	 			PrintCenterTextAll("%N's %i-player killstreak was ended by a mysterious assailant...", client, i_CFKillstreak[client]);
-	 			EmitSoundToAll(CFKS_SFX_KSEnded, _, _, 110);
+	 			EmitSoundToAll(CFKS_SFX_EndedOwnKS, _, _, 110);
+	 			
+	 			if (i_CFCurrentAnnouncer == 0)
+		 		{
+		 			EmitSoundToAll(CFKS_Announcer_Administrator_EndedOwnKS[GetRandomInt(0, sizeof(CFKS_Announcer_Administrator_EndedOwnKS) - 1)], _, _, 120);
+		 		}
+		 		else
+		 		{
+		 			EmitSoundToAll(CFKS_Announcer_Merasmus_EndedOwnKS[GetRandomInt(0, sizeof(CFKS_Announcer_Merasmus_EndedOwnKS) - 1)], _, _, 120);
+		 		}
 	 		}
  		}
  		
 	 	i_CFKillstreak[client] = kills;
+	 	SetEntProp(client, Prop_Send, "m_nStreaks", kills, _, 0);
 	 	
 	 	if (f_CFKillstreakForwardTime[client] < GetGameTime()) //Prevent infinite loops from happening if people call CF_SetKillstreak on the client in this forward.
 	 	{

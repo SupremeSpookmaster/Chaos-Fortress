@@ -1,8 +1,8 @@
-#define DEBUG_CHARACTER_CREATION
-#define DEBUG_ROUND_STATE
-#define DEBUG_KILLSTREAKS
+//#define DEBUG_CHARACTER_CREATION
+//#define DEBUG_ROUND_STATE
+//#define DEBUG_KILLSTREAKS
 #define DEBUG_ONTAKEDAMAGE
-#define DEBUG_BUTTONS
+//#define DEBUG_BUTTONS
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
@@ -34,8 +34,8 @@ public void OnPluginStart()
 {
 	HookEvent("post_inventory_application", PlayerReset);
 	HookEvent("player_death", PlayerKilled);
-	HookEvent("teamplay_round_start", RoundStart);
-	HookEvent("arena_round_start", RoundStart);
+	HookEvent("teamplay_waiting_begins", Waiting);
+	HookEvent("teamplay_setup_finished", RoundStart);
 	HookEvent("teamplay_round_win", RoundEnd);
 	
 	CF_MakeForwards();
@@ -67,6 +67,11 @@ public Action PlayerKilled(Event hEvent, const char[] sEvName, bool bDontBroadca
 	return Plugin_Continue;
 }
 
+public void Waiting(Event hEvent, const char[] sEvName, bool bDontBroadcast)
+{
+	CF_Waiting();
+}
+
 public void RoundStart(Event hEvent, const char[] sEvName, bool bDontBroadcast)
 {
 	CF_RoundStart();
@@ -81,7 +86,7 @@ public void PlayerReset(Event gEvent, const char[] sEvName, bool bDontBroadcast)
 {    
 	int client = GetClientOfUserId(gEvent.GetInt("userid"));
 	
-	if (IsValidMulti(client, true, true, false))
+	if (IsValidClient(client))
 	{
 		CF_MakeCharacter(client);
 	}
@@ -96,41 +101,52 @@ public void PlayerReset(Event gEvent, const char[] sEvName, bool bDontBroadcast)
 	}
 	else
 	{
-		CPrintToChatAll("%N spawned but is not a character, and therefore does not have a config.");
+		CPrintToChatAll("%N spawned but is not a character, and therefore does not have a config.", client);
 	}
 	#endif
 }
 
 #if defined DEBUG_ONTAKEDAMAGE
 
-public void CF_OnTakeDamageAlive_Pre(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, float damageForce[3], float damagePosition[3], int damagecustom)
+public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+	float damageForce[3], float damagePosition[3], int &damagecustom)
 {
 	CPrintToChatAll("Called CF_OnTakeDamageAlive_Pre. Damage is currently %i.", RoundFloat(damage));
+	return Plugin_Continue;
 }
 
-public void CF_OnTakeDamageAlive_Bonus(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, float damageForce[3], float damagePosition[3], int damagecustom)
+public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+	float damageForce[3], float damagePosition[3], int &damagecustom)
 {
 	CPrintToChatAll("Called CF_OnTakeDamageAlive_Bonus. Damage is currently %i.", RoundFloat(damage));
 	
 	damage *= 2.0;
 	
 	CPrintToChatAll("Damage is now %i after attempting to double it.", RoundFloat(damage));
+	
+	return Plugin_Changed;
 }
 
-public void CF_OnTakeDamageAlive_Resistance(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, float damageForce[3], float damagePosition[3], int damagecustom)
+public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+	float damageForce[3], float damagePosition[3], int &damagecustom)
 {
 	CPrintToChatAll("Called CF_OnTakeDamageAlive_Resistance. Damage is currently %i.", RoundFloat(damage));
 	
 	damage *= 0.66;
 	
 	CPrintToChatAll("Damage is now %i after attempting to reduce it by 33%.", RoundFloat(damage));
+	
+	return Plugin_Changed;
 }
 
-public void CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, float damageForce[3], float damagePosition[3], int damagecustom)
+public Action CF_OnTakeDamageAlive_Post(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+	float damageForce[3], float damagePosition[3], int &damagecustom)
 {
 	CPrintToChatAll("Called CF_OnTakeDamageAlive_Post. Damage is currently %i.", RoundFloat(damage));
 	
 	CPrintToChatAll("Gained %i imaginary tokens for dealing %i damage", RoundFloat(damage * 40), RoundFloat(damage));
+	
+	return Plugin_Continue;
 }
 
 #endif

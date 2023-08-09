@@ -83,7 +83,7 @@ public void CF_MakeForwards()
  public void CF_PrecacheAnnouncerDialogue()
  {
  	//TODO: After reading game_rules, add a check here to only precache files which will be needed.
- 	CFKS_Precache(0);
+ 	CFKS_Precache(1);
  }
  
 /**
@@ -117,9 +117,14 @@ public void CF_MakeForwards()
  */
  public void CF_MakeCharacter(int client)
  {
+ 	if (!IsValidClient(client))
+ 		return;
+ 		
  	//TODO: Write the code for this, also write a forward called CF_OnCharacterSpawned and have this call it.
  	//For now we have this temporary debug code.
  	s_CharacterConfig[client] = "Test Config Name";
+ 	
+ 	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  }
  
@@ -154,6 +159,14 @@ public void CF_MakeForwards()
  	}
  	
  	CFKS_PlayerKilled(victim, attacker, deadRinger);
+ }
+ 
+ /**
+ * Called when the round starts.
+ */
+ void CF_Waiting()
+ {
+ 	CF_SetRoundState(0);
  }
  
 /**
@@ -194,15 +207,15 @@ public Native_CF_GetRoundState(Handle plugin, int numParams)
 public Native_CF_GetPlayerConfig(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
-	int size; GetNativeStringLength(1, size);
+	int size; GetNativeStringLength(2, size);
 	
 	if (IsValidClient(client))
 	{
-		SetNativeString(1, s_CharacterConfig[client], size + 1, false);
+		SetNativeString(2, s_CharacterConfig[client], size + 1, false);
 		return;
 	}
-	
-	SetNativeString(1, "", size + 1, false);
+
+	SetNativeString(2, "", size + 1, false);
 }
 
 public Native_CF_IsPlayerCharacter(Handle plugin, int numParams)
