@@ -77,7 +77,7 @@ stock bool IsValidMulti(int client, bool checkAlive = true, bool isAlive = true,
  *
  * @return					A KeyValues object created from the given path, null if invalid and throwError is not true.
  */
-KeyValues GetKeyValuesFromPath(char path[255], bool throwError, char error[255])
+stock KeyValues GetKeyValuesFromPath(char path[255], bool throwError, char error[255])
 {
 	char file[255];
 	BuildPath(Path_SM, file, PLATFORM_MAX_PATH, path);
@@ -99,4 +99,64 @@ KeyValues GetKeyValuesFromPath(char path[255], bool throwError, char error[255])
  	}
  	
  	return kv;
+}
+
+/**
+ * Returns a KeyValues object from a given file path, at a given section.
+ *
+ * @param path				The file path (EX: data/chaos_fortress/game_rules.cfg)
+ * @param section			The section to go to.
+ * @param throwError		Do we want to throw an error if the kv or section does not exist?
+ * @param error				The error to throw if throwError == true.
+ *
+ * @return					A KeyValues object created from the given path, pre-navigated to the given section, null if invalid and throwError is not true.
+ */
+stock KeyValues GetKeyValuesAtSection(char path[255], char section[255], bool throwError, char error[255])
+{
+	char file[255];
+	BuildPath(Path_SM, file, PLATFORM_MAX_PATH, path);
+	KeyValues kv = new KeyValues("");
+	FileToKeyValues(kv, file);
+ 	
+ 	if (!kv.JumpToKey(section))
+ 	{
+ 		delete kv;
+ 		
+ 		if (throwError)
+ 		{
+ 			ThrowError(error);
+ 		}
+ 		else
+ 		{
+ 			return null;
+ 		}
+ 	}
+ 	
+ 	return kv;
+}
+
+/**
+ * Checks if a file exists.
+ *
+ * @param client			The file to check.
+ *
+ * @return					True if it exists, false otherwise.
+ */
+stock bool CheckFile(char path[255])
+{
+	bool exists = false;
+	
+	if (FileExists(path))
+	{
+		exists = true;
+	}
+	else
+	{
+		if (FileExists(path, true))
+		{
+			exists = true;
+		}
+	}
+	
+	return exists;
 }

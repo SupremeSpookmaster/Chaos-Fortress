@@ -1,9 +1,9 @@
-//#define DEBUG_CHARACTER_CREATION
+#define DEBUG_CHARACTER_CREATION
 //#define DEBUG_ROUND_STATE
 //#define DEBUG_KILLSTREAKS
 //#define DEBUG_ONTAKEDAMAGE
 //#define DEBUG_BUTTONS
-#define DEBUG_GAMERULES
+//#define DEBUG_GAMERULES
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

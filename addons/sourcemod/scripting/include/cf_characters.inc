@@ -1,5 +1,15 @@
 //Store configs and names in two separate arrays so we aren't reading every single character's config every single time someone opens the !characters menu:
 
+public const char s_ModelFileExtensions[][] =
+{
+	".dx80.vtx",
+	".dx90.vtx",
+	".mdl",
+	".phy",
+	".sw.vtx",
+	".vvd"
+};
+
 Handle CF_Characters_Configs;
 Handle CF_Characters_Names;
 
@@ -70,7 +80,32 @@ public void CFC_MakeForwards()
 					#if defined DEBUG_CHARACTER_CREATION
 	    			PrintToServer("\nLocated character pack: %s", value);
 	   				#endif
-					CF_LoadCharacterPack(value);
+					CF_LoadCharacterPack(value, false);
+				}
+ 			}
+ 		}
+ 		
+ 		if (StrEqual(section, "Download Character Packs"))
+ 		{
+ 			bool breakOut = false;
+ 			for (int keyNum = 1; !breakOut; keyNum++)
+ 			{
+ 				char keyNumToChar[128];
+				IntToString(keyNum, keyNumToChar, sizeof(keyNumToChar));
+				
+				char value[255];
+				kv.GetString(keyNumToChar, value, sizeof(value));
+				
+				if (StrEqual(value, ""))
+				{
+					breakOut = true;
+				}
+				else
+				{
+					#if defined DEBUG_CHARACTER_CREATION
+	    			PrintToServer("\nLocated character pack to download files for: %s", value);
+	   				#endif
+					CF_LoadCharacterPack(value, true);
 				}
  			}
  		}
@@ -85,7 +120,7 @@ public void CFC_MakeForwards()
  	}
  }
  
- public void CF_LoadCharacterPack(char pack[255])
+ public void CF_LoadCharacterPack(char pack[255], bool JustDownload)
  {
  	KeyValues kv = GetKeyValuesFromPath("data/chaos_fortress/characters.cfg", true, "FATAL ERROR: COULD NOT READ FILE ''data/chaos_fortress/characters.cfg''.");
  	
@@ -98,7 +133,7 @@ public void CFC_MakeForwards()
  	{
  		char section[255];
  		kv.GetSectionName(section, 255);
- 		ThrowError("FATAL ERROR: ''Enabled Character Packs'' in characters.cfg states that there should be a character pack titled ''%s'', but no such pack exists. Current section is ''%s''.", pack, section);
+ 		ThrowError("FATAL ERROR: ''Enabled Character Packs'' in characters.cfg states that there should be a character pack titled ''%s'', but no such pack exists.", pack, section);
  	}
  	
  	bool breakOut = false;
@@ -118,9 +153,12 @@ public void CFC_MakeForwards()
 		{
 			Format(value, sizeof(value), "configs/chaos_fortress/%s.cfg", value);
 
-			CF_LoadSpecificCharacter(value);
+			CF_LoadSpecificCharacter(value, JustDownload);
 			
-			PushArrayString(CF_Characters_Configs, value);
+			if (!JustDownload)
+			{
+				PushArrayString(CF_Characters_Configs, value);
+			}
 			
 			#if defined DEBUG_CHARACTER_CREATION
 		    PrintToServer("\nLocated character: %s", value);
@@ -131,7 +169,7 @@ public void CFC_MakeForwards()
  	delete kv;
  }
  
- public void CF_LoadSpecificCharacter(char path[255])
+ public void CF_LoadSpecificCharacter(char path[255], bool JustDownload)
  {
  	char str[255];
  	Format(str, sizeof(str), "FATAL ERROR: COULD NOT READ FILE ''%s''", str);
@@ -142,21 +180,168 @@ public void CFC_MakeForwards()
  	
  	kv.GetString("name", str, 255);
  	
- 	PushArrayString(CF_Characters_Names, str);
+ 	if (!JustDownload)
+ 	{
+ 		PushArrayString(CF_Characters_Names, str);
  	
- 	#if defined DEBUG_CHARACTER_CREATION
-	PrintToServer("\nConfig ''%s'' has a character name of ''%s''.", path, str);
- 	#endif
+ 		#if defined DEBUG_CHARACTER_CREATION
+		PrintToServer("\nConfig ''%s'' has a character name of ''%s''.", path, str);
+ 		#endif
+ 	}
  
- 	//CF_ManageCharacterFiles(path);
+ 	CF_ManageCharacterFiles(kv);
  }
  
 /**
- * Precaches all of the files in the "downloads" and "precache" sections of a given CFG, and adds all files in the former section to the downloads table.
+ * Precaches all of the files in the "downloads", "model_download", and "precache" sections of a given CFG, and adds all files in the former two to the downloads table.
  */
- public void CF_ManageCharacterFiles(char path[255])
+ public void CF_ManageCharacterFiles(KeyValues kv)
  {
- 	//TODO: Write this code.
+ 	if (kv.JumpToKey("model_download"))
+ 	{
+ 		//TODO: I REALLY need to find a way to abstract this...
+ 		bool breakOut = false;
+	 	for (int keyNum = 1; !breakOut; keyNum++)
+	 	{
+	 		char keyNumToChar[128];
+			IntToString(keyNum, keyNumToChar, sizeof(keyNumToChar));
+					
+			char value[255];
+			kv.GetString(keyNumToChar, value, sizeof(value));
+					
+			if (StrEqual(value, ""))
+			{
+				breakOut = true;
+			}
+			else
+			{
+				char file[255];
+				
+				for (int i = 0; i < sizeof(s_ModelFileExtensions); i++)
+				{
+					Format(file, sizeof(file), "%s%s", value, s_ModelFileExtensions[i]);
+					if (CheckFile(file))
+					{
+						PrecacheModel(file);
+						AddFileToDownloadsTable(file);
+						
+						#if defined DEBUG_CHARACTER_CREATION
+					    PrintToServer("Successfully added model file ''%s'' to the downloads table.", file);
+					    #endif
+					}
+					else
+					{
+						#if defined DEBUG_CHARACTER_CREATION
+					    PrintToServer("ERROR: Failed to find model file ''%s''.", file);
+					    #endif
+					}
+				}
+			}
+	 	}
+	 	
+	 	kv.GoBack();
+ 	}
+ 	
+ 	if (kv.JumpToKey("downloads"))
+ 	{
+ 		//TODO: I REALLY need to find a way to abstract this...
+ 		bool breakOut = false;
+	 	for (int keyNum = 1; !breakOut; keyNum++)
+	 	{
+	 		char keyNumToChar[128];
+			IntToString(keyNum, keyNumToChar, sizeof(keyNumToChar));
+					
+			char value[255];
+			kv.GetString(keyNumToChar, value, sizeof(value));
+					
+			if (StrEqual(value, ""))
+			{
+				breakOut = true;
+			}
+			else
+			{
+				if (CheckFile(value))
+				{
+					AddFileToDownloadsTable(value);
+						
+					#if defined DEBUG_CHARACTER_CREATION
+					 PrintToServer("Successfully added file ''%s'' to the downloads table.", value);
+					 #endif
+				}
+				else
+				{
+					#if defined DEBUG_CHARACTER_CREATION
+					PrintToServer("ERROR: Failed to find file ''%s''.", value);
+					#endif
+				}
+			}
+	 	}
+	 	
+	 	kv.GoBack();
+ 	}
+ 	
+ 	if (kv.JumpToKey("precache"))
+ 	{
+ 		//TODO: I REALLY need to find a way to abstract this...
+ 		bool breakOut = false;
+	 	for (int keyNum = 1; !breakOut; keyNum++)
+	 	{
+	 		char keyNumToChar[128];
+			IntToString(keyNum, keyNumToChar, sizeof(keyNumToChar));
+					
+			char value[255];
+			kv.GetString(keyNumToChar, value, sizeof(value));
+					
+			if (StrEqual(value, ""))
+			{
+				breakOut = true;
+			}
+			else
+			{
+				char file[255];
+				
+				bool exists = false;
+				
+				Format(file, sizeof(file), "models/%s", value);
+				
+				
+				if (CheckFile(file))
+				{
+					PrecacheModel(file);
+					exists = true;
+					
+					#if defined DEBUG_CHARACTER_CREATION
+					PrintToServer("Successfully precached file ''%s''.", file);
+					#endif
+				}
+				else
+				{
+					Format(file, sizeof(file), "sound/%s", value);
+					
+					if (CheckFile(file))
+					{
+						PrecacheSound(file);
+						exists = true;
+					
+						#if defined DEBUG_CHARACTER_CREATION
+						PrintToServer("Successfully precached file ''%s''.", file);
+						#endif
+					}
+				}
+				
+				if (!exists)
+				{
+					#if defined DEBUG_CHARACTER_CREATION
+					PrintToServer("Failed to find file ''%s''.", file);
+					#endif
+				}
+			}
+	 	}
+	 	
+	 	kv.GoBack();
+ 	}
+ 	
+ 	delete kv;
  }
 
 /**
