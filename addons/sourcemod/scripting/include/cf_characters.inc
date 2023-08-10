@@ -1,3 +1,8 @@
+//Store configs and names in two separate arrays so we aren't reading every single character's config every single time someone opens the !characters menu:
+
+Handle CF_Characters_Configs;
+Handle CF_Characters_Names;
+
 bool b_CharacterApplied[MAXPLAYERS + 1] = { false, ... }; //Whether or not the client's character has been applied to them already. If true: skip MakeCharacter for that client. Set to false automatically on death, round end, disconnect, and if the player changes their character selection.
 
 char s_CharacterConfig[MAXPLAYERS+1][255];	//The config currently used for this player's character. If empty: that player is not a character.
@@ -10,6 +15,12 @@ public void CFC_MakeNatives()
 	CreateNative("CF_IsPlayerCharacter", Native_CF_IsPlayerCharacter);
 }
 
+public void CFC_MakeForwards()
+{
+	CF_Characters_Configs = CreateArray();
+	CF_Characters_Names = CreateArray();
+}
+
 /**
  * Loads all of the characters from data/chaos_fortress/characters.cfg.
  *
@@ -18,12 +29,132 @@ public void CFC_MakeNatives()
  public void CF_LoadCharacters(int admin)
  {
  	//TODO: And now comes the hard part... I'll do this tomorrow when I have my caffeine boost.
+ 	
+ 	KeyValues kv = GetKeyValuesFromPath("data/chaos_fortress/characters.cfg", true, "FATAL ERROR: COULD NOT READ FILE ''data/chaos_fortress/characters.cfg''.");
+ 	bool FoundEnabled = false;
+ 	
+ 	#if defined DEBUG_CHARACTER_CREATION
+	PrintToServer("//////////////////////////////////////////////////");
+	PrintToServer("CHAOS FORTRESS CHARACTERS.CFG DEBUG MESSAGES BELOW");
+	PrintToServer("//////////////////////////////////////////////////");
+	#endif
+ 	
+ 	do 
+ 	{
+ 		char section[255];
+ 		kv.GetSectionName(section, 255);
+ 		
+ 		#if defined DEBUG_CHARACTER_CREATION
+	    PrintToServer("\nNow reading %s...", section);
+	    #endif
+ 		
+ 		if (StrEqual(section, "Enabled Character Packs"))
+ 		{
+ 			FoundEnabled = true;
+ 			
+ 			bool breakOut = false;
+ 			for (int keyNum = 1; !breakOut; keyNum++)
+ 			{
+ 				char keyNumToChar[128];
+				IntToString(keyNum, keyNumToChar, sizeof(keyNumToChar));
+				
+				char value[255];
+				kv.GetString(keyNumToChar, value, sizeof(value));
+				
+				if (StrEqual(value, ""))
+				{
+					breakOut = true;
+				}
+				else
+				{
+					#if defined DEBUG_CHARACTER_CREATION
+	    			PrintToServer("\nLocated character pack: %s", value);
+	   				#endif
+					CF_LoadCharacterPack(value);
+				}
+ 			}
+ 		}
+ 	} 
+ 	while (kv.GotoNextKey());
+ 	
+ 	delete kv;
+ 	
+ 	if (!FoundEnabled)
+ 	{
+ 		PrintToServer("WARNING: Chaos Fortress was able to locate your characters.cfg file, but it is missing the ''Enabled Character Packs'' block. As a result, your installation of Chaos Fortress has no characters...");
+ 	}
+ }
+ 
+ public void CF_LoadCharacterPack(char pack[255])
+ {
+ 	KeyValues kv = GetKeyValuesFromPath("data/chaos_fortress/characters.cfg", true, "FATAL ERROR: COULD NOT READ FILE ''data/chaos_fortress/characters.cfg''.");
+ 	
+ 	#if defined DEBUG_CHARACTER_CREATION
+	PrintToServer("\nNow searching character pack ''%s''...", pack);
+	#endif
+ 	
+ 	kv.GoBack();
+ 	if (!kv.JumpToKey(pack))
+ 	{
+ 		char section[255];
+ 		kv.GetSectionName(section, 255);
+ 		ThrowError("FATAL ERROR: ''Enabled Character Packs'' in characters.cfg states that there should be a character pack titled ''%s'', but no such pack exists. Current section is ''%s''.", pack, section);
+ 	}
+ 	
+ 	bool breakOut = false;
+ 	for (int keyNum = 1; !breakOut; keyNum++)
+ 	{
+ 		char keyNumToChar[128];
+		IntToString(keyNum, keyNumToChar, sizeof(keyNumToChar));
+				
+		char value[255];
+		kv.GetString(keyNumToChar, value, sizeof(value));
+				
+		if (StrEqual(value, ""))
+		{
+			breakOut = true;
+		}
+		else
+		{
+			Format(value, sizeof(value), "configs/chaos_fortress/%s.cfg", value);
+
+			CF_LoadSpecificCharacter(value);
+			
+			PushArrayString(CF_Characters_Configs, value);
+			
+			#if defined DEBUG_CHARACTER_CREATION
+		    PrintToServer("\nLocated character: %s", value);
+		    #endif
+		}
+ 	}
+ 	
+ 	delete kv;
+ }
+ 
+ public void CF_LoadSpecificCharacter(char path[255])
+ {
+ 	char str[255];
+ 	Format(str, sizeof(str), "FATAL ERROR: COULD NOT READ FILE ''%s''", str);
+ 	
+ 	KeyValues kv = GetKeyValuesFromPath(path, true, str);
+ 	
+ 	kv.GoBack();
+ 	
+ 	kv.GetString("name", str, 255);
+ 	
+ 	PushArrayString(CF_Characters_Names, str);
+ 	
+ 	#if defined DEBUG_CHARACTER_CREATION
+	PrintToServer("\nConfig ''%s'' has a character name of ''%s''.", path, str);
+ 	#endif
+ 
+ 	//CF_ManageCharacterFiles(path);
  }
  
 /**
  * Precaches all of the files in the "downloads" and "precache" sections of a given CFG, and adds all files in the former section to the downloads table.
  */
- public void CF_ManageCharacterFiles(/* TODO: Will need to pass something to this */)
+ public void CF_ManageCharacterFiles(char path[255])
  {
  	//TODO: Write this code.
  }

@@ -67,3 +67,36 @@ stock bool IsValidMulti(int client, bool checkAlive = true, bool isAlive = true,
 
 	return true;
 }
+
+/**
+ * Returns a KeyValues object from a given file path.
+ *
+ * @param path				The file path (EX: data/chaos_fortress/game_rules.cfg)
+ * @param throwError		Do we want to throw an error if the kv does not exist?
+ * @param error				The error to throw if throwError == true.
+ *
+ * @return					A KeyValues object created from the given path, null if invalid and throwError is not true.
+ */
+KeyValues GetKeyValuesFromPath(char path[255], bool throwError, char error[255])
+{
+	char file[255];
+	BuildPath(Path_SM, file, PLATFORM_MAX_PATH, path);
+	KeyValues kv = new KeyValues("");
+	FileToKeyValues(kv, file);
+ 	
+ 	if (!kv.GotoFirstSubKey())
+ 	{
+ 		delete kv;
+ 		
+ 		if (throwError)
+ 		{
+ 			ThrowError(error);
+ 		}
+ 		else
+ 		{
+ 			return null;
+ 		}
+ 	}
+ 	
+ 	return kv;
+}

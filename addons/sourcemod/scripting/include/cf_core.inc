@@ -41,6 +41,7 @@ public void CF_MakeForwards()
 	CFDMG_MakeForwards();
 	CFB_MakeForwards();
 	CFKS_MakeForwards();
+	CFC_MakeForwards();
 	
 	g_OnPlayerKilled = new GlobalForward("CF_OnPlayerKilled", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	g_OnRoundStateChanged = new GlobalForward("CF_OnRoundStateChanged", ET_Ignore, Param_Cell);
@@ -75,18 +76,8 @@ public void CF_MakeForwards()
  * @param admin		The client index of the admin who reloaded game_rules. If valid: prints the new rules to that admin's console.
  */
  public void CF_SetGameRules(int admin)
- {
- 	char filepath[255];
-	BuildPath(Path_SM, filepath, PLATFORM_MAX_PATH, "data/chaos_fortress/game_rules.cfg");
-	KeyValues kv = new KeyValues("");
-	FileToKeyValues(kv, filepath);
- 	
- 	if (!kv.GotoFirstSubKey())
- 	{
- 		delete kv;
- 		ThrowError("FATAL ERROR: COULD NOT READ FILE ''data/chaos_fortress/game_rules.cfg''.");
- 		return;
- 	}
+ { 	
+ 	KeyValues kv = GetKeyValuesFromPath("data/chaos_fortress/game_rules.cfg", true, "FATAL ERROR: COULD NOT READ FILE ''data/chaos_fortress/game_rules.cfg''.");
 
 	char intStr[255];
 
