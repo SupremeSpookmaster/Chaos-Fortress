@@ -15,6 +15,7 @@
 !chaos_fortress.sp
 !cf_plugin_template.sp
 !cf_buttons.inc
+!cf_characters.inc
 !cf_core.inc
 !cf_damage.inc
 !cf_include.inc

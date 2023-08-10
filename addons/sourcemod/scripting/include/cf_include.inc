@@ -56,6 +56,49 @@ forward Action CF_OnPlayerM3(int client, int &buttons, int &impulse, int &weapon
 forward Action CF_OnPlayerReload(int client, int &buttons, int &impulse, int &weapon)
 
 /**
+ * Called when a character presses their scoreboard button.
+ *
+ * @param client			The client who ran the command.
+ * @param buttons			The button(s) pressed.
+ * @param impulse			Copyback buffer containing the current impulse command.
+ * @param weapon			Entity index of the new weapon held by the player, 0 if weapon was not swapped.
+ *
+ * @return					Return Plugin_Continue to proceed as normal, Plugin_Changed if you altered any of these variables, or Plugin_Handled to prevent the command from being run.
+ */
+forward Action CF_OnPlayerTab(int client, int &buttons, int &impulse, int &weapon)
+
+/**
+ * Called when a character presses their jump button. NOTICE: This runs even if they are already in the air, it is purely to detect the button press.
+ *
+ * @param client			The client who ran the command.
+ * @param buttons			The button(s) pressed.
+ * @param impulse			Copyback buffer containing the current impulse command.
+ * @param weapon			Entity index of the new weapon held by the player, 0 if weapon was not swapped.
+ *
+ * @return					Return Plugin_Continue to proceed as normal, Plugin_Changed if you altered any of these variables, or Plugin_Handled to prevent the command from being run.
+ */
+forward Action CF_OnPlayerJump(int client, int &buttons, int &impulse, int &weapon)
+
+/**
+ * Called when a character presses their crouch button. NOTICE: This runs even if they are already in the air, it is purely to detect the button press.
+ *
+ * @param client			The client who ran the command.
+ * @param buttons			The button(s) pressed.
+ * @param impulse			Copyback buffer containing the current impulse command.
+ * @param weapon			Entity index of the new weapon held by the player, 0 if weapon was not swapped.
+ *
+ * @return					Return Plugin_Continue to proceed as normal, Plugin_Changed if you altered any of these variables, or Plugin_Handled to prevent the command from being run.
+ */
+forward Action CF_OnPlayerCrouch(int client, int &buttons, int &impulse, int &weapon)
+
+/**
+ * Called when a character calls for medic, AKA when they press the E key.
+ *
+ * @param client			The client who ran the command.
+ */
+forward void CF_OnPlayerCallForMedic(int client)
+
+/**
  * Called when a character takes damage, before any modifications have been made by Chaos Fortress.
  *
  * For the sake of organization and to avoid plugin execution conflicts: 
@@ -144,6 +187,23 @@ forward Action CF_OnTakeDamageAlive_Post(int victim, int &attacker, int &inflict
  * @param kills				The new killstreak.
  */
 forward void CF_OnKillstreakChanged(int client, int kills)
+
+/**
+ * Called when a character is killed.
+ *
+ * @param victim			The player who was killed.
+ * @param inflictor			The entity which inflicted the killing blow.
+ * @param attacker			The player who is credited for the kill.
+ * @param deadRinger		0 if the kill was real, 1 if it was a dead ringer.
+ */
+forward void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int deadRinger)
+
+/**
+ * Called when the Chaos Fortress round state is changed.
+ *
+ * @param state				The new round state. 0: Pre-game/setup time/waiting for players, 1: round in progress, 2: round has ended.
+ */
+forward void CF_OnRoundStateChanged(int state)
 	
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
@@ -193,3 +253,65 @@ native CF_GetM3Status(int client);
  * @return True if the client was holding reload, false otherwise.
  */
 native CF_GetReloadStatus(int client);
+
+/**
+ * Determines whether or not the chosen client was holding their jump key during the previous frame.
+ *
+ * @param client		The client to check.
+ *
+ * @return True if the client was holding jump, false otherwise.
+ */
+native CF_GetJumpStatus(int client);
+
+/**
+ * Determines whether or not the chosen client was holding their scoreboard button during the previous frame.
+ *
+ * @param client		The client to check.
+ *
+ * @return True if the client was holding tab, false otherwise.
+ */
+native CF_GetTabStatus(int client);
+
+/**
+ * Determines whether or not the chosen client was holding crouch during the previous frame.
+ *
+ * @param client		The client to check.
+ *
+ * @return True if the client was holding crouch, false otherwise.
+ */
+native CF_GetCrouchStatus(int client);
+
+/**
+ * Retrieves the current round state.
+ *
+ * @return The current round state. 0: pre-game/waiting for players/setup, 1: round in progress, 2: round has ended.
+ */
+native CF_GetRoundState();
+
+/**
+ * Retrieves the client's current character config.
+ *
+ * @param client		The client whose config to retrieve.
+ * @param buffer		Output buffer.
+ * @param size			Output buffer size.
+ *
+ * @return The config used by the client's current character, stored in the buffer. Returns an empty string is the client is invalid, or not currently a character. 
+ */
+native CF_GetPlayerConfig(int client, char[] buffer, int size);
+
+/**
+ * Sets the client's current character config.
+ *
+ * @param client		The client whose config to set.
+ * @param confName		The new config.
+ */
+native CF_SetPlayerConfig(int client, char[] confName);
+
+/**
+ * Determines whether or not the chosen client is a character.
+ *
+ * @param client		The client to check.
+ *
+ * @return True if the client is a character, false if they are invalid or not a character.
+ */
+native bool CF_IsPlayerCharacter(int client);

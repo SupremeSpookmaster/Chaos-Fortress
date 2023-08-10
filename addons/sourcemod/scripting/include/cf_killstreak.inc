@@ -263,7 +263,7 @@ public Native_CF_SetKillstreak(Handle plugin, int numParams)
 	 	
 	 	if (f_CFKillstreakForwardTime[client] < GetGameTime()) //Prevent infinite loops from happening if people call CF_SetKillstreak on the client in this forward.
 	 	{
-	 		f_CFKillstreakForwardTime[client] = GetGameTime() + 0.2;
+	 		f_CFKillstreakForwardTime[client] = GetGameTime() + 0.1;
 	 		
 		 	Call_StartForward(g_OnKillstreakChanged);
 		

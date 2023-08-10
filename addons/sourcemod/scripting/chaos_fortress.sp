@@ -3,7 +3,7 @@
 //#define DEBUG_KILLSTREAKS
 //#define DEBUG_ONTAKEDAMAGE
 //#define DEBUG_BUTTONS
-#define DEBUG_GAMERULES
+//#define DEBUG_GAMERULES
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
@@ -41,12 +41,17 @@ public void OnPluginStart()
 	HookEvent("teamplay_round_win", RoundEnd);
 	HookEvent("teamplay_round_stalemate", RoundEnd);
 	
+	RegAdminCmd("cf_reloadrules", CF_ReloadRules, ADMFLAG_KICK, "Chaos Fortress: Reloads the settings in game_rules.cfg.");
+	
 	CF_MakeForwards();
 }
+
+#define SND_ADMINCOMMAND		"ui/cyoa_ping_in_progress.wav"
 
 public OnMapStart()
 {
 	CF_MapStart();
+	PrecacheSound(SND_ADMINCOMMAND);
 }
 
 public Action PlayerKilled(Event hEvent, const char[] sEvName, bool bDontBroadcast)
@@ -108,6 +113,29 @@ public void PlayerReset(Event gEvent, const char[] sEvName, bool bDontBroadcast)
 	#endif
 }
 
+public Action CF_ReloadRules(int client, int args)
+{	
+	if (IsValidClient(client))
+	{
+		CPrintToChat(client, "{indigo}[Chaos Fortress] {default}Reloaded data/chaos_fortress/game_rules.cfg. {olive}View your console{default} to see the new game rules.");
+		EmitSoundToClient(client, SND_ADMINCOMMAND);
+		CF_SetGameRules(client);
+	}	
+	
+	return Plugin_Continue;
+}
+
+public Action CF_ReloadCharacters(int client, int args)
+{	
+	if (IsValidClient(client))
+	{
+		CPrintToChat(client, "{indigo}[Chaos Fortress] {default}Reloaded data/chaos_fortress/characters.cfg. {olive}View the !characters menu{default} to see the new game character list.");
+		EmitSoundToClient(client, SND_ADMINCOMMAND);
+		CF_LoadCharacters(client);
+	}	
+	
+	return Plugin_Continue;
+}
 #if defined DEBUG_ONTAKEDAMAGE
 
 public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
@@ -160,8 +188,8 @@ public Action CF_OnPlayerRunCmd(int client, int &buttons, int &impulse, int &wea
 {
 	if (GetGameTime() >= DebugButtonsGameTimeToPreventLotsOfAnnoyingSpam)
 	{
-		CPrintToChatAll("Detected a button press (this will run every half second instead of every frame to prevent excessive chat spam).");
-		DebugButtonsGameTimeToPreventLotsOfAnnoyingSpam = GetGameTime() + 0.5;
+		CPrintToChatAll("Detected a button press (this will run every second instead of every frame to prevent excessive chat spam).");
+		DebugButtonsGameTimeToPreventLotsOfAnnoyingSpam = GetGameTime() + 1.0;
 	}
 	
 	return Plugin_Continue;
@@ -169,11 +197,9 @@ public Action CF_OnPlayerRunCmd(int client, int &buttons, int &impulse, int &wea
 
 public Action CF_OnPlayerM2(int client, int &buttons, int &impulse, int &weapon)
 {
-	CPrintToChatAll("Detected a right-click, but we're going to block it to test.");
-	
-	buttons &= ~IN_ATTACK2;
-	
-	return Plugin_Changed;
+	CPrintToChatAll("Detected a right-click.");
+
+	return Plugin_Continue;
 }
 
 public Action CF_OnPlayerM3(int client, int &buttons, int &impulse, int &weapon)
@@ -188,6 +214,32 @@ public Action CF_OnPlayerReload(int client, int &buttons, int &impulse, int &wea
 	CPrintToChatAll("Detected a reload.");
 	
 	return Plugin_Continue;
+}
+
+public Action CF_OnPlayerTab(int client, int &buttons, int &impulse, int &weapon)
+{
+	CPrintToChatAll("Detected a tab.");
+	
+	return Plugin_Continue;
+}
+
+public Action CF_OnPlayerJump(int client, int &buttons, int &impulse, int &weapon)
+{
+	CPrintToChatAll("Detected a jump.");
+	
+	return Plugin_Continue;
+}
+
+public Action CF_OnPlayerCrouch(int client, int &buttons, int &impulse, int &weapon)
+{
+	CPrintToChatAll("Detected a crouch.");
+	
+	return Plugin_Continue;
+}
+
+public void CF_OnPlayerCallForMedic(int client)
+{
+	CPrintToChatAll("Detected a medic call.");
 }
 
 #endif
