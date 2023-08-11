@@ -160,3 +160,21 @@ stock bool CheckFile(char path[255])
 	
 	return exists;
 }
+
+stock void CopyMenu(Menu &dest, Menu source)
+{
+	char title[255];
+	source.GetTitle(title, 255);
+	dest.SetTitle(title);
+	
+	int items = GetMenuItemCount(source);
+	
+	char item[255]; char info[255];
+	int style;
+	for (int i = 0; i < items; i++)
+	{
+		GetMenuItem(source, i, info, 255, style, item, 255);
+		
+		AddMenuItem(dest, info, item, style);
+	}
+}

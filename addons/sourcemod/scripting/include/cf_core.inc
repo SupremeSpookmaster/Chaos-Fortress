@@ -14,10 +14,6 @@ int i_CFRoundState = 0;						//The current round state.
 
 float f_ChargeRetain = 0.0;
 
-bool b_IgnoreCharacterDefaults = false;
-
-char s_DefaultCharacter[255];
-
 GlobalForward g_OnPlayerKilled;
 GlobalForward g_OnRoundStateChanged;
 
@@ -105,20 +101,20 @@ public void CF_MakeForwards()
 		{
 	        kv.GetString("default_character", s_DefaultCharacter, 255);
 	        f_ChargeRetain = kv.GetFloat("charge_retain");
-	        kv.GetString("ignore_defaults", intStr, 255);
-	        b_IgnoreCharacterDefaults = !(StringToInt(intStr) == 0);
+	        kv.GetString("display_role", intStr, 255);
+	        b_DisplayRole = !(StringToInt(intStr) == 0);
 	        
 	        if (IsValidClient(admin))
 	        {
 	        	PrintToConsole(admin, "\nDefault Character: %s", s_DefaultCharacter);
 	        	PrintToConsole(admin, "Ult Charge Retained On Character Switch: %.2f", f_ChargeRetain);
-	        	PrintToConsole(admin, "Ignore Defaults: %i", view_as<int>(b_IgnoreCharacterDefaults));
+	        	PrintToConsole(admin, "Display Role: %i", view_as<int>(b_DisplayRole));
 	        }
 	        
 	        #if defined DEBUG_GAMERULES
 	        PrintToServer("\nDefault Character: %s", s_DefaultCharacter);
 	        PrintToServer("Ult Charge Retained On Character Switch: %.2f", f_ChargeRetain);
-	        PrintToServer("Ignore Defaults: %i", view_as<int>(b_IgnoreCharacterDefaults));
+	        PrintToServer("Display Role: %i", view_as<int>(b_DisplayRole));
 	        #endif
 		}
 		
@@ -153,28 +149,14 @@ public void CF_MakeForwards()
 		
 		if (StrEqual(section, "character_defaults"))
 		{
-			if (!b_IgnoreCharacterDefaults)
-			{
-				if (IsValidClient(admin))
-		        {
-		        	PrintToConsole(admin, "\nCharacter defaults are in-use, view data/chaos_fortress/game_rules.cfg for details.");
-		        }
+			if (IsValidClient(admin))
+		    {
+		        PrintToConsole(admin, "\nCharacter defaults are ignored due to current settings, skipping.");
+		    }
 		        
-		        #if defined DEBUG_GAMERULES
-	        	PrintToServer("\nCharacter defaults are in-use, view data/chaos_fortress/game_rules.cfg for details.");
-	        	#endif
-			}
-			else
-			{
-				if (IsValidClient(admin))
-		        {
-		        	PrintToConsole(admin, "\nCharacter defaults are ignored due to current settings, skipping.");
-		        }
-		        
-		        #if defined DEBUG_GAMERULES
-	        	PrintToServer("\nCharacter defaults are ignored due to current settings, skipping.");
-	        	#endif
-			}
+		    #if defined DEBUG_GAMERULES
+	        PrintToServer("\nCharacter defaults are ignored due to current settings, skipping.");
+	        #endif
 		}
 		
 	} while (kv.GotoNextKey());

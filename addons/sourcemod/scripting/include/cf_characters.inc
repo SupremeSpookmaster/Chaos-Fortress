@@ -13,9 +13,16 @@ public const char s_ModelFileExtensions[][] =
 Handle CF_Characters_Configs;
 Handle CF_Characters_Names;
 
+Menu CF_CharactersMenu;
+Menu CF_ClientMenu[MAXPLAYERS + 1] = { null, ... };
+
+bool b_DisplayRole = true;
 bool b_CharacterApplied[MAXPLAYERS + 1] = { false, ... }; //Whether or not the client's character has been applied to them already. If true: skip MakeCharacter for that client. Set to false automatically on death, round end, disconnect, and if the player changes their character selection.
 
 char s_CharacterConfig[MAXPLAYERS+1][255];	//The config currently used for this player's character. If empty: that player is not a character.
+char s_CharacterConfigInMenu[MAXPLAYERS+1][255];	//The config currently used this player's info menu.
+char s_DesiredCharacterConfig[MAXPLAYERS+1][255];	//The config of the character this player will become next time they spawn.
+char s_DefaultCharacter[255];
 
 public void CFC_MakeNatives()
 {
@@ -27,19 +34,19 @@ public void CFC_MakeNatives()
 
 public void CFC_MakeForwards()
 {
-	CF_Characters_Configs = CreateArray();
-	CF_Characters_Names = CreateArray();
+	CF_Characters_Configs = CreateArray(255);
+	CF_Characters_Names = CreateArray(255);
+	
+	RegConsoleCmd("characters", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
 }
 
 /**
  * Loads all of the characters from data/chaos_fortress/characters.cfg.
  *
- * @param admin		The client index of the admin who reloaded game_rules. If valid: prints the new rules to that admin's console.
+ * @param admin		The client index of the admin who reloaded characters.cfg. If valid: prints the new character list to that admin's console.
  */
  public void CF_LoadCharacters(int admin)
  {
- 	//TODO: And now comes the hard part... I'll do this tomorrow when I have my caffeine boost.
- 	
  	KeyValues kv = GetKeyValuesFromPath("data/chaos_fortress/characters.cfg", true, "FATAL ERROR: COULD NOT READ FILE ''data/chaos_fortress/characters.cfg''.");
  	bool FoundEnabled = false;
  	
@@ -118,6 +125,10 @@ public void CFC_MakeForwards()
  	{
  		PrintToServer("WARNING: Chaos Fortress was able to locate your characters.cfg file, but it is missing the ''Enabled Character Packs'' block. As a result, your installation of Chaos Fortress has no characters...");
  	}
+ 	else
+ 	{
+ 		CF_BuildCharactersMenu();
+ 	}
  }
  
  public void CF_LoadCharacterPack(char pack[255], bool JustDownload)
@@ -180,6 +191,15 @@ public void CFC_MakeForwards()
  	
  	kv.GetString("name", str, 255);
  	
+ 	if (b_DisplayRole)
+ 	{
+ 		kv.JumpToKey("menu_display");
+ 		char role[255];
+ 		kv.GetString("role", role, 255);
+ 		Format(str, sizeof(str), "[%s] %s", role, str);
+ 		kv.GoBack();
+ 	}
+ 	
  	if (!JustDownload)
  	{
  		PushArrayString(CF_Characters_Names, str);
@@ -191,6 +211,143 @@ public void CFC_MakeForwards()
  
  	CF_ManageCharacterFiles(kv);
  }
+ 
+ public void CF_BuildCharactersMenu()
+ {
+ 	CF_CharactersMenu = new Menu(CFC_Menu);
+	CF_CharactersMenu.SetTitle("Welcome to Chaos Fortress!\nWhich character would you like to spawn as?");
+	
+	char name[255];
+	for (int i = 0; i < GetArraySize(CF_Characters_Names); i++)
+	{
+		GetArrayString(CF_Characters_Names, i, name, 255);
+		PrintToServer("CREATING CHARACTER MENU: ADDED ITEM ''%s''", name);
+		CF_CharactersMenu.AddItem("Character", name);
+	}
+ }
+ 
+public CFC_Menu(Menu CFC_Menu, MenuAction action, int client, int param)
+{	
+	if (!IsValidClient(client))
+	return;
+	
+	if (action == MenuAction_Select)
+	{
+		//TODO: Make a menu which displays character info of CF_Characters_Configs[param]
+		char conf[255];
+		GetArrayString(CF_Characters_Configs, param, conf, 255);
+		
+		CFC_BuildInfoMenu(client, conf);		
+	}
+	else if (action == MenuAction_End || action == MenuAction_Cancel)
+	{
+		//TODO: Delete this client's character preview model
+		if (CF_ClientMenu[client] != null)
+			delete CF_ClientMenu[client];
+	}
+}
+
+public Action CFC_OpenMenu(int client, int args)
+{
+	if (!IsValidClient(client))
+		return Plugin_Continue;
+		
+	if (CF_ClientMenu[client] != null)
+		delete CF_ClientMenu[client];
+		
+	CF_ClientMenu[client] = new Menu(CFC_Menu);
+	CopyMenu(CF_ClientMenu[client], CF_CharactersMenu);
+	CF_ClientMenu[client].Display(client, MENU_TIME_FOREVER);
+	
+	//TODO: Character preview menu
+	
+	return Plugin_Continue;
+}
+ 
+ public void CFC_BuildInfoMenu(int client, char config[255])
+ {
+ 	if (!IsValidClient(client))
+		return;
+		
+	if (CF_ClientMenu[client] != null)
+		delete CF_ClientMenu[client];
+	
+	KeyValues kv = GetKeyValuesFromPath(config, false, "Error: Could not load character config.");
+ 	
+ 	kv.GoBack();
+ 	
+ 	char name[255]; char title[255]; char related[255]; char role[255]; char desc[255];
+ 	kv.GetString("name", name, 255);
+ 	
+ 	if (kv.JumpToKey("menu_display"))
+ 	{
+ 		kv.GetString("related_class", related, 255);
+ 		kv.GetString("role", role, 255);
+ 		kv.GetString("description", desc, 255);
+ 	}
+ 	else
+ 	{
+ 		kv = GetKeyValuesFromPath("data/chaos_fortress/game_rules.cfg", false, "Error: Could not load game_rules.cfg.");
+ 		kv.GoBack();
+ 		
+ 		if (kv.JumpToKey("character_defaults"))
+ 		{
+ 			if (kv.JumpToKey("menu_display"))
+ 			{
+ 				kv.GetString("related_class", related, 255);
+		 		kv.GetString("role", role, 255);
+		 		kv.GetString("description", desc, 255);
+ 			}
+ 		}
+ 	}
+ 	
+ 	Format(title, sizeof(title), "%s\n\nSimilar TF2 Class: %s\nRole: %s\n\n%s", name, related, role, desc);
+ 	
+ 	s_CharacterConfigInMenu[client] = config;
+ 	
+ 	CF_ClientMenu[client] = new Menu(CFC_InfoMenu);
+ 	CF_ClientMenu[client].SetTitle(title);
+ 	
+ 	Format(name, sizeof(name), "Spawn As %s", name);
+ 	CF_ClientMenu[client].AddItem("Select", name);
+ 	CF_ClientMenu[client].AddItem("Back", "Go Back");
+ 	CF_ClientMenu[client].ExitButton = false;
+ 	CF_ClientMenu[client].Display(client, MENU_TIME_FOREVER);
+ 	
+ 	delete kv;
+ }
+ 
+ public CFC_InfoMenu(Menu CFC_Menu, MenuAction action, int client, int param)
+{	
+	if (!IsValidClient(client))
+	return;
+	
+	if (action == MenuAction_Select)
+	{
+		if (param == 0)
+		{
+			KeyValues kv = GetKeyValuesFromPath(s_CharacterConfigInMenu[client], false, "Error: Could not load character config.");
+			kv.GoBack();
+			
+			char name[255];
+			kv.GetString("name", name, 255);
+			Format(name, sizeof(name), "{indigo}[Chaos Fortress] {default}You will respawn as {olive}%s{default}.", name);
+			CPrintToChat(client, name);
+			
+			s_DesiredCharacterConfig[client] = s_CharacterConfigInMenu[client];
+			delete kv;
+			
+			//TODO: Delete this client's character preview model
+			if (CF_ClientMenu[client] != null)
+				delete CF_ClientMenu[client];
+		}
+		else
+		{
+			CFC_OpenMenu(client, 0);
+		}		
+	}
+}
+
  
 /**
  * Precaches all of the files in the "downloads", "model_download", and "precache" sections of a given CFG, and adds all files in the former two to the downloads table.
@@ -356,6 +513,9 @@ public void CFC_MakeForwards()
 
 	if (b_CharacterApplied[client])
 		return;
+
+	//TODO: Apply s_DesiredCharacterConfig to a cookie and read that cookie to determine which character to spawn as.
+	//If the cookie is empty: use the default character config specified in game_rules.
 
  	//TODO: Write the code for this, also write a forward called CF_OnCharacterSpawned and have this call it.
  	//For now we have this temporary debug code.
