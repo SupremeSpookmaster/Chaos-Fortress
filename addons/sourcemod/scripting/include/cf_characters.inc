@@ -1,4 +1,6 @@
-//Store configs and names in two separate arrays so we aren't reading every single character's config every single time someone opens the !characters menu:
+#define MODEL_PREVIEW_DOORS		"models/vgui/versus_doors_win.mdl"
+#define MODEL_PREVIEW_STAGE		"models/props_ui/competitive_stage.mdl"
+#define MODEL_PREVIEW_UNKNOWN	"models/class_menu/random_class_icon.mdl"
 
 public const char s_ModelFileExtensions[][] =
 {
@@ -10,11 +12,18 @@ public const char s_ModelFileExtensions[][] =
 	".vvd"
 };
 
+//Store configs and names in two separate arrays so we aren't reading every single character's config every single time someone opens the !characters menu:
 Handle CF_Characters_Configs;
 Handle CF_Characters_Names;
 
 Menu CF_CharactersMenu;
 Menu CF_ClientMenu[MAXPLAYERS + 1] = { null, ... };
+
+int i_CFPreviewModel[MAXPLAYERS + 1] = { -1, ... };
+int i_PreviewOwner[2049] = { -1, ... };
+//These would have been so damn cool but there are too many situations in which it just wouldn't look good...
+//int i_CFPreviewStage[MAXPLAYERS + 1] = { -1, ... };
+//int i_CFPreviewCam[MAXPLAYERS + 1] = { -1, ... };
 
 bool b_DisplayRole = true;
 bool b_CharacterApplied[MAXPLAYERS + 1] = { false, ... }; //Whether or not the client's character has been applied to them already. If true: skip MakeCharacter for that client. Set to false automatically on death, round end, disconnect, and if the player changes their character selection.
@@ -38,6 +47,10 @@ public void CFC_MakeForwards()
 	CF_Characters_Names = CreateArray(255);
 	
 	RegConsoleCmd("characters", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
+	
+	PrecacheModel(MODEL_PREVIEW_DOORS);
+	PrecacheModel(MODEL_PREVIEW_STAGE);
+	PrecacheModel(MODEL_PREVIEW_UNKNOWN);
 }
 
 /**
@@ -221,7 +234,11 @@ public void CFC_MakeForwards()
 	for (int i = 0; i < GetArraySize(CF_Characters_Names); i++)
 	{
 		GetArrayString(CF_Characters_Names, i, name, 255);
+		
+		#if defined DEBUG_CHARACTER_CREATION
 		PrintToServer("CREATING CHARACTER MENU: ADDED ITEM ''%s''", name);
+		#endif
+		
 		CF_CharactersMenu.AddItem("Character", name);
 	}
  }
@@ -233,7 +250,6 @@ public CFC_Menu(Menu CFC_Menu, MenuAction action, int client, int param)
 	
 	if (action == MenuAction_Select)
 	{
-		//TODO: Make a menu which displays character info of CF_Characters_Configs[param]
 		char conf[255];
 		GetArrayString(CF_Characters_Configs, param, conf, 255);
 		
@@ -241,10 +257,22 @@ public CFC_Menu(Menu CFC_Menu, MenuAction action, int client, int param)
 	}
 	else if (action == MenuAction_End || action == MenuAction_Cancel)
 	{
-		//TODO: Delete this client's character preview model
 		if (CF_ClientMenu[client] != null)
 			delete CF_ClientMenu[client];
+			
+		CF_DeletePreviewModel(client);
 	}
+}
+
+public void CF_DeletePreviewModel(int client)
+{
+	if (!IsValidClient(client))
+		return;
+		
+	if (!CF_PreviewModelActive(client))
+		return;
+		
+	CreateTimer(0.0, Timer_RemoveEntity, i_CFPreviewModel[client], TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public Action CFC_OpenMenu(int client, int args)
@@ -259,10 +287,131 @@ public Action CFC_OpenMenu(int client, int args)
 	CopyMenu(CF_ClientMenu[client], CF_CharactersMenu);
 	CF_ClientMenu[client].Display(client, MENU_TIME_FOREVER);
 	
-	//TODO: Character preview menu
+	if (!CF_PreviewModelActive(client))
+	{
+		float spawnLoc[3];
+		GetClientEyePosition(client, spawnLoc);
+			
+		float aimLoc[3];
+		Handle trace = getAimTrace(client);
+		if (TR_DidHit(trace))
+		{
+			TR_GetEndPosition(aimLoc, trace);
+		}
+		CloseHandle(trace);
+		
+		if (GetVectorDistance(spawnLoc, aimLoc, true) >= 140.0)
+		{
+			float constraint = 140.0/GetVectorDistance(spawnLoc, aimLoc);
+			
+			for (int i = 0; i < 3; i++)
+			{
+				aimLoc[i] = ((aimLoc[i] - spawnLoc[i]) * constraint) + spawnLoc[i];
+			}
+		}
+		
+		float ang[3];
+		GetClientEyeAngles(client, ang);
+		ang[0] = 0.0;
+		ang[1] *= -1.0;
+		ang[2] = 0.0;
+		aimLoc[2] -= 40.0;
+		
+		char skin[255] = "0";
+		if (TF2_GetClientTeam(client) == TFTeam_Blue)
+		{
+			skin = "1";
+		}
+		
+		int preview = SpawnDummyModel(MODEL_PREVIEW_UNKNOWN, "selection", aimLoc, ang, skin);
+		TF2_CreateGlow(preview, 0);
+		int text = AttachWorldTextToEntity(preview, "Character Preview", "root", _, _, _, 100.0);
+		
+		if (IsValidEntity(text))
+		{
+			i_PreviewOwner[text] = GetClientUserId(client);
+			//SDKHook(text, SDKHook_SetTransmit, CF_PreviewModelTransmit);
+		}
+		
+		i_PreviewOwner[preview] = GetClientUserId(client);
+		
+		//SDKHook(preview, SDKHook_SetTransmit, CF_PreviewModelTransmit);
+		
+		i_CFPreviewModel[client] = EntIndexToEntRef(preview);
+		SDKHook(client, SDKHook_PreThink, CF_PreviewModelPreThink);
+	}
+	else
+	{
+		int preview = EntRefToEntIndex(i_CFPreviewModel[client]);
+		SetEntityModel(preview, MODEL_PREVIEW_UNKNOWN);
+		ChangeModelAnimation(preview, "selection", 1.0);
+	}
 	
 	return Plugin_Continue;
 }
+ 
+ public Action CF_PreviewModelPreThink(int client)
+ {
+ 	if (!CF_PreviewModelActive(client))
+ 		return Plugin_Stop;
+ 	
+	int preview = EntRefToEntIndex(i_CFPreviewModel[client]);
+	
+	float spawnLoc[3];
+	GetClientEyePosition(client, spawnLoc);
+			
+	float aimLoc[3];
+	Handle trace = getAimTrace(client);
+	if (TR_DidHit(trace))
+	{
+		TR_GetEndPosition(aimLoc, trace);
+	}
+	CloseHandle(trace);
+		
+	if (GetVectorDistance(spawnLoc, aimLoc, true) >= 140.0)
+	{
+		float constraint = 140.0/GetVectorDistance(spawnLoc, aimLoc);
+			
+		for (int i = 0; i < 3; i++)
+		{
+			aimLoc[i] = ((aimLoc[i] - spawnLoc[i]) * constraint) + spawnLoc[i];
+		}
+	}
+		
+	float ang[3], DummyAng[3];
+	GetClientEyeAngles(client, DummyAng);
+	GetAngleToPoint(preview, spawnLoc, DummyAng, ang, 0.0, 0.0, 40.0);
+	aimLoc[2] -= 40.0;
+		
+	char skin[255] = "0";
+	if (TF2_GetClientTeam(client) == TFTeam_Blue)
+	{
+		skin = "1";
+	}
+	
+	TeleportEntity(preview, aimLoc, ang, NULL_VECTOR);
+	ChangeModelSkin(preview, skin);
+ 	
+ 	return Plugin_Continue;
+ }
+ 
+ public Action CF_PreviewModelTransmit(int client, int entity)
+ {
+ 	if (client != GetClientOfUserId(i_PreviewOwner[entity]))
+ 	{
+ 		return Plugin_Handled;
+ 	}
+ 		
+ 	return Plugin_Continue;
+ }
+ 
+ bool CF_PreviewModelActive(int client)
+ {
+ 	if (!IsValidClient(client))
+ 		return false;
+ 		
+ 	return IsValidEntity(EntRefToEntIndex(i_CFPreviewModel[client]));
+ }
  
  public void CFC_BuildInfoMenu(int client, char config[255])
  {
@@ -276,7 +425,7 @@ public Action CFC_OpenMenu(int client, int args)
  	
  	kv.GoBack();
  	
- 	char name[255]; char title[255]; char related[255]; char role[255]; char desc[255];
+ 	char name[255]; char title[255]; char related[255]; char role[255]; char desc[255]; char model[255] = ""; char sequence[255];
  	kv.GetString("name", name, 255);
  	
  	if (kv.JumpToKey("menu_display"))
@@ -284,6 +433,10 @@ public Action CFC_OpenMenu(int client, int args)
  		kv.GetString("related_class", related, 255);
  		kv.GetString("role", role, 255);
  		kv.GetString("description", desc, 255);
+ 		kv.GetString("preview_sequence", sequence, 255);
+ 		
+ 		kv.GoBack();
+ 		kv.GetString("model", model, 255);
  	}
  	else
  	{
@@ -299,6 +452,13 @@ public Action CFC_OpenMenu(int client, int args)
 		 		kv.GetString("description", desc, 255);
  			}
  		}
+ 	}
+ 	
+ 	if (!StrEqual(model, "") && CF_PreviewModelActive(client))
+ 	{
+ 		int preview = EntRefToEntIndex(i_CFPreviewModel[client]);
+ 		SetEntityModel(preview, model);
+ 		ChangeModelAnimation(preview, sequence, 1.0);
  	}
  	
  	Format(title, sizeof(title), "%s\n\nSimilar TF2 Class: %s\nRole: %s\n\n%s", name, related, role, desc);
@@ -337,14 +497,22 @@ public Action CFC_OpenMenu(int client, int args)
 			s_DesiredCharacterConfig[client] = s_CharacterConfigInMenu[client];
 			delete kv;
 			
-			//TODO: Delete this client's character preview model
 			if (CF_ClientMenu[client] != null)
 				delete CF_ClientMenu[client];
+				
+			CF_DeletePreviewModel(client);
 		}
 		else
 		{
 			CFC_OpenMenu(client, 0);
 		}		
+	}
+	else if (action == MenuAction_End || action == MenuAction_Cancel)
+	{
+		if (CF_ClientMenu[client] != null)
+			delete CF_ClientMenu[client];
+				
+		CF_DeletePreviewModel(client);
 	}
 }
 
