@@ -2,6 +2,17 @@
 #define MODEL_PREVIEW_STAGE		"models/props_ui/competitive_stage.mdl"
 #define MODEL_PREVIEW_UNKNOWN	"models/class_menu/random_class_icon.mdl"
 
+#define SOUND_CHARACTER_PREVIEW	"ui/quest_status_tick_advanced_pda.wav"
+
+public const char s_PreviewParticles[][] =
+{
+	"drg_wrenchmotron_teleport",
+	"wrenchmotron_teleport_beam",
+	"wrenchmotron_teleport_flash",
+	"wrenchmotron_teleport_glow_big",
+	"wrenchmotron_teleport_sparks"
+};
+
 public const char s_ModelFileExtensions[][] =
 {
 	".dx80.vtx",
@@ -21,12 +32,17 @@ Menu CF_ClientMenu[MAXPLAYERS + 1] = { null, ... };
 
 int i_CFPreviewModel[MAXPLAYERS + 1] = { -1, ... };
 int i_PreviewOwner[2049] = { -1, ... };
+int i_CFPreviewProp[MAXPLAYERS + 1] = { -1, ... };
+int i_CFPreviewWeapon[MAXPLAYERS + 1] = { -1, ... };
+
+float f_CFPreviewRotation[MAXPLAYERS + 1] = { 0.0, ... };
 //These would have been so damn cool but there are too many situations in which it just wouldn't look good...
 //int i_CFPreviewStage[MAXPLAYERS + 1] = { -1, ... };
 //int i_CFPreviewCam[MAXPLAYERS + 1] = { -1, ... };
 
 bool b_DisplayRole = true;
 bool b_CharacterApplied[MAXPLAYERS + 1] = { false, ... }; //Whether or not the client's character has been applied to them already. If true: skip MakeCharacter for that client. Set to false automatically on death, round end, disconnect, and if the player changes their character selection.
+bool b_SpawnPreviewParticleNextFrame[MAXPLAYERS + 1] = { false, ... };
 
 char s_CharacterConfig[MAXPLAYERS+1][255];	//The config currently used for this player's character. If empty: that player is not a character.
 char s_CharacterConfigInMenu[MAXPLAYERS+1][255];	//The config currently used this player's info menu.
@@ -51,6 +67,7 @@ public void CFC_MakeForwards()
 	PrecacheModel(MODEL_PREVIEW_DOORS);
 	PrecacheModel(MODEL_PREVIEW_STAGE);
 	PrecacheModel(MODEL_PREVIEW_UNKNOWN);
+	PrecacheSound(SOUND_CHARACTER_PREVIEW);
 }
 
 /**
@@ -68,6 +85,18 @@ public void CFC_MakeForwards()
 	PrintToServer("CHAOS FORTRESS CHARACTERS.CFG DEBUG MESSAGES BELOW");
 	PrintToServer("//////////////////////////////////////////////////");
 	#endif
+ 	
+ 	if (CF_Characters_Configs != null)
+ 	{
+ 		delete CF_Characters_Configs;
+ 		CF_Characters_Configs = CreateArray(255);
+ 	}
+ 	
+ 	if (CF_Characters_Names != null)
+ 	{
+ 		delete CF_Characters_Names;
+ 		CF_Characters_Names = CreateArray(255);
+ 	}
  	
  	do 
  	{
@@ -273,6 +302,8 @@ public void CF_DeletePreviewModel(int client)
 		return;
 		
 	CreateTimer(0.0, Timer_RemoveEntity, i_CFPreviewModel[client], TIMER_FLAG_NO_MAPCHANGE);
+	CreateTimer(0.0, Timer_RemoveEntity, i_CFPreviewProp[client], TIMER_FLAG_NO_MAPCHANGE);
+	CreateTimer(0.0, Timer_RemoveEntity, i_CFPreviewWeapon[client], TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public Action CFC_OpenMenu(int client, int args)
@@ -327,6 +358,40 @@ public Action CFC_OpenMenu(int client, int args)
 		TF2_CreateGlow(preview, 0);
 		int text = AttachWorldTextToEntity(preview, "Character Preview", "root", _, _, _, 100.0);
 		
+		int physProp = CreateEntityByName("prop_physics_override");
+			
+		if (IsValidEntity(physProp))
+		{
+			DispatchKeyValue(physProp, "targetname", "droneparent"); 
+			DispatchKeyValue(physProp, "spawnflags", "4"); 
+			DispatchKeyValue(physProp, "model", "models/props_c17/canister01a.mdl");
+				
+			DispatchSpawn(physProp);
+				
+			ActivateEntity(physProp);
+			
+			DispatchKeyValue(physProp, "Health", "9999999999");
+			SetEntProp(physProp, Prop_Data, "m_takedamage", 0, 1);
+					
+			SetEntPropEnt(physProp, Prop_Data, "m_hOwnerEntity", client);
+			SetEntProp(physProp, Prop_Send, "m_fEffects", 32); //EF_NODRAW
+			
+			aimLoc[2] += 40.0;
+			TeleportEntity(physProp, aimLoc, ang, NULL_VECTOR);
+			
+			//SetEntityMoveType(physProp, MOVETYPE_NOCLIP);
+			
+			SetVariantString("!activator");
+			AcceptEntityInput(preview, "SetParent", physProp);
+		 
+			SetEntityCollisionGroup(physProp, 0);
+			SetEntProp(physProp, Prop_Send, "m_usSolidFlags", 12); 
+			SetEntProp(physProp, Prop_Data, "m_nSolidType", 0x0004); 
+			SetEntityGravity(physProp, 0.0);
+			
+			i_CFPreviewProp[client] = EntIndexToEntRef(physProp);
+		}
+		
 		if (IsValidEntity(text))
 		{
 			i_PreviewOwner[text] = GetClientUserId(client);
@@ -339,12 +404,18 @@ public Action CFC_OpenMenu(int client, int args)
 		
 		i_CFPreviewModel[client] = EntIndexToEntRef(preview);
 		SDKHook(client, SDKHook_PreThink, CF_PreviewModelPreThink);
+		f_CFPreviewRotation[client] = 0.0;
 	}
 	else
 	{
 		int preview = EntRefToEntIndex(i_CFPreviewModel[client]);
 		SetEntityModel(preview, MODEL_PREVIEW_UNKNOWN);
 		ChangeModelAnimation(preview, "selection", 1.0);
+		int wep = EntRefToEntIndex(i_CFPreviewWeapon[client]);
+		if (IsValidEntity(wep))
+		{
+			RemoveEntity(wep);
+		}
 	}
 	
 	return Plugin_Continue;
@@ -356,6 +427,7 @@ public Action CFC_OpenMenu(int client, int args)
  		return Plugin_Stop;
  	
 	int preview = EntRefToEntIndex(i_CFPreviewModel[client]);
+	int prop = EntRefToEntIndex(i_CFPreviewProp[client]);
 	
 	float spawnLoc[3];
 	GetClientEyePosition(client, spawnLoc);
@@ -380,7 +452,7 @@ public Action CFC_OpenMenu(int client, int args)
 		
 	float ang[3], DummyAng[3];
 	GetClientEyeAngles(client, DummyAng);
-	GetAngleToPoint(preview, spawnLoc, DummyAng, ang, 0.0, 0.0, 40.0);
+	GetAngleToPoint(prop, spawnLoc, DummyAng, ang, 0.0, 0.0, 40.0);
 	aimLoc[2] -= 40.0;
 		
 	char skin[255] = "0";
@@ -389,7 +461,31 @@ public Action CFC_OpenMenu(int client, int args)
 		skin = "1";
 	}
 	
-	TeleportEntity(preview, aimLoc, ang, NULL_VECTOR);
+	if (b_SpawnPreviewParticleNextFrame[client])
+	{
+		b_SpawnPreviewParticleNextFrame[client] = false;
+		
+		if (TF2_GetClientTeam(client) == TFTeam_Red)
+		{
+			int part = SpawnParticle(aimLoc, "teleportedin_red", 2.0);
+			i_PreviewOwner[part] = GetClientUserId(client);
+			//SDKHook(part, SDKHook_SetTransmit, CF_PreviewModelTransmit);
+		}
+		else
+		{
+			int part = SpawnParticle(aimLoc, "teleportedin_blue", 2.0);
+			i_PreviewOwner[part] = GetClientUserId(client);
+			//SDKHook(part, SDKHook_SetTransmit, CF_PreviewModelTransmit);
+		}
+		
+		EmitSoundToClient(client, SOUND_CHARACTER_PREVIEW);
+	}
+	
+	aimLoc[2] += 40.0;
+	f_CFPreviewRotation[client] += 1.0;
+	ang[1] += f_CFPreviewRotation[client];
+	PhysProp_MoveToTargetPosition_Preview(prop, client, ang);
+	//TeleportEntity(preview, NULL_VECTOR, ang, NULL_VECTOR);
 	ChangeModelSkin(preview, skin);
  	
  	return Plugin_Continue;
@@ -410,7 +506,7 @@ public Action CFC_OpenMenu(int client, int args)
  	if (!IsValidClient(client))
  		return false;
  		
- 	return IsValidEntity(EntRefToEntIndex(i_CFPreviewModel[client]));
+ 	return IsValidEntity(EntRefToEntIndex(i_CFPreviewModel[client])) && IsValidEntity(EntRefToEntIndex(i_CFPreviewProp[client]));
  }
  
  public void CFC_BuildInfoMenu(int client, char config[255])
@@ -425,7 +521,7 @@ public Action CFC_OpenMenu(int client, int args)
  	
  	kv.GoBack();
  	
- 	char name[255]; char title[255]; char related[255]; char role[255]; char desc[255]; char model[255] = ""; char sequence[255];
+ 	char name[255]; char title[255]; char related[255]; char role[255]; char desc[255]; char model[255] = ""; char weapon[255]; char attachment[255]; char sequence[255];
  	kv.GetString("name", name, 255);
  	
  	if (kv.JumpToKey("menu_display"))
@@ -434,9 +530,12 @@ public Action CFC_OpenMenu(int client, int args)
  		kv.GetString("role", role, 255);
  		kv.GetString("description", desc, 255);
  		kv.GetString("preview_sequence", sequence, 255);
+ 		kv.GetString("preview_weapon", weapon, 255);
+ 		kv.GetString("preview_attachment", attachment, 255);
  		
  		kv.GoBack();
  		kv.GetString("model", model, 255);
+ 		kv.JumpToKey("menu_display");
  	}
  	else
  	{
@@ -450,15 +549,48 @@ public Action CFC_OpenMenu(int client, int args)
  				kv.GetString("related_class", related, 255);
 		 		kv.GetString("role", role, 255);
 		 		kv.GetString("description", desc, 255);
+		 		kv.GetString("preview_weapon", weapon, 255);
+ 				kv.GetString("preview_attachment", attachment, 255);
  			}
  		}
  	}
  	
- 	if (!StrEqual(model, "") && CF_PreviewModelActive(client))
+ 	if (!StrEqual(model, "") && CheckFile(model) && CF_PreviewModelActive(client))
  	{
  		int preview = EntRefToEntIndex(i_CFPreviewModel[client]);
  		SetEntityModel(preview, model);
  		ChangeModelAnimation(preview, sequence, 1.0);
+ 		
+ 		if (!StrEqual(weapon, "") && CheckFile(weapon))
+ 		{
+ 			PrecacheModel(weapon);
+ 			
+ 			if (StrEqual(attachment, ""))
+ 			{
+ 				attachment = "weapon_bone";
+ 			}
+ 			
+ 			char skin[255] = "0";
+ 			if (TF2_GetClientTeam(client) == TFTeam_Blue)
+ 			{
+ 				skin = "1";
+ 			}
+ 			
+ 			float xOff = kv.GetFloat("attachment_x_offset");
+ 			float yOff = kv.GetFloat("attachment_y_offset");
+ 			float zOff = kv.GetFloat("attachment_z_offset");
+ 			float xRot = kv.GetFloat("attachment_x_rotation");
+ 			float yRot = kv.GetFloat("attachment_y_rotation");
+ 			float zRot = kv.GetFloat("attachment_z_rotation");
+ 			
+ 			int wep = AttachModelToEntity(weapon, attachment, preview, _, skin, xOff, yOff, zOff, xRot, yRot, zRot);
+ 			if (IsValidEntity(wep))
+ 			{
+ 				i_CFPreviewWeapon[client] = EntIndexToEntRef(wep);
+ 			}
+ 			
+ 			b_SpawnPreviewParticleNextFrame[client] = true;
+ 		}
  	}
  	
  	Format(title, sizeof(title), "%s\n\nSimilar TF2 Class: %s\nRole: %s\n\n%s", name, related, role, desc);
@@ -540,24 +672,29 @@ public Action CFC_OpenMenu(int client, int args)
 			}
 			else
 			{
-				char file[255];
+				char fileCheck[255], actualFile[255];
 				
 				for (int i = 0; i < sizeof(s_ModelFileExtensions); i++)
 				{
-					Format(file, sizeof(file), "%s%s", value, s_ModelFileExtensions[i]);
-					if (CheckFile(file))
+					Format(fileCheck, sizeof(fileCheck), "models/%s%s", value, s_ModelFileExtensions[i]);
+					Format(actualFile, sizeof(actualFile), "%s%s", value, s_ModelFileExtensions[i]);
+					if (CheckFile(fileCheck))
 					{
-						PrecacheModel(file);
-						AddFileToDownloadsTable(file);
+						if (StrEqual(s_ModelFileExtensions[i], ".mdl"))
+						{
+							PrecacheModel(fileCheck);
+						}
+
+						AddFileToDownloadsTable(fileCheck);
 						
 						#if defined DEBUG_CHARACTER_CREATION
-					    PrintToServer("Successfully added model file ''%s'' to the downloads table.", file);
+					    PrintToServer("Successfully added model file ''%s'' to the downloads table.", fileCheck);
 					    #endif
 					}
 					else
 					{
 						#if defined DEBUG_CHARACTER_CREATION
-					    PrintToServer("ERROR: Failed to find model file ''%s''.", file);
+					    PrintToServer("ERROR: Failed to find model file ''%s''.", fileCheck);
 					    #endif
 					}
 				}

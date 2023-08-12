@@ -42,6 +42,7 @@ public void OnPluginStart()
 	HookEvent("teamplay_round_stalemate", RoundEnd);
 	
 	RegAdminCmd("cf_reloadrules", CF_ReloadRules, ADMFLAG_KICK, "Chaos Fortress: Reloads the settings in game_rules.cfg.");
+	RegAdminCmd("cf_reloadcharacters", CF_ReloadCharacters, ADMFLAG_KICK, "Chaos Fortress: Reloads the character packs, as defined in characters.cfg.");
 	
 	CF_MakeForwards();
 }
@@ -129,7 +130,7 @@ public Action CF_ReloadCharacters(int client, int args)
 {	
 	if (IsValidClient(client))
 	{
-		CPrintToChat(client, "{indigo}[Chaos Fortress] {default}Reloaded data/chaos_fortress/characters.cfg. {olive}View the !characters menu{default} to see the new game character list.");
+		CPrintToChat(client, "{indigo}[Chaos Fortress] {default}Reloaded data/chaos_fortress/characters.cfg. {olive}View the !characters menu{default} to see the updated character list.");
 		EmitSoundToClient(client, SND_ADMINCOMMAND);
 		CF_LoadCharacters(client);
 	}	

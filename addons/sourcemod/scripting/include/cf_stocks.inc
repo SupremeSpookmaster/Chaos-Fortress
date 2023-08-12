@@ -11,6 +11,8 @@
 
 float OFF_THE_MAP[3] = {1182792704.0, 1182792704.0, -964690944.0};
 
+float PhysProp_CurrentSpeed[2049] = { 0.0, ... };
+
 /**
  * Checks if a client is valid.
  *
@@ -427,4 +429,182 @@ stock int AttachWorldTextToEntity(int entity, char message[255], char point[255]
 	}
 	
 	return ReturnValue;
+}
+
+stock int AttachModelToEntity(char model[255], char point[255], int parent, float life = 0.0, char skin[255] = "0", float xOff = 0.0, float yOff = 0.0, float zOff = 0.0, float xRot = 0.0, float yRot = 0.0, float zRot = 0.0)
+{
+	int ReturnValue = -1;
+	
+	ReturnValue = CreateEntityByName("prop_dynamic_override");
+	
+	if(IsValidEntity(ReturnValue))
+	{
+		float pos[3], ang[3];
+		if (HasEntProp(parent, Prop_Data, "m_vecAbsOrigin"))
+		{
+			GetEntPropVector(parent, Prop_Data, "m_vecAbsOrigin", pos);
+		}
+		else if (HasEntProp(parent, Prop_Send, "m_vecOrigin"))
+		{
+			GetEntPropVector(parent, Prop_Send, "m_vecOrigin", pos);
+		}
+		
+		TeleportEntity(ReturnValue, pos, NULL_VECTOR, NULL_VECTOR);
+	
+		DispatchKeyValue(ReturnValue, "skin", skin);
+		DispatchKeyValue(ReturnValue, "model", model);	
+		
+		SetVariantString("!activator");
+		AcceptEntityInput(ReturnValue, "SetParent", parent, ReturnValue);
+		SetVariantString(point);
+		AcceptEntityInput(ReturnValue, "SetParentAttachmentMaintainOffset", ReturnValue, ReturnValue);
+		DispatchKeyValue(ReturnValue, "targetname", "present");
+		
+		DispatchSpawn(ReturnValue);
+		ActivateEntity(ReturnValue);
+		
+		GetEntPropVector(ReturnValue, Prop_Send, "m_vecOrigin", pos);
+		
+		pos[0] += xOff;
+		pos[1] += yOff;
+		pos[2] += zOff;
+		
+		GetEntPropVector(ReturnValue, Prop_Send, "m_angRotation", ang);
+		
+		ang[0] += xRot;
+		ang[1] += yRot;
+		ang[2] += zRot;
+		
+		TeleportEntity(ReturnValue, pos, ang, NULL_VECTOR);
+		
+		if (life > 0.0)
+		{
+			CreateTimer(life, Timer_RemoveEntity, EntIndexToEntRef(ReturnValue), TIMER_FLAG_NO_MAPCHANGE);
+		}
+	}
+	else
+	{
+		ReturnValue = -1;
+	}
+	
+	return ReturnValue;
+}
+
+public void PhysProp_MoveToTargetPosition(int ent, float targPos[3], float angOverride[3])
+{
+	if (ent < MaxClients + 1 || ent > 2048)
+	return;
+	
+	if (!IsValidEntity(ent))
+	return;
+	
+	float DroneLoc[3], Velocity[3], Angles[3];
+	GetEntPropVector(ent, Prop_Send, "m_vecOrigin", DroneLoc);
+	GetEntPropVector(ent, Prop_Send, "m_angRotation", Angles);
+	 
+	for (int vel = 0; vel < 3; vel++)
+	{
+		Velocity[vel] = 0.0;
+	}
+	
+	float TargetSpeed = 900.0;
+	
+	PhysProp_ChangeSpeed(ent, 20.0, TargetSpeed);
+	
+	float dist = GetVectorDistance(DroneLoc, targPos);
+	
+	float fVecFinal[3], fFinalPos[3], DummyAngles[3];
+	DummyAngles = Angles;
+		
+	AddInFrontOf(targPos, DummyAngles, 7.0, fVecFinal);
+	MakeVectorFromPoints(DroneLoc, fVecFinal, fFinalPos);
+		
+	GetVectorAngles(fFinalPos, Angles);
+		
+	GetAngleVectors(Angles, Velocity, NULL_VECTOR, NULL_VECTOR);
+	float mult = (dist/140.0);
+	
+	if (mult > 1.0)
+	{
+		mult = 1.0;
+	}
+		
+	float FinalVelScale = PhysProp_CurrentSpeed[ent] * mult;
+	ScaleVector(Velocity, FinalVelScale);
+		
+	TeleportEntity(ent, NULL_VECTOR, angOverride, Velocity);
+}
+
+public void PhysProp_ChangeSpeed(int ent, float mod, float maximum)
+{
+	if (ent < MaxClients + 1 || ent > 2048)
+	return;
+	
+	if (!IsValidEntity(ent))
+	return;
+	
+	if (PhysProp_CurrentSpeed[ent] > maximum)
+	{
+		PhysProp_CurrentSpeed[ent] += -mod;
+	}
+	else if (PhysProp_CurrentSpeed[ent] < maximum)
+	{
+		PhysProp_CurrentSpeed[ent] += mod;
+	}
+	
+	
+	if (PhysProp_CurrentSpeed[ent] < 0.0)
+	{
+		PhysProp_CurrentSpeed[ent] = 0.0;
+	}
+	
+	if (PhysProp_CurrentSpeed[ent] > maximum)
+	{
+		PhysProp_CurrentSpeed[ent] = maximum;
+	}
+}
+
+public void PhysProp_MoveToTargetPosition_Preview(int ent, int client, float angOverride[3])
+{
+	if (ent < MaxClients + 1 || ent > 2048)
+	return;
+	
+	if (!IsValidEntity(ent) || !IsValidClient(client))
+	return;
+	
+	float vecView[3], vecFwd[3], vecPos[3], vecVel[3];
+	GetClientEyeAngles(client, vecView);
+	GetAngleVectors(vecView, vecFwd, NULL_VECTOR, NULL_VECTOR);
+	GetClientEyePosition(client, vecPos);
+	vecPos[0]+=vecFwd[0] * 140.0;
+	vecPos[1]+=vecFwd[1] * 140.0;
+	vecPos[2]+=vecFwd[2] * 140.0;
+	GetEntPropVector(ent, Prop_Send, "m_vecOrigin", vecFwd);
+	SubtractVectors(vecPos, vecFwd, vecVel);
+	ScaleVector(vecVel, 5.0);
+	TeleportEntity(ent, NULL_VECTOR, angOverride, vecVel);
+}
+
+stock int SpawnParticle(float origin[3], char particle[255], float duration = 0.0)
+{
+	int Effect = CreateEntityByName("info_particle_system");
+	if (IsValidEdict(Effect))
+	{
+		TeleportEntity(Effect, origin, NULL_VECTOR, NULL_VECTOR);
+		DispatchKeyValue(Effect, "effect_name", particle);
+		SetVariantString("!activator");
+		DispatchKeyValue(Effect, "targetname", "present");
+		DispatchSpawn(Effect);
+		ActivateEntity(Effect);
+		AcceptEntityInput(Effect, "Start");
+		
+		if (duration > 0.0)
+		{
+			CreateTimer(duration, Timer_RemoveEntity, EntIndexToEntRef(Effect), TIMER_FLAG_NO_MAPCHANGE);
+		}
+		
+		return Effect;
+	}
+	
+	return -1;
 }
