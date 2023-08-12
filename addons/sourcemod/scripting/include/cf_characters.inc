@@ -403,7 +403,6 @@ public Action CFC_OpenMenu(int client, int args)
 		//SDKHook(preview, SDKHook_SetTransmit, CF_PreviewModelTransmit);
 		
 		i_CFPreviewModel[client] = EntIndexToEntRef(preview);
-		SDKHook(client, SDKHook_PreThink, CF_PreviewModelPreThink);
 		f_CFPreviewRotation[client] = 0.0;
 	}
 	else
@@ -421,10 +420,10 @@ public Action CFC_OpenMenu(int client, int args)
 	return Plugin_Continue;
 }
  
- public Action CF_PreviewModelPreThink(int client)
+ public void CF_UpdatePreviewModel(int client)
  {
- 	if (!CF_PreviewModelActive(client))
- 		return Plugin_Stop;
+ 	if (!IsValidClient(client))
+ 		return;
  	
 	int preview = EntRefToEntIndex(i_CFPreviewModel[client]);
 	int prop = EntRefToEntIndex(i_CFPreviewProp[client]);
@@ -487,9 +486,21 @@ public Action CFC_OpenMenu(int client, int args)
 	PhysProp_MoveToTargetPosition_Preview(prop, client, ang);
 	//TeleportEntity(preview, NULL_VECTOR, ang, NULL_VECTOR);
 	ChangeModelSkin(preview, skin);
- 	
- 	return Plugin_Continue;
  }
+ 
+ public void CFC_OGF()
+ {
+ 	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (IsValidClient(i))
+		{
+			if (CF_PreviewModelActive(i))
+			{
+				CF_UpdatePreviewModel(i);
+			}
+		}
+	}
+}
  
  public Action CF_PreviewModelTransmit(int client, int entity)
  {

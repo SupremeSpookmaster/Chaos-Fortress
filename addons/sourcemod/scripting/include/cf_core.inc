@@ -245,3 +245,8 @@ public Native_CF_GetRoundState(Handle plugin, int numParams)
 {
 	return i_CFRoundState;
 }
+
+public void OnGameFrame()
+{
+	CFC_OGF();
+}
