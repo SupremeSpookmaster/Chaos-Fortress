@@ -460,7 +460,7 @@ public Action CFC_OpenMenu(int client, int args)
 		skin = "1";
 	}
 	
-	if (b_SpawnPreviewParticleNextFrame[client])
+	if (b_SpawnPreviewParticleNextFrame[client]) //TODO: this just randomly breaks and decides not to work sometimes...
 	{
 		b_SpawnPreviewParticleNextFrame[client] = false;
 		
@@ -571,6 +571,7 @@ public Action CFC_OpenMenu(int client, int args)
  		int preview = EntRefToEntIndex(i_CFPreviewModel[client]);
  		SetEntityModel(preview, model);
  		ChangeModelAnimation(preview, sequence, 1.0);
+ 		b_SpawnPreviewParticleNextFrame[client] = true;
  		
  		if (!StrEqual(weapon, "") && CheckFile(weapon))
  		{
@@ -599,8 +600,6 @@ public Action CFC_OpenMenu(int client, int args)
  			{
  				i_CFPreviewWeapon[client] = EntIndexToEntRef(wep);
  			}
- 			
- 			b_SpawnPreviewParticleNextFrame[client] = true;
  		}
  	}
  	
