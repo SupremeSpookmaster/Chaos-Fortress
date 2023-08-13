@@ -8,6 +8,8 @@
 //GENERAL TODO LIST (things I'll need to add eventually so I don't forget):
 //	- Everything that happens on client disconnect.
 //	- Cookies system.
+//	- Collision forwards.
+//	- (right before publishing) check includes to see if I will need to add anything to the prerequisites section of the readme
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
