@@ -27,6 +27,8 @@ public const char s_ModelFileExtensions[][] =
 Handle CF_Characters_Configs;
 Handle CF_Characters_Names;
 
+ConfigMap Characters;
+
 Menu CF_CharactersMenu;
 Menu CF_ClientMenu[MAXPLAYERS + 1] = { null, ... };
 
@@ -77,7 +79,11 @@ public void CFC_MakeForwards()
  */
  public void CF_LoadCharacters(int admin)
  {
- 	KeyValues kv = GetKeyValuesFromPath("data/chaos_fortress/characters.cfg", true, "FATAL ERROR: COULD NOT READ FILE ''data/chaos_fortress/characters.cfg''.");
+ 	Characters = new ConfigMap("data/chaos_fortress/characters.cfg");
+ 	
+ 	if (Characters == null)
+ 		ThrowError("FATAL ERROR: FAILED TO LOAD data/chaos_fortress/characters.cfg!");
+ 		
  	bool FoundEnabled = false;
  	
  	#if defined DEBUG_CHARACTER_CREATION
@@ -98,70 +104,8 @@ public void CFC_MakeForwards()
  		CF_Characters_Names = CreateArray(255);
  	}
  	
- 	do 
- 	{
- 		char section[255];
- 		kv.GetSectionName(section, 255);
- 		
- 		#if defined DEBUG_CHARACTER_CREATION
-	    PrintToServer("\nNow reading %s...", section);
-	    #endif
- 		
- 		if (StrEqual(section, "Enabled Character Packs"))
- 		{
- 			FoundEnabled = true;
- 			
- 			bool breakOut = false;
- 			for (int keyNum = 1; !breakOut; keyNum++)
- 			{
- 				char keyNumToChar[128];
-				IntToString(keyNum, keyNumToChar, sizeof(keyNumToChar));
-				
-				char value[255];
-				kv.GetString(keyNumToChar, value, sizeof(value));
-				
-				if (StrEqual(value, ""))
-				{
-					breakOut = true;
-				}
-				else
-				{
-					#if defined DEBUG_CHARACTER_CREATION
-	    			PrintToServer("\nLocated character pack: %s", value);
-	   				#endif
-					CF_LoadCharacterPack(value, false);
-				}
- 			}
- 		}
- 		
- 		if (StrEqual(section, "Download Character Packs"))
- 		{
- 			bool breakOut = false;
- 			for (int keyNum = 1; !breakOut; keyNum++)
- 			{
- 				char keyNumToChar[128];
-				IntToString(keyNum, keyNumToChar, sizeof(keyNumToChar));
-				
-				char value[255];
-				kv.GetString(keyNumToChar, value, sizeof(value));
-				
-				if (StrEqual(value, ""))
-				{
-					breakOut = true;
-				}
-				else
-				{
-					#if defined DEBUG_CHARACTER_CREATION
-	    			PrintToServer("\nLocated character pack to download files for: %s", value);
-	   				#endif
-					CF_LoadCharacterPack(value, true);
-				}
- 			}
- 		}
- 	} 
- 	while (kv.GotoNextKey());
- 	
- 	delete kv;
+ 	FoundEnabled = CF_CheckPack("characters.Enabled Character Packs", false);
+ 	CF_CheckPack("characters.Download Character Packs", true);
  	
  	if (!FoundEnabled)
  	{
@@ -173,85 +117,105 @@ public void CFC_MakeForwards()
  	}
  }
  
+ public bool CF_CheckPack(char[] path, bool JustDownload)
+ {
+ 	ConfigMap subsection = Characters.GetSection(path);
+ 	if (subsection != null)
+ 	{
+ 		char value[255];
+ 		for (int i = 1; i <= subsection.Size; i++)
+ 		{
+ 			subsection.GetIntKey(i, value, sizeof(value));
+ 			
+ 			#if defined DEBUG_CHARACTER_CREATION
+ 			if (JustDownload)
+ 			{
+	    		PrintToServer("\nLocated download pack: %s", value);
+			}
+			else
+	    	{
+	    		PrintToServer("\nLocated character pack: %s", value);
+	    	}
+	   		#endif
+	   		
+	   		CF_LoadCharacterPack(value, JustDownload);
+ 		}
+ 		
+ 		return true;
+ 	}
+
+ 	return false;
+ }
+ 
  public void CF_LoadCharacterPack(char pack[255], bool JustDownload)
  {
- 	KeyValues kv = GetKeyValuesFromPath("data/chaos_fortress/characters.cfg", true, "FATAL ERROR: COULD NOT READ FILE ''data/chaos_fortress/characters.cfg''.");
+ 	char packChar[255];
+ 	Format(packChar, sizeof(packChar), "characters.%s", pack);
+ 	
+ 	ConfigMap Pack = Characters.GetSection(packChar);
+ 	
+ 	if (Pack == null)
+ 	{
+ 		PrintToServer("WARNING: data/chaos_fortress/characters.cfg defines a character pack titled ''%s'', but no such pack exists inside of the config. Skipping character pack...", pack);
+ 		return;
+ 	}
  	
  	#if defined DEBUG_CHARACTER_CREATION
 	PrintToServer("\nNow searching character pack ''%s''...", pack);
 	#endif
  	
- 	kv.GoBack();
- 	if (!kv.JumpToKey(pack))
+ 	char value[255];
+ 	for (int i = 1; i <= Pack.Size; i++)
  	{
- 		char section[255];
- 		kv.GetSectionName(section, 255);
- 		ThrowError("FATAL ERROR: ''Enabled Character Packs'' in characters.cfg states that there should be a character pack titled ''%s'', but no such pack exists.", pack, section);
- 	}
- 	
- 	bool breakOut = false;
- 	for (int keyNum = 1; !breakOut; keyNum++)
- 	{
- 		char keyNumToChar[128];
-		IntToString(keyNum, keyNumToChar, sizeof(keyNumToChar));
-				
-		char value[255];
-		kv.GetString(keyNumToChar, value, sizeof(value));
-				
-		if (StrEqual(value, ""))
-		{
-			breakOut = true;
-		}
-		else
-		{
-			Format(value, sizeof(value), "configs/chaos_fortress/%s.cfg", value);
-
-			CF_LoadSpecificCharacter(value, JustDownload);
+ 		Pack.GetIntKey(i, value, sizeof(value));
+ 		
+ 		Format(value, sizeof(value), "configs/chaos_fortress/%s.cfg", value);
+ 		
+ 		CF_LoadSpecificCharacter(value, JustDownload);
 			
-			if (!JustDownload)
-			{
-				PushArrayString(CF_Characters_Configs, value);
-			}
-			
-			#if defined DEBUG_CHARACTER_CREATION
-		    PrintToServer("\nLocated character: %s", value);
-		    #endif
+		if (!JustDownload)
+		{
+			PushArrayString(CF_Characters_Configs, value);
 		}
- 	}
- 	
- 	delete kv;
+			
+		#if defined DEBUG_CHARACTER_CREATION
+		PrintToServer("\nLocated character: %s", value);
+		#endif
+	}
  }
  
  public void CF_LoadSpecificCharacter(char path[255], bool JustDownload)
  {
- 	char str[255];
- 	Format(str, sizeof(str), "FATAL ERROR: COULD NOT READ FILE ''%s''", str);
+ 	ConfigMap Character = new ConfigMap(path);
  	
- 	KeyValues kv = GetKeyValuesFromPath(path, true, str);
+ 	if (Character == null)
+ 	{
+ 		PrintToServer("WARNING: One of your character packs enables a character with config ''%s'', but no such character exists in the configs/chaos_fortress directory. Skipping character...", path);
+ 		return;
+ 	}
  	
- 	kv.GoBack();
- 	
- 	kv.GetString("name", str, 255);
+ 	char str[255]; //TODO: Abstract this to a native titled CF_GetCharacterName. REMINDER: Would be easiest to just make a native called CF_GetCharacterKV and have this native use that to get the name.
+ 	Character.Get("character.name", str, sizeof(str));
  	
  	if (b_DisplayRole)
  	{
- 		kv.JumpToKey("menu_display");
- 		char role[255];
- 		kv.GetString("role", role, 255);
+ 		char role[255];		//TODO: Abstract this to a native titled CF_GetCharacterRole.
+ 		Character.Get("character.menu_display.role", role, sizeof(role));
+ 		
  		Format(str, sizeof(str), "[%s] %s", role, str);
- 		kv.GoBack();
  	}
  	
  	if (!JustDownload)
  	{
  		PushArrayString(CF_Characters_Names, str);
+ 		PushArrayString(CF_Characters_Configs, path);
  	
  		#if defined DEBUG_CHARACTER_CREATION
 		PrintToServer("\nConfig ''%s'' has a character name of ''%s''.", path, str);
  		#endif
  	}
  
- 	CF_ManageCharacterFiles(kv);
+ 	CF_ManageCharacterFiles(Character);
  }
  
  public void CF_BuildCharactersMenu()
@@ -460,7 +424,7 @@ public Action CFC_OpenMenu(int client, int args)
 		skin = "1";
 	}
 	
-	if (b_SpawnPreviewParticleNextFrame[client]) //TODO: this just randomly breaks and decides not to work sometimes...
+	if (b_SpawnPreviewParticleNextFrame[client])
 	{
 		b_SpawnPreviewParticleNextFrame[client] = false;
 		
@@ -483,7 +447,7 @@ public Action CFC_OpenMenu(int client, int args)
 	aimLoc[2] += 40.0;
 	f_CFPreviewRotation[client] += 1.0;
 	ang[1] += f_CFPreviewRotation[client];
-	PhysProp_MoveToTargetPosition_Preview(prop, client, ang);
+	PhysProp_MoveToTargetPosition_Preview(prop, client, ang, 600.0);
 	//TeleportEntity(preview, NULL_VECTOR, ang, NULL_VECTOR);
 	ChangeModelSkin(preview, skin);
  }
@@ -528,43 +492,42 @@ public Action CFC_OpenMenu(int client, int args)
 	if (CF_ClientMenu[client] != null)
 		delete CF_ClientMenu[client];
 	
-	KeyValues kv = GetKeyValuesFromPath(config, false, "Error: Could not load character config.");
- 	
- 	kv.GoBack();
+	ConfigMap Character = new ConfigMap(config);
+	
+ 	if (Character == null)
+ 	{
+ 		PrintToServer("ERROR: Failed to locate config ''%s'' in CFC_BuildInfoMenu.", config);
+ 		return;
+ 	}
  	
  	char name[255]; char title[255]; char related[255]; char role[255]; char desc[255]; char model[255] = ""; char weapon[255]; char attachment[255]; char sequence[255];
- 	kv.GetString("name", name, 255);
+ 	Character.Get("character.name", name, sizeof(name));
+ 	Character.Get("character.model", model, sizeof(model));
  	
- 	if (kv.JumpToKey("menu_display"))
+ 	ConfigMap section = Character.GetSection("character.menu_display");
+ 	if (section == null)
  	{
- 		kv.GetString("related_class", related, 255);
- 		kv.GetString("role", role, 255);
- 		kv.GetString("description", desc, 255);
- 		kv.GetString("preview_sequence", sequence, 255);
- 		kv.GetString("preview_weapon", weapon, 255);
- 		kv.GetString("preview_attachment", attachment, 255);
+ 		Character = new ConfigMap("data/chaos_fortress/game_rules.cfg");
  		
- 		kv.GoBack();
- 		kv.GetString("model", model, 255);
- 		kv.JumpToKey("menu_display");
- 	}
- 	else
- 	{
- 		kv = GetKeyValuesFromPath("data/chaos_fortress/game_rules.cfg", false, "Error: Could not load game_rules.cfg.");
- 		kv.GoBack();
+ 		if (Character == null)		//Don't bother printing an error to the console because this should get thrown in SetGameRules if it's going to get thrown here, unless someone is deliberately deleting server files in which case that's their own fault.
+ 			return;
  		
- 		if (kv.JumpToKey("character_defaults"))
+ 		section = Character.GetSection("game_rules.character_defaults.menu_display");
+ 		
+ 		if (section == null)
  		{
- 			if (kv.JumpToKey("menu_display"))
- 			{
- 				kv.GetString("related_class", related, 255);
-		 		kv.GetString("role", role, 255);
-		 		kv.GetString("description", desc, 255);
-		 		kv.GetString("preview_weapon", weapon, 255);
- 				kv.GetString("preview_attachment", attachment, 255);
- 			}
+ 			PrintToServer("ERROR: Character config ''%s'' does not have default menu information, and neither does your game_rules.cfg.");
+ 			return;
  		}
  	}
+ 	
+ 	//Should be impossible to reach this code without a valid section ConfigMap so don't bother doing security checks:
+ 	section.Get("related_class", related, sizeof(related));
+ 	section.Get("role", role, sizeof(role));
+ 	section.Get("description", desc, sizeof(desc));
+ 	section.Get("preview_weapon", weapon, sizeof(weapon));
+ 	section.Get("preview_attachment", attachment, sizeof(attachment));
+ 	section.Get("preview_sequence", sequence, sizeof(sequence));
  	
  	if (!StrEqual(model, "") && CheckFile(model) && CF_PreviewModelActive(client))
  	{
@@ -588,12 +551,12 @@ public Action CFC_OpenMenu(int client, int args)
  				skin = "1";
  			}
  			
- 			float xOff = kv.GetFloat("attachment_x_offset");
- 			float yOff = kv.GetFloat("attachment_y_offset");
- 			float zOff = kv.GetFloat("attachment_z_offset");
- 			float xRot = kv.GetFloat("attachment_x_rotation");
- 			float yRot = kv.GetFloat("attachment_y_rotation");
- 			float zRot = kv.GetFloat("attachment_z_rotation");
+ 			float xOff = GetFloatFromConfigMap(section, "attachment_x_offset");
+ 			float yOff = GetFloatFromConfigMap(section, "attachment_y_offset");
+ 			float zOff = GetFloatFromConfigMap(section, "attachment_z_offset");
+ 			float xRot = GetFloatFromConfigMap(section, "attachment_x_rotation");
+ 			float yRot = GetFloatFromConfigMap(section, "attachment_y_rotation");
+ 			float zRot = GetFloatFromConfigMap(section, "attachment_z_rotation");
  			
  			int wep = AttachModelToEntity(weapon, attachment, preview, _, skin, xOff, yOff, zOff, xRot, yRot, zRot);
  			if (IsValidEntity(wep))
@@ -615,8 +578,6 @@ public Action CFC_OpenMenu(int client, int args)
  	CF_ClientMenu[client].AddItem("Back", "Go Back");
  	CF_ClientMenu[client].ExitButton = false;
  	CF_ClientMenu[client].Display(client, MENU_TIME_FOREVER);
- 	
- 	delete kv;
  }
  
  public CFC_InfoMenu(Menu CFC_Menu, MenuAction action, int client, int param)
@@ -628,16 +589,21 @@ public Action CFC_OpenMenu(int client, int args)
 	{
 		if (param == 0)
 		{
-			KeyValues kv = GetKeyValuesFromPath(s_CharacterConfigInMenu[client], false, "Error: Could not load character config.");
-			kv.GoBack();
+			ConfigMap Character = new ConfigMap(s_CharacterConfigInMenu[client]);
 			
+			if (Character == null)
+			{
+				PrintToServer("ERROR: Somehow, an invalid character config (%s) was added to the !characters menu.", s_CharacterConfigInMenu[client]);
+				CPrintToChat(client, "{indigo}[Chaos Fortress] {crimson}ERROR: {default}Somehow, an invalid character config {olive}(%s){default} was added to the !characters menu. This should be impossible. Please inform your server's developer.", s_CharacterConfigInMenu[client]);
+				return;
+			}
+
 			char name[255];
-			kv.GetString("name", name, 255);
+			Character.Get("character.name", name, sizeof(name));
 			Format(name, sizeof(name), "{indigo}[Chaos Fortress] {default}You will respawn as {olive}%s{default}.", name);
 			CPrintToChat(client, name);
 			
 			s_DesiredCharacterConfig[client] = s_CharacterConfigInMenu[client];
-			delete kv;
 			
 			if (CF_ClientMenu[client] != null)
 				delete CF_ClientMenu[client];
@@ -662,159 +628,192 @@ public Action CFC_OpenMenu(int client, int args)
 /**
  * Precaches all of the files in the "downloads", "model_download", and "precache" sections of a given CFG, and adds all files in the former two to the downloads table.
  */
- public void CF_ManageCharacterFiles(KeyValues kv)
+ public void CF_ManageCharacterFiles(ConfigMap Character)
  {
- 	if (kv.JumpToKey("model_download"))
+ 	ConfigMap section = Character.GetSection("character.model_download");
+ 	if (section != null)
  	{
- 		//TODO: I REALLY need to find a way to abstract this...
- 		bool breakOut = false;
-	 	for (int keyNum = 1; !breakOut; keyNum++)
-	 	{
-	 		char keyNumToChar[128];
-			IntToString(keyNum, keyNumToChar, sizeof(keyNumToChar));
-					
-			char value[255];
-			kv.GetString(keyNumToChar, value, sizeof(value));
-					
-			if (StrEqual(value, ""))
-			{
-				breakOut = true;
-			}
-			else
-			{
-				char fileCheck[255], actualFile[255];
+ 		CF_DownloadAndPrecacheModels(section);
+ 	}
+ 	
+ 	section = Character.GetSection("character.downloads");
+ 	if (section != null)
+ 	{
+ 		CF_DownloadFiles(section);
+ 	}
+ 	
+ 	section = Character.GetSection("character.precache");
+ 	if (section != null)
+ 	{
+ 		CF_PrecacheFiles(section);
+ 	}
+ }
+ 
+ public void CF_DownloadAndPrecacheModels(ConfigMap subsection)
+ {
+ 	char value[255];
+ 	
+ 	for (int i = 1; i <= subsection.Size; i++)
+ 	{
+ 		subsection.GetIntKey(i, value, sizeof(value));
+ 			
+ 		char fileCheck[255], actualFile[255];
 				
-				for (int i = 0; i < sizeof(s_ModelFileExtensions); i++)
+		for (int j = 0; j < sizeof(s_ModelFileExtensions); j++)
+		{
+			Format(fileCheck, sizeof(fileCheck), "models/%s%s", value, s_ModelFileExtensions[j]);
+			Format(actualFile, sizeof(actualFile), "%s%s", value, s_ModelFileExtensions[j]);
+			if (CheckFile(fileCheck))
+			{
+				if (StrEqual(s_ModelFileExtensions[j], ".mdl"))
 				{
-					Format(fileCheck, sizeof(fileCheck), "models/%s%s", value, s_ModelFileExtensions[i]);
-					Format(actualFile, sizeof(actualFile), "%s%s", value, s_ModelFileExtensions[i]);
-					if (CheckFile(fileCheck))
+					#if defined DEBUG_CHARACTER_CREATION
+					int check = PrecacheModel(fileCheck);
+					
+					if (check != 0)
 					{
-						if (StrEqual(s_ModelFileExtensions[i], ".mdl"))
-						{
-							PrecacheModel(fileCheck);
-						}
-
-						AddFileToDownloadsTable(fileCheck);
-						
-						#if defined DEBUG_CHARACTER_CREATION
-					    PrintToServer("Successfully added model file ''%s'' to the downloads table.", fileCheck);
-					    #endif
+						PrintToServer("Successfully precached file ''%s''.", fileCheck);
 					}
 					else
 					{
-						#if defined DEBUG_CHARACTER_CREATION
-					    PrintToServer("ERROR: Failed to find model file ''%s''.", fileCheck);
-					    #endif
+						PrintToServer("Failed to precache file ''%s''.", fileCheck);
 					}
+					#else
+					PrecacheModel(fileCheck);
+					#endif
 				}
-			}
-	 	}
-	 	
-	 	kv.GoBack();
- 	}
- 	
- 	if (kv.JumpToKey("downloads"))
- 	{
- 		//TODO: I REALLY need to find a way to abstract this...
- 		bool breakOut = false;
-	 	for (int keyNum = 1; !breakOut; keyNum++)
-	 	{
-	 		char keyNumToChar[128];
-			IntToString(keyNum, keyNumToChar, sizeof(keyNumToChar));
-					
-			char value[255];
-			kv.GetString(keyNumToChar, value, sizeof(value));
-					
-			if (StrEqual(value, ""))
-			{
-				breakOut = true;
-			}
-			else
-			{
-				if (CheckFile(value))
-				{
-					AddFileToDownloadsTable(value);
+
+				AddFileToDownloadsTable(fileCheck);
 						
-					#if defined DEBUG_CHARACTER_CREATION
-					 PrintToServer("Successfully added file ''%s'' to the downloads table.", value);
-					 #endif
-				}
-				else
-				{
-					#if defined DEBUG_CHARACTER_CREATION
-					PrintToServer("ERROR: Failed to find file ''%s''.", value);
-					#endif
-				}
-			}
-	 	}
-	 	
-	 	kv.GoBack();
- 	}
- 	
- 	if (kv.JumpToKey("precache"))
- 	{
- 		//TODO: I REALLY need to find a way to abstract this...
- 		bool breakOut = false;
-	 	for (int keyNum = 1; !breakOut; keyNum++)
-	 	{
-	 		char keyNumToChar[128];
-			IntToString(keyNum, keyNumToChar, sizeof(keyNumToChar));
-					
-			char value[255];
-			kv.GetString(keyNumToChar, value, sizeof(value));
-					
-			if (StrEqual(value, ""))
-			{
-				breakOut = true;
+				#if defined DEBUG_CHARACTER_CREATION
+				PrintToServer("Successfully added model file ''%s'' to the downloads table.", fileCheck);
+				#endif
 			}
 			else
 			{
-				char file[255];
-				
-				bool exists = false;
-				
-				Format(file, sizeof(file), "models/%s", value);
-				
-				
-				if (CheckFile(file))
+				#if defined DEBUG_CHARACTER_CREATION
+				PrintToServer("ERROR: Failed to find model file ''%s''.", fileCheck);
+				#endif
+			}
+		}
+	}
+ }
+ 
+ public void CF_DownloadFiles(ConfigMap subsection)
+ {
+ 	char value[255];
+ 	
+ 	for (int i = 1; i <= subsection.Size; i++)
+ 	{
+ 		subsection.GetIntKey(i, value, sizeof(value));
+ 			
+ 		char actualFile[255];
+ 		
+ 		if (CheckFile(value))
+		{
+			AddFileToDownloadsTable(value);
+			
+			if (StrContains(value, "sound") == 0)
+			{
+				for (int j = 6; j < sizeof(value); j++)	//Write the path to the sound without the "sound/" to a new string so we can precache it.
 				{
-					PrecacheModel(file);
-					exists = true;
-					
-					#if defined DEBUG_CHARACTER_CREATION
-					PrintToServer("Successfully precached file ''%s''.", file);
-					#endif
+					actualFile[j - 6] = value[j];
+				}
+
+				#if defined DEBUG_CHARACTER_CREATION
+				bool succeeded = PrecacheSound(actualFile);
+				
+				if (succeeded)
+				{
+					PrintToServer("Successfully precached file ''%s''.", actualFile);
 				}
 				else
 				{
-					Format(file, sizeof(file), "sound/%s", value);
-					
-					if (CheckFile(file))
-					{
-						PrecacheSound(file);
-						exists = true;
-					
-						#if defined DEBUG_CHARACTER_CREATION
-						PrintToServer("Successfully precached file ''%s''.", file);
-						#endif
-					}
+					PrintToServer("Failed to precache file ''%s''.", actualFile);
 				}
-				
-				if (!exists)
-				{
-					#if defined DEBUG_CHARACTER_CREATION
-					PrintToServer("Failed to find file ''%s''.", file);
-					#endif
-				}
+				#else
+				PrecacheSound(actualFile);
+				#endif
 			}
-	 	}
-	 	
-	 	kv.GoBack();
- 	}
- 	
- 	delete kv;
+			
+			#if defined DEBUG_CHARACTER_CREATION
+			PrintToServer("Successfully added file ''%s'' to the downloads table.", value);
+			#endif
+		}
+		else
+		{
+			#if defined DEBUG_CHARACTER_CREATION
+			PrintToServer("ERROR: Failed to find file ''%s''.", value);
+			#endif
+		}
+	}
  }
+
+ public void CF_PrecacheFiles(ConfigMap subsection)
+ {
+ 	char value[255];
+ 	
+ 	for (int i = 1; i <= subsection.Size; i++)
+ 	{
+ 		subsection.GetIntKey(i, value, sizeof(value));
+ 		
+ 		char file[255];
+				
+		bool exists = false;
+				
+		Format(file, sizeof(file), "models/%s", value);
+				
+				
+		if (CheckFile(file))
+		{
+			exists = true;
+					
+			#if defined DEBUG_CHARACTER_CREATION
+			int check = PrecacheModel(file);
+			if (check != 0)
+			{
+				PrintToServer("Successfully precached file ''%s''.", file);
+			}
+			else
+			{
+				PrintToServer("Failed to precache file ''%s''.", file);
+			}
+			#else
+			PrecacheModel(file);
+			#endif
+		}
+		else
+		{
+			Format(file, sizeof(file), "sound/%s", value);
+					
+			if (CheckFile(file))
+			{
+				exists = true;
+					
+				#if defined DEBUG_CHARACTER_CREATION
+				bool check = PrecacheSound(value);
+				if (check)
+				{
+					PrintToServer("Successfully precached file ''%s''.", file);
+				}
+				else
+				{
+					PrintToServer("Failed to precache file ''%s''.", file);
+				}
+				#else
+				PrecacheSound(value);
+				#endif
+			}
+		}
+				
+		if (!exists)
+		{
+			#if defined DEBUG_CHARACTER_CREATION
+			PrintToServer("Failed to find file ''%s''.", file);
+			#endif
+		}
+	}
+}
 
 /**
  * Turns a player into their selected Chaos Fortress character, or the default specified in game_rules if they haven't chosen.

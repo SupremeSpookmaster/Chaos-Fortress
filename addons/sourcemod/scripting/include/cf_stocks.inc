@@ -263,7 +263,7 @@ public Action Timer_RemoveEntity(Handle Timer_RemoveEntity, int entityId)
 	return Plugin_Continue;
 }
 
-int GAT_User = -1;
+//int GAT_User = -1;
 stock Handle getAimTrace(int client, bool obstructions = false)
 {
 	if (!IsValidClient(client))
@@ -278,7 +278,7 @@ stock Handle getAimTrace(int client, bool obstructions = false)
 	
 	Handle trace;
 	
-	GAT_User = client;
+	//GAT_User = client;
 	trace = TR_TraceRayFilterEx(eyePos, eyeAng, MASK_SHOT, RayType_Infinite, TraceEntityFilterPlayer_GAT);
 	
 	return trace;
@@ -564,7 +564,7 @@ public void PhysProp_ChangeSpeed(int ent, float mod, float maximum)
 	}
 }
 
-public void PhysProp_MoveToTargetPosition_Preview(int ent, int client, float angOverride[3])
+public void PhysProp_MoveToTargetPosition_Preview(int ent, int client, float angOverride[3], float maxDistance)
 {
 	if (ent < MaxClients + 1 || ent > 2048)
 	return;
@@ -580,9 +580,17 @@ public void PhysProp_MoveToTargetPosition_Preview(int ent, int client, float ang
 	vecPos[1]+=vecFwd[1] * 140.0;
 	vecPos[2]+=vecFwd[2] * 140.0;
 	GetEntPropVector(ent, Prop_Send, "m_vecOrigin", vecFwd);
-	SubtractVectors(vecPos, vecFwd, vecVel);
-	ScaleVector(vecVel, 5.0);
-	TeleportEntity(ent, NULL_VECTOR, angOverride, vecVel);
+	
+	if (GetVectorDistance(vecFwd, vecPos) > maxDistance && maxDistance > 0.0)
+	{
+		TeleportEntity(ent, vecPos, angOverride, NULL_VECTOR);
+	}
+	else
+	{
+		SubtractVectors(vecPos, vecFwd, vecVel);
+		ScaleVector(vecVel, 5.0);
+		TeleportEntity(ent, NULL_VECTOR, angOverride, vecVel);
+	}
 }
 
 stock int SpawnParticle(float origin[3], char particle[255], float duration = 0.0)
@@ -607,4 +615,28 @@ stock int SpawnParticle(float origin[3], char particle[255], float duration = 0.
 	}
 	
 	return -1;
+}
+
+stock int GetIntFromConfigMap(ConfigMap map, char[] path)
+{
+	char value[255];
+	map.Get(path, value, sizeof(value));
+	
+	return StringToInt(value);
+}
+
+stock float GetFloatFromConfigMap(ConfigMap map, char[] path)
+{
+	char value[255];
+	map.Get(path, value, sizeof(value));
+	
+	return StringToFloat(value);
+}
+
+stock bool GetBoolFromConfigMap(ConfigMap map, char[] path)
+{
+	char value[255];
+	map.Get(path, value, sizeof(value));
+	
+	return (StringToInt(value) != 0);
 }

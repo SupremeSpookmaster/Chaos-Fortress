@@ -77,22 +77,21 @@ public void CF_MakeForwards()
  { 	
  	GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 
+	if (GameRules == null)
+ 		ThrowError("FATAL ERROR: FAILED TO LOAD data/chaos_fortress/game_rules.cfg!");
+
 	#if defined DEBUG_GAMERULES
 	PrintToServer("//////////////////////////////////////////////");
 	PrintToServer("CHAOS FORTRESS GAME_RULES DEBUG MESSAGES BELOW");
 	PrintToServer("//////////////////////////////////////////////");
 	#endif
 
-	char convertThis[255];
-	
 	ConfigMap subsection = GameRules.GetSection("game_rules.general_rules");
 	if (subsection != null)
 	{
 	    subsection.Get("default_character", s_DefaultCharacter, 255);
-	    subsection.Get("charge_retain", convertThis, 255);
-	    f_ChargeRetain = StringToFloat(convertThis);
-	    subsection.Get("display_role", convertThis, 255);
-	    b_DisplayRole = !(StringToInt(convertThis) == 0);
+	    f_ChargeRetain = GetFloatFromConfigMap(subsection, "charge_retain");
+	    b_DisplayRole = GetBoolFromConfigMap(subsection, "display_role");
 	    
 	    if (IsValidClient(admin))
 	    {
@@ -113,17 +112,10 @@ public void CF_MakeForwards()
 	subsection = GameRules.GetSection("game_rules.killstreak_settings");
 	if (subsection != null)
 	{
-		subsection.Get("killstreak_announcements", convertThis, 255);
-		int announcer = StringToInt(convertThis);
-		
-		subsection.Get("killstreak_interval", convertThis, 255);
-		int interval = StringToInt(convertThis);
-		
-		subsection.Get("killstreak_ended", convertThis, 255);
-		int ended = StringToInt(convertThis);
-		
-		subsection.Get("killstreak_godlike", convertThis, 255);
-		int godlike = StringToInt(convertThis);
+		int announcer = GetIntFromConfigMap(subsection, "killstreak_announcements");
+		int interval = GetIntFromConfigMap(subsection, "killstreak_interval");
+		int ended = GetIntFromConfigMap(subsection, "killstreak_ended");
+		int godlike = GetIntFromConfigMap(subsection, "killstreak_godlike");
 	        
 	   	CFKS_Prepare(announcer, interval, ended, godlike);
 	    
