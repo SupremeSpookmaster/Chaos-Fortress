@@ -5,6 +5,10 @@
 //#define DEBUG_BUTTONS
 //#define DEBUG_GAMERULES
 
+//GENERAL TODO LIST (things I'll need to add eventually so I don't forget):
+//	- Everything that happens on client disconnect.
+//	- Cookies system.
+
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
 #define PLUGIN_AUTHOR         "Spookmaster"
