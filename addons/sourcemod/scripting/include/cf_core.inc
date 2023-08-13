@@ -17,6 +17,8 @@ float f_ChargeRetain = 0.0;
 GlobalForward g_OnPlayerKilled;
 GlobalForward g_OnRoundStateChanged;
 
+ConfigMap GameRules;
+
 /**
  * Creates all of Chaos Fortress' natives.
  */
@@ -73,9 +75,7 @@ public void CF_MakeForwards()
  */
  public void CF_SetGameRules(int admin)
  { 	
- 	KeyValues kv = GetKeyValuesFromPath("data/chaos_fortress/game_rules.cfg", true, "FATAL ERROR: COULD NOT READ FILE ''data/chaos_fortress/game_rules.cfg''.");
-
-	char intStr[255];
+ 	GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 
 	#if defined DEBUG_GAMERULES
 	PrintToServer("//////////////////////////////////////////////");
@@ -83,83 +83,65 @@ public void CF_MakeForwards()
 	PrintToServer("//////////////////////////////////////////////");
 	#endif
 
-	do //TODO: Probably a good idea to abstract this to a method instead of copy/pasting it every time and making small changes...
+	char convertThis[255];
+	
+	ConfigMap subsection = GameRules.GetSection("game_rules.general_rules");
+	if (subsection != null)
 	{
-		char section[255];
-		kv.GetSectionName(section, 255);
-		
-		if (IsValidClient(admin))
+	    subsection.Get("default_character", s_DefaultCharacter, 255);
+	    subsection.Get("charge_retain", convertThis, 255);
+	    f_ChargeRetain = StringToFloat(convertThis);
+	    subsection.Get("display_role", convertThis, 255);
+	    b_DisplayRole = !(StringToInt(convertThis) == 0);
+	    
+	    if (IsValidClient(admin))
 	    {
-	    	PrintToConsole(admin, "\nNew game rules under section ''%s'' are as follows:", section);
+	    	PrintToConsole(admin, "\nNew game rules under general_rules:");
+	        PrintToConsole(admin, "\nDefault Character: %s", s_DefaultCharacter);
+	        PrintToConsole(admin, "Ult Charge Retained On Character Switch: %.2f", f_ChargeRetain);
+	        PrintToConsole(admin, "Display Role: %i", view_as<int>(b_DisplayRole));
 	    }
-		
-		#if defined DEBUG_GAMERULES
-	    PrintToServer("\nNow reading %s...", section);
+	    
+	    #if defined DEBUG_GAMERULES
+	    PrintToServer("\nNow reading general_rules...");
+	    PrintToServer("\nDefault Character: %s", s_DefaultCharacter);
+	    PrintToServer("Ult Charge Retained On Character Switch: %.2f", f_ChargeRetain);
+	    PrintToServer("Display Role: %i", view_as<int>(b_DisplayRole));
 	    #endif
+	}
+	
+	subsection = GameRules.GetSection("game_rules.killstreak_settings");
+	if (subsection != null)
+	{
+		subsection.Get("killstreak_announcements", convertThis, 255);
+		int announcer = StringToInt(convertThis);
 		
-		if (StrEqual(section, "general_rules"))
+		subsection.Get("killstreak_interval", convertThis, 255);
+		int interval = StringToInt(convertThis);
+		
+		subsection.Get("killstreak_ended", convertThis, 255);
+		int ended = StringToInt(convertThis);
+		
+		subsection.Get("killstreak_godlike", convertThis, 255);
+		int godlike = StringToInt(convertThis);
+	        
+	   	CFKS_Prepare(announcer, interval, ended, godlike);
+	    
+		if (IsValidClient(admin))
 		{
-	        kv.GetString("default_character", s_DefaultCharacter, 255);
-	        f_ChargeRetain = kv.GetFloat("charge_retain");
-	        kv.GetString("display_role", intStr, 255);
-	        b_DisplayRole = !(StringToInt(intStr) == 0);
+	        PrintToConsole(admin, "\nKillstreak Announcer: %i", announcer);
+	        PrintToConsole(admin, "Killstreak Interval: Every %i Kill(s)", interval);
+	        PrintToConsole(admin, "Announce Ended Killstreaks at: %i Kill(s)", ended);
+	        PrintToConsole(admin, "Killstreaks Are Godlike At: %i Kill(s)", godlike);
+	    }
 	        
-	        if (IsValidClient(admin))
-	        {
-	        	PrintToConsole(admin, "\nDefault Character: %s", s_DefaultCharacter);
-	        	PrintToConsole(admin, "Ult Charge Retained On Character Switch: %.2f", f_ChargeRetain);
-	        	PrintToConsole(admin, "Display Role: %i", view_as<int>(b_DisplayRole));
-	        }
-	        
-	        #if defined DEBUG_GAMERULES
-	        PrintToServer("\nDefault Character: %s", s_DefaultCharacter);
-	        PrintToServer("Ult Charge Retained On Character Switch: %.2f", f_ChargeRetain);
-	        PrintToServer("Display Role: %i", view_as<int>(b_DisplayRole));
-	        #endif
-		}
-		
-		if (StrEqual(section, "killstreak_settings"))
-		{
-	        kv.GetString("killstreak_announcements", intStr, 255);
-	        int announcer = StringToInt(intStr);
-	        kv.GetString("killstreak_interval", intStr, 255);
-	        int interval = StringToInt(intStr);
-	        kv.GetString("killstreak_ended", intStr, 255);
-	        int ended = StringToInt(intStr);
-	        kv.GetString("killstreak_godlike", intStr, 255);
-	        int godlike = StringToInt(intStr);
-	        
-	        CFKS_Prepare(announcer, interval, ended, godlike);
-	        
-	        if (IsValidClient(admin))
-	        {
-	        	PrintToConsole(admin, "\nKillstreak Announcer: %i", announcer);
-	        	PrintToConsole(admin, "Killstreak Interval: Every %i Kill(s)", interval);
-	        	PrintToConsole(admin, "Announce Ended Killstreaks at: %i Kill(s)", ended);
-	        	PrintToConsole(admin, "Killstreaks Are Godlike At: %i Kill(s)", godlike);
-	        }
-	        
-	        #if defined DEBUG_GAMERULES
-	        PrintToServer("\nKillstreak Announcer: %i", announcer);
-	        PrintToServer("Killstreak Interval: Every %i Kill(s)", interval);
-	        PrintToServer("Announce Ended Killstreaks at: %i Kill(s)", ended);
-	        PrintToServer("Killstreaks Are Godlike At: %i Kill(s)", godlike);
-	        #endif
-		}
-		
-		if (StrEqual(section, "character_defaults"))
-		{
-			if (IsValidClient(admin))
-		    {
-		        PrintToConsole(admin, "\nCharacter defaults are ignored due to current settings, skipping.");
-		    }
-		        
-		    #if defined DEBUG_GAMERULES
-	        PrintToServer("\nCharacter defaults are ignored due to current settings, skipping.");
-	        #endif
-		}
-		
-	} while (kv.GotoNextKey());
+	    #if defined DEBUG_GAMERULES
+	    PrintToServer("\nKillstreak Announcer: %i", announcer);
+	    PrintToServer("Killstreak Interval: Every %i Kill(s)", interval);
+	    PrintToServer("Announce Ended Killstreaks at: %i Kill(s)", ended);
+	    PrintToServer("Killstreaks Are Godlike At: %i Kill(s)", godlike);
+	    #endif
+	}
 	
 	#if defined DEBUG_GAMERULES
 	PrintToServer("//////////////////////////////////////////////");
@@ -167,7 +149,7 @@ public void CF_MakeForwards()
 	PrintToServer("//////////////////////////////////////////////");
 	#endif
 	
-    delete kv;
+    //delete kv;
  }
  
 /**
