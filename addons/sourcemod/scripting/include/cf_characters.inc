@@ -45,6 +45,7 @@ float f_CFPreviewRotation[MAXPLAYERS + 1] = { 0.0, ... };
 bool b_DisplayRole = true;
 bool b_CharacterApplied[MAXPLAYERS + 1] = { false, ... }; //Whether or not the client's character has been applied to them already. If true: skip MakeCharacter for that client. Set to false automatically on death, round end, disconnect, and if the player changes their character selection.
 bool b_SpawnPreviewParticleNextFrame[MAXPLAYERS + 1] = { false, ... };
+bool b_ReadingLore[MAXPLAYERS + 1] = { false, ... };
 
 char s_CharacterConfig[MAXPLAYERS+1][255];	//The config currently used for this player's character. If empty: that player is not a character.
 char s_CharacterConfigInMenu[MAXPLAYERS+1][255];	//The config currently used this player's info menu.
@@ -246,7 +247,7 @@ public CFC_Menu(Menu CFC_Menu, MenuAction action, int client, int param)
 		char conf[255];
 		GetArrayString(CF_Characters_Configs, param, conf, 255);
 		
-		CFC_BuildInfoMenu(client, conf);		
+		CFC_BuildInfoMenu(client, conf, false, false);		
 	}
 	else if (action == MenuAction_End || action == MenuAction_Cancel)
 	{
@@ -281,6 +282,7 @@ public Action CFC_OpenMenu(int client, int args)
 	CF_ClientMenu[client] = new Menu(CFC_Menu);
 	CopyMenu(CF_ClientMenu[client], CF_CharactersMenu);
 	CF_ClientMenu[client].Display(client, MENU_TIME_FOREVER);
+	b_ReadingLore[client] = false;
 	
 	if (!CF_PreviewModelActive(client))
 	{
@@ -484,7 +486,7 @@ public Action CFC_OpenMenu(int client, int args)
  	return IsValidEntity(EntRefToEntIndex(i_CFPreviewModel[client])) && IsValidEntity(EntRefToEntIndex(i_CFPreviewProp[client]));
  }
  
- public void CFC_BuildInfoMenu(int client, char config[255])
+ public void CFC_BuildInfoMenu(int client, char config[255], bool isLore, bool justReading)
  {
  	if (!IsValidClient(client))
 		return;
@@ -500,7 +502,7 @@ public Action CFC_OpenMenu(int client, int args)
  		return;
  	}
  	
- 	char name[255]; char title[255]; char related[255]; char role[255]; char desc[255]; char model[255] = ""; char weapon[255]; char attachment[255]; char sequence[255];
+ 	char name[255]; char title[255]; char related[255]; char role[255]; char desc[255]; char model[255] = ""; char lore[255] = ""; char weapon[255]; char attachment[255]; char sequence[255];
  	Character.Get("character.name", name, sizeof(name));
  	Character.Get("character.model", model, sizeof(model));
  	
@@ -528,8 +530,9 @@ public Action CFC_OpenMenu(int client, int args)
  	section.Get("preview_weapon", weapon, sizeof(weapon));
  	section.Get("preview_attachment", attachment, sizeof(attachment));
  	section.Get("preview_sequence", sequence, sizeof(sequence));
+ 	section.Get("lore_description", lore, sizeof(lore));
  	
- 	if (!StrEqual(model, "") && CheckFile(model) && CF_PreviewModelActive(client))
+ 	if (!StrEqual(model, "") && CheckFile(model) && CF_PreviewModelActive(client) && !justReading)
  	{
  		int preview = EntRefToEntIndex(i_CFPreviewModel[client]);
  		SetEntityModel(preview, model);
@@ -566,7 +569,14 @@ public Action CFC_OpenMenu(int client, int args)
  		}
  	}
  	
- 	Format(title, sizeof(title), "%s\n\nSimilar TF2 Class: %s\nRole: %s\n\n%s", name, related, role, desc);
+ 	if (!isLore)
+ 	{
+ 		Format(title, sizeof(title), "%s\n\nSimilar TF2 Class: %s\nRole: %s\n\n%s", name, related, role, desc);
+ 	}
+ 	else
+ 	{
+ 		Format(title, sizeof(title), "%s\n\n%s", name, lore);
+ 	}
  	
  	s_CharacterConfigInMenu[client] = config;
  	
@@ -575,9 +585,28 @@ public Action CFC_OpenMenu(int client, int args)
  	
  	Format(name, sizeof(name), "Spawn As %s", name);
  	CF_ClientMenu[client].AddItem("Select", name);
+ 	
+ 	if (!isLore)
+ 	{
+	 	if (StrEqual(lore, ""))
+	 	{
+	 		CF_ClientMenu[client].AddItem("Lore", "(No Lore)", ITEMDRAW_DISABLED);
+	 	}
+	 	else
+	 	{
+	 		CF_ClientMenu[client].AddItem("Lore", "View Lore");
+	 	}
+	 }
+	 else
+	 {
+	 	CF_ClientMenu[client].AddItem("Lore", "View Gameplay Description");
+	 }
+ 	
  	CF_ClientMenu[client].AddItem("Back", "Go Back");
+ 	
  	CF_ClientMenu[client].ExitButton = false;
  	CF_ClientMenu[client].Display(client, MENU_TIME_FOREVER);
+ 	b_ReadingLore[client] = isLore;
  }
  
  public CFC_InfoMenu(Menu CFC_Menu, MenuAction action, int client, int param)
@@ -587,7 +616,7 @@ public Action CFC_OpenMenu(int client, int args)
 	
 	if (action == MenuAction_Select)
 	{
-		if (param == 0)
+		if (param != 2)
 		{
 			ConfigMap Character = new ConfigMap(s_CharacterConfigInMenu[client]);
 			
@@ -597,18 +626,25 @@ public Action CFC_OpenMenu(int client, int args)
 				CPrintToChat(client, "{indigo}[Chaos Fortress] {crimson}ERROR: {default}Somehow, an invalid character config {olive}(%s){default} was added to the !characters menu. This should be impossible. Please inform your server's developer.", s_CharacterConfigInMenu[client]);
 				return;
 			}
-
-			char name[255];
-			Character.Get("character.name", name, sizeof(name));
-			Format(name, sizeof(name), "{indigo}[Chaos Fortress] {default}You will respawn as {olive}%s{default}.", name);
-			CPrintToChat(client, name);
 			
-			s_DesiredCharacterConfig[client] = s_CharacterConfigInMenu[client];
-			
-			if (CF_ClientMenu[client] != null)
-				delete CF_ClientMenu[client];
+			if (param == 0)
+			{
+				char name[255];
+				Character.Get("character.name", name, sizeof(name));
+				Format(name, sizeof(name), "{indigo}[Chaos Fortress] {default}You will respawn as {olive}%s{default}.", name);
+				CPrintToChat(client, name);
 				
-			CF_DeletePreviewModel(client);
+				s_DesiredCharacterConfig[client] = s_CharacterConfigInMenu[client];
+				
+				if (CF_ClientMenu[client] != null)
+					delete CF_ClientMenu[client];
+					
+				CF_DeletePreviewModel(client);
+			}
+			else if (param == 1)
+			{
+				CFC_BuildInfoMenu(client, s_CharacterConfigInMenu[client], !b_ReadingLore[client], true);
+			}
 		}
 		else
 		{
