@@ -10,6 +10,7 @@
 //	- Cookies system.
 //	- Collision forwards.
 //	- (right before publishing) check includes to see if I will need to add anything to the prerequisites section of the readme
+//	- Add SetTransmit to character preview model and effects.
 //  - BUG: If the round changes (IE round A ends, round B starts, or the waiting for players phase ends) while reading a specific character's description,
 //		the character select preview model disappears until the player goes back to the main character menu. This is very minor and has no impact on gameplay.
 
