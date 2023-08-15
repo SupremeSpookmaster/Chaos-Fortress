@@ -443,9 +443,10 @@ public Action CFC_OpenMenu(int client, int args)
 			//SDKHook(part, SDKHook_SetTransmit, CF_PreviewModelTransmit);
 		}
 		
+		//TODO: Switch this to CF_PlayRandomSound(?)
 		char snd[255];
-		KeyValType kvtype = CF_GetRandomSound(s_CharacterConfigInMenu[client], "sound_ultimate_ready", snd);
-		PrintToServer("Character selection snd is %s", snd);
+		CF_GetRandomSound(s_CharacterConfigInMenu[client], "sound_selection_preview", snd);
+		EmitSoundToClient(client, snd);
 		
 		EmitSoundToClient(client, SOUND_CHARACTER_PREVIEW);
 	}

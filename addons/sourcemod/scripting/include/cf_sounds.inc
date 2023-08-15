@@ -44,11 +44,24 @@ public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Outp
 	
 	if (StrContains(key, ".") != -1)
 	{
-		ReplaceString(key, sizeof(key), ".", "\\.");
+		KeyValues kv = new KeyValues(Config); //TODO: I do not like this, figure out how to keep everything as CFGMap...
+		kv.JumpToKey("sounds");
+		kv.JumpToKey(Sound);
+		Format(Output, sizeof(Output), "%s", key);
+		
+		#if defined DEBUG_SOUNDS
+		PrintToServer("CF_GetRandomSound retrieved a ConfigMap with KeyValType_Section, the section name is %s.", Output);
+		#endif
+		
+		delete kv;
+		
+		return KeyValType_Section;
+		
+		/*ReplaceString(key, sizeof(key), ".", "\\.");
 		#if defined DEBUG_SOUNDS
 		PrintToServer("CF_GetRandomSound retrieved a ConfigMap which contained a '.' in its path. New path: %s.%s", snd, key);
 		PrintToServer("The key itself is currently %s", key);
-		#endif
+		#endif*/
 	}
 	
 	switch(newMap.GetKeyValType(key))
@@ -87,7 +100,7 @@ public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Outp
 /**
  * Plays a random sound from a client's boss config, as specified by the settings below.
  *
- * @param source				The source to play the sound from. If this is a valid client, Config is automatically filled out and can be skipped.
+ * @param source				The source to play the sound from. If this is a valid client, Config can be left blank to automatically grab their current character config.
  * @param Config				The config to grab the sound from. Ignored if source is a valid client.
  * @param Sound					The sound section to grab from, such as "sound_kill".
  * @param OtherCharacter		The optional name of other character involved in the interaction which triggered the sound, used by sound_kill and sound_killed.
@@ -98,5 +111,5 @@ public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Outp
  */
 void CF_PlayRandomSound(int source, char Config[255], char Sound[255], char OtherCharacter[255] = "", float damage = 0.0, float UltLoc[3] = {0.0, ...}, int UltUser = -1)
 {
-
+	//TODO
 }
