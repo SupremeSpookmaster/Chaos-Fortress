@@ -1,25 +1,87 @@
 /**
  * Gets a random sound from a given boss config.
  *
- * @param Config 				The config to grab the sound from.Can be a direct path such as "configs/chaos_fortress/character.cfg"", or just the name of the cfg, such as "character"
+ * @param Config 				The config to grab the sound from. Must be a direct path such as "configs/chaos_fortress/character.cfg". You can obtain this easily with CF_GetCharacterConfig.
  * @param Sound					The sound section to grab from, such as "sound_kill".
+ * @param Output				The output buffer.
  *
- * @return	A ConfigMap directed to the chosen sound, null if the config or sound do not exist.
+ * @return A KeyValType corresponding to the chosen sound. KeyValType_Value for sounds without special settings, KeyValType_Section for sounds with special settings, and KeyValType_Null for invalid sounds.
  */
-public ConfigMap CF_GetRandomSound(char Config[255], char Sound[255])
+public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Output[255])
 {
-	if (!CheckFile(Config))
-		Format(Config, sizeof(Config), "configs/chaos_fortress/%s.cfg", Config);
+	//if (!CheckFile(Config))
+		//Format(Config, sizeof(Config), "configs/chaos_fortress/%s.cfg", Config);
 		
-	if (!CheckFile(Config))
-		return null;
+	//if (!CheckFile(Config))
+		//return null;
 		
-	ConfigMap conf = new ConfigMap(Config);
+	ConfigMap cfgMap = new ConfigMap(Config);
 	
-	if (conf == null)
-		return null;
+	if (cfgMap == null)
+		return KeyValType_Null;
 		
-	//TODO: man I'm so much more tired than I thought I was, do the rest of this tomorrow
+	char snd[255];
+		
+	Format(snd, sizeof(snd), "character.sounds.%s", Sound);
+	ConfigMap newMap = cfgMap.GetSection(snd);
+	
+	if (newMap == null)
+		return KeyValType_Null;
+		
+	StringMapSnapshot snap = newMap.Snapshot();
+	
+	int chosen = GetRandomInt(0, snap.Length - 1);
+	
+	char key[255];
+	snap.GetKey(chosen, key, sizeof(key));
+	
+	#if defined DEBUG_SOUNDS
+	PrintToServer("CF_GetRandomSound retrieved a ConfigMap with the following path: %s.%s", snd, key);
+	#endif
+	
+	char OldKey[255];
+	Format(OldKey, sizeof(OldKey), "%s", key);
+	
+	if (StrContains(key, ".") != -1)
+	{
+		ReplaceString(key, sizeof(key), ".", "\\.");
+		#if defined DEBUG_SOUNDS
+		PrintToServer("CF_GetRandomSound retrieved a ConfigMap which contained a '.' in its path. New path: %s.%s", snd, key);
+		PrintToServer("The key itself is currently %s", key);
+		#endif
+	}
+	
+	switch(newMap.GetKeyValType(key))
+	{
+		case KeyValType_Value: //This works as intended.
+		{
+			newMap.Get(key, Output, sizeof(Output));
+			
+			#if defined DEBUG_SOUNDS
+			PrintToServer("CF_GetRandomSound retrieved a ConfigMap with KeyValType_Value, the value is %s.", Output);
+			#endif
+			
+			return KeyValType_Value;
+		}
+		case KeyValType_Section: //BUG: This cannot be accessed. The github's tutorial says I should replace the "." with a "\.", which I am doing, but it still does not work.
+		{
+			Format(Output, sizeof(Output), "%s", OldKey);
+			
+			#if defined DEBUG_SOUNDS
+			PrintToServer("CF_GetRandomSound retrieved a ConfigMap with KeyValType_Section, the section name is %s.", Output);
+			#endif
+			
+			return KeyValType_Section;
+		}
+		default:
+		{
+			#if defined DEBUG_SOUNDS
+			PrintToServer("CF_GetRandomSound retrieved a ConfigMap with KeyValType_Null, meaning the section does not exist. This should not be possible.");
+			#endif
+			
+			return KeyValType_Null;
+		}
+	}
 }
 
 /**
@@ -34,7 +96,7 @@ public ConfigMap CF_GetRandomSound(char Config[255], char Sound[255])
  * @param UltUser				The optional user of the Ultimate Ability which triggered this sound, used for sound_ultimate_react sounds.
  *
  */
-void CF_PlayRandomSound(int source, char[] Sound, char[] OtherCharacter = "", float damage = 0.0, float UltLoc[3] = {0.0, ...}, int UltUser = -1)
+void CF_PlayRandomSound(int source, char Config[255], char Sound[255], char OtherCharacter[255] = "", float damage = 0.0, float UltLoc[3] = {0.0, ...}, int UltUser = -1)
 {
 
 }

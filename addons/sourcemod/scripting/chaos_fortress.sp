@@ -4,6 +4,7 @@
 //#define DEBUG_ONTAKEDAMAGE
 //#define DEBUG_BUTTONS
 //#define DEBUG_GAMERULES
+#define DEBUG_SOUNDS
 
 //GENERAL TODO LIST (things I'll need to add eventually so I don't forget):
 //	- Everything that happens on client disconnect.
@@ -11,8 +12,9 @@
 //	- Collision forwards.
 //	- (right before publishing) check includes to see if I will need to add anything to the prerequisites section of the readme
 //	- Add SetTransmit to character preview model and effects.
-//  - BUG: If the round changes (IE round A ends, round B starts, or the waiting for players phase ends) while reading a specific character's description,
-//		the character select preview model disappears until the player goes back to the main character menu. This is very minor and has no impact on gameplay.
+//  - BUG: If the round changes (IE round A ends then round B starts, or the waiting for players phase ends) while reading a specific character's description,
+//		the character select preview model disappears until the player goes back to the main character menu. The preview's outline also permanently breaks
+//		when this happens. This is very minor and has no impact on gameplay.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
