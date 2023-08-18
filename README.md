@@ -42,7 +42,7 @@ Let's say you want to add or remove a character, or you have a handful of charac
 All configurable options specific to this game mode are described in and can be controlled in **[game_rules.cfg](addons/sourcemod/data/chaos_fortress/game_rules.cfg)**.
 
 ## *Credits*
-In order of most to least contribution:
+In no particular order, all help is greatly appreciated:
   - **[Spookmaster](https://github.com/SupremeSpookmaster)** (Lead Dev, Game Mode Creator, All Default Characters)
   - **[Artvin](https://github.com/artvin01)** and **[Batfoxkid](https://github.com/Batfoxkid)** (Creators of ***[TF2 Zombie Riot](https://github.com/artvin01/TF2-Zombie-Riot)***, which I borrowed code from at certain points, general advice and support)
-  - **[Zabaniya001, AKA Suza](https://github.com/Zabaniya001/Zabaniya001)** (Various tips and tricks, help regarding code cleanliness and performance)
+  - **[Zabaniya001, AKA Suza](https://github.com/Zabaniya001/Zabaniya001)** (Various tips and tricks, help regarding code cleanliness and performance, lots of help with unfamiliar coding territory)
