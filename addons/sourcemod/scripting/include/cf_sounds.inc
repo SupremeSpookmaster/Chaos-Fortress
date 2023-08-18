@@ -9,12 +9,6 @@
  */
 public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Output[255])
 {
-	//if (!CheckFile(Config))
-		//Format(Config, sizeof(Config), "configs/chaos_fortress/%s.cfg", Config);
-		
-	//if (!CheckFile(Config))
-		//return null;
-		
 	ConfigMap cfgMap = new ConfigMap(Config);
 	
 	if (cfgMap == null)
@@ -44,24 +38,11 @@ public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Outp
 	
 	if (StrContains(key, ".") != -1)
 	{
-		KeyValues kv = new KeyValues(Config); //TODO: I do not like this, figure out how to keep everything as CFGMap...
-		kv.JumpToKey("sounds");
-		kv.JumpToKey(Sound);
-		Format(Output, sizeof(Output), "%s", key);
-		
-		#if defined DEBUG_SOUNDS
-		PrintToServer("CF_GetRandomSound retrieved a ConfigMap with KeyValType_Section, the section name is %s.", Output);
-		#endif
-		
-		delete kv;
-		
-		return KeyValType_Section;
-		
-		/*ReplaceString(key, sizeof(key), ".", "\\.");
+		ReplaceString(key, sizeof(key), ".", "\\.");
 		#if defined DEBUG_SOUNDS
 		PrintToServer("CF_GetRandomSound retrieved a ConfigMap which contained a '.' in its path. New path: %s.%s", snd, key);
 		PrintToServer("The key itself is currently %s", key);
-		#endif*/
+		#endif
 	}
 	
 	switch(newMap.GetKeyValType(key))
@@ -76,7 +57,7 @@ public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Outp
 			
 			return KeyValType_Value;
 		}
-		case KeyValType_Section: //BUG: This cannot be accessed. The github's tutorial says I should replace the "." with a "\.", which I am doing, but it still does not work.
+		case KeyValType_Section:
 		{
 			Format(Output, sizeof(Output), "%s", OldKey);
 			

@@ -4,7 +4,7 @@
 //#define DEBUG_ONTAKEDAMAGE
 //#define DEBUG_BUTTONS
 //#define DEBUG_GAMERULES
-#define DEBUG_SOUNDS
+//#define DEBUG_SOUNDS
 
 //GENERAL TODO LIST (things I'll need to add eventually so I don't forget):
 //	- Everything that happens on client disconnect.
