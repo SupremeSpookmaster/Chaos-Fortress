@@ -91,8 +91,8 @@ public void CF_MakeForwards()
 	if (subsection != null)
 	{
 	    subsection.Get("default_character", s_DefaultCharacter, 255);
-	    f_ChargeRetain = GetFloatFromConfigMap(subsection, "charge_retain");
-	    b_DisplayRole = GetBoolFromConfigMap(subsection, "display_role");
+	    f_ChargeRetain = GetFloatFromConfigMap(subsection, "charge_retain", 0.0);
+	    b_DisplayRole = GetBoolFromConfigMap(subsection, "display_role", false);
 	    
 	    if (IsValidClient(admin))
 	    {
@@ -113,10 +113,10 @@ public void CF_MakeForwards()
 	subsection = GameRules.GetSection("game_rules.killstreak_settings");
 	if (subsection != null)
 	{
-		int announcer = GetIntFromConfigMap(subsection, "killstreak_announcements");
-		int interval = GetIntFromConfigMap(subsection, "killstreak_interval");
-		int ended = GetIntFromConfigMap(subsection, "killstreak_ended");
-		int godlike = GetIntFromConfigMap(subsection, "killstreak_godlike");
+		int announcer = GetIntFromConfigMap(subsection, "killstreak_announcements", 0);
+		int interval = GetIntFromConfigMap(subsection, "killstreak_interval", 0);
+		int ended = GetIntFromConfigMap(subsection, "killstreak_ended", 0);
+		int godlike = GetIntFromConfigMap(subsection, "killstreak_godlike", 0);
 	        
 	   	CFKS_Prepare(announcer, interval, ended, godlike);
 	    

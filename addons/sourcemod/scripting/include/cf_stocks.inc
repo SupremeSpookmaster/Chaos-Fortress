@@ -617,26 +617,41 @@ stock int SpawnParticle(float origin[3], char particle[255], float duration = 0.
 	return -1;
 }
 
-stock int GetIntFromConfigMap(ConfigMap map, char[] path)
+stock int GetIntFromConfigMap(ConfigMap map, char[] path, int defaultValue)
 {
 	char value[255];
 	map.Get(path, value, sizeof(value));
+	
+	if (StrEqual(value, ""))
+	{
+		return defaultValue;
+	}
 	
 	return StringToInt(value);
 }
 
-stock float GetFloatFromConfigMap(ConfigMap map, char[] path)
+stock float GetFloatFromConfigMap(ConfigMap map, char[] path, float defaultValue)
 {
 	char value[255];
 	map.Get(path, value, sizeof(value));
 	
+	if (StrEqual(value, ""))
+	{
+		return defaultValue;
+	}
+	
 	return StringToFloat(value);
 }
 
-stock bool GetBoolFromConfigMap(ConfigMap map, char[] path)
+stock bool GetBoolFromConfigMap(ConfigMap map, char[] path, bool defaultValue)
 {
 	char value[255];
 	map.Get(path, value, sizeof(value));
+	
+	if (StrEqual(value, ""))
+	{
+		return defaultValue;
+	}
 	
 	return (StringToInt(value) != 0);
 }

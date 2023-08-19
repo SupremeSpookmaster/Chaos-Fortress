@@ -559,12 +559,12 @@ public Action CFC_OpenMenu(int client, int args)
  				skin = "1";
  			}
  			
- 			float xOff = GetFloatFromConfigMap(section, "attachment_x_offset");
- 			float yOff = GetFloatFromConfigMap(section, "attachment_y_offset");
- 			float zOff = GetFloatFromConfigMap(section, "attachment_z_offset");
- 			float xRot = GetFloatFromConfigMap(section, "attachment_x_rotation");
- 			float yRot = GetFloatFromConfigMap(section, "attachment_y_rotation");
- 			float zRot = GetFloatFromConfigMap(section, "attachment_z_rotation");
+ 			float xOff = GetFloatFromConfigMap(section, "attachment_x_offset", 0.0);
+ 			float yOff = GetFloatFromConfigMap(section, "attachment_y_offset", 0.0);
+ 			float zOff = GetFloatFromConfigMap(section, "attachment_z_offset", 0.0);
+ 			float xRot = GetFloatFromConfigMap(section, "attachment_x_rotation", 0.0);
+ 			float yRot = GetFloatFromConfigMap(section, "attachment_y_rotation", 0.0);
+ 			float zRot = GetFloatFromConfigMap(section, "attachment_z_rotation", 0.0);
  			
  			int wep = AttachModelToEntity(weapon, attachment, preview, _, skin, xOff, yOff, zOff, xRot, yRot, zRot);
  			if (IsValidEntity(wep))
@@ -876,6 +876,8 @@ public Action CFC_OpenMenu(int client, int args)
  	//For now we have this temporary debug code.
  	CF_SetPlayerConfig(client, "Test Config");
  	b_CharacterApplied[client] = true;
+ 	
+ 	CF_PlayRandomSound(client, "", "sound_spawn");
  	
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);

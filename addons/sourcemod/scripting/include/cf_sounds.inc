@@ -1,3 +1,16 @@
+int CF_SndChans[10] = {
+	SNDCHAN_AUTO,
+	SNDCHAN_BODY,
+	SNDCHAN_ITEM,
+	SNDCHAN_REPLACE,
+	SNDCHAN_STATIC,
+	SNDCHAN_STREAM,
+	SNDCHAN_USER_BASE,
+	SNDCHAN_VOICE,
+	SNDCHAN_VOICE_BASE,
+	SNDCHAN_WEAPON
+};
+
 /**
  * Gets a random sound from a given boss config.
  *
@@ -82,15 +95,77 @@ public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Outp
  * Plays a random sound from a client's boss config, as specified by the settings below.
  *
  * @param source				The source to play the sound from. If this is a valid client, Config can be left blank to automatically grab their current character config.
- * @param Config				The config to grab the sound from. Ignored if source is a valid client.
+ * @param Config				The config to grab the sound from. If source is a valid client and you leave this blank, the config is automatically grabbed from that client's current character.
  * @param Sound					The sound section to grab from, such as "sound_kill".
- * @param OtherCharacter		The optional name of other character involved in the interaction which triggered the sound, used by sound_kill and sound_killed.
  * @param damage				The optional damage dealt to trigger this sound, used by sound_bighit.
- * @param UltLoc				The optional location the Ultimate Ability which triggered this sound was located, used for sound_ultimate_react sounds.
- * @param UltUser				The optional user of the Ultimate Ability which triggered this sound, used for sound_ultimate_react sounds.
  *
+ * @return		True if the sound was played, false otherwise.
  */
-void CF_PlayRandomSound(int source, char Config[255], char Sound[255], char OtherCharacter[255] = "", float damage = 0.0, float UltLoc[3] = {0.0, ...}, int UltUser = -1)
+bool CF_PlayRandomSound(int source, char Config[255], char Sound[255], float damage = 0.0)
 {
-	//TODO
+	if (CF_IsPlayerCharacter(source) && StrEqual(Config, ""))
+	{
+		CF_GetPlayerConfig(source, Config, sizeof(Config));
+	}
+	
+	char snd[255] = ""; char checkFile[255];
+	KeyValType kvType = CF_GetRandomSound(Config, Sound, snd);
+	Format(checkFile, sizeof(checkFile), "sound/%s", snd);
+	
+	if (!CheckFile(checkFile))
+		return false;
+	
+	switch(kvType)
+	{
+		case KeyValType_Value:
+		{
+			EmitSoundToAll(snd, source, SNDCHAN_VOICE);
+			return true;
+		}
+		case KeyValType_Section:
+		{
+			char path[255];
+			Format(path, sizeof(path), "character.sounds.%s.%s", Sound, snd);
+			ReplaceString(path, sizeof(path), ".", "\\.");
+			
+			ConfigMap cfgMap = new ConfigMap(Config);
+			cfgMap = cfgMap.GetSection(path);
+			
+			if (cfgMap == null)
+				return false;
+				
+			int level = GetIntFromConfigMap(cfgMap, "level", 100);
+			bool onlySelf = GetBoolFromConfigMap(cfgMap, "source", false);
+			float volume = GetFloatFromConfigMap(cfgMap, "volume", 1.0);
+			int channel = GetIntFromConfigMap(cfgMap, "channel", 7);
+			bool global = GetBoolFromConfigMap(cfgMap, "global", false);
+			float chance = GetFloatFromConfigMap(cfgMap, "chance", 1.0);
+			
+			if (GetRandomFloat(0.0, 1.0) <= chance)
+			{
+				if (global)
+				{
+					EmitSoundToAll(snd, _, CF_SndChans[channel], level, _, volume);
+				}
+				else if (onlySelf && IsValidClient(source))
+				{
+					EmitSoundToClient(source, snd, _, CF_SndChans[channel], level, _, volume);
+				}
+				else
+				{
+					EmitSoundToAll(snd, source, CF_SndChans[channel], level, _, volume);
+				}
+				
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		}
+		default:
+		{
+			return false;
+		}
+	}
 }
