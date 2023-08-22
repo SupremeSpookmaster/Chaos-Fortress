@@ -8,6 +8,7 @@
 #include <tf2_stocks>
 #include <cfgmap>
 #include <queue>
+#include <clientprefs>
 
 float OFF_THE_MAP[3] = {1182792704.0, 1182792704.0, -964690944.0};
 

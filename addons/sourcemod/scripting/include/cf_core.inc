@@ -18,7 +18,7 @@ float f_ChargeRetain = 0.0;
 GlobalForward g_OnPlayerKilled;
 GlobalForward g_OnRoundStateChanged;
 
-ConfigMap GameRules;
+public ConfigMap GameRules;
 
 /**
  * Creates all of Chaos Fortress' natives.
@@ -91,6 +91,7 @@ public void CF_MakeForwards()
 	if (subsection != null)
 	{
 	    subsection.Get("default_character", s_DefaultCharacter, 255);
+	    Format(s_DefaultCharacter, sizeof(s_DefaultCharacter), "configs/chaos_fortress/%s.cfg", s_DefaultCharacter);
 	    f_ChargeRetain = GetFloatFromConfigMap(subsection, "charge_retain", 0.0);
 	    b_DisplayRole = GetBoolFromConfigMap(subsection, "display_role", false);
 	    

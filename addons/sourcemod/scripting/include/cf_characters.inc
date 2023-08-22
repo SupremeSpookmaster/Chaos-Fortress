@@ -23,6 +23,19 @@ public const char s_ModelFileExtensions[][] =
 	".vvd"
 };
 
+public const TFClassType Classes[] = 
+{
+	TFClass_Scout,
+	TFClass_Soldier,
+	TFClass_Pyro,
+	TFClass_DemoMan,
+	TFClass_Heavy,
+	TFClass_Engineer,
+	TFClass_Medic,
+	TFClass_Sniper,
+	TFClass_Spy
+};
+
 //Store configs and names in two separate arrays so we aren't reading every single character's config every single time someone opens the !characters menu:
 Handle CF_Characters_Configs;
 Handle CF_Characters_Names;
@@ -49,8 +62,10 @@ bool b_ReadingLore[MAXPLAYERS + 1] = { false, ... };
 
 char s_CharacterConfig[MAXPLAYERS+1][255];	//The config currently used for this player's character. If empty: that player is not a character.
 char s_CharacterConfigInMenu[MAXPLAYERS+1][255];	//The config currently used this player's info menu.
-char s_DesiredCharacterConfig[MAXPLAYERS+1][255];	//The config of the character this player will become next time they spawn.
+//char s_DesiredCharacterConfig[MAXPLAYERS+1][255];	//The config of the character this player will become next time they spawn.
 char s_DefaultCharacter[255];
+
+Handle c_DesiredCharacter;
 
 public void CFC_MakeNatives()
 {
@@ -66,6 +81,8 @@ public void CFC_MakeForwards()
 	CF_Characters_Names = CreateArray(255);
 	
 	RegConsoleCmd("characters", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
+	
+	c_DesiredCharacter = RegClientCookie("DesiredCharacter", "The character this player has chosen to spawn as. If blank: reverts to the default character.", CookieAccess_Private);
 	
 	PrecacheModel(MODEL_PREVIEW_DOORS);
 	PrecacheModel(MODEL_PREVIEW_STAGE);
@@ -639,7 +656,8 @@ public Action CFC_OpenMenu(int client, int args)
 				Format(name, sizeof(name), "{indigo}[Chaos Fortress] {default}You will respawn as {olive}%s{default}.", name);
 				CPrintToChat(client, name);
 				
-				s_DesiredCharacterConfig[client] = s_CharacterConfigInMenu[client];
+				SetClientCookie(client, c_DesiredCharacter, s_CharacterConfigInMenu[client]);
+				b_CharacterApplied[client] = false;
 				
 				if (CF_ClientMenu[client] != null)
 					delete CF_ClientMenu[client];
@@ -856,6 +874,25 @@ public Action CFC_OpenMenu(int client, int args)
 	}
 }
 
+public void CF_OnRoundStateChanged(int state)
+{
+	if (state == 0)
+	{
+		for (int i = 1; i <= MaxClients; i++)
+		{
+			b_CharacterApplied[i] = false;
+		}
+	}
+}
+
+public void CF_ResetMadeStatus(int client)
+{
+	if (client >= 1 && client <= MaxClients)
+	{
+		b_CharacterApplied[client] = false;
+	}
+}
+
 /**
  * Turns a player into their selected Chaos Fortress character, or the default specified in game_rules if they haven't chosen.
  *
@@ -866,18 +903,83 @@ public Action CFC_OpenMenu(int client, int args)
  	if (!IsValidClient(client))
  		return;
 
-	if (b_CharacterApplied[client])
+	char conf[255], currentConf[255];
+	CF_GetPlayerConfig(client, currentConf, sizeof(currentConf));
+	GetClientCookie(client, c_DesiredCharacter, conf, sizeof(conf));
+	if (StrEqual(conf, ""))
+	{
+		conf = s_DefaultCharacter;
+	}
+	
+	ConfigMap map = new ConfigMap(conf);
+	if (map == null)
 		return;
-
-	//TODO: Apply s_DesiredCharacterConfig to a cookie and read that cookie to determine which character to spawn as.
-	//If the cookie is empty: use the default character config specified in game_rules.
-
- 	//TODO: Write the code for this, also write a forward called CF_OnCharacterSpawned and have this call it.
- 	//For now we have this temporary debug code.
- 	CF_SetPlayerConfig(client, "Test Config");
+		
+	ConfigMap GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
+		
+	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
+	TF2_SetPlayerClass(client, Classes[class]);
+	
+	char model[255];
+	map.Get("character.model", model, sizeof(model));
+	SetVariantString(model);
+	AcceptEntityInput(client, "SetCustomModel");
+	SetEntProp(client, Prop_Send, "m_bUseClassAnimations", 1);
+	
+	int entity;
+	while((entity = FindEntityByClassname(entity, "tf_wearable")) != -1)
+	{
+		int owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
+		if (owner == client)
+		{
+			TF2_RemoveWearable(owner, entity);
+		}
+	}
+	
+	int health = GetIntFromConfigMap(map, "character.health", 200);
+	SetEntProp(client, Prop_Data, "m_iMaxHealth", health);
+	SetEntProp(client, Prop_Data, "m_iHealth", health);
+	
+	ConfigMap weapons = map.GetSection("character.weapons");
+	if (weapons == null)
+	{
+		weapons = GameRules.GetSection("game_rules.character_defaults.weapons");
+	}
+	
+	if (weapons != null)
+	{
+		TF2_RemoveAllWeapons(client);
+		//TODO: Spawn weapons
+	}
+	
+	ConfigMap wearables = map.GetSection("character.wearables");
+	if (wearables == null)
+	{
+		weapons = GameRules.GetSection("game_rules.character_defaults.wearables");
+	}
+	
+	if (wearables != null)
+	{
+		//TODO: Spawn wearables
+	}
+	
+	ConfigMap particles = map.GetSection("character.particles");
+	if (particles != null)
+	{
+		//TODO: Spawn particles
+	}
+	
+ 	CF_SetPlayerConfig(client, conf);
  	b_CharacterApplied[client] = true;
  	
- 	CF_PlayRandomSound(client, "", "sound_spawn");
+ 	if (!StrEqual(conf, currentConf))
+ 	{
+ 		CF_PlayRandomSound(client, conf, "sound_spawn"); //This is sound_spawn_intro
+ 	}
+ 	else
+ 	{
+ 		//TODO: sound_spawn_happy, sound_spawn_neutral, sound_spawn_angry
+ 	}
  	
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);

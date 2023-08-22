@@ -46,12 +46,14 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 public void OnPluginStart()
 {
 	HookEvent("post_inventory_application", PlayerReset);
+	//HookEvent("player_spawn", PlayerReset);
 	HookEvent("player_death", PlayerKilled);
 	HookEvent("teamplay_waiting_begins", Waiting);
 	HookEvent("teamplay_round_start", Waiting);
 	HookEvent("teamplay_setup_finished", RoundStart);
 	HookEvent("teamplay_round_win", RoundEnd);
 	HookEvent("teamplay_round_stalemate", RoundEnd);
+	HookEvent("player_changeclass", ClassChange);
 	
 	RegAdminCmd("cf_reloadrules", CF_ReloadRules, ADMFLAG_KICK, "Chaos Fortress: Reloads the settings in game_rules.cfg.");
 	RegAdminCmd("cf_reloadcharacters", CF_ReloadCharacters, ADMFLAG_KICK, "Chaos Fortress: Reloads the character packs, as defined in characters.cfg.");
@@ -90,6 +92,12 @@ public Action PlayerKilled(Event hEvent, const char[] sEvName, bool bDontBroadca
 public void Waiting(Event hEvent, const char[] sEvName, bool bDontBroadcast)
 {
 	CF_Waiting();
+}
+
+public void ClassChange(Event hEvent, const char[] sEvName, bool bDontBroadcast)
+{
+	int client = GetClientOfUserId(hEvent.GetInt("userid"));
+	CF_ResetMadeStatus(client);
 }
 
 public void RoundStart(Event hEvent, const char[] sEvName, bool bDontBroadcast)
