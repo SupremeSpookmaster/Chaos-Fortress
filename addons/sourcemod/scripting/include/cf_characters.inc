@@ -36,6 +36,19 @@ public const TFClassType Classes[] =
 	TFClass_Spy
 };
 
+public const float f_ClassBaseHP[] =
+{
+	125.0,
+	200.0,
+	175.0,
+	175.0,
+	300.0,
+	125.0,
+	150.0,
+	125.0,
+	125.0
+};
+
 //Store configs and names in two separate arrays so we aren't reading every single character's config every single time someone opens the !characters menu:
 Handle CF_Characters_Configs;
 Handle CF_Characters_Names;
@@ -59,6 +72,7 @@ bool b_DisplayRole = true;
 bool b_CharacterApplied[MAXPLAYERS + 1] = { false, ... }; //Whether or not the client's character has been applied to them already. If true: skip MakeCharacter for that client. Set to false automatically on death, round end, disconnect, and if the player changes their character selection.
 bool b_SpawnPreviewParticleNextFrame[MAXPLAYERS + 1] = { false, ... };
 bool b_ReadingLore[MAXPLAYERS + 1] = { false, ... };
+bool b_IsDead[MAXPLAYERS + 1] = { false, ... };
 
 char s_CharacterConfig[MAXPLAYERS+1][255];	//The config currently used for this player's character. If empty: that player is not a character.
 char s_CharacterConfigInMenu[MAXPLAYERS+1][255];	//The config currently used this player's info menu.
@@ -923,8 +937,7 @@ public void CF_ResetMadeStatus(int client)
 	char model[255];
 	map.Get("character.model", model, sizeof(model));
 	SetVariantString(model);
-	AcceptEntityInput(client, "SetCustomModel");
-	SetEntProp(client, Prop_Send, "m_bUseClassAnimations", 1);
+	AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
 	
 	int entity;
 	while((entity = FindEntityByClassname(entity, "tf_wearable")) != -1)
@@ -936,9 +949,15 @@ public void CF_ResetMadeStatus(int client)
 		}
 	}
 	
-	int health = GetIntFromConfigMap(map, "character.health", 200);
-	SetEntProp(client, Prop_Data, "m_iMaxHealth", health);
-	SetEntProp(client, Prop_Data, "m_iHealth", health);
+	float health = GetFloatFromConfigMap(map, "character.health", 200.0) - f_ClassBaseHP[class];
+	if (health < 0.0)
+	{
+		TF2Attrib_SetByDefIndex(client, 125, -health);
+	}
+	else
+	{
+		TF2Attrib_SetByDefIndex(client, 26, health);
+	}
 	
 	ConfigMap weapons = map.GetSection("character.weapons");
 	if (weapons == null)
@@ -949,7 +968,38 @@ public void CF_ResetMadeStatus(int client)
 	if (weapons != null)
 	{
 		TF2_RemoveAllWeapons(client);
-		//TODO: Spawn weapons
+		
+		int i = 1;
+		char secName[255];
+		Format(secName, sizeof(secName), "weapon_%i", i);
+		
+		ConfigMap subsection = weapons.GetSection(secName);
+		while (subsection != null)
+		{
+			char classname[255], attributes[255], override[255];
+			subsection.Get("classname", classname, sizeof(classname));
+			
+			int index = GetIntFromConfigMap(subsection, "index", 1);
+			int level = GetIntFromConfigMap(subsection, "level", 77);
+			int quality = GetIntFromConfigMap(subsection, "quality", 7);
+			int slot = GetIntFromConfigMap(subsection, "slot", 0);
+			int reserve = GetIntFromConfigMap(subsection, "reserve", 0);
+			int clip = GetIntFromConfigMap(subsection, "clip", 0);
+			
+			subsection.Get("attributes", attributes, sizeof(attributes));
+			
+			bool visible = GetBoolFromConfigMap(subsection, "visible", true);
+			if (visible)
+			{
+				subsection.Get("model_override", override, sizeof(override));
+			}
+			
+			SpawnWeapon_Special(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible);
+			
+			i++;
+			Format(secName, sizeof(secName), "weapon_%i", i);
+			subsection = weapons.GetSection(secName);
+		}
 	}
 	
 	ConfigMap wearables = map.GetSection("character.wearables");
@@ -976,13 +1026,22 @@ public void CF_ResetMadeStatus(int client)
  	{
  		CF_PlayRandomSound(client, conf, "sound_spawn"); //This is sound_spawn_intro
  	}
- 	else
+ 	else if (b_IsDead[client])
  	{
  		//TODO: sound_spawn_happy, sound_spawn_neutral, sound_spawn_angry
+ 		b_IsDead[client] = false;
  	}
  	
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
+ }
+ 
+ public void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int deadRinger)
+ {
+ 	if (victim > 0 && victim <= MaxClients)
+ 	{
+ 		b_IsDead[victim] = true;
+ 	}
  }
  
 /**
