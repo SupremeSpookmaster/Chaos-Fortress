@@ -9,6 +9,7 @@
 #include <cfgmap>
 #include <queue>
 #include <clientprefs>
+#include <tf_econ_data>
 
 float OFF_THE_MAP[3] = {1182792704.0, 1182792704.0, -964690944.0};
 

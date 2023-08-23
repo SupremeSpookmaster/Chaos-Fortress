@@ -10,6 +10,7 @@
 #include <cf_include>
 #include <cf_characters>
 #include <cf_sounds>
+#include <cf_viewchange>
 
 int i_CFRoundState = 0;						//The current round state.
 
