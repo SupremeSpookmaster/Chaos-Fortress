@@ -31,6 +31,7 @@ public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Outp
 		
 	Format(snd, sizeof(snd), "character.sounds.%s", Sound);
 	ConfigMap newMap = cfgMap.GetSection(snd);
+	delete cfgMap;
 	
 	if (newMap == null)
 		return KeyValType_Null;
@@ -58,6 +59,8 @@ public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Outp
 		#endif
 	}
 	
+	KeyValType ReturnValue = KeyValType_Null;
+	
 	switch(newMap.GetKeyValType(key))
 	{
 		case KeyValType_Value: //This works as intended.
@@ -68,7 +71,7 @@ public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Outp
 			PrintToServer("CF_GetRandomSound retrieved a ConfigMap with KeyValType_Value, the value is %s.", Output);
 			#endif
 			
-			return KeyValType_Value;
+			ReturnValue = KeyValType_Value;
 		}
 		case KeyValType_Section:
 		{
@@ -78,17 +81,18 @@ public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Outp
 			PrintToServer("CF_GetRandomSound retrieved a ConfigMap with KeyValType_Section, the section name is %s.", Output);
 			#endif
 			
-			return KeyValType_Section;
+			ReturnValue = KeyValType_Section;
 		}
 		default:
 		{
 			#if defined DEBUG_SOUNDS
 			PrintToServer("CF_GetRandomSound retrieved a ConfigMap with KeyValType_Null, meaning the section does not exist. This should not be possible.");
 			#endif
-			
-			return KeyValType_Null;
 		}
 	}
+	
+	delete newMap;
+	return ReturnValue;
 }
 
 /**
@@ -140,6 +144,8 @@ bool CF_PlayRandomSound(int source, char Config[255], char Sound[255], float dam
 			int channel = GetIntFromConfigMap(cfgMap, "channel", 7);
 			bool global = GetBoolFromConfigMap(cfgMap, "global", false);
 			float chance = GetFloatFromConfigMap(cfgMap, "chance", 1.0);
+			
+			delete cfgMap;
 			
 			if (GetRandomFloat(0.0, 1.0) <= chance)
 			{

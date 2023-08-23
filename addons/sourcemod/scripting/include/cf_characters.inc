@@ -111,6 +111,9 @@ public void CFC_MakeForwards()
  */
  public void CF_LoadCharacters(int admin)
  {
+ 	if (Characters != null)
+ 		delete Characters;
+ 		
  	Characters = new ConfigMap("data/chaos_fortress/characters.cfg");
  	
  	if (Characters == null)
@@ -173,6 +176,8 @@ public void CFC_MakeForwards()
 	   		CF_LoadCharacterPack(value, JustDownload);
  		}
  		
+ 		delete subsection;
+ 		
  		return true;
  	}
 
@@ -214,6 +219,8 @@ public void CFC_MakeForwards()
 		PrintToServer("\nLocated character: %s", value);
 		#endif
 	}
+	
+	delete Pack;
  }
  
  public void CF_LoadSpecificCharacter(char path[255], bool JustDownload)
@@ -248,6 +255,7 @@ public void CFC_MakeForwards()
  	}
  
  	CF_ManageCharacterFiles(Character);
+ 	delete Character;
  }
  
  public void CF_BuildCharactersMenu()
@@ -643,6 +651,9 @@ public Action CFC_OpenMenu(int client, int args)
  	CF_ClientMenu[client].ExitButton = false;
  	CF_ClientMenu[client].Display(client, MENU_TIME_FOREVER);
  	b_ReadingLore[client] = isLore;
+ 	
+ 	delete section;
+ 	delete Character;
  }
  
  public CFC_InfoMenu(Menu CFC_Menu, MenuAction action, int client, int param)
@@ -682,6 +693,8 @@ public Action CFC_OpenMenu(int client, int args)
 			{
 				CFC_BuildInfoMenu(client, s_CharacterConfigInMenu[client], !b_ReadingLore[client], true);
 			}
+			
+			delete Character;
 		}
 		else
 		{
@@ -707,18 +720,21 @@ public Action CFC_OpenMenu(int client, int args)
  	if (section != null)
  	{
  		CF_DownloadAndPrecacheModels(section);
+ 		delete section;
  	}
  	
  	section = Character.GetSection("character.downloads");
  	if (section != null)
  	{
  		CF_DownloadFiles(section);
+ 		delete section;
  	}
  	
  	section = Character.GetSection("character.precache");
  	if (section != null)
  	{
  		CF_PrecacheFiles(section);
+ 		delete section;
  	}
  }
  
@@ -1002,6 +1018,10 @@ public void CF_ResetMadeStatus(int client)
 			Format(secName, sizeof(secName), "weapon_%i", i);
 			subsection = weapons.GetSection(secName);
 		}
+		
+		delete weapons;
+		if (subsection != null)
+			delete subsection;
 	}
 	
 	ConfigMap wearables = map.GetSection("character.wearables");
@@ -1013,12 +1033,14 @@ public void CF_ResetMadeStatus(int client)
 	if (wearables != null)
 	{
 		//TODO: Spawn wearables
+		delete wearables;
 	}
 	
 	ConfigMap particles = map.GetSection("character.particles");
 	if (particles != null)
 	{
 		//TODO: Spawn particles
+		delete particles;
 	}
 	
  	CF_SetPlayerConfig(client, conf);
@@ -1032,6 +1054,15 @@ public void CF_ResetMadeStatus(int client)
  	{
  		//TODO: sound_spawn_happy, sound_spawn_neutral, sound_spawn_angry
  		b_IsDead[client] = false;
+ 	}
+ 	
+ 	if (map != null)
+ 	{
+ 		delete map;
+ 	}
+ 	if (GameRules != null)
+ 	{
+ 		delete GameRules;
  	}
  	
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);

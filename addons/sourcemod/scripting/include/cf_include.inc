@@ -335,4 +335,4 @@ native bool CF_IsPlayerCharacter(int client);
  *
  * @return True if the client was holding reload, false otherwise.
  */
-native CF_SpawnWeapon(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255] = "", bool visible = true, bool unequip = true, bool useVC = false);
+native int CF_SpawnWeapon(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255] = "", bool visible = true, bool unequip = true, bool useVC = false);

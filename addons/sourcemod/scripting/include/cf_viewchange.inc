@@ -78,7 +78,7 @@ void ViewChange_PluginStart()
 
 void ViewChange_MapStart()
 {
-	for(int i; i < sizeof(HandIndex); i++)
+	for(int i; i < sizeof(HandModels); i++)
 	{
 		HandIndex[i] = PrecacheModel(HandModels[i], true);
 	}

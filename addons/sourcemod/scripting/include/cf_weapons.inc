@@ -8,7 +8,10 @@ public void CFW_OnPluginStart()
 public void CFW_MapStart()
 {
 	ViewChange_MapStart();
-	
+}
+
+public void CFW_MakeNatives()
+{
 	CreateNative("CF_SpawnWeapon", Native_CF_SpawnWeapon);
 }
 

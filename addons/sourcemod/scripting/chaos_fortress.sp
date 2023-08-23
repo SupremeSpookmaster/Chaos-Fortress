@@ -16,7 +16,6 @@
 //  - BUG: If the round changes (IE round A ends then round B starts, or the waiting for players phase ends) while reading a specific character's description,
 //		the character select preview model disappears until the player goes back to the main character menu. The preview's outline also permanently breaks
 //		when this happens. This is very minor and has no impact on gameplay.
-//	- Uh oh memory leak, delete all ConfigMaps when they are done being used...
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

@@ -31,6 +31,7 @@ public void CF_MakeNatives()
 	CFKS_MakeNatives();
 	CFB_MakeNatives();
 	CFC_MakeNatives();
+	CFW_MakeNatives();
 }
 
 /**
@@ -80,6 +81,9 @@ public void CF_OnPluginStart()
  */
  public void CF_SetGameRules(int admin)
  { 	
+ 	if (GameRules != null)
+ 		delete GameRules;
+ 		
  	GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 
 	if (GameRules == null)
@@ -113,6 +117,8 @@ public void CF_OnPluginStart()
 	    PrintToServer("Ult Charge Retained On Character Switch: %.2f", f_ChargeRetain);
 	    PrintToServer("Display Role: %i", view_as<int>(b_DisplayRole));
 	    #endif
+	    
+	    delete subsection;
 	}
 	
 	subsection = GameRules.GetSection("game_rules.killstreak_settings");
@@ -139,6 +145,8 @@ public void CF_OnPluginStart()
 	    PrintToServer("Announce Ended Killstreaks at: %i Kill(s)", ended);
 	    PrintToServer("Killstreaks Are Godlike At: %i Kill(s)", godlike);
 	    #endif
+	    
+	    delete subsection;
 	}
 	
 	#if defined DEBUG_GAMERULES
