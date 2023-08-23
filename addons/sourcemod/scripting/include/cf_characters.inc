@@ -400,12 +400,12 @@ public Action CFC_OpenMenu(int client, int args)
 		if (IsValidEntity(text))
 		{
 			i_PreviewOwner[text] = GetClientUserId(client);
-			//SDKHook(text, SDKHook_SetTransmit, CF_PreviewModelTransmit);
+			SDKHook(text, SDKHook_SetTransmit, CF_PreviewModelTransmit);
 		}
 		
 		i_PreviewOwner[preview] = GetClientUserId(client);
 		
-		//SDKHook(preview, SDKHook_SetTransmit, CF_PreviewModelTransmit);
+		SDKHook(preview, SDKHook_SetTransmit, CF_PreviewModelTransmit);
 		
 		i_CFPreviewModel[client] = EntIndexToEntRef(preview);
 		f_CFPreviewRotation[client] = 0.0;
@@ -473,13 +473,13 @@ public Action CFC_OpenMenu(int client, int args)
 		{
 			int part = SpawnParticle(aimLoc, "teleportedin_red", 2.0);
 			i_PreviewOwner[part] = GetClientUserId(client);
-			//SDKHook(part, SDKHook_SetTransmit, CF_PreviewModelTransmit);
+			SDKHook(part, SDKHook_SetTransmit, CF_PreviewModelTransmit);
 		}
 		else
 		{
 			int part = SpawnParticle(aimLoc, "teleportedin_blue", 2.0);
 			i_PreviewOwner[part] = GetClientUserId(client);
-			//SDKHook(part, SDKHook_SetTransmit, CF_PreviewModelTransmit);
+			SDKHook(part, SDKHook_SetTransmit, CF_PreviewModelTransmit);
 		}
 		
 		//TODO: Switch this to CF_PlayRandomSound(?)
@@ -512,7 +512,7 @@ public Action CFC_OpenMenu(int client, int args)
 	}
 }
  
- public Action CF_PreviewModelTransmit(int client, int entity)
+ public Action CF_PreviewModelTransmit(int entity, int client)
  {
  	if (client != GetClientOfUserId(i_PreviewOwner[entity]))
  	{
