@@ -3,6 +3,7 @@
 
 //TODO: Current edits enable the plugin to compile with this included. However, it is not yet actually implemented, so it does nothing.
 //Make further edits to implement it into the game mode, utilizing config options for further customization.
+//To prevent cross-plugin conflicts from annihilating this functionality, convert all client-specific variables to natives.
 
 static Handle SDKEquipWearable;
 static Handle g_hRecalculatePlayerBodygroups;
