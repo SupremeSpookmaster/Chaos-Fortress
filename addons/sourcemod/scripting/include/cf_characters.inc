@@ -993,8 +993,10 @@ public void CF_ResetMadeStatus(int client)
 			{
 				subsection.Get("model_override", override, sizeof(override));
 			}
+			bool unequip = GetBoolFromConfigMap(subsection, "unequip", true);
+			bool useVC = GetBoolFromConfigMap(subsection, "use_viewchange", false);
 			
-			SpawnWeapon_Special(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible);
+			CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, useVC);
 			
 			i++;
 			Format(secName, sizeof(secName), "weapon_%i", i);

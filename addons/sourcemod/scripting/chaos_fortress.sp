@@ -59,7 +59,7 @@ public void OnPluginStart()
 	RegAdminCmd("cf_reloadrules", CF_ReloadRules, ADMFLAG_KICK, "Chaos Fortress: Reloads the settings in game_rules.cfg.");
 	RegAdminCmd("cf_reloadcharacters", CF_ReloadCharacters, ADMFLAG_KICK, "Chaos Fortress: Reloads the character packs, as defined in characters.cfg.");
 	
-	CF_MakeForwards();
+	CF_OnPluginStart();
 }
 
 #define SND_ADMINCOMMAND		"ui/cyoa_ping_in_progress.wav"

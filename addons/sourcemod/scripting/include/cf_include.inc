@@ -315,3 +315,24 @@ native CF_SetPlayerConfig(int client, char[] confName);
  * @return True if the client is a character, false if they are invalid or not a character.
  */
 native bool CF_IsPlayerCharacter(int client);
+
+/**
+ * Gives a weapon to the given client.
+ *
+ * @param client		The client to give the weapon to.
+ * @param name			The weapon's classname.
+ * @param index			The weapon's index.
+ * @param level			The weapon's level.
+ * @param qual			The weapon's quality.
+ * @param slot			The weapon's slot. 0 for primary, 1 for secondary, 2 for melee.
+ * @param reserve		The weapon's reserve ammo.
+ * @param clip			The ammo held in the weapon's clip/magazine/whatever.
+ * @param att			The weapon's attributes.
+ * @param override		Optional weapon model override.
+ * @param visible		Should the weapon be visible?
+ * @param unequip		Should whichever weapon(s) currently in this weapon's slot be removed before equipping this weapon?
+ * @param useVC			Should this weapon use the ViewChange system? EX: If we give the scout a wrench, this will switch his first-person and third-person animations to that of the engineer while he has the wrench out, making it look like he is actually holding the wrench. USE THIS WITH CAUTION! Certain animations look VERY bad on certain models, such as Heavy animations turning every other class into abominations.
+ *
+ * @return True if the client was holding reload, false otherwise.
+ */
+native CF_SpawnWeapon(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255] = "", bool visible = true, bool unequip = true, bool useVC = false);

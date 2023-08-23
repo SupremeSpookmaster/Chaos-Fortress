@@ -3,7 +3,6 @@
 
 //TODO: Current edits enable the plugin to compile with this included. However, it is not yet actually implemented, so it does nothing.
 //Make further edits to implement it into the game mode, utilizing config options for further customization.
-//To prevent cross-plugin conflicts from annihilating this functionality, convert all client-specific variables to natives.
 
 static Handle SDKEquipWearable;
 static Handle g_hRecalculatePlayerBodygroups;
@@ -61,8 +60,6 @@ static int i_Viewmodel_WeaponModel[MAXPLAYERS + 1];
 static int i_nm_body_client[MAXPLAYERS + 1];
 static TFClassType WeaponClass[MAXPLAYERS + 1];
 
-#define EF_NODRAW	32
-
 void ViewChange_PluginStart()
 {
 	GameData gamedata = LoadGameConfigFile("sm-tf2.games");
@@ -95,6 +92,8 @@ void ViewChange_MapStart()
 	{
 		RobotIndex[i] = PrecacheModel(RobotModels[i], true);
 	}
+	
+	
 }
 
 void ViewChange_PlayerModel(int client)

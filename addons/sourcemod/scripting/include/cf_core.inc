@@ -10,7 +10,7 @@
 #include <cf_include>
 #include <cf_characters>
 #include <cf_sounds>
-#include <cf_viewchange>
+#include <cf_weapons>
 
 int i_CFRoundState = 0;						//The current round state.
 
@@ -36,12 +36,13 @@ public void CF_MakeNatives()
 /**
  * Creates all of Chaos Fortress forwards.
  */
-public void CF_MakeForwards()
+public void CF_OnPluginStart()
 {
 	CFDMG_MakeForwards();
 	CFB_MakeForwards();
 	CFKS_MakeForwards();
 	CFC_MakeForwards();
+	CFW_OnPluginStart();
 	
 	g_OnPlayerKilled = new GlobalForward("CF_OnPlayerKilled", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	g_OnRoundStateChanged = new GlobalForward("CF_OnRoundStateChanged", ET_Ignore, Param_Cell);
@@ -57,6 +58,8 @@ public void CF_MakeForwards()
  	CF_SetGameRules(-1);
  	
  	CF_LoadCharacters(-1);
+ 	
+ 	CFW_MapStart();
  	
  	//CF_PrecacheAnnouncerDialogue();
  }
