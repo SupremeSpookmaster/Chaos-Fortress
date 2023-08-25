@@ -59,6 +59,8 @@ static int i_Viewmodel_PlayerModel[MAXPLAYERS + 1];
 static int i_Viewmodel_WeaponModel[MAXPLAYERS + 1];
 static int i_nm_body_client[MAXPLAYERS + 1];
 static TFClassType WeaponClass[MAXPLAYERS + 1];
+static int i_WeaponModelIndexOverride[2049];
+static int i_WeaponForceClass[2049];
 
 void ViewChange_PluginStart()
 {
@@ -96,15 +98,26 @@ void ViewChange_MapStart()
 	
 }
 
+void ViewChange_SetForceClass(int entity, int ForceClass)
+{
+	i_WeaponForceClass[entity] = ForceClass;
+}
+
+void ViewChange_SetOverrideIndex(int entity, int override)
+{
+	if (IsValidEntity(entity))
+	{
+		i_WeaponModelIndexOverride[entity] = override;
+	}
+}
+
 void ViewChange_PlayerModel(int client)
 {
 	int team = GetClientTeam(client);
 	int entity = CreateEntityByName("tf_wearable");
 	if(entity > MaxClients)	// Weapon viewmodel
 	{
-		int currentClass = view_as<int>(TF2_GetPlayerClass(client));
-		
-		SetEntProp(entity, Prop_Send, "m_nModelIndex", currentClass); //TODO
+		SetEntProp(entity, Prop_Send, "m_nModelIndex", i_CharacterModelIndex[client]);
 			
 		UpdatePlayerFakeModel(client);
 				
@@ -141,7 +154,25 @@ void ViewChange_Switch(int client, int active, const char[] buffer = "")
 		if(active > MaxClients)
 		{
 			int itemdefindex = GetEntProp(active, Prop_Send, "m_iItemDefinitionIndex");
-			TFClassType class = TF2_GetWeaponClass(itemdefindex, TF2_GetPlayerClass(client), TF2_GetClassnameSlot(buffer, true));
+			TFClassType class = TF2_GetWeaponClass(itemdefindex, CF_GetCharacterClass(client), TF2_GetClassnameSlot(buffer, true));
+			
+			if(i_WeaponForceClass[active] > 0)
+			{
+				if(i_WeaponForceClass[active] > 9) //it is an allclass weapon, we want to force the weapon into the class the person holds
+				//some weapons for engi or spy just don do this and take pyro and look ugly as fuck.
+				{
+					//exception for engineer, hes always bugged, force medic.
+					class = CF_GetCharacterClass(client);
+					if(class == TFClass_Engineer)
+					{
+						class = TFClass_Medic;
+					}
+				}
+				else
+				{
+					class = Classes[i_WeaponForceClass[active] - 1];
+				}
+			}
 			
 			SetEntProp(entity, Prop_Send, "m_nModelIndex", HandIndex[class]);
 
@@ -149,9 +180,9 @@ void ViewChange_Switch(int client, int active, const char[] buffer = "")
 			if(entity > MaxClients)	// Weapon viewmodel
 			{
 				int team = GetClientTeam(client);
-				/*if(i_WeaponModelIndexOverride[active] > 0)
-					SetEntProp(entity, Prop_Send, "m_nModelIndex", i_WeaponModelIndexOverride[active]); //TODO: Get the override model index
-				else*/
+				if(i_WeaponModelIndexOverride[active] > 0)
+					SetEntProp(entity, Prop_Send, "m_nModelIndex", i_WeaponModelIndexOverride[active]);
+				else
 					SetEntProp(entity, Prop_Send, "m_nModelIndex", GetEntProp(active, Prop_Send, "m_iWorldModelIndex"));
 				
 				SetEntProp(entity, Prop_Send, "m_fEffects", 129);
@@ -175,9 +206,9 @@ void ViewChange_Switch(int client, int active, const char[] buffer = "")
 			if(entity > MaxClients)	// Weapon worldmodel
 			{
 				int team = GetClientTeam(client);
-				/*if(i_WeaponModelIndexOverride[active] > 0)
+				if(i_WeaponModelIndexOverride[active] > 0)
 					SetEntProp(entity, Prop_Send, "m_nModelIndex", i_WeaponModelIndexOverride[active]);
-				else*/
+				else
 					SetEntProp(entity, Prop_Send, "m_nModelIndex", GetEntProp(active, Prop_Send, "m_iWorldModelIndex"));
 				
 				SetEntProp(entity, Prop_Send, "m_fEffects", 129);
@@ -198,6 +229,11 @@ void ViewChange_Switch(int client, int active, const char[] buffer = "")
 			}
 			
 			HidePlayerWeaponModel(client, active);
+			
+			TF2_SetPlayerClass(client, class, _, false);
+				
+			ViewChange_DeleteHands(client);
+			ViewChange_UpdateHands(client, CF_GetCharacterClass(client));
 
 			UpdatePlayerFakeModel(client);
 			return;
@@ -229,6 +265,7 @@ int ViewChange_UpdateHands(int client, TFClassType class)
 		{
 			int hand_index = view_as<int>(class);
 			
+			//TODO: Support for custom hand models would go here
 			SetEntProp(entity, Prop_Send, "m_nModelIndex", HandIndex[hand_index]);
 			SetEntProp(entity, Prop_Send, "m_fEffects", 129);
 			SetEntProp(entity, Prop_Send, "m_iTeamNum", GetClientTeam(client));
@@ -415,6 +452,39 @@ void SDKCall_RecalculatePlayerBodygroups(int index)
 static Address GetPlayerSharedAddress(int client) {
 	return GetEntityAddress(client)
 			+ view_as<Address>(FindSendPropInfo("CTFPlayer", "m_Shared"));
+}
+
+static int i_PreviousWeapon[MAXPLAYERS+1];
+
+public void ViewChange_WeaponSwitch(int client, int weapon)
+{
+	if (weapon != -1 && i_PreviousWeapon[client] != EntIndexToEntRef(weapon))
+	{
+		i_PreviousWeapon[client] = EntIndexToEntRef(weapon);
+		DataPack Pack = new DataPack();
+		RequestFrame(OnWeaponSwitchFrame, Pack);
+		Pack.WriteCell(GetClientUserId(client));
+		Pack.WriteCell(EntIndexToEntRef(weapon));
+	}
+}
+
+public void OnWeaponSwitchFrame(DataPack pack)
+{
+	pack.Reset();
+	
+	int client = GetClientOfUserId(pack.ReadCell());
+	if(client)
+	{
+		int weapon = EntRefToEntIndex(pack.ReadCell());
+		if(weapon != -1)
+		{
+			char buffer[36];
+			GetEntityClassname(weapon, buffer, sizeof(buffer));
+			ViewChange_Switch(client, weapon, buffer);
+		}
+	}
+	
+	delete pack;
 }
 
 //MOST OF THE CONTENT in this include file was originally written by Artvin and Batfoxkid for TF2 Zombie Riot. The vast majority of the credit goes to them.

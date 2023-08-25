@@ -40,12 +40,13 @@ public Native_CF_SpawnWeapon(Handle plugin, int numParams)
  	bool visible = GetNativeCell(11) != 0;
  	bool unequip = GetNativeCell(12) != 0;
  	bool useVC = GetNativeCell(13) != 0;
+ 	int ForceClass = GetNativeCell(14);
  	
- 	return SpawnWeapon_Special(client, name, index, level, qual, slot, reserve, clip, att, override, visible, unequip, useVC);
+ 	return SpawnWeapon_Special(client, name, index, level, qual, slot, reserve, clip, att, override, visible, unequip, useVC, ForceClass);
  }
 
 //Credit to Artvin and Batfoxkid for this, I just took it from Zombie Riot and modified some things.
-stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255], bool visible, bool unequip, bool useVC)
+stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255], bool visible, bool unequip, bool useVC, int ForceClass)
 {
 	if(StrEqual(name, "saxxy", false))	// if "saxxy" is specified as the name, replace with appropiate name
 	{ 
@@ -116,8 +117,7 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 		SetEntProp(entity, Prop_Send, "m_bValidatedAttachedEntity", 1);
 		if (CheckFile(override))
 		{
-			PrecacheModel(override);
-			SetEntityModel(entity, override);
+			ViewChange_SetOverrideIndex(entity, PrecacheModel(override));
 		}
 	}
 	else
@@ -131,6 +131,16 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 		SetAmmo(client, entity, reserve);
 		SetClip(client, entity, clip);
 	}
+	
+	if (ForceClass > 0)
+	{
+		ViewChange_SetForceClass(entity, ForceClass);
+	}
+	
+	/*if (useVC)
+	{
+		ViewChange_Switch(client, entity, name);
+	}*/
 	
 	return entity;
 }

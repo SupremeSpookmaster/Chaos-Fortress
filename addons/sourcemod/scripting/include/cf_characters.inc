@@ -62,6 +62,7 @@ int i_CFPreviewModel[MAXPLAYERS + 1] = { -1, ... };
 int i_PreviewOwner[2049] = { -1, ... };
 int i_CFPreviewProp[MAXPLAYERS + 1] = { -1, ... };
 int i_CFPreviewWeapon[MAXPLAYERS + 1] = { -1, ... };
+int i_CharacterModelIndex[MAXPLAYERS+1];
 
 float f_CFPreviewRotation[MAXPLAYERS + 1] = { 0.0, ... };
 //These would have been so damn cool but there are too many situations in which it just wouldn't look good...
@@ -87,6 +88,7 @@ public void CFC_MakeNatives()
 	CreateNative("CF_GetPlayerConfig", Native_CF_GetPlayerConfig);
 	CreateNative("CF_SetPlayerConfig", Native_CF_SetPlayerConfig);
 	CreateNative("CF_IsPlayerCharacter", Native_CF_IsPlayerCharacter);
+	CreateNative("CF_GetCharacterClass", Native_CF_GetCharacterClass);
 }
 
 public void CFC_MakeForwards()
@@ -950,11 +952,6 @@ public void CF_ResetMadeStatus(int client)
 	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
 	TF2_SetPlayerClass(client, Classes[class]);
 	
-	char model[255];
-	map.Get("character.model", model, sizeof(model));
-	SetVariantString(model);
-	AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
-	
 	int entity;
 	while((entity = FindEntityByClassname(entity, "tf_wearable")) != -1)
 	{
@@ -965,6 +962,19 @@ public void CF_ResetMadeStatus(int client)
 		}
 	}
 	
+	ViewChange_DeleteHands(client);
+	ViewChange_UpdateHands(client, CF_GetCharacterClass(client));
+	
+	char model[255];
+	map.Get("character.model", model, sizeof(model));
+	if (CheckFile(model))
+	{
+		SetVariantString(model);
+		AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
+		i_CharacterModelIndex[client] = PrecacheModel(model);
+		ViewChange_PlayerModel(client);
+	}
+	
 	float health = GetFloatFromConfigMap(map, "character.health", 200.0) - f_ClassBaseHP[class];
 	if (health < 0.0)
 	{
@@ -973,6 +983,18 @@ public void CF_ResetMadeStatus(int client)
 	else
 	{
 		TF2Attrib_SetByDefIndex(client, 26, health);
+	}
+	
+	ConfigMap wearables = map.GetSection("character.wearables");
+	if (wearables == null)
+	{
+		wearables = GameRules.GetSection("game_rules.character_defaults.wearables");
+	}
+	
+	if (wearables != null)
+	{
+		//TODO: Spawn wearables
+		delete wearables;
 	}
 	
 	ConfigMap weapons = map.GetSection("character.weapons");
@@ -1001,6 +1023,7 @@ public void CF_ResetMadeStatus(int client)
 			int slot = GetIntFromConfigMap(subsection, "slot", 0);
 			int reserve = GetIntFromConfigMap(subsection, "reserve", 0);
 			int clip = GetIntFromConfigMap(subsection, "clip", 0);
+			int ForceClass = GetIntFromConfigMap(subsection, "force_class", 0);
 			
 			subsection.Get("attributes", attributes, sizeof(attributes));
 			
@@ -1012,7 +1035,12 @@ public void CF_ResetMadeStatus(int client)
 			bool unequip = GetBoolFromConfigMap(subsection, "unequip", true);
 			bool useVC = GetBoolFromConfigMap(subsection, "use_viewchange", false);
 			
-			CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, useVC);
+			int wep = CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, useVC, ForceClass);
+			
+			if (i == 1)
+			{
+				ViewChange_Switch(client, wep, classname);
+			}
 			
 			i++;
 			Format(secName, sizeof(secName), "weapon_%i", i);
@@ -1022,18 +1050,6 @@ public void CF_ResetMadeStatus(int client)
 		delete weapons;
 		if (subsection != null)
 			delete subsection;
-	}
-	
-	ConfigMap wearables = map.GetSection("character.wearables");
-	if (wearables == null)
-	{
-		weapons = GameRules.GetSection("game_rules.character_defaults.wearables");
-	}
-	
-	if (wearables != null)
-	{
-		//TODO: Spawn wearables
-		delete wearables;
 	}
 	
 	ConfigMap particles = map.GetSection("character.particles");
@@ -1065,6 +1081,8 @@ public void CF_ResetMadeStatus(int client)
  		delete GameRules;
  	}
  	
+ 	SDKUnhook(client, SDKHook_WeaponSwitchPost, ViewChange_WeaponSwitch);
+ 	SDKHook(client, SDKHook_WeaponSwitchPost, ViewChange_WeaponSwitch);
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  }
@@ -1089,6 +1107,7 @@ public void CF_ResetMadeStatus(int client)
  	//For now we have this temporary debug code.
  	CF_SetPlayerConfig(client, "");
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
+ 	SDKUnhook(client, SDKHook_WeaponSwitchPost, CFDMG_OnTakeDamageAlive);
  	b_CharacterApplied[client] = false;
  }
  
@@ -1153,4 +1172,27 @@ public Native_CF_IsPlayerCharacter(Handle plugin, int numParams)
 	}
 	
 	return ReturnValue;
+}
+
+public Native_CF_GetCharacterClass(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return TFClass_Unknown;
+		
+	char conf[255];
+	CF_GetPlayerConfig(client, conf, 255);
+	ConfigMap map = new ConfigMap(conf);
+	int num = GetIntFromConfigMap(map, "character.class", 0);
+	if (num == 0)
+	{
+		return TFClass_Unknown;
+	}
+	else
+	{
+		TFClassType class = Classes[num - 1];
+		delete map;
+		return class;
+	}
 }
