@@ -948,10 +948,14 @@ public void CF_ResetMadeStatus(int client)
 	if (map == null)
 		return;
 		
+	CF_SetPlayerConfig(client, conf);
+		
 	ConfigMap GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 		
 	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
 	TF2_SetPlayerClass(client, Classes[class]);
+	
+	ViewChange_DeleteAll(client);
 	
 	int entity;
 	while((entity = FindEntityByClassname(entity, "tf_wearable")) != -1)
@@ -963,7 +967,14 @@ public void CF_ResetMadeStatus(int client)
 		}
 	}
 	
-	ViewChange_DeleteAll(client);
+	while((entity = FindEntityByClassname(entity, "tf_wearable_vm")) != -1)
+	{
+		int owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
+		if (owner == client)
+		{
+			TF2_RemoveWearable(owner, entity);
+		}
+	}
 	
 	bool useVC = GetBoolFromConfigMap(map, "character.use_viewchange", false);
 	
@@ -1042,10 +1053,11 @@ public void CF_ResetMadeStatus(int client)
 			}
 			bool unequip = GetBoolFromConfigMap(subsection, "unequip", true);
 			
-			int wep = CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, useVC, ForceClass);
+			CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, useVC, ForceClass);
 			
 			i++;
 			Format(secName, sizeof(secName), "weapon_%i", i);
+			delete subsection;
 			subsection = weapons.GetSection(secName);
 		}
 		
@@ -1068,18 +1080,18 @@ public void CF_ResetMadeStatus(int client)
 		delete particles;
 	}
 	
- 	CF_SetPlayerConfig(client, conf);
  	b_CharacterApplied[client] = true;
  	
- 	if (!StrEqual(conf, currentConf))
+ 	if (!StrEqual(conf, currentConf))	//We are respawning as a new character, default to spawn_intro
  	{
  		CF_PlayRandomSound(client, conf, "sound_spawn"); //This is sound_spawn_intro
  	}
  	else if (b_IsDead[client])
  	{
  		//TODO: sound_spawn_happy, sound_spawn_neutral, sound_spawn_angry
- 		b_IsDead[client] = false;
  	}
+ 	
+ 	b_IsDead[client] = false;
  	
  	if (map != null)
  	{

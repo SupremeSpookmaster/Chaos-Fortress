@@ -150,6 +150,7 @@ void ViewChange_DeleteAll(int client)
 	ViewChange_DeletePlayerModel(client);
 	ViewChange_DeleteWeaponModel(client);
 	ViewChange_DeleteHands(client);
+	UnHidePlayerWeaponModel(client);
 }
 
 void ViewChange_DeletePlayerModel(int client)
@@ -351,6 +352,22 @@ void HidePlayerWeaponModel(int client, int entity)
 	{
 		SetEntPropFloat(EntityWeaponModel, Prop_Send, "m_flModelScale", f_WeaponSizeOverrideViewmodel[entity]);
 	}*/
+}
+
+void UnHidePlayerWeaponModel(int client, int entity = -1)
+{
+	if (!IsValidEntity(entity))
+	{
+		entity = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+	}
+	
+	if (entity > MaxClients)
+	{
+		SetEntityRenderColor(entity);
+		SetEntProp(entity, Prop_Send, "m_fEffects", GetEntProp(entity, Prop_Send, "m_fEffects") & ~EF_NODRAW);
+		SetEntPropFloat(entity, Prop_Send, "m_fadeMinDist", 100000.0);
+		SetEntPropFloat(entity, Prop_Send, "m_fadeMaxDist", 100000.01);
+	}
 }
 
 void UpdatePlayerFakeModel(int client)

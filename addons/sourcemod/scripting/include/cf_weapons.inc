@@ -124,9 +124,13 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 	if(visible)
 	{
 		SetEntProp(entity, Prop_Send, "m_bValidatedAttachedEntity", 1);
-		if (CheckFile(override))
+		if (CheckFile(override) && useVC)
 		{
 			ViewChange_SetOverrideIndex(entity, PrecacheModel(override));
+		}
+		else if (!useVC)
+		{
+			UnHidePlayerWeaponModel(client, entity);
 		}
 	}
 	else
