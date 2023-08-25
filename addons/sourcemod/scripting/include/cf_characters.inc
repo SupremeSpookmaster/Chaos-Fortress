@@ -963,6 +963,8 @@ public void CF_ResetMadeStatus(int client)
 		}
 	}
 	
+	ViewChange_DeleteAll(client);
+	
 	bool useVC = GetBoolFromConfigMap(map, "character.use_viewchange", false);
 	
 	char model[255];
@@ -1054,7 +1056,10 @@ public void CF_ResetMadeStatus(int client)
 			delete subsection;
 	}
 	
-	ViewChange_UpdateHands(client, CF_GetCharacterClass(client));
+	if (useVC)
+	{
+		ViewChange_UpdateHands(client, CF_GetCharacterClass(client));
+	}
 	
 	ConfigMap particles = map.GetSection("character.particles");
 	if (particles != null)
@@ -1085,9 +1090,9 @@ public void CF_ResetMadeStatus(int client)
  		delete GameRules;
  	}
  	
+ 	SDKUnhook(client, SDKHook_WeaponSwitchPost, ViewChange_WeaponSwitch);
  	if (useVC)
  	{
- 		SDKUnhook(client, SDKHook_WeaponSwitchPost, ViewChange_WeaponSwitch);
  		SDKHook(client, SDKHook_WeaponSwitchPost, ViewChange_WeaponSwitch);
  	}
  	

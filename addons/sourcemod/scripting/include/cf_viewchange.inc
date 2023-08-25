@@ -142,6 +142,51 @@ void ViewChange_PlayerModel(int client)
 	}
 }
 
+void ViewChange_DeleteAll(int client)
+{
+	if (!IsValidClient(client))
+		return;
+		
+	ViewChange_DeletePlayerModel(client);
+	ViewChange_DeleteWeaponModel(client);
+	ViewChange_DeleteHands(client);
+}
+
+void ViewChange_DeletePlayerModel(int client)
+{
+	if (!IsValidClient(client))
+		return;
+		
+	int entity = EntRefToEntIndex(i_Viewmodel_PlayerModel[client]);
+	if (entity > MaxClients)
+	{
+		TF2_RemoveWearable(client, entity);
+		RemoveEntity(entity);
+		
+		SetEntProp(client, Prop_Send, "m_nRenderFX", RENDERFX_MAX);
+	}
+}
+
+void ViewChange_DeleteWeaponModel(int client)
+{
+	if (!IsValidClient(client))
+		return;
+		
+	int entity = EntRefToEntIndex(i_Viewmodel_WeaponModel[client]);
+	if (entity > MaxClients)
+	{
+		TF2_RemoveWearable(client, entity);
+		RemoveEntity(entity);
+	}
+	
+	entity = EntRefToEntIndex(WeaponRef[client]);
+	if (entity > MaxClients)
+	{
+		TF2_RemoveWearable(client, entity);
+		RemoveEntity(entity);
+	}
+}
+
 void ViewChange_Switch(int client, int active, const char[] buffer = "")
 {
 	int entity = EntRefToEntIndex(WeaponRef[client]);
