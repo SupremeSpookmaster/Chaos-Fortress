@@ -167,14 +167,7 @@ public void CF_OnPluginStart()
  * @param deadRinger		Was this a fake death caused by the Dead Ringer?
  */
  public void CF_PlayerKilled(int victim, int inflictor, int attacker, bool deadRinger)
- {
- 	if (!deadRinger)
- 	{
- 		CF_UnmakeCharacter(victim, false);
- 	}
- 	
- 	CFKS_PlayerKilled(victim, attacker, deadRinger);
- 	
+ {	
  	Call_StartForward(g_OnPlayerKilled);
  	
  	Call_PushCell(victim);
@@ -183,6 +176,13 @@ public void CF_OnPluginStart()
  	Call_PushCell(view_as<int>(deadRinger));
  	
  	Call_Finish();
+ 	
+ 	if (!deadRinger)
+ 	{
+ 		CF_UnmakeCharacter(victim, false);
+ 	}
+ 	
+ 	CFKS_PlayerKilled(victim, attacker, deadRinger);
  }
  
  /**

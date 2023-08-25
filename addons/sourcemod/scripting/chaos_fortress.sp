@@ -263,3 +263,8 @@ public void CF_OnPlayerCallForMedic(int client)
 }
 
 #endif
+
+public void OnEntityDestroyed(int entity)
+{
+	ViewChange_OnEntityDestroyed(entity);
+}

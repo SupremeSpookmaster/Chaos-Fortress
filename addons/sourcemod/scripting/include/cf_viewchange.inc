@@ -62,6 +62,15 @@ static TFClassType WeaponClass[MAXPLAYERS + 1];
 static int i_WeaponModelIndexOverride[2049];
 static int i_WeaponForceClass[2049];
 
+public void ViewChange_OnEntityDestroyed(int entity)
+{
+	if (entity > 0 && entity < 2049)
+	{
+		i_WeaponForceClass[entity] = 0;
+		i_WeaponModelIndexOverride[entity] = -1;
+	}
+}
+
 void ViewChange_PluginStart()
 {
 	GameData gamedata = LoadGameConfigFile("sm-tf2.games");
@@ -232,7 +241,6 @@ void ViewChange_Switch(int client, int active, const char[] buffer = "")
 			
 			TF2_SetPlayerClass(client, class, _, false);
 				
-			ViewChange_DeleteHands(client);
 			ViewChange_UpdateHands(client, CF_GetCharacterClass(client));
 
 			UpdatePlayerFakeModel(client);
@@ -257,6 +265,8 @@ void ViewChange_DeleteHands(int client)
 
 int ViewChange_UpdateHands(int client, TFClassType class)
 {
+	ViewChange_DeleteHands(client);
+	
 	int entity = EntRefToEntIndex(HandRef[client]);
 	if(entity <= MaxClients)
 	{

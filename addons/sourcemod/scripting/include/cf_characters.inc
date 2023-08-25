@@ -962,15 +962,12 @@ public void CF_ResetMadeStatus(int client)
 		}
 	}
 	
-	ViewChange_DeleteHands(client);
-	ViewChange_UpdateHands(client, CF_GetCharacterClass(client));
-	
 	char model[255];
 	map.Get("character.model", model, sizeof(model));
 	if (CheckFile(model))
 	{
-		SetVariantString(model);
-		AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
+		//SetVariantString(model);
+		//AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
 		i_CharacterModelIndex[client] = PrecacheModel(model);
 		ViewChange_PlayerModel(client);
 	}
@@ -1037,20 +1034,24 @@ public void CF_ResetMadeStatus(int client)
 			
 			int wep = CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, useVC, ForceClass);
 			
-			if (i == 1)
-			{
-				ViewChange_Switch(client, wep, classname);
-			}
+			//if (i == 1)
+			//{
+			//	ViewChange_Switch(client, wep, classname);
+			//}
 			
 			i++;
 			Format(secName, sizeof(secName), "weapon_%i", i);
 			subsection = weapons.GetSection(secName);
 		}
 		
+		//ViewChange_UpdateHands(client, CF_GetCharacterClass(client));
+		
 		delete weapons;
 		if (subsection != null)
 			delete subsection;
 	}
+	
+	ViewChange_UpdateHands(client, CF_GetCharacterClass(client));
 	
 	ConfigMap particles = map.GetSection("character.particles");
 	if (particles != null)
@@ -1089,9 +1090,13 @@ public void CF_ResetMadeStatus(int client)
  
  public void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int deadRinger)
  {
- 	if (victim > 0 && victim <= MaxClients)
+ 	if (victim > 0 && victim <= MaxClients && !deadRinger)
  	{
  		b_IsDead[victim] = true;
+ 		if (CF_IsPlayerCharacter(victim))
+ 		{
+ 			TF2_SetPlayerClass(victim, CF_GetCharacterClass(victim));
+ 		}
  	}
  }
  
