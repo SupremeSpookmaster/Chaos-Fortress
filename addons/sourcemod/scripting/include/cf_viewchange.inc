@@ -281,6 +281,7 @@ void ViewChange_Switch(int client, int active, const char[] buffer = "")
 			HidePlayerWeaponModel(client, active);
 			
 			TF2_SetPlayerClass(client, class, _, false);
+			CF_UpdateCharacterHP(client, class);
 				
 			ViewChange_UpdateHands(client, CF_GetCharacterClass(client));
 

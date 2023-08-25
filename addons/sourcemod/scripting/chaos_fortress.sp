@@ -7,18 +7,20 @@
 //#define DEBUG_SOUNDS
 
 //GENERAL TODO LIST (things I'll need to add eventually so I don't forget):
-//	- Everything that happens on client disconnect.
-//	- Cookies system.
-//	- Collision forwards.
-//	- (right before publishing) check includes to see if I will need to add anything to the prerequisites section of the readme
-//	- Add support for held weapons and HOPEFULLY wearables to character preview models.
-//  - BUG: If the round changes (IE round A ends then round B starts, or the waiting for players phase ends) while reading a specific character's description,
+//	- TODO: Everything that happens on client disconnect.
+//	- TODO: Cookies system.
+//	- TODO: Collision forwards.
+//	- TODO: (right before publishing) check includes to see if I will need to add anything to the prerequisites section of the readme
+//	- TODO: Add support for held weapons and HOPEFULLY wearables to character preview models.
+//
+//  - MINOR BUG: If the round changes (IE round A ends then round B starts, or the waiting for players phase ends) while reading a specific character's description,
 //		the character select preview model disappears until the player goes back to the main character menu. The preview's outline also permanently breaks
 //		when this happens. This is very minor and has no impact on gameplay.
-//	- BUG: Switching from a character who uses viewchange to one that does not results in the new character's weapons getting stacked on top of each other every time they switch weapons. Doing the reverse breaks the viewchange user's 3rd person animations(?) and also carries over the animations from the previous class. These are both most likely caused by something not getting cleaned properly.
-//	- BUG: There is still a memory leak happening somewhere...
-// 	- BUG: When using viewchange, switching weapons changes your max health if the new class has different max health from the old one.
-//	- BUG: Melee weapons which use viewchange have a noticable delay of roughly ~0.5s before viewchange gets applied.
+//	- MINOR BUG: Switching weapons with viewchange has not transition animation, it is *permanent.* This looks ugly, but it isn't horrible and doesn't have a major impact on gameplay (it might make headshots like 10% harder if people abuse it but that's all).
+//
+//	- MAJOR BUG: Switching from a character who uses viewchange to one that does not results in the new character's weapons getting stacked on top of each other every time they switch weapons. Doing the reverse breaks the viewchange user's 3rd person animations if the two characters are the same class, or carries over the animations from the previous class if they are not. These are both most likely caused by something not getting cleaned properly.
+//	- MAJOR BUG: Melee weapons which use viewchange have a noticable delay of roughly ~0.5s before viewchange gets applied. This doesn't affect gameplay but is EXTREMELY ugly.
+//	- MAJOR BUG: There is still a memory leak happening somewhere...
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

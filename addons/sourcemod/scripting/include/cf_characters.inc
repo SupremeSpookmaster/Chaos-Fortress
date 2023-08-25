@@ -89,6 +89,7 @@ public void CFC_MakeNatives()
 	CreateNative("CF_SetPlayerConfig", Native_CF_SetPlayerConfig);
 	CreateNative("CF_IsPlayerCharacter", Native_CF_IsPlayerCharacter);
 	CreateNative("CF_GetCharacterClass", Native_CF_GetCharacterClass);
+	CreateNative("CF_GetCharacterMaxHealth", Native_CF_GetCharacterMaxHealth);
 }
 
 public void CFC_MakeForwards()
@@ -994,15 +995,7 @@ public void CF_ResetMadeStatus(int client)
 		}
 	}
 	
-	float health = GetFloatFromConfigMap(map, "character.health", 200.0) - f_ClassBaseHP[class];
-	if (health < 0.0)
-	{
-		TF2Attrib_SetByDefIndex(client, 125, -health);
-	}
-	else
-	{
-		TF2Attrib_SetByDefIndex(client, 26, health);
-	}
+	CF_UpdateCharacterHP(client, Classes[class - 1]);
 	
 	ConfigMap wearables = map.GetSection("character.wearables");
 	if (wearables == null)
@@ -1122,6 +1115,54 @@ public void CF_ResetMadeStatus(int client)
  			TF2_SetPlayerClass(victim, CF_GetCharacterClass(victim));
  		}
  	}
+ }
+ 
+ public void CF_UpdateCharacterHP(int client, TFClassType class)
+ {
+ 	if (!IsValidClient(client) || class == TFClass_Unknown)
+ 		return;
+ 	
+ 	int num = 0;
+ 	while (Classes[num] != class)
+ 	{
+ 		num++;
+ 	}
+ 	
+ 	CPrintToChatAll("num is %i", num);
+ 	
+ 	if (num > 8)
+ 		return;
+ 		
+ 	float maxHP = CF_GetCharacterMaxHealth(client);
+ 	float deduction = f_ClassBaseHP[num];
+ 	float health = maxHP - deduction;
+ 	CPrintToChatAll("max is %.2f", maxHP);
+ 	CPrintToChatAll("deduction is %.2f", deduction);
+ 	CPrintToChatAll("Health is %.2f", health);
+ 	
+	if (health < 0.0)
+	{
+		TF2Attrib_SetByDefIndex(client, 125, -health);
+	}
+	else
+	{
+		TF2Attrib_SetByDefIndex(client, 26, health);
+	}
+ }
+ 
+ public Native_CF_GetCharacterMaxHealth(Handle plugin, int numParams)
+ {
+ 	int client = GetNativeCell(1);
+ 	
+ 	if (!CF_IsPlayerCharacter(client))
+ 		return 0.0;
+ 		
+ 	char conf[255];
+ 	CF_GetPlayerConfig(client, conf, sizeof(conf));
+ 	ConfigMap map = new ConfigMap(conf);
+ 	float returnVal = GetFloatFromConfigMap(map, "character.health", 0.0);
+ 	delete map;
+ 	return returnVal;
  }
  
 /**

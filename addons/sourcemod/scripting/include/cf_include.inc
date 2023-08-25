@@ -308,6 +308,15 @@ native CF_GetPlayerConfig(int client, char[] buffer, int size);
 native CF_SetPlayerConfig(int client, char[] confName);
 
 /**
+ * Returns the max HP of the given client's character.
+ *
+ * @param client		The client whose max HP to get.
+ * 
+ * @return Returns a float value equal to the max health of the client's character, 0.0 if the client is invalid or their character has no specified max HP.
+ */
+native CF_GetCharacterMaxHealth(int client);
+
+/**
  * Determines whether or not the chosen client is a character.
  *
  * @param client		The client to check.
