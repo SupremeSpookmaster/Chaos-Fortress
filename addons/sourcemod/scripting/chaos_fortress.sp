@@ -15,6 +15,9 @@
 //  - BUG: If the round changes (IE round A ends then round B starts, or the waiting for players phase ends) while reading a specific character's description,
 //		the character select preview model disappears until the player goes back to the main character menu. The preview's outline also permanently breaks
 //		when this happens. This is very minor and has no impact on gameplay.
+//	- BUG: The first time you spawn, the first weapon given to you by the plugin (nearly always your primary weapon) gets removed after a short delay. This is fixed by touching the resupply locker or dying and respawning.
+//	- BUG: Switching from a character who uses viewchange to one that does not results in the new character having the old broken viewchange. Doing the reverse breaks the viewchange user's 3rd person animations. These are both most likely caused by something not getting cleaned properly.
+//	- BUG: There is still a memory leak happening somewhere...
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

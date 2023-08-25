@@ -105,16 +105,21 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 		}
 	}
 
-	TF2_SetPlayerClass(client, TF2_GetWeaponClass(index, CF_GetCharacterClass(client), TF2_GetClassnameSlot(name, true)), _, false);
-
 	int entity = TF2Items_GiveNamedItem(client, hWeapon);
 	delete hWeapon;
 	if(entity == -1)
 		return -1;
 
-	EquipPlayerWeapon(client, entity);
-	
-	TF2_SetPlayerClass(client, CF_GetCharacterClass(client), _, false);
+	if (useVC)
+	{
+		TF2_SetPlayerClass(client, TF2_GetWeaponClass(index, CF_GetCharacterClass(client), TF2_GetClassnameSlot(name, true)), _, false);
+		EquipPlayerWeapon(client, entity);
+		TF2_SetPlayerClass(client, CF_GetCharacterClass(client), _, false);
+	}
+	else
+	{
+		EquipPlayerWeapon(client, entity);
+	}
 
 	if(visible)
 	{
@@ -136,15 +141,10 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 		SetClip(client, entity, clip);
 	}
 	
-	if (ForceClass > 0)
+	if (ForceClass > 0 && useVC)
 	{
 		ViewChange_SetForceClass(entity, ForceClass);
 	}
-	
-	/*if (useVC)
-	{
-		ViewChange_Switch(client, entity, name);
-	}*/
 	
 	return entity;
 }

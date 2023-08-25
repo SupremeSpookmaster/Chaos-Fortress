@@ -217,9 +217,9 @@ public void CFC_MakeForwards()
 			PushArrayString(CF_Characters_Configs, value);
 		}
 			
-		#if defined DEBUG_CHARACTER_CREATION
+		//#if defined DEBUG_CHARACTER_CREATION
 		PrintToServer("\nLocated character: %s", value);
-		#endif
+		//#endif
 	}
 	
 	delete Pack;
@@ -249,7 +249,6 @@ public void CFC_MakeForwards()
  	if (!JustDownload)
  	{
  		PushArrayString(CF_Characters_Names, str);
- 		PushArrayString(CF_Characters_Configs, path);
  	
  		#if defined DEBUG_CHARACTER_CREATION
 		PrintToServer("\nConfig ''%s'' has a character name of ''%s''.", path, str);
@@ -287,6 +286,7 @@ public CFC_Menu(Menu CFC_Menu, MenuAction action, int client, int param)
 	{
 		char conf[255];
 		GetArrayString(CF_Characters_Configs, param, conf, 255);
+		CPrintToChatAll("Selected item with config %s", conf);
 		
 		CFC_BuildInfoMenu(client, conf, false, false);		
 	}
@@ -671,6 +671,7 @@ public Action CFC_OpenMenu(int client, int args)
 			
 			if (Character == null)
 			{
+				delete Character;
 				PrintToServer("ERROR: Somehow, an invalid character config (%s) was added to the !characters menu.", s_CharacterConfigInMenu[client]);
 				CPrintToChat(client, "{indigo}[Chaos Fortress] {crimson}ERROR: {default}Somehow, an invalid character config {olive}(%s){default} was added to the !characters menu. This should be impossible. Please inform your server's developer.", s_CharacterConfigInMenu[client]);
 				return;
@@ -962,14 +963,22 @@ public void CF_ResetMadeStatus(int client)
 		}
 	}
 	
+	bool useVC = GetBoolFromConfigMap(map, "character.use_viewchange", false);
+	
 	char model[255];
 	map.Get("character.model", model, sizeof(model));
 	if (CheckFile(model))
 	{
-		//SetVariantString(model);
-		//AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
-		i_CharacterModelIndex[client] = PrecacheModel(model);
-		ViewChange_PlayerModel(client);
+		if (!useVC)
+		{
+			SetVariantString(model);
+			AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
+		}
+		else
+		{
+			i_CharacterModelIndex[client] = PrecacheModel(model);
+			ViewChange_PlayerModel(client);
+		}
 	}
 	
 	float health = GetFloatFromConfigMap(map, "character.health", 200.0) - f_ClassBaseHP[class];
@@ -1030,14 +1039,8 @@ public void CF_ResetMadeStatus(int client)
 				subsection.Get("model_override", override, sizeof(override));
 			}
 			bool unequip = GetBoolFromConfigMap(subsection, "unequip", true);
-			bool useVC = GetBoolFromConfigMap(subsection, "use_viewchange", false);
 			
 			int wep = CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, useVC, ForceClass);
-			
-			//if (i == 1)
-			//{
-			//	ViewChange_Switch(client, wep, classname);
-			//}
 			
 			i++;
 			Format(secName, sizeof(secName), "weapon_%i", i);
@@ -1082,8 +1085,12 @@ public void CF_ResetMadeStatus(int client)
  		delete GameRules;
  	}
  	
- 	SDKUnhook(client, SDKHook_WeaponSwitchPost, ViewChange_WeaponSwitch);
- 	SDKHook(client, SDKHook_WeaponSwitchPost, ViewChange_WeaponSwitch);
+ 	if (useVC)
+ 	{
+ 		SDKUnhook(client, SDKHook_WeaponSwitchPost, ViewChange_WeaponSwitch);
+ 		SDKHook(client, SDKHook_WeaponSwitchPost, ViewChange_WeaponSwitch);
+ 	}
+ 	
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  }
@@ -1190,6 +1197,8 @@ public Native_CF_GetCharacterClass(Handle plugin, int numParams)
 	CF_GetPlayerConfig(client, conf, 255);
 	ConfigMap map = new ConfigMap(conf);
 	int num = GetIntFromConfigMap(map, "character.class", 0);
+	delete map;
+	
 	if (num == 0)
 	{
 		return TFClass_Unknown;
@@ -1197,7 +1206,6 @@ public Native_CF_GetCharacterClass(Handle plugin, int numParams)
 	else
 	{
 		TFClassType class = Classes[num - 1];
-		delete map;
 		return class;
 	}
 }

@@ -1,9 +1,6 @@
 //MOST OF THE CONTENT in this include file was originally written by Artvin and Batfoxkid for TF2 Zombie Riot. The vast majority of the credit goes to them.
 //I DID make heavy edits in porting it to Chaos Fortress, but I am NOT the original author.
 
-//TODO: Current edits enable the plugin to compile with this included. However, it is not yet actually implemented, so it does nothing.
-//Make further edits to implement it into the game mode, utilizing config options for further customization.
-
 static Handle SDKEquipWearable;
 static Handle g_hRecalculatePlayerBodygroups;
 
@@ -103,8 +100,6 @@ void ViewChange_MapStart()
 	{
 		RobotIndex[i] = PrecacheModel(RobotModels[i], true);
 	}
-	
-	
 }
 
 void ViewChange_SetForceClass(int entity, int ForceClass)
