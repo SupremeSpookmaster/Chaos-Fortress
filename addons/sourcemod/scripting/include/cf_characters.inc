@@ -287,8 +287,7 @@ public CFC_Menu(Menu CFC_Menu, MenuAction action, int client, int param)
 	{
 		char conf[255];
 		GetArrayString(CF_Characters_Configs, param, conf, 255);
-		CPrintToChatAll("Selected item with config %s", conf);
-		
+
 		CFC_BuildInfoMenu(client, conf, false, false);		
 	}
 	else if (action == MenuAction_End || action == MenuAction_Cancel)
@@ -953,8 +952,8 @@ public void CF_ResetMadeStatus(int client)
 		
 	ConfigMap GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 		
-	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
-	TF2_SetPlayerClass(client, Classes[class]);
+	//int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
+	//TF2_SetPlayerClass(client, Classes[class]);
 	
 	ViewChange_DeleteAll(client);
 	
@@ -990,12 +989,12 @@ public void CF_ResetMadeStatus(int client)
 		}
 		else
 		{
+			SetVariantString("");
+			AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
 			i_CharacterModelIndex[client] = PrecacheModel(model);
 			ViewChange_PlayerModel(client);
 		}
 	}
-	
-	CF_UpdateCharacterHP(client, Classes[class - 1]);
 	
 	ConfigMap wearables = map.GetSection("character.wearables");
 	if (wearables == null)
@@ -1061,6 +1060,10 @@ public void CF_ResetMadeStatus(int client)
 			delete subsection;
 	}
 	
+	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
+	TF2_SetPlayerClass(client, Classes[class]);
+	CF_UpdateCharacterHP(client, Classes[class - 1], true);
+	
 	if (useVC)
 	{
 		ViewChange_UpdateHands(client, CF_GetCharacterClass(client));
@@ -1117,10 +1120,12 @@ public void CF_ResetMadeStatus(int client)
  	}
  }
  
- public void CF_UpdateCharacterHP(int client, TFClassType class)
+ public void CF_UpdateCharacterHP(int client, TFClassType class, bool spawn)
  {
- 	if (!IsValidClient(client) || class == TFClass_Unknown)
+ 	if (!IsValidClient(client))
  		return;
+ 	
+ 	//SetEntProp(client, Prop_Data, "m_iMaxHealth", CF_GetCharacterMaxHealth(client));
  	
  	int num = 0;
  	while (Classes[num] != class)
@@ -1128,17 +1133,17 @@ public void CF_ResetMadeStatus(int client)
  		num++;
  	}
  	
- 	CPrintToChatAll("num is %i", num);
- 	
  	if (num > 8)
  		return;
- 		
+ 	
+ 	//for some bizarre reason, it freaks out and sets the HP to something in the billions if I don't separate these:
  	float maxHP = CF_GetCharacterMaxHealth(client);
  	float deduction = f_ClassBaseHP[num];
  	float health = maxHP - deduction;
- 	CPrintToChatAll("max is %.2f", maxHP);
- 	CPrintToChatAll("deduction is %.2f", deduction);
- 	CPrintToChatAll("Health is %.2f", health);
+ 	CPrintToChatAll("Max is %.2f, deduction is %.2f, health is %.2f", maxHP, deduction, health);
+ 	
+ 	TF2Attrib_RemoveByDefIndex(client, 125);
+ 	TF2Attrib_RemoveByDefIndex(client, 26);
  	
 	if (health < 0.0)
 	{
@@ -1147,6 +1152,11 @@ public void CF_ResetMadeStatus(int client)
 	else
 	{
 		TF2Attrib_SetByDefIndex(client, 26, health);
+	}
+	
+	if (spawn)
+	{
+		SetEntProp(client, Prop_Send, "m_iHealth", RoundFloat(maxHP));
 	}
  }
  

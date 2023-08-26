@@ -6,21 +6,32 @@
 //#define DEBUG_GAMERULES
 //#define DEBUG_SOUNDS
 
-//GENERAL TODO LIST (things I'll need to add eventually so I don't forget):
+//	- TO-DO LIST AND ALL CURRENT BUGS:
+//
 //	- TODO: Everything that happens on client disconnect.
 //	- TODO: Cookies system.
 //	- TODO: Collision forwards.
-//	- TODO: (right before publishing) check includes to see if I will need to add anything to the prerequisites section of the readme
+//	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
 //	- TODO: Add support for held weapons and HOPEFULLY wearables to character preview models.
+//	- TODO: Fix all major bugs, obviously.
 //
 //  - MINOR BUG: If the round changes (IE round A ends then round B starts, or the waiting for players phase ends) while reading a specific character's description,
 //		the character select preview model disappears until the player goes back to the main character menu. The preview's outline also permanently breaks
 //		when this happens. This is very minor and has no impact on gameplay.
-//	- MINOR BUG: Switching weapons with viewchange has not transition animation, it is *permanent.* This looks ugly, but it isn't horrible and doesn't have a major impact on gameplay (it might make headshots like 10% harder if people abuse it but that's all).
+//			- Current Theory: Vanilla TF2 round-end logic removes it as part of its cleanup. If this is the case, there is no known fix.
+//	- MINOR BUG: Switching weapons with viewchange has no transition animation, it is *instant.* This looks ugly, but it isn't horrible and doesn't have a major impact on gameplay (it might make headshots like 10% harder if people abuse it but that's all).
+//			- Current Theory: It skips the intro sequence because the intro sequence is marked as having already been finished by the time we 
+//	- MINOR BUG: Characters who use viewchange are still holding their weapons on death. This is ugly and it would be best to make it fall like a phys prop.
 //
-//	- MAJOR BUG: Switching from a character who uses viewchange to one that does not results in the new character's weapons getting stacked on top of each other every time they switch weapons. Doing the reverse breaks the viewchange user's 3rd person animations if the two characters are the same class, or carries over the animations from the previous class if they are not. These are both most likely caused by something not getting cleaned properly.
-//	- MAJOR BUG: Melee weapons which use viewchange have a noticable delay of roughly ~0.5s before viewchange gets applied. This doesn't affect gameplay but is EXTREMELY ugly.
+//	- MAJOR BUG: Switching from a character who uses viewchange to one that does not results in the new character's first weapon (usually primary) getting stacked on top every other weapon they hold. Dying and respawning fixes this.
+//		- Current Theory: The dummy model spawned by viewchange is failing to be deleted in the resupply event.
+//	- MAJOR BUG: Melee weapons which use viewchange have a noticable delay of roughly ~0.5s before viewchange gets applied. This doesn't affect gameplay but is EXTREMELY ugly, I refuse to ship the final product without fixing this.
+//		- Current Theory: Still no clue.
+//	- MAJOR BUG: Switching from a character which uses viewchange to one that does not results in the new character *partially* using viewchange anyway. Third person animations work fine, but first person anims are sometimes correct (don't use vc) and sometimes wrong (do use vc).
+//	- MAJOR BUG: The health you spawn with is not actually the correct amount of health.
+//		- Current Theory: haha you guessed it, NO FUCKING CLUE :) setting m_iHealth does NOTHING
 //	- MAJOR BUG: There is still a memory leak happening somewhere...
+//		- Current Theory: I missed a Handle somewhere. Either that or natives/forwards create handles, which I doubt is the case.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

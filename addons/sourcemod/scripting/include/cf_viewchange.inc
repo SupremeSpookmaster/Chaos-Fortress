@@ -162,7 +162,8 @@ void ViewChange_DeletePlayerModel(int client)
 	if (entity > MaxClients)
 	{
 		TF2_RemoveWearable(client, entity);
-		RemoveEntity(entity);
+		//RemoveEntity(entity);
+		i_Viewmodel_PlayerModel[client] = -1;
 		
 		SetEntProp(client, Prop_Send, "m_nRenderFX", RENDERFX_MAX);
 	}
@@ -177,14 +178,16 @@ void ViewChange_DeleteWeaponModel(int client)
 	if (entity > MaxClients)
 	{
 		TF2_RemoveWearable(client, entity);
-		RemoveEntity(entity);
+		i_Viewmodel_WeaponModel[client] = -1;
+		//RemoveEntity(entity);
 	}
 	
 	entity = EntRefToEntIndex(WeaponRef[client]);
 	if (entity > MaxClients)
 	{
 		TF2_RemoveWearable(client, entity);
-		RemoveEntity(entity);
+		WeaponRef[client] = -1;
+		//RemoveEntity(entity);
 	}
 }
 
@@ -281,7 +284,7 @@ void ViewChange_Switch(int client, int active, const char[] buffer = "")
 			HidePlayerWeaponModel(client, active);
 			
 			TF2_SetPlayerClass(client, class, _, false);
-			CF_UpdateCharacterHP(client, class);
+			CF_UpdateCharacterHP(client, class, false);
 				
 			ViewChange_UpdateHands(client, CF_GetCharacterClass(client));
 

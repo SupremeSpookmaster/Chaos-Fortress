@@ -21,6 +21,8 @@ GlobalForward g_OnRoundStateChanged;
 
 public ConfigMap GameRules;
 
+ConVar g_WeaponDropLifespan;
+
 /**
  * Creates all of Chaos Fortress' natives.
  */
@@ -47,6 +49,9 @@ public void CF_OnPluginStart()
 	
 	g_OnPlayerKilled = new GlobalForward("CF_OnPlayerKilled", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	g_OnRoundStateChanged = new GlobalForward("CF_OnRoundStateChanged", ET_Ignore, Param_Cell);
+	
+	g_WeaponDropLifespan = FindConVar("tf_dropped_weapon_lifetime");
+	g_WeaponDropLifespan.IntValue = 0;
 }
 
 /**

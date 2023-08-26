@@ -113,7 +113,7 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 	if (useVC)
 	{
 		TFClassType wepClass = TF2_GetWeaponClass(index, CF_GetCharacterClass(client), TF2_GetClassnameSlot(name, true));
-		TF2_SetPlayerClass(client, wepClass, /*_*/false, false);
+		TF2_SetPlayerClass(client, wepClass, _, false);
 		EquipPlayerWeapon(client, entity);
 		TF2_SetPlayerClass(client, CF_GetCharacterClass(client), _, false);
 	}
