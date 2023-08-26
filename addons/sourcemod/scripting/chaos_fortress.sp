@@ -23,13 +23,10 @@
 //			- Current Theory: It skips the intro sequence because the intro sequence is marked as having already been finished by the time we 
 //	- MINOR BUG: Characters who use viewchange are still holding their weapons on death. This is ugly and it would be best to make it fall like a phys prop.
 //
-//	- MAJOR BUG: Switching from a character who uses viewchange to one that does not results in the new character's first weapon (usually primary) getting stacked on top every other weapon they hold. Dying and respawning fixes this.
-//		- Current Theory: The dummy model spawned by viewchange is failing to be deleted in the resupply event.
 //	- MAJOR BUG: Melee weapons which use viewchange have a noticable delay of roughly ~0.5s before viewchange gets applied. This doesn't affect gameplay but is EXTREMELY ugly, I refuse to ship the final product without fixing this.
 //		- Current Theory: Still no clue.
-//	- MAJOR BUG: Switching from a character which uses viewchange to one that does not results in the new character *partially* using viewchange anyway. Third person animations work fine, but first person anims are sometimes correct (don't use vc) and sometimes wrong (do use vc).
 //	- MAJOR BUG: The health you spawn with is not actually the correct amount of health.
-//		- Current Theory: haha you guessed it, NO FUCKING CLUE :) setting m_iHealth does NOTHING
+//		- Current Theory: haha you guessed it, NO FUCKING CLUE :) setting m_iHealth does NOTHING, TF2 can EAT SHIT
 //	- MAJOR BUG: There is still a memory leak happening somewhere...
 //		- Current Theory: I missed a Handle somewhere. Either that or natives/forwards create handles, which I doubt is the case.
 
@@ -132,6 +129,10 @@ public void PlayerReset(Event gEvent, const char[] sEvName, bool bDontBroadcast)
 	
 	if (IsValidClient(client))
 	{
+		//Do it twice in a row because otherwise switching from a character who uses viewchange to one that does not breaks a lot of things.
+		//I have no clue why. 
+		//Yes, I am aware this is EXTREMELY suboptimal, no I am not happy I had to do it, but I'm sick of trying to make this thing work seamlessly so I just tossed in a hack and called it a day.
+		CF_MakeCharacter(client);
 		CF_MakeCharacter(client);
 	}
 	

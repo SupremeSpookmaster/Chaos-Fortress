@@ -177,17 +177,17 @@ void ViewChange_DeleteWeaponModel(int client)
 	int entity = EntRefToEntIndex(i_Viewmodel_WeaponModel[client]);
 	if (entity > MaxClients)
 	{
+		SetEntProp(entity, Prop_Send, "m_nRenderFX", RENDERFX_NONE);
 		TF2_RemoveWearable(client, entity);
 		i_Viewmodel_WeaponModel[client] = -1;
-		//RemoveEntity(entity);
 	}
 	
 	entity = EntRefToEntIndex(WeaponRef[client]);
 	if (entity > MaxClients)
 	{
+		SetEntProp(entity, Prop_Send, "m_nRenderFX", RENDERFX_NONE);
 		TF2_RemoveWearable(client, entity);
 		WeaponRef[client] = -1;
-		//RemoveEntity(entity);
 	}
 }
 
