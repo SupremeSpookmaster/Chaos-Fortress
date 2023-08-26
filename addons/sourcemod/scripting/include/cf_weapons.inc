@@ -39,8 +39,8 @@ public Native_CF_SpawnWeapon(Handle plugin, int numParams)
  	
  	bool visible = GetNativeCell(11) != 0;
  	bool unequip = GetNativeCell(12) != 0;
- 	bool useVC = GetNativeCell(13) != 0;
- 	int ForceClass = GetNativeCell(14);
+ 	bool useVC = CF_GetCharacterUsingViewChange(client);
+ 	int ForceClass = GetNativeCell(13);
  	
  	return SpawnWeapon_Special(client, name, index, level, qual, slot, reserve, clip, att, override, visible, unequip, useVC, ForceClass);
  }

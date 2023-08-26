@@ -14,6 +14,7 @@
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
 //	- TODO: Add support for held weapons and HOPEFULLY wearables to character preview models.
 //	- TODO: Fix all major bugs, obviously.
+//	- TODO: Add support for maximum customization to the viewchange system.
 //
 //  - MINOR BUG: If the round changes (IE round A ends then round B starts, or the waiting for players phase ends) while reading a specific character's description,
 //		the character select preview model disappears until the player goes back to the main character menu. The preview's outline also permanently breaks
@@ -22,9 +23,9 @@
 //	- MINOR BUG: Switching weapons with viewchange has no transition animation, it is *instant.* This looks ugly, but it isn't horrible and doesn't have a major impact on gameplay (it might make headshots like 10% harder if people abuse it but that's all).
 //			- Current Theory: It skips the intro sequence because the intro sequence is marked as having already been finished by the time we 
 //	- MINOR BUG: Characters who use viewchange are still holding their weapons on death. This is ugly and it would be best to make it fall like a phys prop.
-//
-//	- MAJOR BUG: Melee weapons which use viewchange have a noticable delay of roughly ~0.5s before viewchange gets applied. This doesn't affect gameplay but is EXTREMELY ugly, I refuse to ship the final product without fixing this.
+//	- MINOR BUG: Melee weapons which use viewchange have a noticeable delay of roughly ~0.5s before viewchange gets applied. This doesn't affect gameplay and is only visible in first person view, but is EXTREMELY ugly.
 //		- Current Theory: Still no clue.
+//
 //	- MAJOR BUG: The health you spawn with is not actually the correct amount of health.
 //		- Current Theory: haha you guessed it, NO FUCKING CLUE :) setting m_iHealth does NOTHING, TF2 can EAT SHIT
 //	- MAJOR BUG: There is still a memory leak happening somewhere...

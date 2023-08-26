@@ -340,12 +340,11 @@ native bool CF_IsPlayerCharacter(int client);
  * @param override		Optional weapon model override.
  * @param visible		Should the weapon be visible?
  * @param unequip		Should whichever weapon(s) currently in this weapon's slot be removed before equipping this weapon?
- * @param useVC			Should this weapon use the ViewChange system? EX: If we give the scout a wrench, this will switch his first-person and third-person animations to that of the engineer while he has the wrench out, making it look like he is actually holding the wrench. USE THIS WITH CAUTION! Certain animations look VERY bad on certain models, such as Heavy animations turning every other class into abominations.
  * @param ForceClass	Class to force this weapon to use the animations of, if using ViewChange. 1-9 for the mercs, anything above 9 is considered all-class.
  *
  * @return The entity index of the spawned weapon, -1 if not valid.
  */
-native int CF_SpawnWeapon(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255] = "", bool visible = true, bool unequip = true, bool useVC = false, int ForceClass = 0);
+native int CF_SpawnWeapon(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255] = "", bool visible = true, bool unequip = true, int ForceClass = 0);
 
 /**
  * Gets the class of the player's current character.
@@ -355,3 +354,12 @@ native int CF_SpawnWeapon(int client, char[] name, int index, int level, int qua
  * @return The class of the player's character, TFClass_Unknown if invalid.
  */
 native TFClassType CF_GetCharacterClass(int client);
+
+/**
+ * Checks if the player's current character is using the ViewChange system.
+ *
+ * @param client		The client to check.
+ *
+ * @return True if the client is valid and is a character which uses ViewChange, false otherwise.
+ */
+native bool CF_GetCharacterUsingViewChange(int client);

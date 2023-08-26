@@ -90,6 +90,7 @@ public void CFC_MakeNatives()
 	CreateNative("CF_IsPlayerCharacter", Native_CF_IsPlayerCharacter);
 	CreateNative("CF_GetCharacterClass", Native_CF_GetCharacterClass);
 	CreateNative("CF_GetCharacterMaxHealth", Native_CF_GetCharacterMaxHealth);
+	CreateNative("CF_GetCharacterUsingViewChange", Native_CF_GetCharacterUsingViewChange);
 }
 
 public void CFC_MakeForwards()
@@ -1045,7 +1046,7 @@ public void CF_ResetMadeStatus(int client)
 			}
 			bool unequip = GetBoolFromConfigMap(subsection, "unequip", true);
 			
-			CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, useVC, ForceClass);
+			CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, ForceClass);
 			
 			i++;
 			Format(secName, sizeof(secName), "weapon_%i", i);
@@ -1276,4 +1277,20 @@ public Native_CF_GetCharacterClass(Handle plugin, int numParams)
 		TFClassType class = Classes[num - 1];
 		return class;
 	}
+}
+
+public Native_CF_GetCharacterUsingViewChange(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return false;
+		
+	char conf[255];
+	CF_GetPlayerConfig(client, conf, 255);
+	ConfigMap map = new ConfigMap(conf);
+	int num = GetIntFromConfigMap(map, "character.use_viewchange", 0);
+	delete map;
+	
+	return num;
 }
