@@ -15,6 +15,9 @@
 //	- TODO: Add support for held weapons and HOPEFULLY wearables to character preview models.
 //	- TODO: Fix all major bugs, obviously.
 //	- TODO: Add support for maximum customization to the viewchange system.
+//	- TODO: Figure out why natives that don't return ints are throwing compiler warnings.
+//	- TODO: Viewchange system weapon size support.
+//	- TODO: Viewchange system custom hands support, maybe?
 //
 //  - MINOR BUG: If the round changes (IE round A ends then round B starts, or the waiting for players phase ends) while reading a specific character's description,
 //		the character select preview model disappears until the player goes back to the main character menu. The preview's outline also permanently breaks
@@ -31,6 +34,9 @@
 //	- MAJOR BUG: There is still a memory leak happening somewhere...
 //		- Current Theory: I missed a Handle somewhere. Either that or natives/forwards create handles, which I doubt is the case.
 //	- MAJOR BUG: Particles spawned by the character preview model system do not get properly hit with SetTransmit, so they are visible to everyone. This WILL be abused if it is not fixed.
+//	- MAJOR BUG: Particles spawned on characters via their CFG do not remain in the correct attachment position if that character has viewchange and switches their weapon.
+//		- SOLUTION: If the character uses viewchange, parent the particle to their fake model instead of their actual model
+//	- MAJOR BUG: Spy weapons (namely revolver) do not spawn at all... This likely also applies to other weapons...
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

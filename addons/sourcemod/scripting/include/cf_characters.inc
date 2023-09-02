@@ -1031,8 +1031,7 @@ public void CF_ResetMadeStatus(int client)
 	
 	if (wearables != null)
 	{
-		//TODO: Spawn wearables
-		delete wearables;
+		CFC_GiveWearables(client, wearables);
 	}
 	
 	ConfigMap weapons = map.GetSection("character.weapons");
@@ -1093,6 +1092,31 @@ public void CF_ResetMadeStatus(int client)
  	
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
+ }
+ 
+ 
+ public void CFC_GiveWearables(int client, ConfigMap wearables)
+ {
+ 	TF2_RemoveAllWeapons(client);
+		
+	int i = 1;
+	char secName[255];
+	Format(secName, sizeof(secName), "wearable_%i", i);
+		
+	ConfigMap subsection = wearables.GetSection(secName);
+	while (subsection != null)
+	{
+		//TODO: This is the last of the "hard part", after this we're back in familiar territory for the rest of the plugin.
+		
+		i++;
+		Format(secName, sizeof(secName), "wearable_%i", i);
+		delete subsection;
+		subsection = wearables.GetSection(secName);
+	}
+
+	delete wearables;
+	if (subsection != null)
+		delete subsection;
  }
  
  public void CFC_GiveWeapons(int client, ConfigMap weapons)
