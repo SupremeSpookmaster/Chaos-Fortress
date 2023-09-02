@@ -62,6 +62,7 @@ int i_CFPreviewModel[MAXPLAYERS + 1] = { -1, ... };
 int i_PreviewOwner[2049] = { -1, ... };
 int i_CFPreviewProp[MAXPLAYERS + 1] = { -1, ... };
 int i_CFPreviewWeapon[MAXPLAYERS + 1] = { -1, ... };
+int i_CharacterParticleOwner[2049] = { -1, ... };
 int i_CharacterModelIndex[MAXPLAYERS+1];
 
 float f_CFPreviewRotation[MAXPLAYERS + 1] = { 0.0, ... };
@@ -82,6 +83,8 @@ char s_DefaultCharacter[255];
 
 Handle c_DesiredCharacter;
 
+Queue g_CharacterParticles[MAXPLAYERS + 1];
+
 public void CFC_MakeNatives()
 {
 	CreateNative("CF_GetRoundState", Native_CF_GetRoundState);
@@ -91,6 +94,7 @@ public void CFC_MakeNatives()
 	CreateNative("CF_GetCharacterClass", Native_CF_GetCharacterClass);
 	CreateNative("CF_GetCharacterMaxHealth", Native_CF_GetCharacterMaxHealth);
 	CreateNative("CF_GetCharacterUsingViewChange", Native_CF_GetCharacterUsingViewChange);
+	CreateNative("CF_AttachParticle", Native_CF_AttachParticle);
 }
 
 public void CFC_MakeForwards()
@@ -106,6 +110,11 @@ public void CFC_MakeForwards()
 	PrecacheModel(MODEL_PREVIEW_STAGE);
 	PrecacheModel(MODEL_PREVIEW_UNKNOWN);
 	PrecacheSound(SOUND_CHARACTER_PREVIEW);
+}
+
+public void CFC_OnEntityDestroyed(int entity)
+{
+	i_CharacterParticleOwner[entity] = -1;
 }
 
 /**
@@ -523,6 +532,23 @@ public Action CFC_OpenMenu(int client, int args)
  	}
  		
  	return Plugin_Continue;
+ }
+ 
+ public Action CFC_ParticleTransmit(int entity, int client)
+ {
+ 	SetEdictFlags(entity, GetEdictFlags(entity)&(~FL_EDICT_ALWAYS));
+ 	
+ 	int owner = GetClientOfUserId(i_CharacterParticleOwner[entity]);
+ 	/*if (!IsValidClient(owner))	//This should never happen so I've removed it for the sake of optimization, if it throws error we know what to re-enable.
+ 		return Plugin_Handled;*/
+ 		
+ 	if (IsPlayerInvis(owner))	//Block the particle if the user is invisible, for obvious reasons...
+ 		return Plugin_Handled;
+ 		
+ 	if (client != owner || (client == owner && GetEntProp(client, Prop_Send, "m_nForceTauntCam")))
+ 		return Plugin_Continue;
+ 		
+ 	return Plugin_Handled;
  }
  
  bool CF_PreviewModelActive(int client)
@@ -1017,48 +1043,8 @@ public void CF_ResetMadeStatus(int client)
 	
 	if (weapons != null)
 	{
-		TF2_RemoveAllWeapons(client);
-		
-		int i = 1;
-		char secName[255];
-		Format(secName, sizeof(secName), "weapon_%i", i);
-		
-		ConfigMap subsection = weapons.GetSection(secName);
-		while (subsection != null)
-		{
-			char classname[255], attributes[255], override[255];
-			subsection.Get("classname", classname, sizeof(classname));
-			
-			int index = GetIntFromConfigMap(subsection, "index", 1);
-			int level = GetIntFromConfigMap(subsection, "level", 77);
-			int quality = GetIntFromConfigMap(subsection, "quality", 7);
-			int slot = GetIntFromConfigMap(subsection, "slot", 0);
-			int reserve = GetIntFromConfigMap(subsection, "reserve", 0);
-			int clip = GetIntFromConfigMap(subsection, "clip", 0);
-			int ForceClass = GetIntFromConfigMap(subsection, "force_class", 0);
-			
-			subsection.Get("attributes", attributes, sizeof(attributes));
-			
-			bool visible = GetBoolFromConfigMap(subsection, "visible", true);
-			if (visible)
-			{
-				subsection.Get("model_override", override, sizeof(override));
-			}
-			bool unequip = GetBoolFromConfigMap(subsection, "unequip", true);
-			
-			CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, ForceClass);
-			
-			i++;
-			Format(secName, sizeof(secName), "weapon_%i", i);
-			delete subsection;
-			subsection = weapons.GetSection(secName);
-		}
-		
-		//ViewChange_UpdateHands(client, CF_GetCharacterClass(client));
-		
-		delete weapons;
-		if (subsection != null)
-			delete subsection;
+		CFC_GiveWeapons(client, weapons);
+		//delete weapons;
 	}
 	
 	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
@@ -1073,8 +1059,8 @@ public void CF_ResetMadeStatus(int client)
 	ConfigMap particles = map.GetSection("character.particles");
 	if (particles != null)
 	{
-		//TODO: Spawn particles
-		delete particles;
+		CFC_AttachParticles(client, particles);
+		//delete particles;
 	}
 	
  	b_CharacterApplied[client] = true;
@@ -1107,6 +1093,112 @@ public void CF_ResetMadeStatus(int client)
  	
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
+ }
+ 
+ public void CFC_GiveWeapons(int client, ConfigMap weapons)
+ {
+ 	TF2_RemoveAllWeapons(client);
+		
+	int i = 1;
+	char secName[255];
+	Format(secName, sizeof(secName), "weapon_%i", i);
+		
+	ConfigMap subsection = weapons.GetSection(secName);
+	while (subsection != null)
+	{
+		char classname[255], attributes[255], override[255];
+		subsection.Get("classname", classname, sizeof(classname));
+			
+		int index = GetIntFromConfigMap(subsection, "index", 1);
+		int level = GetIntFromConfigMap(subsection, "level", 77);
+		int quality = GetIntFromConfigMap(subsection, "quality", 7);
+		int slot = GetIntFromConfigMap(subsection, "slot", 0);
+		int reserve = GetIntFromConfigMap(subsection, "reserve", 0);
+		int clip = GetIntFromConfigMap(subsection, "clip", 0);
+		int ForceClass = GetIntFromConfigMap(subsection, "force_class", 0);
+			
+		subsection.Get("attributes", attributes, sizeof(attributes));
+			
+		bool visible = GetBoolFromConfigMap(subsection, "visible", true);
+		if (visible)
+		{
+			subsection.Get("model_override", override, sizeof(override));
+		}
+		bool unequip = GetBoolFromConfigMap(subsection, "unequip", true);
+			
+		CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, ForceClass);
+			
+		i++;
+		Format(secName, sizeof(secName), "weapon_%i", i);
+		delete subsection;
+		subsection = weapons.GetSection(secName);
+	}
+
+	delete weapons;
+	if (subsection != null)
+		delete subsection;
+ }
+ 
+ public void CFC_DeleteParticles(int client)
+ {
+ 	if (!IsValidClient(client))
+ 		return;
+ 		
+ 	if (g_CharacterParticles[client] == null)
+ 		return;
+ 		
+ 	while (!g_CharacterParticles[client].Empty)
+ 	{
+ 		int part = EntRefToEntIndex(g_CharacterParticles[client].Pop());
+ 		
+ 		if (IsValidEdict(part))
+ 		{
+ 			RemoveEntity(part);
+ 		}
+ 	}
+ 	
+ 	delete g_CharacterParticles[client];
+ }
+ 
+ public void CFC_AttachParticles(int client, ConfigMap particles)
+ {
+ 	CFC_DeleteParticles(client);
+ 	g_CharacterParticles[client] = new Queue();
+ 	
+ 	int i = 1;
+	char secName[255];
+	Format(secName, sizeof(secName), "particle_%i", i);
+		
+	ConfigMap subsection = particles.GetSection(secName);
+	while (subsection != null)
+	{
+		char partName[255]; char point[255];
+		if (TF2_GetClientTeam(client) == TFTeam_Red)
+		{
+			subsection.Get("name_red", partName, sizeof(partName));
+		}
+		else
+		{
+			subsection.Get("name_blue", partName, sizeof(partName));
+		}
+		
+		subsection.Get("point", point, sizeof(point));
+		
+		float xOff = GetFloatFromConfigMap(subsection, "x_offset", 0.0);
+		float yOff = GetFloatFromConfigMap(subsection, "y_offset", 0.0);
+		float zOff = GetFloatFromConfigMap(subsection, "z_offset", 0.0);
+		
+		CF_AttachParticle(client, partName, point, 0.0, xOff, yOff, zOff);
+		
+		i++;
+		Format(secName, sizeof(secName), "particle_%i", i);
+		delete subsection;
+		subsection = particles.GetSection(secName);
+	}
+	
+	delete particles;
+	if (subsection != null)
+		delete subsection;
  }
  
  public void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int deadRinger)
@@ -1190,6 +1282,8 @@ public void CF_ResetMadeStatus(int client)
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKUnhook(client, SDKHook_WeaponSwitchPost, CFDMG_OnTakeDamageAlive);
  	b_CharacterApplied[client] = false;
+ 	
+ 	CFC_DeleteParticles(client);
  }
  
  public Native_CF_GetPlayerConfig(Handle plugin, int numParams)
@@ -1293,4 +1387,33 @@ public Native_CF_GetCharacterUsingViewChange(Handle plugin, int numParams)
 	delete map;
 	
 	return num;
+}
+
+public Native_CF_AttachParticle(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return -1;
+		
+	if (g_CharacterParticles[client] == null)
+		g_CharacterParticles[client] = new Queue();
+		
+	char partName[255], point[255];
+	GetNativeString(2, partName, sizeof(partName));
+	GetNativeString(3, point, sizeof(point));
+	float lifespan = GetNativeCell(4);
+	float xOff = GetNativeCell(5);
+	float yOff = GetNativeCell(6);
+	float zOff = GetNativeCell(7);
+		
+	int particle = AttachParticleToEntity(client, partName, point, lifespan, xOff, yOff, zOff);
+	if (IsValidEntity(particle))
+	{
+		SetEdictFlags(particle, GetEdictFlags(particle)&(~FL_EDICT_ALWAYS));
+			
+		i_CharacterParticleOwner[particle] = GetClientUserId(client);
+		SDKHook(particle, SDKHook_SetTransmit, CFC_ParticleTransmit);
+		g_CharacterParticles[client].Push(EntIndexToEntRef(particle));
+	}
 }

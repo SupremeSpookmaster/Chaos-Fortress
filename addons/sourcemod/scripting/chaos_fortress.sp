@@ -30,6 +30,7 @@
 //		- Current Theory: haha you guessed it, NO FUCKING CLUE :) setting m_iHealth does NOTHING, TF2 can EAT SHIT
 //	- MAJOR BUG: There is still a memory leak happening somewhere...
 //		- Current Theory: I missed a Handle somewhere. Either that or natives/forwards create handles, which I doubt is the case.
+//	- MAJOR BUG: Particles spawned by the character preview model system do not get properly hit with SetTransmit, so they are visible to everyone. This WILL be abused if it is not fixed.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
@@ -285,5 +286,9 @@ public void CF_OnPlayerCallForMedic(int client)
 
 public void OnEntityDestroyed(int entity)
 {
+	if (!IsValidEntity(entity) || entity < 0 || entity > 2049)
+		return;
+		
 	ViewChange_OnEntityDestroyed(entity);
+	CFC_OnEntityDestroyed(entity);
 }

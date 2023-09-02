@@ -61,11 +61,8 @@ static int i_WeaponForceClass[2049];
 
 public void ViewChange_OnEntityDestroyed(int entity)
 {
-	if (entity > 0 && entity < 2049)
-	{
-		i_WeaponForceClass[entity] = 0;
-		i_WeaponModelIndexOverride[entity] = -1;
-	}
+	i_WeaponForceClass[entity] = 0;
+	i_WeaponModelIndexOverride[entity] = -1;
 }
 
 void ViewChange_PluginStart()
@@ -346,12 +343,12 @@ void HidePlayerWeaponModel(int client, int entity)
 	SetEntProp(entity, Prop_Send, "m_fEffects", GetEntProp(entity, Prop_Send, "m_fEffects") | EF_NODRAW);
 	SetEntPropFloat(entity, Prop_Send, "m_fadeMinDist", 0.0);
 	SetEntPropFloat(entity, Prop_Send, "m_fadeMaxDist", 0.00001);
-	int EntityWeaponModel = EntRefToEntIndex(i_Viewmodel_WeaponModel[client]);
+	//int EntityWeaponModel = EntRefToEntIndex(i_Viewmodel_WeaponModel[client]);
 	/*if(IsValidEntity(EntityWeaponModel))
 	{
 		SetEntPropFloat(EntityWeaponModel, Prop_Send, "m_flModelScale", f_WeaponSizeOverride[entity]);
 	}*/
-	EntityWeaponModel = EntRefToEntIndex(WeaponRef[client]);
+	//EntityWeaponModel = EntRefToEntIndex(WeaponRef[client]); TODO: Model scale support
 	/*if(IsValidEntity(EntityWeaponModel))
 	{
 		SetEntPropFloat(EntityWeaponModel, Prop_Send, "m_flModelScale", f_WeaponSizeOverrideViewmodel[entity]);

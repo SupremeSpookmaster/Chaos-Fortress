@@ -659,3 +659,97 @@ stock bool GetBoolFromConfigMap(ConfigMap map, char[] path, bool defaultValue)
 	
 	return (StringToInt(value) != 0);
 }
+
+/**
+ * Attaches a particle to an entity, and returns the entity index of the particle.
+ *
+ * @param entity      Entity index to attach the particle to.
+ * @param type			Name of the particle to attach.
+ * @param point 	The attachment point to attach the particle to.
+ * @param duration	Optional particle lifespan. 0.0 or below: infinite.
+ * @param xOff		Optional X-axis offset, in hammer units.
+ * @param yOff		Optional Y-axis offset, in hammer units.
+ * @param zOff		Optional Z-axis offset, in hammer units.
+ *
+ * @return			The entity index of the particle attached via this method.
+ *
+ * @error               Invalid entity index.
+ */
+stock int AttachParticleToEntity(int entity, char type[255], char point[255], float duration = 0.0, float xOff = 0.0, float yOff = 0.0, float zOff = 0.0)
+{
+	int ReturnValue = -1;
+	
+	if (IsValidEntity(entity))
+	{
+		int part1 = CreateEntityByName("info_particle_system");
+		if (IsValidEdict(part1))
+		{
+			ReturnValue = part1;
+			
+			float pos[3];
+			if (HasEntProp(entity, Prop_Data, "m_vecAbsOrigin"))
+			{
+				GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", pos);
+			}
+			else if (HasEntProp(entity, Prop_Send, "m_vecOrigin"))
+			{
+				GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+			}
+			
+			pos[0] += xOff;
+			pos[1] += yOff;
+			pos[2] += zOff;
+			
+			TeleportEntity(part1, pos, NULL_VECTOR, NULL_VECTOR);
+			DispatchKeyValue(part1, "effect_name", type);
+			SetVariantString("!activator");
+			AcceptEntityInput(part1, "SetParent", entity, part1);
+			SetVariantString(point);
+			AcceptEntityInput(part1, "SetParentAttachmentMaintainOffset", part1, part1);
+			DispatchKeyValue(part1, "targetname", "present");
+			DispatchSpawn(part1);
+			ActivateEntity(part1);
+			AcceptEntityInput(part1, "Start");
+			
+			if (duration > 0.0)
+			{
+				CreateTimer(duration, Timer_RemoveEntity, EntIndexToEntRef(part1), TIMER_FLAG_NO_MAPCHANGE);
+			}
+		}
+	}
+	
+	return ReturnValue;
+}
+
+/**
+ * Checks if a client is invisible. This includes the following checks:
+ * The client's model is models/empty.mdl.
+ * They have 0 alpha in their render color.
+ * Their render mode is RENDER_NONE.
+ * They are under one of the following TF2 conditions: TFCond_Cloaked, TFCond_Stealthed, or TFCond_StealthedUserBuffFade.
+ *
+ * @param client		The client to check.
+ *
+ * @return			True if the client is "invisible" by these tests, false otherwise.
+ */
+stock bool IsPlayerInvis(int client)
+{
+	if (!IsValidClient(client))
+		return false;
+		
+	//Check for empty model:
+	char model[255];
+	GetEntPropString(client, Prop_Data, "m_ModelName", model, sizeof(model));
+	
+	if (StrContains(model, "empty.mdl") != -1)
+		return true;
+		
+	//Check for zero alpha:
+	int r, g, b, a;
+	GetEntityRenderColor(client, r, g, b, a);
+	if (a == 0)
+		return true;
+	
+	//Check for RENDERFX_NONE and TF2's invisibility conditions:
+	return GetEntityRenderMode(client) == RENDER_NONE || TF2_IsPlayerInCondition(client, TFCond_Cloaked) || TF2_IsPlayerInCondition(client, TFCond_Stealthed) || TF2_IsPlayerInCondition(client, TFCond_StealthedUserBuffFade);
+}

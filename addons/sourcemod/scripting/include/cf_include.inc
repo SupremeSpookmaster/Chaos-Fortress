@@ -363,3 +363,20 @@ native TFClassType CF_GetCharacterClass(int client);
  * @return True if the client is valid and is a character which uses ViewChange, false otherwise.
  */
 native bool CF_GetCharacterUsingViewChange(int client);
+
+/**
+ * Attaches a particle to a client, using Chaos Fortress' system to automatically handle several important things particles need.
+ * In specific, this system automatically blocks the particle from view if the client is invisible, automatically despawns the particle if the client
+ * dies or disconnects, and prevents the particle from blocking the client's view in first person.
+ *
+ * @param client		The client to attach the particle to.
+ * @param particle		The particle's name.
+ * @param point			The attachment point of the particle.
+ * @param lifespan		Optional particle duration, 0.0 or below for infinite.
+ * @param xOff			Optional X-axis offset, in hammer units.
+ * @param yOff			Optional Y-axis offset, in hammer units.
+ * @param zOff			Optional Z-axis offset, in hammer units.
+ *
+ * @return The entity index of the spawned particle, -1 if invalid.
+ */
+native int CF_AttachParticle(int client, char particle[255], char point[255], float lifespan = 0.0, float xOff = 0.0, float yOff = 0.0, float zOff = 0.0);
