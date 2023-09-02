@@ -1233,7 +1233,7 @@ public void CF_ResetMadeStatus(int client)
  	float maxHP = CF_GetCharacterMaxHealth(client);
  	float deduction = f_ClassBaseHP[num];
  	float health = maxHP - deduction;
- 	CPrintToChatAll("Max is %.2f, deduction is %.2f, health is %.2f", maxHP, deduction, health);
+ 	//CPrintToChatAll("Max is %.2f, deduction is %.2f, health is %.2f", maxHP, deduction, health);
  	
  	TF2Attrib_RemoveByDefIndex(client, 125);
  	TF2Attrib_RemoveByDefIndex(client, 26);
