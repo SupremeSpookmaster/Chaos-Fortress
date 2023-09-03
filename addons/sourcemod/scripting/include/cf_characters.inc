@@ -95,6 +95,7 @@ public void CFC_MakeNatives()
 	CreateNative("CF_GetCharacterMaxHealth", Native_CF_GetCharacterMaxHealth);
 	CreateNative("CF_GetCharacterUsingViewChange", Native_CF_GetCharacterUsingViewChange);
 	CreateNative("CF_AttachParticle", Native_CF_AttachParticle);
+	CreateNative("CF_AttachWearable", Native_CF_AttachWearable);
 }
 
 public void CFC_MakeForwards()
@@ -1097,8 +1098,6 @@ public void CF_ResetMadeStatus(int client)
  
  public void CFC_GiveWearables(int client, ConfigMap wearables)
  {
- 	TF2_RemoveAllWeapons(client);
-		
 	int i = 1;
 	char secName[255];
 	Format(secName, sizeof(secName), "wearable_%i", i);
@@ -1107,6 +1106,17 @@ public void CF_ResetMadeStatus(int client)
 	while (subsection != null)
 	{
 		//TODO: This is the last of the "hard part", after this we're back in familiar territory for the rest of the plugin.
+		
+		char classname[255], atts[255];
+		
+		subsection.Get("classname", classname, sizeof(classname));
+		int index = GetIntFromConfigMap(subsection, "index", 0);
+		subsection.Get("attributes", atts, sizeof(atts));
+		bool visible = GetBoolFromConfigMap(subsection, "visible", true);
+		int paint = GetIntFromConfigMap(subsection, "paint", -1);
+		//TODO: Maybe add support for wearable scale?
+		
+		CF_AttachWearable(client, index, visible, paint, atts, 0.0);
 		
 		i++;
 		Format(secName, sizeof(secName), "wearable_%i", i);
@@ -1439,5 +1449,35 @@ public Native_CF_AttachParticle(Handle plugin, int numParams)
 		i_CharacterParticleOwner[particle] = GetClientUserId(client);
 		SDKHook(particle, SDKHook_SetTransmit, CFC_ParticleTransmit);
 		g_CharacterParticles[client].Push(EntIndexToEntRef(particle));
+	}
+}
+
+public Native_CF_AttachWearable(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return -1;
+		
+	//if (g_CharacterParticles[client] == null)
+	//	g_CharacterParticles[client] = new Queue();
+		
+	char atts[255];
+	int index = GetNativeCell(2);
+	bool visible = GetNativeCell(3);
+	int paint = GetNativeCell(4);
+	GetNativeString(5, atts, sizeof(atts));
+	float lifespan = GetNativeCell(6);
+		
+	int wearable = CreateWearable(client, index, atts, paint, visible, lifespan);
+	if (IsValidEntity(wearable))
+	{
+		//SetEdictFlags(wearable, GetEdictFlags(wearable)&(~FL_EDICT_ALWAYS));
+			
+		//i_CharacterAttachmentOwner[particle] = GetClientUserId(client);
+		//SDKHook(particle, SDKHook_SetTransmit, CFC_AttachmentTransmit);
+		
+		SDKCall_EquipWearable(client, wearable);
+		//g_CharacterParticles[client].Push(EntIndexToEntRef(particle));
 	}
 }

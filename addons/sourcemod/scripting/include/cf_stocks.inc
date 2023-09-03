@@ -753,3 +753,216 @@ stock bool IsPlayerInvis(int client)
 	//Check for RENDERFX_NONE and TF2's invisibility conditions:
 	return GetEntityRenderMode(client) == RENDER_NONE || TF2_IsPlayerInCondition(client, TFCond_Cloaked) || TF2_IsPlayerInCondition(client, TFCond_Stealthed) || TF2_IsPlayerInCondition(client, TFCond_StealthedUserBuffFade);
 }
+
+/**
+ * Borrowed from PC Gamer on AlliedMods and then *slightly* modified for Chaos Fortress. Credit goes to the original author.
+ * Creates a wearable, given a set of inputs.
+ *
+ * @param client		The client to give the wearable to.
+ * @param itemindex		The wearable's index.
+ * @param atts			The wearable's item attributes.
+ * @param paint			The wearable's paint, 1-29.
+ * @param visible		True for the wearable to be visible, false to hide it.
+ * @param lifespan		Optional lifespan for the wearable, 0.0 or below for infinite.
+ *
+ * @return			The wearable's item index.
+ */
+stock int CreateWearable(int client, int itemindex, char atts[255] = "", int paint = 0, bool visible = true, float lifespan = 0.0)
+{
+	int hat = CreateEntityByName("tf_wearable");
+	
+	if (!IsValidEntity(hat))
+	{
+		return -1;
+	}
+	
+	char entclass[64];
+	GetEntityNetClass(hat, entclass, sizeof(entclass));
+	SetEntData(hat, FindSendPropInfo(entclass, "m_iItemDefinitionIndex"), itemindex);
+	SetEntData(hat, FindSendPropInfo(entclass, "m_bInitialized"), 1); 	
+	SetEntData(hat, FindSendPropInfo(entclass, "m_iEntityLevel"), 77);
+	SetEntData(hat, FindSendPropInfo(entclass, "m_iEntityQuality"), 7);
+	SetEntProp(hat, Prop_Send, "m_bValidatedAttachedEntity", 1);
+	
+	if (paint > 0 && visible)
+	{
+		switch(paint)
+		{
+		case 1:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 3100495.0); //A color similar to slate
+				TF2Attrib_SetByDefIndex(hat, 261, 3100495.0);
+			}
+		case 2:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 8208497.0); //A deep commitment to purple
+				TF2Attrib_SetByDefIndex(hat, 261, 8208497.0);
+			}
+		case 3:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 1315860.0); //A distinctive lack of hue
+				TF2Attrib_SetByDefIndex(hat, 261, 1315860.0);
+			}
+		case 4:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 12377523.0); //A mann's mint
+				TF2Attrib_SetByDefIndex(hat, 261, 12377523.0);
+			}
+		case 5:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 2960676.0); //After eight
+				TF2Attrib_SetByDefIndex(hat, 261, 2960676.0);
+			}
+		case 6:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 8289918.0); //Aged Moustache Grey
+				TF2Attrib_SetByDefIndex(hat, 261, 8289918.0);
+			}
+		case 7:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 15132390.0); //An Extraordinary abundance of tinge
+				TF2Attrib_SetByDefIndex(hat, 261, 15132390.0);
+			}
+		case 8:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 15185211.0); //Australium gold
+				TF2Attrib_SetByDefIndex(hat, 261, 15185211.0);
+			}
+		case 9:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 14204632.0); //Color no 216-190-216
+				TF2Attrib_SetByDefIndex(hat, 261, 14204632.0);
+			}
+		case 10:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 15308410.0); //Dark salmon injustice
+				TF2Attrib_SetByDefIndex(hat, 261, 15308410.0);
+			}
+		case 11:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 8421376.0); //Drably olive
+				TF2Attrib_SetByDefIndex(hat, 261, 8421376.0);
+			}
+		case 12:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 7511618.0); //Indubitably green
+				TF2Attrib_SetByDefIndex(hat, 261, 7511618.0);
+			}
+		case 13:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 13595446.0); //Mann co orange
+				TF2Attrib_SetByDefIndex(hat, 261, 13595446.0);
+			}
+		case 14:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 10843461.0); //Muskelmannbraun
+				TF2Attrib_SetByDefIndex(hat, 261, 10843461.0);
+			}
+		case 15:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 5322826.0); //Noble hatters violet
+				TF2Attrib_SetByDefIndex(hat, 261, 5322826.0);
+			}
+		case 16:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 12955537.0); //Peculiarly drab tincture
+				TF2Attrib_SetByDefIndex(hat, 261, 12955537.0);
+			}
+		case 17:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 16738740.0); //Pink as hell
+				TF2Attrib_SetByDefIndex(hat, 261, 16738740.0);
+			}
+		case 18:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 6901050.0); //Radigan conagher brown
+				TF2Attrib_SetByDefIndex(hat, 261, 6901050.0);
+			}
+		case 19:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 3329330.0); //A bitter taste of defeat and lime
+				TF2Attrib_SetByDefIndex(hat, 261, 3329330.0);
+			}
+		case 20:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 15787660.0); //The color of a gentlemanns business pants
+				TF2Attrib_SetByDefIndex(hat, 261, 15787660.0);
+			}
+		case 21:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 8154199.0); //Ye olde rustic colour
+				TF2Attrib_SetByDefIndex(hat, 261, 8154199.0);
+			}
+		case 22:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 4345659.0); //Zepheniahs greed
+				TF2Attrib_SetByDefIndex(hat, 261, 4345659.0);
+			}
+		case 23:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 6637376.0); //An air of debonair
+				TF2Attrib_SetByDefIndex(hat, 261, 2636109.0);
+			}
+		case 24:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 3874595.0); //Balaclavas are forever
+				TF2Attrib_SetByDefIndex(hat, 261, 1581885.0);
+			}
+		case 25:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 12807213.0); //Cream spirit
+				TF2Attrib_SetByDefIndex(hat, 261, 12091445.0);
+			}
+		case 26:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 4732984.0); //Operators overalls
+				TF2Attrib_SetByDefIndex(hat, 261, 3686984.0);
+			}
+		case 27:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 12073019.0); //Team spirit
+				TF2Attrib_SetByDefIndex(hat, 261, 5801378.0);
+			}
+		case 28:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 8400928.0); //The value of teamwork
+				TF2Attrib_SetByDefIndex(hat, 261, 2452877.0);
+			}
+		case 29:
+			{
+				TF2Attrib_SetByDefIndex(hat, 142, 11049612.0); //Waterlogged lab coat
+				TF2Attrib_SetByDefIndex(hat, 261, 8626083.0);
+			}
+		}
+	}
+	
+	char attribs[32][32];
+	int count = ExplodeString(atts, ";", attribs, 32, 32);
+
+	if(count % 2)
+		--count;
+		
+	for(int i; i < count; i += 2)
+	{
+		int attrib = StringToInt(attribs[i]);
+		if(attrib)
+		{
+			TF2Attrib_SetByDefIndex(hat, attrib, StringToFloat(attribs[i + 1]));
+		}
+	}
+	
+	DispatchSpawn(hat);
+	
+	if (!visible)
+	{
+		SetEntityRenderMode(hat, RENDER_NONE);
+		DispatchKeyValue(hat, "modelscale", "0.00001");
+	}
+	
+	if (lifespan > 0.0)
+	{
+		CreateTimer(lifespan, Timer_RemoveEntity, EntIndexToEntRef(hat), TIMER_FLAG_NO_MAPCHANGE);
+	}
+	
+	return hat;
+} 

@@ -380,3 +380,19 @@ native bool CF_GetCharacterUsingViewChange(int client);
  * @return The entity index of the spawned particle, -1 if invalid.
  */
 native int CF_AttachParticle(int client, char particle[255], char point[255], float lifespan = 0.0, float xOff = 0.0, float yOff = 0.0, float zOff = 0.0);
+
+/**
+ * Attaches a wearable to a client, using Chaos Fortress' system to automatically handle several important things particles need.
+ * In specific, this system automatically blocks the wearable from view if the client is invisible, automatically despawns the wearable if the client
+ * dies or disconnects, and prevents the wearable from blocking the client's view in first person.
+ *
+ * @param client		The client to attach the wearable to.
+ * @param index			The wearable's item index.
+ * @param visible		Set to false if you want to hide the wearable from view.
+ * @param paint			Any number 1-29 will paint the wearable, if applicable. See the Chaos Fortress wiki page for a list: https://github.com/SupremeSpookmaster/Chaos-Fortress/wiki/Miscellaneous-Data#paint-indexes
+ * @param atts			Optional item attributes for the wearable.
+ * @param lifespan		Optional lifespan for the wearable, 0.0 or below for infinite.
+ *
+ * @return The entity index of the spawned wearable, -1 if invalid.
+ */
+native int CF_AttachWearable(int client, int index, bool visible, int paint, char atts[255] = "", float lifespan = 0.0);
