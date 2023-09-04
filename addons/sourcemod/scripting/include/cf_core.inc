@@ -11,6 +11,7 @@
 #include <cf_characters>
 #include <cf_sounds>
 #include <cf_weapons>
+#include <cf_abilities>
 
 int i_CFRoundState = 0;						//The current round state.
 
@@ -34,6 +35,7 @@ public void CF_MakeNatives()
 	CFB_MakeNatives();
 	CFC_MakeNatives();
 	CFW_MakeNatives();
+	CFA_MakeNatives();
 }
 
 /**
@@ -46,6 +48,7 @@ public void CF_OnPluginStart()
 	CFKS_MakeForwards();
 	CFC_MakeForwards();
 	CFW_OnPluginStart();
+	CFA_MakeForwards();
 	
 	g_OnPlayerKilled = new GlobalForward("CF_OnPlayerKilled", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	g_OnRoundStateChanged = new GlobalForward("CF_OnRoundStateChanged", ET_Ignore, Param_Cell);

@@ -35,8 +35,8 @@
 //		- Current Theory: I missed a Handle somewhere. Either that or natives/forwards create handles, which I doubt is the case.
 //	- MAJOR BUG: Particles spawned by the character preview model system do not get properly hit with SetTransmit, so they are visible to everyone. This WILL be abused if it is not fixed.
 //	- MAJOR BUG: Particles spawned on characters via their CFG do not remain in the correct attachment position if that character has viewchange and switches their weapon.
-//		- SOLUTION: If the character uses viewchange, parent the particle to their fake model instead of their actual model
-//	- MAJOR BUG: Spy weapons (namely revolver) do not spawn at all... This likely also applies to other weapons...
+//		- SOLUTION: If the character uses viewchange, parent the particle to their fake model instead of their actual model. This more than likely applies to wearables too, not sure if you can equip a wearable to a wearable though...
+//	- MAJOR BUG: Spy weapons (namely revolver) do not spawn at all... This likely also applies to other weapons which TF2 handles in a strange manner...
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

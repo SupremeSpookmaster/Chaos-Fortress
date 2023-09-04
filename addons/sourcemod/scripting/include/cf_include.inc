@@ -3,6 +3,25 @@
 #endif
 #define _cfinc_included_
 
+enum CF_UltChargeType
+{
+    CF_UltChargeType_Generic = 0,
+    CF_UltChargeType_Regen,
+    CF_UltChargeType_DamageDealt,
+    CF_UltChargeType_DamageTaken,
+    CF_UltChargeType_Healing,
+    CF_UltChargeType_Kill,
+    CF_UltChargeType_Percentage
+};
+
+enum CF_AbilityType
+{
+    CF_AbilityType_Ult = 0,
+    CF_AbilityType_M2,
+    CF_AbilityType_M3,
+    CF_AbilityType_Reload
+};
+
   ////////////////////////////////////////
  ////////////// FORWARDS: ///////////////
 ////////////////////////////////////////
@@ -396,3 +415,59 @@ native int CF_AttachParticle(int client, char particle[255], char point[255], fl
  * @return The entity index of the spawned wearable, -1 if invalid.
  */
 native int CF_AttachWearable(int client, int index, bool visible, int paint, char atts[255] = "", float lifespan = 0.0);
+
+/**
+ * Gives a client ult charge, based on the parameters given. This can also remove ult charge if "coefficient" is negative.
+ *
+ * @param client		The client to give ult charge to.
+ * @param coefficient	The amount of charge to give, relative to the specified CF_UltChargeType.
+ * @param UltChargeType The method with which ult charge should be given.
+ * 						CF_UltChargeType_Generic: directly adds "coefficient" to the user's current ult charge.
+ *						CF_UltChargeType_Regen: directly adds "coefficient" * on_regen to the user's current ult charge.
+ *						CF_UltChargeType_DamageDealt: directly adds "coefficient" * on_damage to the user's current ult charge.
+ *						CF_UltChargeType_DamageTaken: directly adds "coefficient" * on_hurt to the user's current ult charge.
+ *						CF_UltChargeType_Healing: directly adds "coefficient" * on_heal to the user's current ult charge.
+ *						CF_UltChargeType_Kill: directly adds "coefficient" * on_kill to the user's current ult charge.
+ *						CF_UltChargeType_Percentage: directly fills the user's ult charge by "coefficient"-percent. IE 0.2 would fill ult charge by 20%.
+ *
+ */
+native CF_GiveUltCharge(int client, float coefficient, CF_UltChargeType UltChargeType = CF_UltChargeType_Generic);
+
+/**
+ * Sets a client's ult charge.
+ *
+ * @param client		The client to set the ult charge of.
+ * @param amt			The new ult charge.
+ *
+ */
+native CF_SetUltCharge(int client, float amt);
+
+/**
+ * Gets a client's ult charge.
+ *
+ * @param client		The client to set the ult charge of.
+ * 
+ * @return	A float value equal to the client's current ult charge, 0.0 if the client is invalid or not a character.
+ *
+ */
+native float CF_GetUltCharge(int client);
+
+/**
+ * Applies a cooldown to an ability slot, given a set of parameters.
+ *
+ * @param client		The client to set the cooldown of.
+ * @param duration		The duration the ability should be placed on cooldown.
+ * @param type			The slot which should be placed on cooldown. If ult is blocked, you will also be unable to gain ult charge.
+ * @param override		If true, this new cooldown will completely override any existing cooldowns. Otherwise, it is simply added to the current cooldown.
+ *
+ */
+native CF_ApplyAbilityCooldown(int client, float duration, CF_AbilityType type, bool override = false);
+
+/**
+ * Retrieves the remaining cooldown of the client's given ability slot.
+ *
+ * @param client		The client to set the cooldown of.
+ * @param type			CF_AbilityType pertaining to the given slot.
+ *
+ */
+native float CF_GetAbilityCooldown(int client, CF_AbilityType type);

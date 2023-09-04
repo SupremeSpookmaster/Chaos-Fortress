@@ -484,7 +484,7 @@ public Action CFC_OpenMenu(int client, int args)
 		
 		if (TF2_GetClientTeam(client) == TFTeam_Red)
 		{
-			int part = SpawnParticle(aimLoc, "teleportedin_red", 2.0);
+			int part = SpawnParticle(aimLoc, "teleportedin_red", 2.0); //TODO: This needs to get its render flags adjusted because it is a particle
 			i_PreviewOwner[part] = GetClientUserId(client);
 			SDKHook(part, SDKHook_SetTransmit, CF_PreviewModelTransmit);
 		}
@@ -495,10 +495,7 @@ public Action CFC_OpenMenu(int client, int args)
 			SDKHook(part, SDKHook_SetTransmit, CF_PreviewModelTransmit);
 		}
 		
-		//TODO: Switch this to CF_PlayRandomSound(?)
-		char snd[255];
-		CF_GetRandomSound(s_CharacterConfigInMenu[client], "sound_selection_preview", snd);
-		EmitSoundToClient(client, snd);
+		CF_PlayRandomSound(client, s_CharacterConfigInMenu[client], "sound_selection_preview");
 		
 		EmitSoundToClient(client, SOUND_CHARACTER_PREVIEW);
 	}
@@ -1074,6 +1071,12 @@ public void CF_ResetMadeStatus(int client)
  		//TODO: sound_spawn_happy, sound_spawn_neutral, sound_spawn_angry
  	}
  	
+ 	bool ShowHUD = CFA_InitializeUltimate(client, map) || CFA_InitializeAbilities(client, map);
+ 	if (ShowHUD)
+ 	{
+ 		//TODO: Create the HUD and display it
+ 	}
+ 	
  	b_IsDead[client] = false;
  	
  	if (map != null)
@@ -1105,8 +1108,6 @@ public void CF_ResetMadeStatus(int client)
 	ConfigMap subsection = wearables.GetSection(secName);
 	while (subsection != null)
 	{
-		//TODO: This is the last of the "hard part", after this we're back in familiar territory for the rest of the plugin.
-		
 		char classname[255], atts[255];
 		
 		subsection.Get("classname", classname, sizeof(classname));

@@ -222,8 +222,6 @@ stock int SpawnDummyModel(char model[255], char animation[255], float spawnLoc[3
 		AcceptEntityInput(ReturnValue, "SetAnimation");
 		DispatchKeyValueFloat(ReturnValue, "playbackrate", rate);
 		
-		//TODO: Make these have no collision
-		
 		if (life > 0.0)
 		{
 			CreateTimer(life, Timer_RemoveEntity, EntIndexToEntRef(ReturnValue), TIMER_FLAG_NO_MAPCHANGE);
