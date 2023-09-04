@@ -223,6 +223,15 @@ forward void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int dead
  * @param state				The new round state. 0: Pre-game/setup time/waiting for players, 1: round in progress, 2: round has ended.
  */
 forward void CF_OnRoundStateChanged(int state)
+
+/**
+ * Called when a player's Chaos Fortress killstreak is changed.
+ *
+ * @param client			The client whose ability was activated.
+ * @param pluginName		The name of the ability's plugin, as specified in the config as "plugin_name".
+ * @param pluginName		The name of the ability's ability, as specified in the config as "ability_name".
+ */
+forward void CF_OnAbility(int client, char pluginName[255], char abilityName[255]);
 	
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
@@ -507,3 +516,22 @@ native CF_ApplyAbilityCooldown(int client, float duration, CF_AbilityType type, 
  *
  */
 native float CF_GetAbilityCooldown(int client, CF_AbilityType type);
+
+/**
+ * Activates a given ability, if it exists on the character.
+ *
+ * @param client		The client whose ability to activate.
+ * @param pluginName			The plugin name of the ability, as specified in the config as "plugin_name".
+ * @param abilityName	The ability name of the ability, as specified in the config as "ability_name".
+ *
+ */
+native CF_DoAbility(int client, char pluginName[255], char abilityName[255]);
+
+/**
+ * Activates every ability a client's character has, which uses a given ability slot.
+ *
+ * @param client		The client whose abilities to activate.
+ * @param slot			The slot to use.
+ *
+ */
+native CF_ActivateAbilitySlot(int client, int slot);

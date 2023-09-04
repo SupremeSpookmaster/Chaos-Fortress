@@ -42,6 +42,8 @@ bool b_HasM2[MAXPLAYERS + 1] = { false, ... };
 bool b_HasM3[MAXPLAYERS + 1] = { false, ... };
 bool b_HasReload[MAXPLAYERS + 1] = { false, ... };
 
+GlobalForward g_OnAbility;
+
 public void CFA_MakeNatives()
 {
 	CreateNative("CF_GiveUltCharge", Native_CF_GiveUltCharge);
@@ -52,11 +54,13 @@ public void CFA_MakeNatives()
 	CreateNative("CF_GiveSpecialResource", Native_CF_GiveSpecialResource);
 	CreateNative("CF_SetSpecialResource", Native_CF_SetSpecialResource);
 	CreateNative("CF_GetSpecialResource", Native_CF_GetSpecialResource);
+	CreateNative("CF_DoAbility", Native_CF_DoAbility);
+	CreateNative("CF_ActivateAbilitySlot", Native_CF_ActivateAbilitySlot);
 }
 
 public void CFA_MakeForwards()
 {
-	
+	g_OnAbility = new GlobalForward("CF_OnAbility", ET_Ignore, Param_Cell, Param_String, Param_String);
 }
 
 Handle HudSync;
@@ -552,4 +556,77 @@ public Native_CF_GetAbilityCooldown(Handle plugin, int numParams)
 			return gameTime >= f_ReloadCDEndTime[client] ? 0.0 : f_ReloadCDEndTime[client] - gameTime;
 		}
 	}
+}
+
+public Native_CF_DoAbility(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	char abName[255], pluginName[255];
+	GetNativeString(2, pluginName, sizeof(pluginName));
+	GetNativeString(3, abName, sizeof(abName));
+	
+	Call_StartForward(g_OnAbility);
+		
+	Call_PushCell(client);
+	Call_PushString(pluginName);
+	Call_PushString(abName);
+	
+	Call_Finish();
+}
+
+public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	int slot = GetNativeCell(2);
+	
+	char conf[255], pluginName[255], abName[255];
+	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	
+	ConfigMap map = new ConfigMap(conf);
+	if (map == null)
+		return;
+		
+	ConfigMap abilities = map.GetSection("character.abilities");
+	delete map;
+	if (abilities == null)
+		return;
+		
+	int i = 1;
+	char secName[255];
+	Format(secName, sizeof(secName), "ability_%i", i);
+		
+	ConfigMap subsection = abilities.GetSection(secName);
+	while (subsection != null)
+	{
+		if (GetIntFromConfigMap(subsection, "slot", -1) == slot)
+		{
+			subsection.Get("ability_name", abName, sizeof(abName));
+			subsection.Get("plugin_name", pluginName, sizeof(pluginName));
+			
+			Call_StartForward(g_OnAbility);
+			
+			Call_PushCell(client);
+			Call_PushString(pluginName);
+			Call_PushString(abName);
+		
+			Call_Finish();
+		}
+		
+		i++;
+		Format(secName, sizeof(secName), "ability_%i", i);
+		delete subsection;
+		subsection = abilities.GetSection(secName);
+	}
+	
+	delete abilities;
+	if (subsection != null)
+		delete subsection;
 }
