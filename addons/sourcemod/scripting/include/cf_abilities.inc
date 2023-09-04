@@ -41,6 +41,9 @@ bool b_UseHUD[MAXPLAYERS + 1] = { false, ... };
 bool b_HasM2[MAXPLAYERS + 1] = { false, ... };
 bool b_HasM3[MAXPLAYERS + 1] = { false, ... };
 bool b_HasReload[MAXPLAYERS + 1] = { false, ... };
+bool b_HoldingReload[MAXPLAYERS + 1] = { false, ... };
+bool b_HoldingM2[MAXPLAYERS + 1] = { false, ... };
+bool b_HoldingM3[MAXPLAYERS + 1] = { false, ... };
 
 GlobalForward g_OnAbility;
 GlobalForward g_OnUltUsed;
@@ -131,7 +134,7 @@ public Action CFA_HUDTimer(Handle timer)
 					}
 					else
 					{
-						Format(HUDText, sizeof(HUDText), "%s %s [M2]\n", HUDText, s_M2Name[client]);
+						Format(HUDText, sizeof(HUDText), "%s %s %s\n", HUDText, s_M2Name[client], b_M2IsHeld[client] ? (b_HoldingM2[client] ? "[ACTIVE]" : "[Hold M2]") : "[M2]");
 					}
 				}
 				
@@ -156,7 +159,7 @@ public Action CFA_HUDTimer(Handle timer)
 					}
 					else
 					{
-						Format(HUDText, sizeof(HUDText), "%s %s [M3]\n", HUDText, s_M3Name[client]);
+						Format(HUDText, sizeof(HUDText), "%s %s %s\n", HUDText, s_M3Name[client], b_M3IsHeld[client] ? (b_HoldingM3[client] ? "[ACTIVE]" : "[Hold M3]") : "[M3]");
 					}
 				}
 				
@@ -181,7 +184,7 @@ public Action CFA_HUDTimer(Handle timer)
 					}
 					else
 					{
-						Format(HUDText, sizeof(HUDText), "%s %s [Reload]\n", HUDText, s_ReloadName[client]);
+						Format(HUDText, sizeof(HUDText), "%s %s %s\n", HUDText, s_ReloadName[client], b_ReloadIsHeld[client] ? (b_HoldingReload[client] ? "[ACTIVE]" : "[Hold R]") : "[R]");
 					}
 				}
 				
@@ -366,7 +369,14 @@ public Action CF_OnPlayerM2(int client, int &buttons, int &impulse, int &weapon)
 	if (!b_HasM2[client])
 		return Plugin_Continue;
 		
-	CF_AttemptAbilitySlot(client, CF_AbilityType_M2);
+	if (b_M2IsHeld[client])
+	{
+		
+	}
+	else
+	{
+		CF_AttemptAbilitySlot(client, CF_AbilityType_M2);
+	}
 	
 	return Plugin_Continue;
 }
@@ -379,7 +389,15 @@ public Action CF_OnPlayerM3(int client, int &buttons, int &impulse, int &weapon)
 	if (!b_HasM3[client])
 		return Plugin_Continue;
 		
-	CF_AttemptAbilitySlot(client, CF_AbilityType_M3);
+	if (b_M3IsHeld[client])
+	{
+		
+	}
+	else
+	{
+		CF_AttemptAbilitySlot(client, CF_AbilityType_M3);
+	}
+
 	return Plugin_Continue;
 }
 
@@ -390,10 +408,16 @@ public Action CF_OnPlayerReload(int client, int &buttons, int &impulse, int &wea
 		
 	if (!b_HasReload[client])
 		return Plugin_Continue;
+	
+	if (b_ReloadIsHeld[client])
+	{
 		
-	//TODO: DON'T FORGET HELD ABILITIES!
+	}
+	else
+	{
+		CF_AttemptAbilitySlot(client, CF_AbilityType_Reload);
+	}
 		
-	CF_AttemptAbilitySlot(client, CF_AbilityType_Reload);
 	return Plugin_Continue;
 }
 
