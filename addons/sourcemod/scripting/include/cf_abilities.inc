@@ -198,6 +198,15 @@ public Action CFA_HUDTimer(Handle timer)
 	return Plugin_Continue;
 }
 
+public void CFA_PlayerKilled(int attacker)
+{
+	if (CF_IsPlayerCharacter(attacker))
+	{
+		CF_GiveSpecialResource(attacker, 1.0, CF_ResourceType_Kill);
+		CF_GiveUltCharge(attacker, 1.0, CF_ResourceType_Kill);
+	}
+}
+
 public bool CFA_InitializeUltimate(int client, ConfigMap map)
 {
 	ConfigMap subsection = map.GetSection("character.ultimate_stats");

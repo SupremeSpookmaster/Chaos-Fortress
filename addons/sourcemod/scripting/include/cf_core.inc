@@ -190,6 +190,7 @@ public void CF_OnPluginStart()
  	if (!deadRinger)
  	{
  		CF_UnmakeCharacter(victim, false);
+ 		CFA_PlayerKilled(attacker);
  	}
  	
  	CFKS_PlayerKilled(victim, attacker, deadRinger);

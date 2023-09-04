@@ -53,6 +53,11 @@ public Action CFDMG_OnTakeDamageAlive(victim, &attacker, &inflictor, &Float:dama
 			ReturnValue = newValue;
 		}
 	}
+	
+	CF_GiveSpecialResource(attacker, damage, CF_ResourceType_DamageDealt);
+	CF_GiveUltCharge(attacker, damage, CF_ResourceType_DamageDealt);
+	CF_GiveSpecialResource(victim, damage, CF_ResourceType_DamageTaken);
+	CF_GiveUltCharge(victim, damage, CF_ResourceType_DamageTaken);
 
 	return ReturnValue;
 }
