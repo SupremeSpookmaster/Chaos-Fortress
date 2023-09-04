@@ -37,6 +37,10 @@ bool b_M2IsHeld[MAXPLAYERS + 1] = { false, ... };
 bool b_M3IsHeld[MAXPLAYERS + 1] = { false, ... };
 bool b_ReloadIsHeld[MAXPLAYERS + 1] = { false, ... };
 bool b_ResourceIsUlt[MAXPLAYERS + 1] = { false, ... };
+bool b_UseHUD[MAXPLAYERS + 1] = { false, ... };
+bool b_HasM2[MAXPLAYERS + 1] = { false, ... };
+bool b_HasM3[MAXPLAYERS + 1] = { false, ... };
+bool b_HasReload[MAXPLAYERS + 1] = { false, ... };
 
 public void CFA_MakeNatives()
 {
@@ -53,6 +57,126 @@ public void CFA_MakeNatives()
 public void CFA_MakeForwards()
 {
 	
+}
+
+Handle HudSync;
+
+public void CFA_MapStart()
+{
+	HudSync = CreateHudSynchronizer();
+	
+	CreateTimer(0.1, CFA_HUDTimer, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+}
+
+public Action CFA_HUDTimer(Handle timer)
+{
+	for (int client = 1; client <= MaxClients; client++)
+	{
+		if (CF_IsPlayerCharacter(client) && b_UseHUD[client])
+		{
+			if (IsPlayerAlive(client))
+			{
+				char HUDText[255];
+				
+				if (b_CharacterHasUlt[client])
+				{
+					if (CF_GetAbilityCooldown(client, CF_AbilityType_Ult) < 0.1)
+					{
+						CF_GiveUltCharge(client, f_UltChargeOnRegen[client]/10.0, CF_ResourceType_Percentage);
+					}
+					
+					Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE %s\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0), f_UltCharge[client] >= f_UltChargeRequired[client] ? "(READY, CALL FOR MEDIC)" : "");
+				}
+				
+				if (b_UsingResources[client] && !b_ResourceIsUlt[client])
+				{
+					CF_GiveSpecialResource(client, 1.0, CF_ResourceType_Regen);
+					Format(HUDText, sizeof(HUDText), "%s\n%s: %i/%i\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundFloat(f_Resources[client]), RoundFloat(f_ResourceMax[client]));
+				}
+				
+				if (b_HasM2[client])
+				{
+					if (b_UsingResources[client] && f_M2Cost[client] > 0.0)
+					{
+						if (b_ResourceIsUlt[client])
+						{
+							Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult. Charge]", HUDText, f_M2Cost[client]/f_UltChargeRequired[client]);
+						}
+						else
+						{
+							Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundFloat(f_M2Cost[client]), f_M2Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+						}
+					}
+					
+					float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M2);
+					if (remCD > 0.0)
+					{
+						Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_M2Name[client], remCD);
+					}
+					else
+					{
+						Format(HUDText, sizeof(HUDText), "%s %s [M2]\n", HUDText, s_M2Name[client]);
+					}
+				}
+				
+				if (b_HasM3[client])
+				{
+					if (b_UsingResources[client] && f_M3Cost[client] > 0.0)
+					{
+						if (b_ResourceIsUlt[client])
+						{
+							Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult. Charge]", HUDText, f_M3Cost[client]/f_UltChargeRequired[client]);
+						}
+						else
+						{
+							Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundFloat(f_M3Cost[client]), f_M3Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+						}
+					}
+					
+					float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M3);
+					if (remCD > 0.0)
+					{
+						Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_M3Name[client], remCD);
+					}
+					else
+					{
+						Format(HUDText, sizeof(HUDText), "%s %s [M3]\n", HUDText, s_M3Name[client]);
+					}
+				}
+				
+				if (b_HasReload[client])
+				{
+					if (b_UsingResources[client] && f_ReloadCost[client] > 0.0)
+					{
+						if (b_ResourceIsUlt[client])
+						{
+							Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult. Charge]", HUDText, f_ReloadCost[client]/f_UltChargeRequired[client]);
+						}
+						else
+						{
+							Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundFloat(f_ReloadCost[client]), f_ReloadCost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+						}
+					}
+					
+					float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_Reload);
+					if (remCD > 0.0)
+					{
+						Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_ReloadName[client], remCD);
+					}
+					else
+					{
+						Format(HUDText, sizeof(HUDText), "%s %s [Reload]\n", HUDText, s_ReloadName[client]);
+					}
+				}
+				
+				ReplaceString(HUDText, sizeof(HUDText), "PUTAPERCENTAGEHERE", "%%");
+				SetHudTextParams(-1.0, 0.8, 0.1, 255, 255, 255, 255);
+				ShowSyncHudText(client, HudSync, HUDText);
+			}
+		}
+	}
+	
+	return Plugin_Continue;
 }
 
 public bool CFA_InitializeUltimate(int client, ConfigMap map)
@@ -101,8 +225,13 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map)
 			f_M2Cost[client] = GetFloatFromConfigMap(subsection, "cost", 0.0);
 		}
 		
+		b_HasM2[client] = true;
 		AtLeastOne = true;
 		delete subsection;
+	}
+	else
+	{
+		b_HasM2[client] = false;
 	}
 	
 	subsection = map.GetSection("character.m3_ability");
@@ -117,8 +246,13 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map)
 			f_M3Cost[client] = GetFloatFromConfigMap(subsection, "cost", 0.0);
 		}
 		
+		b_HasM3[client] = true;
 		AtLeastOne = true;
 		delete subsection;
+	}
+	else
+	{
+		b_HasM3[client] = false;
 	}
 	
 	subsection = map.GetSection("character.reload_ability");
@@ -132,10 +266,18 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map)
 		{
 			f_ReloadCost[client] = GetFloatFromConfigMap(subsection, "cost", 0.0);
 		}
+		b_HasReload[client] = true;
 		
 		AtLeastOne = true;
 		delete subsection;
 	}
+	else
+	{
+		b_HasReload[client] = false;
+	}
+	
+	if (!AtLeastOne)
+		b_UsingResources[client] = false;
 	
 	return AtLeastOne;
 }
@@ -181,6 +323,14 @@ public void CFA_InitializeResources(int client, ConfigMap map)
 	}
 }
 
+public void CFA_ToggleHUD(int client, bool toggle)
+{
+	if (!IsValidClient(client))
+		return;
+		
+	b_UseHUD[client] = toggle;
+}
+
 public Native_CF_GiveUltCharge(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
@@ -217,7 +367,7 @@ public Native_CF_GiveUltCharge(Handle plugin, int numParams)
 			}
 			case CF_ResourceType_Percentage:
 			{
-				amt = f_UltChargeRequired[client] * amt;
+				amt = f_UltChargeRequired[client] * amt * 0.01;
 			}
 		}
 	}
@@ -294,7 +444,7 @@ public Native_CF_GiveSpecialResource(Handle plugin, int numParams)
 			}
 			case CF_ResourceType_Percentage:
 			{
-				amt = f_ResourceMax[client] * amt;
+				amt = f_ResourceMax[client] * amt * 0.01;
 			}
 		}
 	}

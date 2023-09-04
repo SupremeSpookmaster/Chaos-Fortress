@@ -1071,11 +1071,10 @@ public void CF_ResetMadeStatus(int client)
  		//TODO: sound_spawn_happy, sound_spawn_neutral, sound_spawn_angry
  	}
  	
- 	bool ShowHUD = CFA_InitializeUltimate(client, map) || CFA_InitializeAbilities(client, map);
- 	if (ShowHUD)
- 	{
- 		//TODO: Create the HUD and display it
- 	}
+ 	bool hasUlt = CFA_InitializeUltimate(client, map);
+ 	bool hasAbilities = CFA_InitializeAbilities(client, map);
+ 	
+ 	CFA_ToggleHUD(client, hasUlt || hasAbilities);
  	
  	b_IsDead[client] = false;
  	

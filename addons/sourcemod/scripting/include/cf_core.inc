@@ -70,6 +70,8 @@ public void CF_OnPluginStart()
  	
  	CFW_MapStart();
  	
+ 	CFA_MapStart();
+ 	
  	//CF_PrecacheAnnouncerDialogue();
  }
  
