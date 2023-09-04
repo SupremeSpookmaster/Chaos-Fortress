@@ -18,7 +18,11 @@ float f_M3Cost[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ReloadCost[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ResourceMax[MAXPLAYERS + 1] = { 0.0, ... };
 float f_Resources[MAXPLAYERS + 1] = { 0.0, ... };
-
+float f_ResourcesOnRegen[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ResourcesOnDamage[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ResourcesOnHurt[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ResourcesOnHeal[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ResourcesOnKill[MAXPLAYERS + 1] = { 0.0, ... };
 
 char s_UltName[MAXPLAYERS + 1][255];
 char s_M2Name[MAXPLAYERS + 1][255];
@@ -34,18 +38,6 @@ bool b_M3IsHeld[MAXPLAYERS + 1] = { false, ... };
 bool b_ReloadIsHeld[MAXPLAYERS + 1] = { false, ... };
 bool b_ResourceIsUlt[MAXPLAYERS + 1] = { false, ... };
 
-"is_ult"		"0"			//If set to any other value than 0, Ultimate Charge is used as the resource, and the rest of these attributes are ignored.
-		"name"			"Mana"		//The name of this resource.
-		"name_plural"	"Mana"		//The name of this resource to use if the user does not have exactly 1 of it.
-		"start"			"0.0"		//Resource this character spawns with.
-		"preserve"		"0.25"		//Percentage of resources to preserve on death. Overrides "start" if the amount of resources preserved by this would be greater, otherwise start is used.
-		"max"			"1000.0"	//Max Resource
-		"on_regen"		"2.0"		//Amount of resource passively generated every tenth of a second.
-		"on_damage"		"1.0"		//Resource gained per point of damage dealt.
-		"on_hurt"		"0.5"		//Resource gained per point of damage taken.
-		"on_heal"		"0.0"		//Resource gained per point of healing given to allies.
-		"on_kill"		"250.0"		//Resource gained per kill.
-
 public void CFA_MakeNatives()
 {
 	CreateNative("CF_GiveUltCharge", Native_CF_GiveUltCharge);
@@ -53,6 +45,9 @@ public void CFA_MakeNatives()
 	CreateNative("CF_GetUltCharge", Native_CF_GetUltCharge);
 	CreateNative("CF_ApplyAbilityCooldown", Native_CF_ApplyAbilityCooldown);
 	CreateNative("CF_GetAbilityCooldown", Native_CF_GetAbilityCooldown);
+	CreateNative("CF_GiveSpecialResource", Native_CF_GiveSpecialResource);
+	CreateNative("CF_SetSpecialResource", Native_CF_SetSpecialResource);
+	CreateNative("CF_GetSpecialResource", Native_CF_GetSpecialResource);
 }
 
 public void CFA_MakeForwards()
@@ -150,17 +145,31 @@ public void CFA_InitializeResources(int client, ConfigMap map)
 	ConfigMap subsection = map.GetSection("character.special_resource");
 	if (subsection != null)
 	{
-		"is_ult"		"0"			//If set to any other value than 0, Ultimate Charge is used as the resource, and the rest of these attributes are ignored.
-		"name"			"Mana"		//The name of this resource.
-		"name_plural"	"Mana"		//The name of this resource to use if the user does not have exactly 1 of it.
-		"start"			"0.0"		//Resource this character spawns with.
-		"preserve"		"0.25"		//Percentage of resources to preserve on death. Overrides "start" if the amount of resources preserved by this would be greater, otherwise start is used.
-		"max"			"1000.0"	//Max Resource
-		"on_regen"		"2.0"		//Amount of resource passively generated every tenth of a second.
-		"on_damage"		"1.0"		//Resource gained per point of damage dealt.
-		"on_hurt"		"0.5"		//Resource gained per point of damage taken.
-		"on_heal"		"0.0"		//Resource gained per point of healing given to allies.
-		"on_kill"		"250.0"		//Resource gained per kill.
+		b_ResourceIsUlt[client] = GetBoolFromConfigMap(subsection, "is_ult", false);
+		
+		if (!b_ResourceIsUlt[client])
+		{
+			subsection.Get("name", s_ResourceName[client], 255);
+			subsection.Get("name_plural", s_ResourceName_Plural[client], 255);
+			float start = GetFloatFromConfigMap(subsection, "start", 0.0);
+			float preserve = GetFloatFromConfigMap(subsection, "preserve", 0.0) * f_Resources[client];
+			f_ResourceMax[client] = GetFloatFromConfigMap(subsection, "max", 0.0);
+			
+			if (preserve > start)
+			{
+				CF_SetSpecialResource(client, preserve);
+			}
+			else
+			{
+				CF_SetSpecialResource(client, start);
+			}
+			
+			f_ResourcesOnRegen[client] = GetFloatFromConfigMap(subsection, "on_regen", 0.0);
+			f_ResourcesOnDamage[client] = GetFloatFromConfigMap(subsection, "on_damage", 0.0);
+			f_ResourcesOnHurt[client] = GetFloatFromConfigMap(subsection, "on_hurt", 0.0);
+			f_ResourcesOnHeal[client] = GetFloatFromConfigMap(subsection, "on_heal", 0.0);
+			f_ResourcesOnKill[client] = GetFloatFromConfigMap(subsection, "on_kill", 0.0);
+		}
 		
 		b_UsingResources[client] = true;
 		
@@ -180,33 +189,33 @@ public Native_CF_GiveUltCharge(Handle plugin, int numParams)
 		return;
 		
 	float amt = GetNativeCell(2);
-	CF_UltChargeType type = GetNativeCell(3);
+	CF_ResourceType type = GetNativeCell(3);
 	
-	if (type != CF_UltChargeType_Generic)
+	if (type != CF_ResourceType_Generic)
 	{
 		switch(type)
 		{
-			case CF_UltChargeType_Regen:
+			case CF_ResourceType_Regen:
 			{
 				amt *= f_UltChargeOnRegen[client];
 			}
-			case CF_UltChargeType_DamageDealt:
+			case CF_ResourceType_DamageDealt:
 			{
 				amt *= f_UltChargeOnDamage[client];
 			}
-			case CF_UltChargeType_DamageTaken:
+			case CF_ResourceType_DamageTaken:
 			{
 				amt *= f_UltChargeOnHurt[client];
 			}
-			case CF_UltChargeType_Healing:
+			case CF_ResourceType_Healing:
 			{
 				amt *= f_UltChargeOnHeal[client];
 			}
-			case CF_UltChargeType_Kill:
+			case CF_ResourceType_Kill:
 			{
 				amt *= f_UltChargeOnKill[client];
 			}
-			case CF_UltChargeType_Percentage:
+			case CF_ResourceType_Percentage:
 			{
 				amt = f_UltChargeRequired[client] * amt;
 			}
@@ -244,6 +253,89 @@ public Native_CF_GetUltCharge(Handle plugin, int numParams)
 		return 0.0;
 	
 	return f_UltCharge[client];
+}
+
+public Native_CF_GiveSpecialResource(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	if (b_ResourceIsUlt[client] || !b_UsingResources[client])
+		return;
+		
+	float amt = GetNativeCell(2);
+	CF_ResourceType type = GetNativeCell(3);
+	
+	if (type != CF_ResourceType_Generic)
+	{
+		switch(type)
+		{
+			case CF_ResourceType_Regen:
+			{
+				amt *= f_ResourcesOnRegen[client];
+			}
+			case CF_ResourceType_DamageDealt:
+			{
+				amt *= f_ResourcesOnDamage[client];
+			}
+			case CF_ResourceType_DamageTaken:
+			{
+				amt *= f_ResourcesOnHurt[client];
+			}
+			case CF_ResourceType_Healing:
+			{
+				amt *= f_ResourcesOnHeal[client];
+			}
+			case CF_ResourceType_Kill:
+			{
+				amt *= f_ResourcesOnKill[client];
+			}
+			case CF_ResourceType_Percentage:
+			{
+				amt = f_ResourceMax[client] * amt;
+			}
+		}
+	}
+	
+	CF_SetSpecialResource(client, f_Resources[client] + amt);
+}
+
+public Native_CF_SetSpecialResource(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	if (b_ResourceIsUlt[client] || !b_UsingResources[client])
+		return;
+		
+	float amt = GetNativeCell(2);
+	
+	if (amt < 0.0)
+		amt = 0.0;
+		
+	if (amt >= f_ResourceMax[client])
+	{
+		amt = f_ResourceMax[client];
+	}
+	
+	f_Resources[client] = amt;
+}
+
+public Native_CF_GetSpecialResource(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return 0.0;
+		
+	if (b_ResourceIsUlt[client] || !b_UsingResources[client])
+		return 0.0;
+	
+	return f_Resources[client];
 }
 
 public Native_CF_ApplyAbilityCooldown(Handle plugin, int numParams)

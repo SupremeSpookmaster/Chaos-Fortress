@@ -3,15 +3,15 @@
 #endif
 #define _cfinc_included_
 
-enum CF_UltChargeType
+enum CF_ResourceType
 {
-    CF_UltChargeType_Generic = 0,
-    CF_UltChargeType_Regen,
-    CF_UltChargeType_DamageDealt,
-    CF_UltChargeType_DamageTaken,
-    CF_UltChargeType_Healing,
-    CF_UltChargeType_Kill,
-    CF_UltChargeType_Percentage
+    CF_ResourceType_Generic = 0,
+    CF_ResourceType_Regen,
+    CF_ResourceType_DamageDealt,
+    CF_ResourceType_DamageTaken,
+    CF_ResourceType_Healing,
+    CF_ResourceType_Kill,
+    CF_ResourceType_Percentage
 };
 
 enum CF_AbilityType
@@ -420,18 +420,18 @@ native int CF_AttachWearable(int client, int index, bool visible, int paint, cha
  * Gives a client ult charge, based on the parameters given. This can also remove ult charge if "coefficient" is negative.
  *
  * @param client		The client to give ult charge to.
- * @param coefficient	The amount of charge to give, relative to the specified CF_UltChargeType.
- * @param UltChargeType The method with which ult charge should be given.
- * 						CF_UltChargeType_Generic: directly adds "coefficient" to the user's current ult charge.
- *						CF_UltChargeType_Regen: directly adds "coefficient" * on_regen to the user's current ult charge.
- *						CF_UltChargeType_DamageDealt: directly adds "coefficient" * on_damage to the user's current ult charge.
- *						CF_UltChargeType_DamageTaken: directly adds "coefficient" * on_hurt to the user's current ult charge.
- *						CF_UltChargeType_Healing: directly adds "coefficient" * on_heal to the user's current ult charge.
- *						CF_UltChargeType_Kill: directly adds "coefficient" * on_kill to the user's current ult charge.
- *						CF_UltChargeType_Percentage: directly fills the user's ult charge by "coefficient"-percent. IE 0.2 would fill ult charge by 20%.
+ * @param coefficient	The amount of charge to give, relative to the specified CF_ResourceType.
+ * @param ResourceType The method with which ult charge should be given.
+ * 						CF_ResourceType_Generic: directly adds "coefficient" to the user's current ult charge.
+ *						CF_ResourceType_Regen: directly adds "coefficient" * on_regen to the user's current ult charge.
+ *						CF_ResourceType_DamageDealt: directly adds "coefficient" * on_damage to the user's current ult charge.
+ *						CF_ResourceType_DamageTaken: directly adds "coefficient" * on_hurt to the user's current ult charge.
+ *						CF_ResourceType_Healing: directly adds "coefficient" * on_heal to the user's current ult charge.
+ *						CF_ResourceType_Kill: directly adds "coefficient" * on_kill to the user's current ult charge.
+ *						CF_ResourceType_Percentage: directly fills the user's ult charge by "coefficient"-percent. IE 0.2 would fill ult charge by 20%.
  *
  */
-native CF_GiveUltCharge(int client, float coefficient, CF_UltChargeType UltChargeType = CF_UltChargeType_Generic);
+native CF_GiveUltCharge(int client, float coefficient, CF_ResourceType ResourceType = CF_ResourceType_Generic);
 
 /**
  * Sets a client's ult charge.
@@ -445,12 +445,48 @@ native CF_SetUltCharge(int client, float amt);
 /**
  * Gets a client's ult charge.
  *
- * @param client		The client to set the ult charge of.
+ * @param client		The client to get the ult charge of.
  * 
  * @return	A float value equal to the client's current ult charge, 0.0 if the client is invalid or not a character.
  *
  */
 native float CF_GetUltCharge(int client);
+
+/**
+ * Gives a client some of their special resource, based on the given ResourceType. Does nothing if the client's special resource has is_ult enabled.
+ *
+ * @param client		The client to give the special resource to.
+ * @param coefficient	The quantity of resources to give, relative to the specified CF_ResourceType.
+ * @param ResourceType The method with which resources should be given.
+ * 						CF_ResourceType_Generic: directly adds "coefficient" to the user's current resources.
+ *						CF_ResourceType_Regen: directly adds "coefficient" * on_regen to the user's current resources.
+ *						CF_ResourceType_DamageDealt: directly adds "coefficient" * on_damage to the user's current resources.
+ *						CF_ResourceType_DamageTaken: directly adds "coefficient" * on_hurt to the user's current resources.
+ *						CF_ResourceType_Healing: directly adds "coefficient" * on_heal to the user's current resources.
+ *						CF_ResourceType_Kill: directly adds "coefficient" * on_kill to the user's current resources.
+ *						CF_ResourceType_Percentage: directly fills the user's resources by "coefficient"-percent. IE 0.2 would fill resources by 20%.
+ *
+ */
+native CF_GiveSpecialResource(int client, float coefficient, CF_ResourceType ResourceType = CF_ResourceType_Generic);
+
+/**
+ * Sets a client's special resource amount. Does nothing if the client's special resource has is_ult enabled.
+ *
+ * @param client		The client to set the special resource of.
+ * @param amt			The new special resource.
+ *
+ */
+native CF_SetSpecialResource(int client, float amt);
+
+/**
+ * Gets a client's special resources.
+ *
+ * @param client		The client to get the special resources of.
+ * 
+ * @return	A float value equal to the client's current resources, 0.0 if the client is invalid, not a character, not using resources, or has is_ult enabled on their special resource.
+ *
+ */
+native float CF_GetSpecialResource(int client);
 
 /**
  * Applies a cooldown to an ability slot, given a set of parameters.
