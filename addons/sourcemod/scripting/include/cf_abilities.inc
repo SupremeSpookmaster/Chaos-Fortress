@@ -43,6 +43,10 @@ bool b_HasM3[MAXPLAYERS + 1] = { false, ... };
 bool b_HasReload[MAXPLAYERS + 1] = { false, ... };
 
 GlobalForward g_OnAbility;
+GlobalForward g_OnUltUsed;
+GlobalForward g_OnM2Used;
+GlobalForward g_OnM3Used;
+GlobalForward g_OnReloadUsed;
 
 public void CFA_MakeNatives()
 {
@@ -61,15 +65,23 @@ public void CFA_MakeNatives()
 public void CFA_MakeForwards()
 {
 	g_OnAbility = new GlobalForward("CF_OnAbility", ET_Ignore, Param_Cell, Param_String, Param_String);
+	g_OnUltUsed = new GlobalForward("CF_OnUltUsed", ET_Event, Param_Cell);
+	g_OnM2Used = new GlobalForward("CF_OnM2Used", ET_Event, Param_Cell);
+	g_OnM3Used = new GlobalForward("CF_OnM3Used", ET_Event, Param_Cell);
+	g_OnReloadUsed = new GlobalForward("CF_OnReloadUsed", ET_Event, Param_Cell);
 }
 
 Handle HudSync;
+
+#define NOPE		"replay/record_fail.wav"
 
 public void CFA_MapStart()
 {
 	HudSync = CreateHudSynchronizer();
 	
 	CreateTimer(0.1, CFA_HUDTimer, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+	
+	PrecacheSound(NOPE);
 }
 
 public Action CFA_HUDTimer(Handle timer)
@@ -104,7 +116,7 @@ public Action CFA_HUDTimer(Handle timer)
 					{
 						if (b_ResourceIsUlt[client])
 						{
-							Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult. Charge]", HUDText, f_M2Cost[client]/f_UltChargeRequired[client]);
+							Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult.]", HUDText, (f_M2Cost[client]/f_UltChargeRequired[client]) * 100.0);
 						}
 						else
 						{
@@ -129,7 +141,7 @@ public Action CFA_HUDTimer(Handle timer)
 					{
 						if (b_ResourceIsUlt[client])
 						{
-							Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult. Charge]", HUDText, f_M3Cost[client]/f_UltChargeRequired[client]);
+							Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult.]", HUDText, (f_M3Cost[client]/f_UltChargeRequired[client]) * 100.0);
 						}
 						else
 						{
@@ -154,7 +166,7 @@ public Action CFA_HUDTimer(Handle timer)
 					{
 						if (b_ResourceIsUlt[client])
 						{
-							Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult. Charge]", HUDText, f_ReloadCost[client]/f_UltChargeRequired[client]);
+							Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult.]", HUDText, (f_ReloadCost[client]/f_UltChargeRequired[client]) * 100.0);
 						}
 						else
 						{
@@ -333,6 +345,143 @@ public void CFA_ToggleHUD(int client, bool toggle)
 		return;
 		
 	b_UseHUD[client] = toggle;
+}
+
+public void CF_OnPlayerCallForMedic(int client)
+{
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	if (!b_CharacterHasUlt[client])
+		return;
+	
+	CF_AttemptAbilitySlot(client, CF_AbilityType_Ult);
+}
+
+public Action CF_OnPlayerM2(int client, int &buttons, int &impulse, int &weapon)
+{
+	if (!CF_IsPlayerCharacter(client))
+		return Plugin_Continue;
+		
+	if (!b_HasM2[client])
+		return Plugin_Continue;
+		
+	CF_AttemptAbilitySlot(client, CF_AbilityType_M2);
+	
+	return Plugin_Continue;
+}
+
+public Action CF_OnPlayerM3(int client, int &buttons, int &impulse, int &weapon)
+{
+	if (!CF_IsPlayerCharacter(client))
+		return Plugin_Continue;
+		
+	if (!b_HasM3[client])
+		return Plugin_Continue;
+		
+	CF_AttemptAbilitySlot(client, CF_AbilityType_M3);
+	return Plugin_Continue;
+}
+
+public Action CF_OnPlayerReload(int client, int &buttons, int &impulse, int &weapon)
+{
+	if (!CF_IsPlayerCharacter(client))
+		return Plugin_Continue;
+		
+	if (!b_HasReload[client])
+		return Plugin_Continue;
+		
+	//TODO: DON'T FORGET HELD ABILITIES!
+		
+	CF_AttemptAbilitySlot(client, CF_AbilityType_Reload);
+	return Plugin_Continue;
+}
+
+public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
+{
+	if (CF_GetAbilityCooldown(client, type) > 0.0)
+	{
+		Nope(client);
+		return;
+	}
+	
+	float cooldown; float cost; float available = (b_ResourceIsUlt[client] || type == CF_AbilityType_Ult) ? f_UltCharge[client] : f_Resources[client];
+	int slot;
+	char soundSlot[255];
+	Action result;
+	GlobalForward toCall;
+	
+	switch(type)
+	{
+		case CF_AbilityType_Ult:
+		{
+			cooldown = f_UltCD[client];
+			cost = f_UltChargeRequired[client];
+			slot = 1;
+			toCall = g_OnUltUsed;
+		}
+		case CF_AbilityType_M2:
+		{
+			cooldown = f_M2CD[client];
+			cost = f_M2Cost[client];
+			slot = 2;
+			soundSlot = "sound_m2";
+			toCall = g_OnM2Used;
+		}
+		case CF_AbilityType_M3:
+		{
+			cooldown = f_M3CD[client];
+			cost = f_M3Cost[client];
+			slot = 3;
+			soundSlot = "sound_m3";
+			toCall = g_OnM3Used;
+		}
+		case CF_AbilityType_Reload:
+		{
+			cooldown = f_ReloadCD[client];
+			cost = f_ReloadCost[client];
+			slot = 4;
+			soundSlot = "sound_reload";
+			toCall = g_OnReloadUsed;
+		}
+	}
+	
+	if (cost > available && b_UsingResources[client])
+	{
+		Nope(client);
+		return;
+	}
+	
+	Call_StartForward(toCall);
+	
+	Call_PushCell(client);
+	
+	Call_Finish(result);
+	
+	if (result != Plugin_Stop && result != Plugin_Handled)
+	{
+		CF_ActivateAbilitySlot(client, slot);
+		
+		if (type == CF_AbilityType_Ult)
+		{
+			//TODO: ult sound
+		}
+		else
+		{
+			CF_PlayRandomSound(client, "", soundSlot);
+		}
+
+		if (type == CF_AbilityType_Ult || (b_ResourceIsUlt[client] && b_UsingResources[client]))
+		{
+			CF_GiveUltCharge(client, -cost);
+		}
+		else if (b_UsingResources[client])
+		{
+			CF_GiveSpecialResource(client, -cost);
+		}
+		
+		CF_ApplyAbilityCooldown(client, cooldown, type, true);
+	}
 }
 
 public Native_CF_GiveUltCharge(Handle plugin, int numParams)
@@ -629,4 +778,9 @@ public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
 	delete abilities;
 	if (subsection != null)
 		delete subsection;
+}
+
+public void Nope(int client)
+{
+	EmitSoundToClient(client, NOPE);
 }

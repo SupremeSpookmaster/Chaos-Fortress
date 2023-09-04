@@ -232,6 +232,42 @@ forward void CF_OnRoundStateChanged(int state)
  * @param pluginName		The name of the ability's ability, as specified in the config as "ability_name".
  */
 forward void CF_OnAbility(int client, char pluginName[255], char abilityName[255]);
+
+/**
+ * Called when a player uses their Ultimate Ability.
+ *
+ * @param client			The client whose Ultimate Ability was activated.
+ *
+ * @return	Plugin_Handled or Plugin_Stop to prevent the Ultimate Ability from being used, otherwise return Plugin_Continue to allow it.
+ */
+forward Action CF_OnUltUsed(int client);
+
+/**
+ * Called when a player uses their M2 ability.
+ *
+ * @param client			The client whose M2 ability was activated.
+ *
+ * @return	Plugin_Handled or Plugin_Stop to prevent the M2 ability from being used, otherwise return Plugin_Continue to allow it.
+ */
+forward Action CF_OnM2Used(int client);
+
+/**
+ * Called when a player uses their M3 ability.
+ *
+ * @param client			The client whose M3 ability was activated.
+ *
+ * @return	Plugin_Handled or Plugin_Stop to prevent the M3 ability from being used, otherwise return Plugin_Continue to allow it.
+ */
+forward Action CF_OnM3Used(int client);
+
+/**
+ * Called when a player uses their reload ability.
+ *
+ * @param client			The client whose reload ability was activated.
+ *
+ * @return	Plugin_Handled or Plugin_Stop to prevent the reload ability from being used, otherwise return Plugin_Continue to allow it.
+ */
+forward Action CF_OnReloadUsed(int client);
 	
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////

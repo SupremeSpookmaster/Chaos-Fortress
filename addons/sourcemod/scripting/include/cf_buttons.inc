@@ -16,13 +16,13 @@ GlobalForward g_OnCallForMedic;
 
 public void CFB_MakeForwards()
 {
-	g_OnRunCmd = new GlobalForward("CF_OnPlayerRunCmd", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);
-	g_OnM2 = new GlobalForward("CF_OnPlayerM2", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);
-	g_OnM3 = new GlobalForward("CF_OnPlayerM3", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);
-	g_OnReload = new GlobalForward("CF_OnPlayerReload", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);
-	g_OnTab = new GlobalForward("CF_OnPlayerTab", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);
-	g_OnJump = new GlobalForward("CF_OnPlayerJump", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);
-	g_OnCrouch = new GlobalForward("CF_OnPlayerCrouch", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);
+	g_OnRunCmd = new GlobalForward("CF_OnPlayerRunCmd", ET_Event, Param_Cell, Param_CellByRef, Param_CellByRef, Param_CellByRef);
+	g_OnM2 = new GlobalForward("CF_OnPlayerM2", ET_Event, Param_Cell, Param_CellByRef, Param_CellByRef, Param_CellByRef);
+	g_OnM3 = new GlobalForward("CF_OnPlayerM3", ET_Event, Param_Cell, Param_CellByRef, Param_CellByRef, Param_CellByRef);
+	g_OnReload = new GlobalForward("CF_OnPlayerReload", ET_Event, Param_Cell, Param_CellByRef, Param_CellByRef, Param_CellByRef);
+	g_OnTab = new GlobalForward("CF_OnPlayerTab", ET_Event, Param_Cell, Param_CellByRef, Param_CellByRef, Param_CellByRef);
+	g_OnJump = new GlobalForward("CF_OnPlayerJump", ET_Event, Param_Cell, Param_CellByRef, Param_CellByRef, Param_CellByRef);
+	g_OnCrouch = new GlobalForward("CF_OnPlayerCrouch", ET_Event, Param_Cell, Param_CellByRef, Param_CellByRef, Param_CellByRef);
 	g_OnCallForMedic = new GlobalForward("CF_OnPlayerCallForMedic", ET_Ignore, Param_Cell);
 	
 	AddCommandListener(CFB_OnCallForMedic, "voicemenu");
@@ -194,11 +194,11 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	return ReturnValue;
 }
 
-public Action CFB_CallForward(GlobalForward forwardToCall, int &client, int &buttons, int &impulse, int &weapon)
+public Action CFB_CallForward(GlobalForward forwardToCall, int client, int &buttons, int &impulse, int &weapon)
 {
 	Call_StartForward(forwardToCall);
 	
-	Call_PushCellRef(client);
+	Call_PushCell(client);
 	Call_PushCellRef(buttons);
 	Call_PushCellRef(impulse);
 	Call_PushCellRef(weapon);
