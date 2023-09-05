@@ -105,18 +105,20 @@ public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Outp
  *
  * @return		True if the sound was played, false otherwise.
  */
-bool CF_PlayRandomSound(int source, char Config[255], char Sound[255], float damage = 0.0) //TODO: There is SOMETHING in here which triggers a critical error that breaks shit. I am baffled.
+bool CF_PlayRandomSound(int source, char Config[255], char Sound[255], float damage = 0.0)
 {
-	if (CF_IsPlayerCharacter(source) && StrEqual(Config, ""))
+	char ourConf[255];
+	StrCopy(ourConf, 255, Config);
+	if (CF_IsPlayerCharacter(source) && StrEqual(ourConf, ""))
 	{
-		CF_GetPlayerConfig(source, Config, sizeof(Config));
+		CF_GetPlayerConfig(source, ourConf, sizeof(ourConf));
 	}
 	
-	if (!FileExists(Config) && !FileExists(Config, true))
+	if (!FileExists(ourConf) && !FileExists(ourConf, true))
 		return false;
 	
 	char snd[255] = ""; char checkFile[255];
-	KeyValType kvType = CF_GetRandomSound(Config, Sound, snd);
+	KeyValType kvType = CF_GetRandomSound(ourConf, Sound, snd);
 	Format(checkFile, sizeof(checkFile), "sound/%s", snd);
 	
 	if (!CheckFile(checkFile))
@@ -135,7 +137,7 @@ bool CF_PlayRandomSound(int source, char Config[255], char Sound[255], float dam
 			Format(path, sizeof(path), "character.sounds.%s.%s", Sound, snd);
 			ReplaceString(path, sizeof(path), ".", "\\.");
 			
-			ConfigMap cfgMap = new ConfigMap(Config);
+			ConfigMap cfgMap = new ConfigMap(ourConf);
 			cfgMap = cfgMap.GetSection(path);
 			
 			if (cfgMap == null)

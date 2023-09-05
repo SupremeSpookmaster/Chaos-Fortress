@@ -306,10 +306,13 @@ public CFC_Menu(Menu CFC_Menu, MenuAction action, int client, int param)
 		if (CF_ClientMenu[client] != null)
 			delete CF_ClientMenu[client];
 			
+		#if defined USE_PREVIEWS
 		CF_DeletePreviewModel(client);
+		#endif
 	}
 }
 
+#if defined USE_PREVIEWS
 public void CF_DeletePreviewModel(int client)
 {
 	if (!IsValidClient(client))
@@ -322,6 +325,7 @@ public void CF_DeletePreviewModel(int client)
 	CreateTimer(0.0, Timer_RemoveEntity, i_CFPreviewProp[client], TIMER_FLAG_NO_MAPCHANGE);
 	CreateTimer(0.0, Timer_RemoveEntity, i_CFPreviewWeapon[client], TIMER_FLAG_NO_MAPCHANGE);
 }
+#endif
 
 public Action CFC_OpenMenu(int client, int args)
 {
@@ -336,6 +340,7 @@ public Action CFC_OpenMenu(int client, int args)
 	CF_ClientMenu[client].Display(client, MENU_TIME_FOREVER);
 	b_ReadingLore[client] = false;
 	
+	#if defined USE_PREVIEWS
 	if (!CF_PreviewModelActive(client))
 	{
 		float spawnLoc[3];
@@ -413,11 +418,13 @@ public Action CFC_OpenMenu(int client, int args)
 		if (IsValidEntity(text))
 		{
 			i_PreviewOwner[text] = GetClientUserId(client);
+			SetEdictFlags(text, GetEdictFlags(text)&(~FL_EDICT_ALWAYS));
 			SDKHook(text, SDKHook_SetTransmit, CF_PreviewModelTransmit);
 		}
 		
 		i_PreviewOwner[preview] = GetClientUserId(client);
 		
+		SetEdictFlags(preview, GetEdictFlags(preview)&(~FL_EDICT_ALWAYS));
 		SDKHook(preview, SDKHook_SetTransmit, CF_PreviewModelTransmit);
 		
 		i_CFPreviewModel[client] = EntIndexToEntRef(preview);
@@ -434,10 +441,12 @@ public Action CFC_OpenMenu(int client, int args)
 			RemoveEntity(wep);
 		}
 	}
+	#endif
 	
 	return Plugin_Continue;
 }
  
+ #if defined USE_PREVIEWS
  public void CF_UpdatePreviewModel(int client)
  {
  	if (!IsValidClient(client))
@@ -486,12 +495,14 @@ public Action CFC_OpenMenu(int client, int args)
 		{
 			int part = SpawnParticle(aimLoc, "teleportedin_red", 2.0); //TODO: This needs to get its render flags adjusted because it is a particle
 			i_PreviewOwner[part] = GetClientUserId(client);
+			SetEdictFlags(part, GetEdictFlags(part)&(~FL_EDICT_ALWAYS));
 			SDKHook(part, SDKHook_SetTransmit, CF_PreviewModelTransmit);
 		}
 		else
 		{
 			int part = SpawnParticle(aimLoc, "teleportedin_blue", 2.0);
 			i_PreviewOwner[part] = GetClientUserId(client);
+			SetEdictFlags(part, GetEdictFlags(part)&(~FL_EDICT_ALWAYS));
 			SDKHook(part, SDKHook_SetTransmit, CF_PreviewModelTransmit);
 		}
 		
@@ -524,6 +535,7 @@ public Action CFC_OpenMenu(int client, int args)
  
  public Action CF_PreviewModelTransmit(int entity, int client)
  {
+ 	SetEdictFlags(entity, GetEdictFlags(entity)&(~FL_EDICT_ALWAYS));
  	if (client != GetClientOfUserId(i_PreviewOwner[entity]))
  	{
  		return Plugin_Handled;
@@ -531,6 +543,7 @@ public Action CFC_OpenMenu(int client, int args)
  		
  	return Plugin_Continue;
  }
+ #endif
  
  public Action CFC_ParticleTransmit(int entity, int client)
  {
@@ -549,6 +562,7 @@ public Action CFC_OpenMenu(int client, int args)
  	return Plugin_Handled;
  }
  
+ #if defined USE_PREVIEWS
  bool CF_PreviewModelActive(int client)
  {
  	if (!IsValidClient(client))
@@ -556,6 +570,7 @@ public Action CFC_OpenMenu(int client, int args)
  		
  	return IsValidEntity(EntRefToEntIndex(i_CFPreviewModel[client])) && IsValidEntity(EntRefToEntIndex(i_CFPreviewProp[client]));
  }
+ #endif
  
  public void CFC_BuildInfoMenu(int client, char config[255], bool isLore, bool justReading)
  {
@@ -603,6 +618,7 @@ public Action CFC_OpenMenu(int client, int args)
  	section.Get("preview_sequence", sequence, sizeof(sequence));
  	section.Get("lore_description", lore, sizeof(lore));
  	
+ 	#if defined USE_PREVIEWS
  	if (!StrEqual(model, "") && CheckFile(model) && CF_PreviewModelActive(client) && !justReading)
  	{
  		int preview = EntRefToEntIndex(i_CFPreviewModel[client]);
@@ -638,7 +654,22 @@ public Action CFC_OpenMenu(int client, int args)
  				i_CFPreviewWeapon[client] = EntIndexToEntRef(wep);
  			}
  		}
+ 		
+ 		delete section;
+ 		section = Character.GetSection("character.particles");
+ 		if (section != null)
+ 		{
+ 			CFC_DummyParticles(client, preview, section);
+ 			delete section;
+ 		}
+ 		
+ 		section = Character.GetSection("character.wearables");
+ 		if (section != null)
+ 		{
+ 			CFC_DummyWearables(client, preview, section);
+ 		}
  	}
+ 	#endif
  	
  	if (!isLore)
  	{
@@ -679,7 +710,10 @@ public Action CFC_OpenMenu(int client, int args)
  	CF_ClientMenu[client].Display(client, MENU_TIME_FOREVER);
  	b_ReadingLore[client] = isLore;
  	
- 	delete section;
+ 	if (section != null)
+ 	{
+ 		delete section;
+ 	}
  	delete Character;
  }
  
@@ -715,7 +749,9 @@ public Action CFC_OpenMenu(int client, int args)
 				if (CF_ClientMenu[client] != null)
 					delete CF_ClientMenu[client];
 					
+				#if defined USE_PREVIEWS
 				CF_DeletePreviewModel(client);
+				#endif
 			}
 			else if (param == 1)
 			{
@@ -734,7 +770,9 @@ public Action CFC_OpenMenu(int client, int args)
 		if (CF_ClientMenu[client] != null)
 			delete CF_ClientMenu[client];
 				
+		#if defined USE_PREVIEWS
 		CF_DeletePreviewModel(client);
+		#endif
 	}
 }
 
@@ -1097,6 +1135,66 @@ public void CF_ResetMadeStatus(int client)
  	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  }
  
+ #if defined USE_PREVIEWS
+ public void CFC_DummyWearables(int client, int entity, ConfigMap wearables)
+ {
+	int i = 1;
+	char secName[255];
+	Format(secName, sizeof(secName), "wearable_%i", i);
+		
+	ConfigMap subsection = wearables.GetSection(secName);
+	while (subsection != null)
+	{
+		char classname[255], atts[255];
+		
+		subsection.Get("classname", classname, sizeof(classname));
+		int index = GetIntFromConfigMap(subsection, "index", 0);
+		subsection.Get("attributes", atts, sizeof(atts));
+		bool visible = GetBoolFromConfigMap(subsection, "visible", true);
+		int paint = GetIntFromConfigMap(subsection, "paint", -1);
+		//TODO: Maybe add support for wearable scale?
+		
+		int hat = CreateWearable(client, index, atts, paint, visible, 0.0, true);
+		int wearable = CreateEntityByName("prop_dynamic_override");
+		if (IsValidEntity(hat) && IsValidEntity(wearable))
+		{
+       	 	SetEntProp(wearable, Prop_Send, "m_nModelIndex", GetEntProp(hat, Prop_Send, "m_nModelIndex"));
+			RemoveEntity(hat);
+			DispatchSpawn(wearable);
+			
+			SetEntProp(wearable, Prop_Send, "m_fEffects", 1|512);
+			SetEntityMoveType(wearable, MOVETYPE_NONE);
+			SetEntProp(wearable, Prop_Data, "m_nNextThinkTick", -1.0);
+			SetEntityCollisionGroup(wearable, 0);
+			
+			if (TF2_GetClientTeam(client) == TFTeam_Blue)
+			{
+				DispatchKeyValue(wearable, "skin", "1");
+			}
+			else
+			{
+				DispatchKeyValue(wearable, "skin", "0");
+			}
+			
+			SetVariantString("!activator");
+			AcceptEntityInput(wearable, "SetParent", entity);
+		
+			i_PreviewOwner[wearable] = GetClientUserId(client);
+			//SetEdictFlags(wearable, GetEdictFlags(wearable)&(~FL_EDICT_ALWAYS));
+			SDKHook(wearable, SDKHook_SetTransmit, CF_PreviewModelTransmit);
+		}
+		
+		i++;
+		Format(secName, sizeof(secName), "wearable_%i", i);
+		delete subsection;
+		subsection = wearables.GetSection(secName);
+	}
+
+	//delete wearables;
+	if (subsection != null)
+		delete subsection;
+ }
+ #endif
  
  public void CFC_GiveWearables(int client, ConfigMap wearables)
  {
@@ -1199,6 +1297,49 @@ public void CF_ResetMadeStatus(int client)
  	
  	delete g_CharacterParticles[client];
  }
+ 
+ #if defined USE_PREVIEWS
+ public void CFC_DummyParticles(int client, int entity, ConfigMap particles)
+ {
+ 	int i = 1;
+	char secName[255];
+	Format(secName, sizeof(secName), "particle_%i", i);
+		
+	ConfigMap subsection = particles.GetSection(secName);
+	while (subsection != null)
+	{
+		char partName[255]; char point[255];
+		if (TF2_GetClientTeam(client) == TFTeam_Red)
+		{
+			subsection.Get("name_red", partName, sizeof(partName));
+		}
+		else
+		{
+			subsection.Get("name_blue", partName, sizeof(partName));
+		}
+		
+		subsection.Get("point", point, sizeof(point));
+		
+		float xOff = GetFloatFromConfigMap(subsection, "x_offset", 0.0);
+		float yOff = GetFloatFromConfigMap(subsection, "y_offset", 0.0);
+		float zOff = GetFloatFromConfigMap(subsection, "z_offset", 0.0);
+		
+		int part = AttachParticleToEntity(entity, partName, point, 0.0, xOff, yOff, zOff);
+		i_PreviewOwner[part] = GetClientUserId(client);
+		SetEdictFlags(part, GetEdictFlags(part)&(~FL_EDICT_ALWAYS));
+		SDKHook(part, SDKHook_SetTransmit, CF_PreviewModelTransmit);
+		
+		i++;
+		Format(secName, sizeof(secName), "particle_%i", i);
+		delete subsection;
+		subsection = particles.GetSection(secName);
+	}
+	
+	//delete particles;
+	if (subsection != null)
+		delete subsection;
+ }
+ #endif
  
  public void CFC_AttachParticles(int client, ConfigMap particles)
  {
@@ -1489,12 +1630,6 @@ public Native_CF_AttachWearable(Handle plugin, int numParams)
 	int wearable = CreateWearable(client, index, atts, paint, visible, lifespan);
 	if (IsValidEntity(wearable))
 	{
-		//SetEdictFlags(wearable, GetEdictFlags(wearable)&(~FL_EDICT_ALWAYS));
-			
-		//i_CharacterAttachmentOwner[particle] = GetClientUserId(client);
-		//SDKHook(particle, SDKHook_SetTransmit, CFC_AttachmentTransmit);
-		
 		SDKCall_EquipWearable(client, wearable);
-		//g_CharacterParticles[client].Push(EntIndexToEntRef(particle));
 	}
 }

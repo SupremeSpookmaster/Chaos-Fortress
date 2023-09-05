@@ -247,5 +247,7 @@ public Native_CF_GetRoundState(Handle plugin, int numParams)
 
 public void OnGameFrame()
 {
+	#if defined USE_PREVIEWS
 	CFC_OGF();
+	#endif
 }

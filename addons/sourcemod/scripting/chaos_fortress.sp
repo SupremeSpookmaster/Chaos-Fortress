@@ -5,6 +5,7 @@
 //#define DEBUG_BUTTONS
 //#define DEBUG_GAMERULES
 //#define DEBUG_SOUNDS
+//#define USE_PREVIEWS
 
 //	- TO-DO LIST AND ALL CURRENT BUGS:
 //
@@ -24,16 +25,16 @@
 //		when this happens. This is very minor and has no impact on gameplay.
 //			- Current Theory: Vanilla TF2 round-end logic removes it as part of its cleanup. If this is the case, there is no known fix.
 //	- MINOR BUG: Switching weapons with viewchange has no transition animation, it is *instant.* This looks ugly, but it isn't horrible and doesn't have a major impact on gameplay (it might make headshots like 10% harder if people abuse it but that's all).
-//			- Current Theory: It skips the intro sequence because the intro sequence is marked as having already been finished by the time we 
+//			- No known fix.
 //	- MINOR BUG: Characters who use viewchange are still holding their weapons on death. This is ugly and it would be best to make it fall like a phys prop.
 //	- MINOR BUG: Melee weapons which use viewchange have a noticeable delay of roughly ~0.5s before viewchange gets applied. This doesn't affect gameplay and is only visible in first person view, but is EXTREMELY ugly.
-//		- Current Theory: Still no clue.
+//			- No known fix.
+//	- MINOR BUG: Preview model attachment particles remain when cycling through characters. This is pretty ugly but then disappear when exiting the menu, so it has no effect.
 //
 //	- MAJOR BUG: The health you spawn with is not actually the correct amount of health.
-//		- Current Theory: haha you guessed it, NO FUCKING CLUE :) setting m_iHealth does NOTHING, TF2 can EAT SHIT
+//		- Current Theory: No idea. Setting m_iHealth does NOTHING. I hate TF2 so much sometimes.
 //	- MAJOR BUG: There is still a memory leak happening somewhere, PROBABLY in OnPlayerRunCmd...
-//		- Current Theory: I missed a Handle somewhere. Either that or natives/forwards create handles, which I doubt is the case.
-//	- MAJOR BUG: Particles spawned by the character preview model system do not get properly hit with SetTransmit, so they are visible to everyone. This WILL be abused if it is not fixed.
+//		- Current Theory: I missed a Handle somewhere. Either that or natives/forwards create handles when they are called, which I doubt is the case.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

@@ -491,7 +491,7 @@ public void CF_AttemptHeldAbility(int client, CF_AbilityType type, int button)
 		}
 		
 		CF_ActivateAbilitySlot(client, slot);
-		//CF_PlayRandomSound(client, "", soundSlot);
+		CF_PlayRandomSound(client, "", soundSlot);
 	}
 	else
 	{
