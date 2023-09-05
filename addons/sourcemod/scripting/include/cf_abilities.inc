@@ -233,14 +233,13 @@ public bool CFA_InitializeUltimate(int client, ConfigMap map)
 		f_UltCD[client] = GetFloatFromConfigMap(subsection, "cooldown", 0.0);
 		
 		b_CharacterHasUlt[client] = true;
-		
-		delete subsection;
 	}
 	else
 	{
 		b_CharacterHasUlt[client] = false;
 	}
 	
+	delete subsection;
 	return b_CharacterHasUlt[client];
 }
 
@@ -266,13 +265,13 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map)
 		
 		b_HasM2[client] = true;
 		AtLeastOne = true;
-		delete subsection;
 	}
 	else
 	{
 		b_HasM2[client] = false;
 	}
 	
+	delete subsection;
 	subsection = map.GetSection("character.m3_ability");
 	if (subsection != null)
 	{
@@ -287,13 +286,13 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map)
 		
 		b_HasM3[client] = true;
 		AtLeastOne = true;
-		delete subsection;
 	}
 	else
 	{
 		b_HasM3[client] = false;
 	}
 	
+	delete subsection;
 	subsection = map.GetSection("character.reload_ability");
 	if (subsection != null)
 	{
@@ -308,13 +307,13 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map)
 		b_HasReload[client] = true;
 		
 		AtLeastOne = true;
-		delete subsection;
 	}
 	else
 	{
 		b_HasReload[client] = false;
 	}
 	
+	delete subsection;
 	if (!AtLeastOne)
 		b_UsingResources[client] = false;
 	
@@ -353,13 +352,13 @@ public void CFA_InitializeResources(int client, ConfigMap map)
 		}
 		
 		b_UsingResources[client] = true;
-		
-		delete subsection;
 	}
 	else
 	{
 		b_UsingResources[client] = false;
 	}
+	
+	delete subsection;
 }
 
 public void CFA_ToggleHUD(int client, bool toggle)
@@ -1019,8 +1018,7 @@ public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
 	}
 	
 	delete abilities;
-	if (subsection != null)
-		delete subsection;
+	delete subsection;
 }
 
 public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
@@ -1088,8 +1086,7 @@ public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
 	}
 	
 	delete abilities;
-	if (subsection != null)
-		delete subsection;
+	delete subsection;
 }
 
 public Native_CF_EndHeldAbility(Handle plugin, int numParams)

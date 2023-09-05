@@ -125,8 +125,7 @@ public void CFC_OnEntityDestroyed(int entity)
  */
  public void CF_LoadCharacters(int admin)
  {
- 	if (Characters != null)
- 		delete Characters;
+ 	delete Characters;
  		
  	Characters = new ConfigMap("data/chaos_fortress/characters.cfg");
  	
@@ -141,17 +140,11 @@ public void CFC_OnEntityDestroyed(int entity)
 	PrintToServer("//////////////////////////////////////////////////");
 	#endif
  	
- 	if (CF_Characters_Configs != null)
- 	{
- 		delete CF_Characters_Configs;
- 		CF_Characters_Configs = CreateArray(255);
- 	}
+ 	delete CF_Characters_Configs;
+ 	CF_Characters_Configs = CreateArray(255);
  	
- 	if (CF_Characters_Names != null)
- 	{
- 		delete CF_Characters_Names;
- 		CF_Characters_Names = CreateArray(255);
- 	}
+ 	delete CF_Characters_Names;
+ 	CF_Characters_Names = CreateArray(255);
  	
  	FoundEnabled = CF_CheckPack("characters.Enabled Character Packs", false);
  	CF_CheckPack("characters.Download Character Packs", true);
@@ -194,7 +187,8 @@ public void CFC_OnEntityDestroyed(int entity)
  		
  		return true;
  	}
-
+	
+	delete subsection;
  	return false;
  }
  
@@ -303,8 +297,7 @@ public CFC_Menu(Menu CFC_Menu, MenuAction action, int client, int param)
 	}
 	else if (action == MenuAction_End || action == MenuAction_Cancel)
 	{
-		if (CF_ClientMenu[client] != null)
-			delete CF_ClientMenu[client];
+		delete CF_ClientMenu[client];
 			
 		#if defined USE_PREVIEWS
 		CF_DeletePreviewModel(client);
@@ -332,8 +325,7 @@ public Action CFC_OpenMenu(int client, int args)
 	if (!IsValidClient(client))
 		return Plugin_Continue;
 		
-	if (CF_ClientMenu[client] != null)
-		delete CF_ClientMenu[client];
+	delete CF_ClientMenu[client];
 		
 	CF_ClientMenu[client] = new Menu(CFC_Menu);
 	CopyMenu(CF_ClientMenu[client], CF_CharactersMenu);
@@ -577,8 +569,7 @@ public Action CFC_OpenMenu(int client, int args)
  	if (!IsValidClient(client))
 		return;
 		
-	if (CF_ClientMenu[client] != null)
-		delete CF_ClientMenu[client];
+	delete CF_ClientMenu[client];
 	
 	ConfigMap Character = new ConfigMap(config);
 	
@@ -660,14 +651,15 @@ public Action CFC_OpenMenu(int client, int args)
  		if (section != null)
  		{
  			CFC_DummyParticles(client, preview, section);
- 			delete section;
  		}
+ 		delete section;
  		
  		section = Character.GetSection("character.wearables");
  		if (section != null)
  		{
  			CFC_DummyWearables(client, preview, section);
  		}
+ 		delete section;
  	}
  	#endif
  	
@@ -710,10 +702,7 @@ public Action CFC_OpenMenu(int client, int args)
  	CF_ClientMenu[client].Display(client, MENU_TIME_FOREVER);
  	b_ReadingLore[client] = isLore;
  	
- 	if (section != null)
- 	{
- 		delete section;
- 	}
+ 	delete section;
  	delete Character;
  }
  
@@ -746,8 +735,7 @@ public Action CFC_OpenMenu(int client, int args)
 				SetClientCookie(client, c_DesiredCharacter, s_CharacterConfigInMenu[client]);
 				b_CharacterApplied[client] = false;
 				
-				if (CF_ClientMenu[client] != null)
-					delete CF_ClientMenu[client];
+				delete CF_ClientMenu[client];
 					
 				#if defined USE_PREVIEWS
 				CF_DeletePreviewModel(client);
@@ -767,8 +755,7 @@ public Action CFC_OpenMenu(int client, int args)
 	}
 	else if (action == MenuAction_End || action == MenuAction_Cancel)
 	{
-		if (CF_ClientMenu[client] != null)
-			delete CF_ClientMenu[client];
+		delete CF_ClientMenu[client];
 				
 		#if defined USE_PREVIEWS
 		CF_DeletePreviewModel(client);
@@ -786,22 +773,22 @@ public Action CFC_OpenMenu(int client, int args)
  	if (section != null)
  	{
  		CF_DownloadAndPrecacheModels(section);
- 		delete section;
  	}
+ 	delete section;
  	
  	section = Character.GetSection("character.downloads");
  	if (section != null)
  	{
  		CF_DownloadFiles(section);
- 		delete section;
  	}
+ 	delete section;
  	
  	section = Character.GetSection("character.precache");
  	if (section != null)
  	{
  		CF_PrecacheFiles(section);
- 		delete section;
  	}
+ 	delete section;
  }
  
  public void CF_DownloadAndPrecacheModels(ConfigMap subsection)
@@ -1116,14 +1103,8 @@ public void CF_ResetMadeStatus(int client)
  	
  	b_IsDead[client] = false;
  	
- 	if (map != null)
- 	{
- 		delete map;
- 	}
- 	if (GameRules != null)
- 	{
- 		delete GameRules;
- 	}
+ 	delete map;
+ 	delete GameRules;
  	
  	SDKUnhook(client, SDKHook_WeaponSwitchPost, ViewChange_WeaponSwitch);
  	if (useVC)
@@ -1190,9 +1171,7 @@ public void CF_ResetMadeStatus(int client)
 		subsection = wearables.GetSection(secName);
 	}
 
-	//delete wearables;
-	if (subsection != null)
-		delete subsection;
+	delete subsection;
  }
  #endif
  
@@ -1224,8 +1203,7 @@ public void CF_ResetMadeStatus(int client)
 	}
 
 	delete wearables;
-	if (subsection != null)
-		delete subsection;
+	delete subsection;
  }
  
  public void CFC_GiveWeapons(int client, ConfigMap weapons)
@@ -1274,8 +1252,7 @@ public void CF_ResetMadeStatus(int client)
 	}
 
 	delete weapons;
-	if (subsection != null)
-		delete subsection;
+	delete subsection;
  }
  
  public void CFC_DeleteParticles(int client)
@@ -1336,9 +1313,7 @@ public void CF_ResetMadeStatus(int client)
 		subsection = particles.GetSection(secName);
 	}
 	
-	//delete particles;
-	if (subsection != null)
-		delete subsection;
+	delete subsection;
  }
  #endif
  
@@ -1379,8 +1354,7 @@ public void CF_ResetMadeStatus(int client)
 	}
 	
 	delete particles;
-	if (subsection != null)
-		delete subsection;
+	delete subsection;
  }
  
  public void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int deadRinger)

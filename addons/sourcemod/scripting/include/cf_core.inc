@@ -91,8 +91,7 @@ public void CF_OnPluginStart()
  */
  public void CF_SetGameRules(int admin)
  { 	
- 	if (GameRules != null)
- 		delete GameRules;
+ 	delete GameRules;
  		
  	GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 
@@ -127,9 +126,8 @@ public void CF_OnPluginStart()
 	    PrintToServer("Ult Charge Retained On Character Switch: %.2f", f_ChargeRetain);
 	    PrintToServer("Display Role: %i", view_as<int>(b_DisplayRole));
 	    #endif
-	    
-	    delete subsection;
 	}
+	delete subsection;
 	
 	subsection = GameRules.GetSection("game_rules.killstreak_settings");
 	if (subsection != null)
@@ -155,9 +153,8 @@ public void CF_OnPluginStart()
 	    PrintToServer("Announce Ended Killstreaks at: %i Kill(s)", ended);
 	    PrintToServer("Killstreaks Are Godlike At: %i Kill(s)", godlike);
 	    #endif
-	    
-	    delete subsection;
 	}
+	delete subsection;
 	
 	#if defined DEBUG_GAMERULES
 	PrintToServer("//////////////////////////////////////////////");
