@@ -1,9 +1,19 @@
 #include <cf_include.inc>
 #include <sdkhooks>
+#include <tf2_stocks>
 
-public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
+public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
 {
-	damage *= 999.0;
-	damagetype += DMG_CRIT;
-	return Plugin_Changed;
+	if (StrContains(abilityName, "test_held") != -1)
+	{
+		TF2_AddCondition(client, TFCond_CritHype);
+	}
+}
+
+public void CF_OnHeldEnd_Ability(int client, char pluginName[255], char abilityName[255])
+{
+	if (StrContains(abilityName, "test_held") != -1)
+	{
+		TF2_RemoveCondition(client, TFCond_CritHype);
+	}
 }

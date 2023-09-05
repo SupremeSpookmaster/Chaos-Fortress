@@ -225,7 +225,7 @@ forward void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int dead
 forward void CF_OnRoundStateChanged(int state)
 
 /**
- * Called when a player's Chaos Fortress killstreak is changed.
+ * Called when a player activates an ability.
  *
  * @param client			The client whose ability was activated.
  * @param pluginName		The name of the ability's plugin, as specified in the config as "plugin_name".
@@ -243,7 +243,7 @@ forward void CF_OnAbility(int client, char pluginName[255], char abilityName[255
 forward Action CF_OnUltUsed(int client);
 
 /**
- * Called when a player uses their M2 ability.
+ * Called when a player uses their M2 ability. For held abilities, use CF_OnHeldStart instead.
  *
  * @param client			The client whose M2 ability was activated.
  *
@@ -252,7 +252,7 @@ forward Action CF_OnUltUsed(int client);
 forward Action CF_OnM2Used(int client);
 
 /**
- * Called when a player uses their M3 ability.
+ * Called when a player uses their M3 ability. For held abilities, use CF_OnHeldStart instead.
  *
  * @param client			The client whose M3 ability was activated.
  *
@@ -261,13 +261,42 @@ forward Action CF_OnM2Used(int client);
 forward Action CF_OnM3Used(int client);
 
 /**
- * Called when a player uses their reload ability.
+ * Called when a player uses their reload ability. For held abilities, use CF_OnHeldStart instead.
  *
  * @param client			The client whose reload ability was activated.
  *
  * @return	Plugin_Handled or Plugin_Stop to prevent the reload ability from being used, otherwise return Plugin_Continue to allow it.
  */
 forward Action CF_OnReloadUsed(int client);
+	
+/**
+ * Called when a player attempts to use a held ability.
+ *
+ * @param client			The client whose held ability was started.
+ * @param type				The type of held ability (M2, M3, or Reload).
+ *
+ * @return	Plugin_Handled or Plugin_Stop to prevent the held ability from being used, otherwise return Plugin_Continue to allow it.
+ */
+forward Action CF_OnHeldStart(int client, CF_AbilityType type);
+
+/**
+ * Called when a held ability ends.
+ *
+ * @param client			The client whose held ability was ended.
+ * @param type				The type of held ability (M2, M3, or Reload).
+ *
+ */
+forward void CF_OnHeldEnd(int client, CF_AbilityType type);
+
+/**
+ * Called when a held ability ends, referencing a specific ability.
+ *
+ * @param client			The client whose held ability was ended.
+ * @param pluginName		The plugin name of the held ability which was ended, specified as "plugin_name" in the character's config.
+ * @param abilityName		The ability name of the held ability which was ended, specified as "ability_name" in the character's config.
+ *
+ */
+forward void CF_OnHeldEnd_Ability(int client, char pluginName[255], char abilityName[255]);
 	
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
@@ -562,6 +591,25 @@ native float CF_GetAbilityCooldown(int client, CF_AbilityType type);
  *
  */
 native CF_DoAbility(int client, char pluginName[255], char abilityName[255]);
+
+/**
+ * Ends all held abilities in a given slot, if it exists on the character.
+ *
+ * @param client		The client whose ability to end.
+ * @param slot			The slot to end (2 for M2, 3 for M3, 4 for Reload).
+ *
+ */
+native CF_EndHeldAbilitySlot(int client, int slot);
+
+/**
+ * Ends a specific held ability.
+ *
+ * @param client		The client whose ability to end.
+ * @param pluginName			The plugin name of the ability to end, as specified in the config as "plugin_name".
+ * @param abilityName			The ability name of the ability to end, as specified in the config as "ability_name".
+ *
+ */
+native CF_EndHeldAbility(int client, int slot);
 
 /**
  * Activates every ability a client's character has, which uses a given ability slot.

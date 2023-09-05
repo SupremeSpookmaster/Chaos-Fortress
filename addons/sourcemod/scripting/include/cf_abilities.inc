@@ -44,12 +44,18 @@ bool b_HasReload[MAXPLAYERS + 1] = { false, ... };
 bool b_HoldingReload[MAXPLAYERS + 1] = { false, ... };
 bool b_HoldingM2[MAXPLAYERS + 1] = { false, ... };
 bool b_HoldingM3[MAXPLAYERS + 1] = { false, ... };
+bool b_ForceEndHeldM2[MAXPLAYERS + 1] = { false, ... };
+bool b_ForceEndHeldM3[MAXPLAYERS + 1] = { false, ... };
+bool b_ForceEndHeldReload[MAXPLAYERS + 1] = { false, ... };
 
 GlobalForward g_OnAbility;
 GlobalForward g_OnUltUsed;
 GlobalForward g_OnM2Used;
 GlobalForward g_OnM3Used;
 GlobalForward g_OnReloadUsed;
+GlobalForward g_OnHeldStart;
+GlobalForward g_OnHeldEnd;
+GlobalForward g_OnHeldEnd_Ability;
 
 public void CFA_MakeNatives()
 {
@@ -63,6 +69,8 @@ public void CFA_MakeNatives()
 	CreateNative("CF_GetSpecialResource", Native_CF_GetSpecialResource);
 	CreateNative("CF_DoAbility", Native_CF_DoAbility);
 	CreateNative("CF_ActivateAbilitySlot", Native_CF_ActivateAbilitySlot);
+	CreateNative("CF_EndHeldAbilitySlot", Native_CF_EndHeldAbilitySlot);
+	CreateNative("CF_EndHeldAbility", Native_CF_EndHeldAbility);
 }
 
 public void CFA_MakeForwards()
@@ -72,6 +80,9 @@ public void CFA_MakeForwards()
 	g_OnM2Used = new GlobalForward("CF_OnM2Used", ET_Event, Param_Cell);
 	g_OnM3Used = new GlobalForward("CF_OnM3Used", ET_Event, Param_Cell);
 	g_OnReloadUsed = new GlobalForward("CF_OnReloadUsed", ET_Event, Param_Cell);
+	g_OnHeldStart = new GlobalForward("CF_OnHeldStart", ET_Event, Param_Cell, Param_Cell);
+	g_OnHeldEnd = new GlobalForward("CF_OnHeldEnd", ET_Event, Param_Cell, Param_Cell);
+	g_OnHeldEnd_Ability = new GlobalForward("CF_OnHeldEnd_Ability", ET_Event, Param_Cell, Param_String, Param_String);
 }
 
 Handle HudSync;
@@ -380,7 +391,8 @@ public Action CF_OnPlayerM2(int client, int &buttons, int &impulse, int &weapon)
 		
 	if (b_M2IsHeld[client])
 	{
-		
+		CPrintToChat(client, "You attempted to use a held M2 ability.");
+		CF_AttemptHeldAbility(client, CF_AbilityType_M2, IN_ATTACK2);
 	}
 	else
 	{
@@ -400,7 +412,7 @@ public Action CF_OnPlayerM3(int client, int &buttons, int &impulse, int &weapon)
 		
 	if (b_M3IsHeld[client])
 	{
-		
+		CF_AttemptHeldAbility(client, CF_AbilityType_M3, IN_ATTACK3);
 	}
 	else
 	{
@@ -420,7 +432,7 @@ public Action CF_OnPlayerReload(int client, int &buttons, int &impulse, int &wea
 	
 	if (b_ReloadIsHeld[client])
 	{
-		
+		CF_AttemptHeldAbility(client, CF_AbilityType_Reload, IN_RELOAD);
 	}
 	else
 	{
@@ -430,15 +442,183 @@ public Action CF_OnPlayerReload(int client, int &buttons, int &impulse, int &wea
 	return Plugin_Continue;
 }
 
-public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
+public void CF_AttemptHeldAbility(int client, CF_AbilityType type, int button)
 {
-	if (CF_GetAbilityCooldown(client, type) > 0.0)
+	if (!CF_CanPlayerUseAbilitySlot(client, type))
 	{
 		Nope(client);
 		return;
 	}
 	
-	float cooldown; float cost; float available = (b_ResourceIsUlt[client] || type == CF_AbilityType_Ult) ? f_UltCharge[client] : f_Resources[client];
+	Action result;
+	Call_StartForward(g_OnHeldStart);
+	
+	Call_PushCell(client);
+	Call_PushCell(type);
+	
+	Call_Finish(result);
+	
+	if (result != Plugin_Stop && result != Plugin_Handled)
+	{
+		int slot;
+		char soundSlot[255];
+		
+		switch(type)
+		{
+			case CF_AbilityType_M2:
+			{
+				slot = 2;
+				soundSlot = "sound_heldstart_m2";
+				SDKUnhook(client, SDKHook_PreThink, CFA_HeldM2PreThink);
+				SDKHook(client, SDKHook_PreThink, CFA_HeldM2PreThink);
+				b_HoldingM2[client] = true;
+			}
+			case CF_AbilityType_M3:
+			{
+				slot = 3;
+				soundSlot = "sound_heldstart_m3";
+				SDKUnhook(client, SDKHook_PreThink, CFA_HeldM3PreThink);
+				SDKHook(client, SDKHook_PreThink, CFA_HeldM3PreThink);
+				b_HoldingM3[client] = true;
+			}
+			case CF_AbilityType_Reload:
+			{
+				slot = 4;
+				soundSlot = "sound_heldstart_reload";
+				SDKUnhook(client, SDKHook_PreThink, CFA_HeldReloadPreThink);
+				SDKHook(client, SDKHook_PreThink, CFA_HeldReloadPreThink);
+				b_HoldingReload[client] = true;
+			}
+		}
+		
+		CF_ActivateAbilitySlot(client, slot);
+		//CF_PlayRandomSound(client, "", soundSlot);
+	}
+	else
+	{
+		Nope(client);
+		CPrintToChat(client, "The forward blocked it.");
+	}
+}
+
+public Action CFA_HeldM2PreThink(int client)
+{
+	b_HoldingM2[client] = (GetClientButtons(client) & IN_ATTACK2 != 0) && !b_ForceEndHeldM2[client] && CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M2);
+	
+	if (!b_HoldingM2[client])
+	{
+		Call_StartForward(g_OnHeldEnd);
+		
+		Call_PushCell(client);
+		Call_PushCell(CF_AbilityType_M2);
+		
+		Call_Finish();
+		
+		CF_EndHeldAbilitySlot(client, 2);
+		
+		CF_ApplyAbilityCooldown(client, f_M2CD[client], CF_AbilityType_M2, true);
+		if (b_UsingResources[client])
+		{
+			if (b_ResourceIsUlt[client])
+			{
+				CF_GiveUltCharge(client, -f_M2Cost[client], CF_ResourceType_Generic);
+			}
+			else
+			{
+				CF_GiveSpecialResource(client, -f_M2Cost[client], CF_ResourceType_Generic);
+			}
+		}
+		
+		//CF_PlayRandomSound(client, "", "sound_heldend_m2");
+		b_ForceEndHeldM2[client] = false;
+		SDKUnhook(client, SDKHook_PreThink, CFA_HeldM2PreThink);
+	}
+	
+	//TODO: If the player respawns or dies for any reason during a held ability, a bunch of shit will break. Make a method to reset all held variables and call it in MakeCharacter and PlayerKilled.
+	return Plugin_Continue;
+}
+
+public Action CFA_HeldM3PreThink(int client)
+{
+	b_HoldingM3[client] = (GetClientButtons(client) & IN_ATTACK3 != 0) && !b_ForceEndHeldM3[client] && CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M3);
+	
+	if (!b_HoldingM3[client])
+	{
+		Call_StartForward(g_OnHeldEnd);
+		
+		Call_PushCell(client);
+		Call_PushCell(CF_AbilityType_M3);
+		
+		Call_Finish();
+		
+		CF_EndHeldAbilitySlot(client, 3);
+		
+		CF_ApplyAbilityCooldown(client, f_M3CD[client], CF_AbilityType_M3, true);
+		if (b_UsingResources[client])
+		{
+			if (b_ResourceIsUlt[client])
+			{
+				CF_GiveUltCharge(client, -f_M3Cost[client], CF_ResourceType_Generic);
+			}
+			else
+			{
+				CF_GiveSpecialResource(client, -f_M3Cost[client], CF_ResourceType_Generic);
+			}
+		}
+		
+		//CF_PlayRandomSound(client, "", "sound_heldend_m3");
+		b_ForceEndHeldM3[client] = false;
+		SDKUnhook(client, SDKHook_PreThink, CFA_HeldM3PreThink);
+	}
+	
+	return Plugin_Continue;
+}
+
+public Action CFA_HeldReloadPreThink(int client)
+{
+	b_HoldingReload[client] = (GetClientButtons(client) & IN_RELOAD != 0) && !b_ForceEndHeldReload[client] && CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_Reload);
+	
+	if (!b_HoldingReload[client])
+	{
+		Call_StartForward(g_OnHeldEnd);
+		
+		Call_PushCell(client);
+		Call_PushCell(CF_AbilityType_Reload);
+		
+		Call_Finish();
+		
+		CF_EndHeldAbilitySlot(client, 4);
+		
+		CF_ApplyAbilityCooldown(client, f_ReloadCD[client], CF_AbilityType_Reload, true);
+		if (b_UsingResources[client])
+		{
+			if (b_ResourceIsUlt[client])
+			{
+				CF_GiveUltCharge(client, -f_ReloadCost[client], CF_ResourceType_Generic);
+			}
+			else
+			{
+				CF_GiveSpecialResource(client, -f_ReloadCost[client], CF_ResourceType_Generic);
+			}
+		}
+		
+		//CF_PlayRandomSound(client, "", "sound_heldend_reload");
+		b_ForceEndHeldReload[client] = false;
+		SDKUnhook(client, SDKHook_PreThink, CFA_HeldReloadPreThink);
+	}
+	
+	return Plugin_Continue;
+}
+
+public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
+{
+	if (!CF_CanPlayerUseAbilitySlot(client, type))
+	{
+		Nope(client);
+		return;
+	}
+	
+	float cooldown; float cost;
 	int slot;
 	char soundSlot[255];
 	Action result;
@@ -479,12 +659,6 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 		}
 	}
 	
-	if (cost > available && b_UsingResources[client])
-	{
-		Nope(client);
-		return;
-	}
-	
 	Call_StartForward(toCall);
 	
 	Call_PushCell(client);
@@ -501,7 +675,7 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 		}
 		else
 		{
-			CF_PlayRandomSound(client, "", soundSlot);
+			//CF_PlayRandomSound(client, "", soundSlot);
 		}
 
 		if (type == CF_AbilityType_Ult || (b_ResourceIsUlt[client] && b_UsingResources[client]))
@@ -515,6 +689,52 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 		
 		CF_ApplyAbilityCooldown(client, cooldown, type, true);
 	}
+	else
+	{
+		Nope(client);
+	}
+}
+
+public bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type)
+{
+	if (CF_GetAbilityCooldown(client, type) > 0.0)
+	{
+		CPrintToChat(client, "It was on cooldown.");
+		return false;
+	}
+		
+	if (b_UsingResources[client] || type == CF_AbilityType_Ult)
+	{
+		float cost; float available = (b_ResourceIsUlt[client] || type == CF_AbilityType_Ult) ? f_UltCharge[client] : f_Resources[client];
+		
+		switch(type)
+		{
+			case CF_AbilityType_Ult:
+			{
+				cost = f_UltChargeRequired[client];
+			}
+			case CF_AbilityType_M2:
+			{
+				cost = f_M2Cost[client];
+			}
+			case CF_AbilityType_M3:
+			{
+				cost = f_M3Cost[client];
+			}
+			case CF_AbilityType_Reload:
+			{
+				cost = f_ReloadCost[client];
+			}
+		}
+		
+		if (cost > available)
+		{
+			CPrintToChat(client, "You were short on resources.");
+			return false;
+		}
+	}
+	
+	return true;
 }
 
 public Native_CF_GiveUltCharge(Handle plugin, int numParams)
@@ -793,7 +1013,54 @@ public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
 			subsection.Get("ability_name", abName, sizeof(abName));
 			subsection.Get("plugin_name", pluginName, sizeof(pluginName));
 			
-			Call_StartForward(g_OnAbility);
+			CF_DoAbility(client, pluginName, abName);
+		}
+		
+		i++;
+		Format(secName, sizeof(secName), "ability_%i", i);
+		delete subsection;
+		subsection = abilities.GetSection(secName);
+	}
+	
+	delete abilities;
+	if (subsection != null)
+		delete subsection;
+}
+
+public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	int slot = GetNativeCell(2);
+	
+	char conf[255], pluginName[255], abName[255];
+	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	
+	ConfigMap map = new ConfigMap(conf);
+	if (map == null)
+		return;
+		
+	ConfigMap abilities = map.GetSection("character.abilities");
+	delete map;
+	if (abilities == null)
+		return;
+		
+	int i = 1;
+	char secName[255];
+	Format(secName, sizeof(secName), "ability_%i", i);
+		
+	ConfigMap subsection = abilities.GetSection(secName);
+	while (subsection != null)
+	{
+		if (GetIntFromConfigMap(subsection, "slot", -1) == slot)
+		{
+			subsection.Get("ability_name", abName, sizeof(abName));
+			subsection.Get("plugin_name", pluginName, sizeof(pluginName));
+			
+			Call_StartForward(g_OnHeldEnd_Ability);
 			
 			Call_PushCell(client);
 			Call_PushString(pluginName);
@@ -808,9 +1075,45 @@ public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
 		subsection = abilities.GetSection(secName);
 	}
 	
+	switch(slot)
+	{
+		case 2:
+		{
+			b_ForceEndHeldM2[client] = true;
+		}
+		case 3:
+		{
+			b_ForceEndHeldM3[client] = true;
+		}
+		case 4:
+		{
+			b_ForceEndHeldReload[client] = true;
+		}
+	}
+	
 	delete abilities;
 	if (subsection != null)
 		delete subsection;
+}
+
+public Native_CF_EndHeldAbility(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	char pluginName[255], abName[255];
+	GetNativeString(2, pluginName, sizeof(pluginName));
+	GetNativeString(3, abName, sizeof(abName));
+	
+	Call_StartForward(g_OnHeldEnd_Ability);
+			
+	Call_PushCell(client);
+	Call_PushString(pluginName);
+	Call_PushString(abName);
+		
+	Call_Finish();
 }
 
 public void Nope(int client)

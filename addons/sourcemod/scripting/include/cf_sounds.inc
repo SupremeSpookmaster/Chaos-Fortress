@@ -105,12 +105,15 @@ public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Outp
  *
  * @return		True if the sound was played, false otherwise.
  */
-bool CF_PlayRandomSound(int source, char Config[255], char Sound[255], float damage = 0.0)
+bool CF_PlayRandomSound(int source, char Config[255], char Sound[255], float damage = 0.0) //TODO: There is SOMETHING in here which triggers a critical error that breaks shit. I am baffled.
 {
 	if (CF_IsPlayerCharacter(source) && StrEqual(Config, ""))
 	{
 		CF_GetPlayerConfig(source, Config, sizeof(Config));
 	}
+	
+	if (!FileExists(Config) && !FileExists(Config, true))
+		return false;
 	
 	char snd[255] = ""; char checkFile[255];
 	KeyValType kvType = CF_GetRandomSound(Config, Sound, snd);
