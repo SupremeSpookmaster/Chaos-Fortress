@@ -483,12 +483,13 @@ native int CF_AttachParticle(int client, char particle[255], char point[255], fl
  * @param index			The wearable's item index.
  * @param visible		Set to false if you want to hide the wearable from view.
  * @param paint			Any number 1-29 will paint the wearable, if applicable. See the Chaos Fortress wiki page for a list: https://github.com/SupremeSpookmaster/Chaos-Fortress/wiki/Miscellaneous-Data#paint-indexes
+ * @param style			Optional style override for cosmetic wearables.
  * @param atts			Optional item attributes for the wearable.
  * @param lifespan		Optional lifespan for the wearable, 0.0 or below for infinite.
  *
  * @return The entity index of the spawned wearable, -1 if invalid.
  */
-native int CF_AttachWearable(int client, int index, bool visible, int paint, char atts[255] = "", float lifespan = 0.0);
+native int CF_AttachWearable(int client, int index, bool visible, int paint, int style, char atts[255] = "", float lifespan = 0.0);
 
 /**
  * Gives a client ult charge, based on the parameters given. This can also remove ult charge if "coefficient" is negative.

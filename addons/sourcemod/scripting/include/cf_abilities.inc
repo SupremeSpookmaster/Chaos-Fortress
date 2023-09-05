@@ -527,7 +527,7 @@ public Action CFA_HeldM2PreThink(int client)
 			}
 		}
 		
-		//CF_PlayRandomSound(client, "", "sound_heldend_m2");
+		CF_PlayRandomSound(client, "", "sound_heldend_m2");
 		b_ForceEndHeldM2[client] = false;
 		SDKUnhook(client, SDKHook_PreThink, CFA_HeldM2PreThink);
 	}
@@ -564,7 +564,7 @@ public Action CFA_HeldM3PreThink(int client)
 			}
 		}
 		
-		//CF_PlayRandomSound(client, "", "sound_heldend_m3");
+		CF_PlayRandomSound(client, "", "sound_heldend_m3");
 		b_ForceEndHeldM3[client] = false;
 		SDKUnhook(client, SDKHook_PreThink, CFA_HeldM3PreThink);
 	}
@@ -600,7 +600,7 @@ public Action CFA_HeldReloadPreThink(int client)
 			}
 		}
 		
-		//CF_PlayRandomSound(client, "", "sound_heldend_reload");
+		CF_PlayRandomSound(client, "", "sound_heldend_reload");
 		b_ForceEndHeldReload[client] = false;
 		SDKUnhook(client, SDKHook_PreThink, CFA_HeldReloadPreThink);
 	}
@@ -673,7 +673,7 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 		}
 		else
 		{
-			//CF_PlayRandomSound(client, "", soundSlot);
+			CF_PlayRandomSound(client, "", soundSlot);
 		}
 
 		if (type == CF_AbilityType_Ult || (b_ResourceIsUlt[client] && b_UsingResources[client]))

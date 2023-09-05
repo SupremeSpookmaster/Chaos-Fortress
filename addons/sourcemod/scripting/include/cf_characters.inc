@@ -556,7 +556,7 @@ public Action CFC_OpenMenu(int client, int args)
  	if (IsPlayerInvis(owner))	//Block the particle if the user is invisible, for obvious reasons...
  		return Plugin_Handled;
  		
- 	if (client != owner || (client == owner && GetEntProp(client, Prop_Send, "m_nForceTauntCam")))
+ 	if (client != owner || (client == owner && (GetEntProp(client, Prop_Send, "m_nForceTauntCam") || TF2_IsPlayerInCondition(client, TFCond_Taunting))))
  		return Plugin_Continue;
  		
  	return Plugin_Handled;
@@ -1212,9 +1212,10 @@ public void CF_ResetMadeStatus(int client)
 		subsection.Get("attributes", atts, sizeof(atts));
 		bool visible = GetBoolFromConfigMap(subsection, "visible", true);
 		int paint = GetIntFromConfigMap(subsection, "paint", -1);
+		int style = GetIntFromConfigMap(subsection, "style", 0);
 		//TODO: Maybe add support for wearable scale?
 		
-		CF_AttachWearable(client, index, visible, paint, atts, 0.0);
+		CF_AttachWearable(client, index, visible, paint, style, atts, 0.0);
 		
 		i++;
 		Format(secName, sizeof(secName), "wearable_%i", i);
@@ -1430,8 +1431,19 @@ public void CF_ResetMadeStatus(int client)
 	
 	if (spawn)
 	{
-		SetEntProp(client, Prop_Send, "m_iHealth", RoundFloat(maxHP));
+		DataPack pack = new DataPack();
+		RequestFrame(CF_GiveMaxHP, pack);
+		WritePackCell(pack, client);
+		WritePackCell(pack, RoundFloat(maxHP));
 	}
+ }
+ 
+ public void CF_GiveMaxHP(DataPack pack)
+ {
+ 	ResetPack(pack);
+ 	int client = ReadPackCell(pack);
+ 	int hp = ReadPackCell(pack);
+ 	SetEntProp(client, Prop_Send, "m_iHealth", hp);
  }
  
  public Native_CF_GetCharacterMaxHealth(Handle plugin, int numParams)
@@ -1624,10 +1636,11 @@ public Native_CF_AttachWearable(Handle plugin, int numParams)
 	int index = GetNativeCell(2);
 	bool visible = GetNativeCell(3);
 	int paint = GetNativeCell(4);
-	GetNativeString(5, atts, sizeof(atts));
-	float lifespan = GetNativeCell(6);
+	int style = GetNativeCell(5);
+	GetNativeString(6, atts, sizeof(atts));
+	float lifespan = GetNativeCell(7);
 		
-	int wearable = CreateWearable(client, index, atts, paint, visible, lifespan);
+	int wearable = CreateWearable(client, index, atts, paint, style, visible, lifespan);
 	if (IsValidEntity(wearable))
 	{
 		SDKCall_EquipWearable(client, wearable);

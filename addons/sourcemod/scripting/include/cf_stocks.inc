@@ -760,13 +760,14 @@ stock bool IsPlayerInvis(int client)
  * @param itemindex		The wearable's index.
  * @param atts			The wearable's item attributes.
  * @param paint			The wearable's paint, 1-29.
+ * @param style			Optional style override parameter for cosmetic wearables.
  * @param visible		True for the wearable to be visible, false to hide it.
  * @param lifespan		Optional lifespan for the wearable, 0.0 or below for infinite.
  * @param item			Use tf_wearable_item instead.
  *
  * @return			The wearable's item index.
  */
-stock int CreateWearable(int client, int itemindex, char atts[255] = "", int paint = 0, bool visible = true, float lifespan = 0.0, bool item = false)
+stock int CreateWearable(int client, int itemindex, char atts[255] = "", int paint = 0, int style = 0, bool visible = true, float lifespan = 0.0, bool item = false)
 {
 	int hat = CreateEntityByName(item ? "tf_wearable_item" : "tf_wearable");
 	
@@ -948,6 +949,11 @@ stock int CreateWearable(int client, int itemindex, char atts[255] = "", int pai
 		{
 			TF2Attrib_SetByDefIndex(hat, attrib, StringToFloat(attribs[i + 1]));
 		}
+	}
+	
+	if (style > 0)
+	{
+		TF2Attrib_SetByDefIndex(hat, 542, float(style));
 	}
 	
 	DispatchSpawn(hat);
