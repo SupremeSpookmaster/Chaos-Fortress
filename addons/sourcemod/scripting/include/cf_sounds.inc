@@ -31,7 +31,6 @@ public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Outp
 		
 	Format(snd, sizeof(snd), "character.sounds.%s", Sound);
 	ConfigMap newMap = cfgMap.GetSection(snd);
-	delete cfgMap;
 	
 	if (newMap == null)
 		return KeyValType_Null;
@@ -91,7 +90,7 @@ public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Outp
 		}
 	}
 	
-	delete newMap;
+	DeleteCfg(cfgMap);
 	return ReturnValue;
 }
 
@@ -138,19 +137,19 @@ bool CF_PlayRandomSound(int source, char Config[255], char Sound[255], float dam
 			ReplaceString(path, sizeof(path), ".", "\\.");
 			
 			ConfigMap cfgMap = new ConfigMap(ourConf);
-			cfgMap = cfgMap.GetSection(path);
+			ConfigMap section = cfgMap.GetSection(path);
 			
-			if (cfgMap == null)
+			if (section == null)
 				return false;
 				
-			int level = GetIntFromConfigMap(cfgMap, "level", 100);
-			bool onlySelf = GetBoolFromConfigMap(cfgMap, "source", false);
-			float volume = GetFloatFromConfigMap(cfgMap, "volume", 1.0);
-			int channel = GetIntFromConfigMap(cfgMap, "channel", 7);
-			bool global = GetBoolFromConfigMap(cfgMap, "global", false);
-			float chance = GetFloatFromConfigMap(cfgMap, "chance", 1.0);
+			int level = GetIntFromConfigMap(section, "level", 100);
+			bool onlySelf = GetBoolFromConfigMap(section, "source", false);
+			float volume = GetFloatFromConfigMap(section, "volume", 1.0);
+			int channel = GetIntFromConfigMap(section, "channel", 7);
+			bool global = GetBoolFromConfigMap(section, "global", false);
+			float chance = GetFloatFromConfigMap(section, "chance", 1.0);
 			
-			delete cfgMap;
+			DeleteCfg(cfgMap);
 			
 			if (GetRandomFloat(0.0, 1.0) <= chance)
 			{

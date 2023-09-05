@@ -125,7 +125,7 @@ public void CFC_OnEntityDestroyed(int entity)
  */
  public void CF_LoadCharacters(int admin)
  {
- 	delete Characters;
+ 	DeleteCfg(Characters);
  		
  	Characters = new ConfigMap("data/chaos_fortress/characters.cfg");
  	
@@ -183,12 +183,12 @@ public void CFC_OnEntityDestroyed(int entity)
 	   		CF_LoadCharacterPack(value, JustDownload);
  		}
  		
- 		delete subsection;
+ 		DeleteCfg(subsection);
  		
  		return true;
  	}
 	
-	delete subsection;
+	DeleteCfg(subsection);
  	return false;
  }
  
@@ -227,8 +227,6 @@ public void CFC_OnEntityDestroyed(int entity)
 		PrintToServer("\nLocated character: %s", value);
 		//#endif
 	}
-	
-	delete Pack;
  }
  
  public void CF_LoadSpecificCharacter(char path[255], bool JustDownload)
@@ -262,7 +260,6 @@ public void CFC_OnEntityDestroyed(int entity)
  	}
  
  	CF_ManageCharacterFiles(Character);
- 	delete Character;
  }
  
  public void CF_BuildCharactersMenu()
@@ -646,20 +643,17 @@ public Action CFC_OpenMenu(int client, int args)
  			}
  		}
  		
- 		delete section;
  		section = Character.GetSection("character.particles");
  		if (section != null)
  		{
  			CFC_DummyParticles(client, preview, section);
  		}
- 		delete section;
  		
  		section = Character.GetSection("character.wearables");
  		if (section != null)
  		{
  			CFC_DummyWearables(client, preview, section);
  		}
- 		delete section;
  	}
  	#endif
  	
@@ -702,8 +696,7 @@ public Action CFC_OpenMenu(int client, int args)
  	CF_ClientMenu[client].Display(client, MENU_TIME_FOREVER);
  	b_ReadingLore[client] = isLore;
  	
- 	delete section;
- 	delete Character;
+ 	DeleteCfg(Character);
  }
  
  public CFC_InfoMenu(Menu CFC_Menu, MenuAction action, int client, int param)
@@ -719,7 +712,7 @@ public Action CFC_OpenMenu(int client, int args)
 			
 			if (Character == null)
 			{
-				delete Character;
+				DeleteCfg(Character);
 				PrintToServer("ERROR: Somehow, an invalid character config (%s) was added to the !characters menu.", s_CharacterConfigInMenu[client]);
 				CPrintToChat(client, "{indigo}[Chaos Fortress] {crimson}ERROR: {default}Somehow, an invalid character config {olive}(%s){default} was added to the !characters menu. This should be impossible. Please inform your server's developer.", s_CharacterConfigInMenu[client]);
 				return;
@@ -746,7 +739,7 @@ public Action CFC_OpenMenu(int client, int args)
 				CFC_BuildInfoMenu(client, s_CharacterConfigInMenu[client], !b_ReadingLore[client], true);
 			}
 			
-			delete Character;
+			DeleteCfg(Character);
 		}
 		else
 		{
@@ -774,21 +767,18 @@ public Action CFC_OpenMenu(int client, int args)
  	{
  		CF_DownloadAndPrecacheModels(section);
  	}
- 	delete section;
  	
  	section = Character.GetSection("character.downloads");
  	if (section != null)
  	{
  		CF_DownloadFiles(section);
  	}
- 	delete section;
  	
  	section = Character.GetSection("character.precache");
  	if (section != null)
  	{
  		CF_PrecacheFiles(section);
  	}
- 	delete section;
  }
  
  public void CF_DownloadAndPrecacheModels(ConfigMap subsection)
@@ -1103,8 +1093,8 @@ public void CF_ResetMadeStatus(int client)
  	
  	b_IsDead[client] = false;
  	
- 	delete map;
- 	delete GameRules;
+ 	DeleteCfg(map);
+ 	DeleteCfg(GameRules);
  	
  	SDKUnhook(client, SDKHook_WeaponSwitchPost, ViewChange_WeaponSwitch);
  	if (useVC)
@@ -1170,8 +1160,6 @@ public void CF_ResetMadeStatus(int client)
 		delete subsection;
 		subsection = wearables.GetSection(secName);
 	}
-
-	delete subsection;
  }
  #endif
  
@@ -1198,12 +1186,8 @@ public void CF_ResetMadeStatus(int client)
 		
 		i++;
 		Format(secName, sizeof(secName), "wearable_%i", i);
-		delete subsection;
 		subsection = wearables.GetSection(secName);
 	}
-
-	delete wearables;
-	delete subsection;
  }
  
  public void CFC_GiveWeapons(int client, ConfigMap weapons)
@@ -1247,12 +1231,8 @@ public void CF_ResetMadeStatus(int client)
 			
 		i++;
 		Format(secName, sizeof(secName), "weapon_%i", i);
-		delete subsection;
 		subsection = weapons.GetSection(secName);
 	}
-
-	delete weapons;
-	delete subsection;
  }
  
  public void CFC_DeleteParticles(int client)
@@ -1312,8 +1292,6 @@ public void CF_ResetMadeStatus(int client)
 		delete subsection;
 		subsection = particles.GetSection(secName);
 	}
-	
-	delete subsection;
  }
  #endif
  
@@ -1349,12 +1327,8 @@ public void CF_ResetMadeStatus(int client)
 		
 		i++;
 		Format(secName, sizeof(secName), "particle_%i", i);
-		delete subsection;
 		subsection = particles.GetSection(secName);
 	}
-	
-	delete particles;
-	delete subsection;
  }
  
  public void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int deadRinger)
@@ -1431,7 +1405,7 @@ public void CF_ResetMadeStatus(int client)
  	CF_GetPlayerConfig(client, conf, sizeof(conf));
  	ConfigMap map = new ConfigMap(conf);
  	float returnVal = GetFloatFromConfigMap(map, "character.health", 0.0);
- 	delete map;
+ 	DeleteCfg(map);
  	return returnVal;
  }
  
@@ -1527,7 +1501,7 @@ public Native_CF_GetCharacterClass(Handle plugin, int numParams)
 	CF_GetPlayerConfig(client, conf, 255);
 	ConfigMap map = new ConfigMap(conf);
 	int num = GetIntFromConfigMap(map, "character.class", 0);
-	delete map;
+	DeleteCfg(map);
 	
 	if (num == 0)
 	{
@@ -1551,7 +1525,7 @@ public Native_CF_GetCharacterUsingViewChange(Handle plugin, int numParams)
 	CF_GetPlayerConfig(client, conf, 255);
 	ConfigMap map = new ConfigMap(conf);
 	int num = GetIntFromConfigMap(map, "character.use_viewchange", 0);
-	delete map;
+	DeleteCfg(map);
 	
 	return num;
 }

@@ -239,7 +239,6 @@ public bool CFA_InitializeUltimate(int client, ConfigMap map)
 		b_CharacterHasUlt[client] = false;
 	}
 	
-	delete subsection;
 	return b_CharacterHasUlt[client];
 }
 
@@ -271,7 +270,6 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map)
 		b_HasM2[client] = false;
 	}
 	
-	delete subsection;
 	subsection = map.GetSection("character.m3_ability");
 	if (subsection != null)
 	{
@@ -292,7 +290,6 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map)
 		b_HasM3[client] = false;
 	}
 	
-	delete subsection;
 	subsection = map.GetSection("character.reload_ability");
 	if (subsection != null)
 	{
@@ -313,7 +310,6 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map)
 		b_HasReload[client] = false;
 	}
 	
-	delete subsection;
 	if (!AtLeastOne)
 		b_UsingResources[client] = false;
 	
@@ -357,8 +353,6 @@ public void CFA_InitializeResources(int client, ConfigMap map)
 	{
 		b_UsingResources[client] = false;
 	}
-	
-	delete subsection;
 }
 
 public void CFA_ToggleHUD(int client, bool toggle)
@@ -992,7 +986,6 @@ public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
 		return;
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
-	delete map;
 	if (abilities == null)
 		return;
 		
@@ -1013,12 +1006,10 @@ public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
 		
 		i++;
 		Format(secName, sizeof(secName), "ability_%i", i);
-		delete subsection;
 		subsection = abilities.GetSection(secName);
 	}
 	
-	delete abilities;
-	delete subsection;
+	DeleteCfg(map);
 }
 
 public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
@@ -1065,7 +1056,6 @@ public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
 		
 		i++;
 		Format(secName, sizeof(secName), "ability_%i", i);
-		delete subsection;
 		subsection = abilities.GetSection(secName);
 	}
 	
@@ -1085,8 +1075,7 @@ public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
 		}
 	}
 	
-	delete abilities;
-	delete subsection;
+	DeleteCfg(map);
 }
 
 public Native_CF_EndHeldAbility(Handle plugin, int numParams)

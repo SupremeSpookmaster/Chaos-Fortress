@@ -91,8 +91,7 @@ public void CF_OnPluginStart()
  */
  public void CF_SetGameRules(int admin)
  { 	
- 	delete GameRules;
- 		
+ 	DeleteCfg(GameRules);
  	GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 
 	if (GameRules == null)
@@ -127,7 +126,6 @@ public void CF_OnPluginStart()
 	    PrintToServer("Display Role: %i", view_as<int>(b_DisplayRole));
 	    #endif
 	}
-	delete subsection;
 	
 	subsection = GameRules.GetSection("game_rules.killstreak_settings");
 	if (subsection != null)
@@ -154,15 +152,14 @@ public void CF_OnPluginStart()
 	    PrintToServer("Killstreaks Are Godlike At: %i Kill(s)", godlike);
 	    #endif
 	}
-	delete subsection;
+	
+	DeleteCfg(GameRules);
 	
 	#if defined DEBUG_GAMERULES
 	PrintToServer("//////////////////////////////////////////////");
 	PrintToServer("CHAOS FORTRESS GAME_RULES DEBUG MESSAGES ABOVE");
 	PrintToServer("//////////////////////////////////////////////");
 	#endif
-	
-    //delete kv;
  }
  
 /**
