@@ -1132,6 +1132,12 @@ public void CF_ResetMadeStatus(int client)
  public void CFC_GiveWeapons(int client, ConfigMap weapons)
  {
  	TF2_RemoveAllWeapons(client);
+ 	
+ 	for (int i = 1; i <= 5; i++)	//Extra security measure. Also guarantees items like engineer's PDAs and spy's sapper get removed, which TF2_RemoveAllWeapons does not do.
+ 	{
+ 		TF2_RemoveWeaponSlot(client, i);
+ 	}
+ 	
 		
 	int i = 1;
 	char secName[255];
@@ -1441,7 +1447,18 @@ public Native_CF_AttachParticle(Handle plugin, int numParams)
 	float yOff = GetNativeCell(6);
 	float zOff = GetNativeCell(7);
 		
-	int particle = AttachParticleToEntity(client, partName, point, lifespan, xOff, yOff, zOff);
+	
+	int particle;  
+	
+	if (CF_GetCharacterUsingViewChange(client))
+	{
+		particle = AttachParticleToEntity_ViewChange(client, partName, point, lifespan, xOff, yOff, zOff);
+	}
+	else
+	{
+		particle = AttachParticleToEntity(client, partName, point, lifespan, xOff, yOff, zOff);
+	}
+	
 	if (IsValidEntity(particle))
 	{
 		SetEdictFlags(particle, GetEdictFlags(particle)&(~FL_EDICT_ALWAYS));

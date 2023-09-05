@@ -139,6 +139,57 @@ void ViewChange_PlayerModel(int client)
 	}
 }
 
+stock int AttachParticleToEntity_ViewChange(int entity, char type[255], char point[255], float duration = 0.0, float xOff = 0.0, float yOff = 0.0, float zOff = 0.0)
+{
+	int ReturnValue = -1;
+	
+	if (!IsValidClient(entity))
+		return -1;
+		
+	entity = EntRefToEntIndex(i_Viewmodel_PlayerModel[entity]);
+	
+	if (IsValidEntity(entity))
+	{
+		int part1 = CreateEntityByName("info_particle_system");
+		if (IsValidEdict(part1))
+		{
+			ReturnValue = part1;
+			
+			float pos[3];
+			if (HasEntProp(entity, Prop_Data, "m_vecAbsOrigin"))
+			{
+				GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", pos);
+			}
+			else if (HasEntProp(entity, Prop_Send, "m_vecOrigin"))
+			{
+				GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+			}
+			
+			pos[0] += xOff;
+			pos[1] += yOff;
+			pos[2] += zOff;
+			
+			TeleportEntity(part1, pos, NULL_VECTOR, NULL_VECTOR);
+			DispatchKeyValue(part1, "effect_name", type);
+			SetVariantString("!activator");
+			AcceptEntityInput(part1, "SetParent", entity, part1);
+			SetVariantString(point);
+			AcceptEntityInput(part1, "SetParentAttachmentMaintainOffset", part1, part1);
+			DispatchKeyValue(part1, "targetname", "present");
+			DispatchSpawn(part1);
+			ActivateEntity(part1);
+			AcceptEntityInput(part1, "Start");
+			
+			if (duration > 0.0)
+			{
+				CreateTimer(duration, Timer_RemoveEntity, EntIndexToEntRef(part1), TIMER_FLAG_NO_MAPCHANGE);
+			}
+		}
+	}
+	
+	return ReturnValue;
+}
+
 void ViewChange_DeleteAll(int client)
 {
 	if (!IsValidClient(client))

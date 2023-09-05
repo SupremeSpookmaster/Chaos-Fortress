@@ -187,3 +187,11 @@ stock void SetClip(int client, int weapon, int newAmmo)
 	}
 }
 //Above is borrowed from DarthNinja
+
+//Don't let characters who just happen to be spies or engineers have sappers or PDAs.
+public Action TF2Items_OnGiveNamedItem(client, String:classname[], iItemDefinitionIndex, &Handle:hItem)
+{
+    switch (iItemDefinitionIndex)
+    {    case 735, 736, 810, 831, 933, 1080, 1102, 25, 26, 28, 737: return Plugin_Handled;    }
+    return Plugin_Continue;
+}

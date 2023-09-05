@@ -391,7 +391,6 @@ public Action CF_OnPlayerM2(int client, int &buttons, int &impulse, int &weapon)
 		
 	if (b_M2IsHeld[client])
 	{
-		CPrintToChat(client, "You attempted to use a held M2 ability.");
 		CF_AttemptHeldAbility(client, CF_AbilityType_M2, IN_ATTACK2);
 	}
 	else
@@ -497,7 +496,6 @@ public void CF_AttemptHeldAbility(int client, CF_AbilityType type, int button)
 	else
 	{
 		Nope(client);
-		CPrintToChat(client, "The forward blocked it.");
 	}
 }
 
@@ -699,7 +697,6 @@ public bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type)
 {
 	if (CF_GetAbilityCooldown(client, type) > 0.0)
 	{
-		CPrintToChat(client, "It was on cooldown.");
 		return false;
 	}
 		
@@ -729,7 +726,6 @@ public bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type)
 		
 		if (cost > available)
 		{
-			CPrintToChat(client, "You were short on resources.");
 			return false;
 		}
 	}
