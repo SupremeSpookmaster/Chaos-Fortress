@@ -28,10 +28,10 @@
 //			- Spawn a phys prop at the fake weapon wearable's location when the player dies and copy the wearable's model index, then delete the wearable.
 //	- MINOR BUG: Melee weapons which use viewchange have a noticeable delay of roughly ~0.5s before viewchange gets applied. This doesn't affect gameplay and is only visible in first person view, but is EXTREMELY ugly.
 //			- No known fix.
-//	- MINOR BUG: You can pick up ammo even if your held weapon is at max capacity. Also, ammo pickups only fill your active weapon, and you cannot pick up ammo if you are not holding a gun. This DOES affect gameplay, but not to a major extent.
+//	- MINOR BUG: You can pick up ammo even if your held weapon is at max capacity, but only sometimes??? Also, ammo pickups only fill your active weapon, and you cannot pick up ammo if you are not holding a gun. This DOES affect gameplay, but not to a major extent.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
-//	- None! For now, at least.
+//	- MAJOR BUG: The "You spawned as: X!" and "You switched to: X!" HUD messages do not always show up.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

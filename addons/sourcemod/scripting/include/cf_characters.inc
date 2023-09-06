@@ -1054,8 +1054,9 @@ public void CF_ResetMadeStatus(int client)
 	
 	bool useVC = GetBoolFromConfigMap(map, "character.use_viewchange", false);
 	
-	char model[255];
+	char model[255], name[255];
 	map.Get("character.model", model, sizeof(model));
+	map.Get("character.name", name, sizeof(name));
 	f_Speed[client] = GetFloatFromConfigMap(map, "character.speed", 300.0);
 	if (CheckFile(model))
 	{
@@ -1099,7 +1100,7 @@ public void CF_ResetMadeStatus(int client)
 	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
 	TF2_SetPlayerClass(client, Classes[class]);
 	CF_UpdateCharacterHP(client, Classes[class - 1], true);
-	CF_UpdateCharacterSpeed(client, Classes[class - 1]);
+	CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
 	
 	if (useVC)
 	{
@@ -1112,8 +1113,6 @@ public void CF_ResetMadeStatus(int client)
 		CFC_AttachParticles(client, particles);
 		//delete particles;
 	}
-	
- 	b_CharacterApplied[client] = true;
  	
  	if (!StrEqual(conf, s_PreviousCharacter[client]))	//We are respawning as a new character, default to spawn_intro
  	{
@@ -1125,12 +1124,35 @@ public void CF_ResetMadeStatus(int client)
  		//TODO: sound_spawn_happy, sound_spawn_neutral, sound_spawn_angry
  	}
  	
+ 	int r = 255;
+ 	int b = 120;
+ 	if (TF2_GetClientTeam(client) == TFTeam_Blue)
+ 	{
+ 		b = 255;
+ 		r = 120;
+ 	}
+ 	
+ 	SetHudTextParams(-1.0, 0.33, 5.0, r, 120, b, 255, 0, 5.0, 0.8, 0.4);
+ 	
+ 	if (b_IsDead[client] || !b_CharacterApplied[client])
+ 	{
+ 		ShowHudText(client, -1, "You spawned as: %s!", name);
+ 		CPrintToChat(client, "Attempted to display: ''You spawned as: %s!''", name);
+ 	}
+ 	else if (!StrEqual(conf, s_PreviousCharacter[client]))
+ 	{
+ 		ShowHudText(client, -1, "You switched to: %s!", name);
+ 		CPrintToChat(client, "Attempted to display: ''You switched to: %s!''", name);
+ 	}
+ 	
  	bool hasUlt = CFA_InitializeUltimate(client, map);
  	bool hasAbilities = CFA_InitializeAbilities(client, map);
  	
  	CFA_ToggleHUD(client, hasUlt || hasAbilities);
  	
+ 	b_CharacterApplied[client] = true;
  	b_IsDead[client] = false;
+ 	s_PreviousCharacter[client] = conf;
  	
  	DeleteCfg(map);
  	DeleteCfg(GameRules);
