@@ -221,13 +221,14 @@ public void CF_OnPluginStart()
  {
  	i_CFRoundState = state;
  	
- 	if (state == 0)
+ 	//This breaks character particles. The goal was to reset everybody's character stats, which is easy but man I'm tired so I'll do it the right way later.
+ 	/*if (state == 0)
  	{
  		for (int i = 1; i <= MaxClients; i++)
  		{
  			CF_UnmakeCharacter(i, false);
  		}
- 	}
+ 	}*/
  	
  	Call_StartForward(g_OnRoundStateChanged);
  	

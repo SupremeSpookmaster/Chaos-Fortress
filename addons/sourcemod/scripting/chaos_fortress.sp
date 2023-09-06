@@ -7,6 +7,8 @@
 //#define DEBUG_SOUNDS
 //#define USE_PREVIEWS
 
+//#define TESTING
+
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Everything that happens on client disconnect.
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
@@ -26,9 +28,10 @@
 //			- Spawn a phys prop at the fake weapon wearable's location when the player dies and copy the wearable's model index, then delete the wearable.
 //	- MINOR BUG: Melee weapons which use viewchange have a noticeable delay of roughly ~0.5s before viewchange gets applied. This doesn't affect gameplay and is only visible in first person view, but is EXTREMELY ugly.
 //			- No known fix.
+//	- MINOR BUG: You can pick up ammo even if your held weapon is at max capacity. Also, ammo pickups only fill your active weapon, and you cannot pick up ammo if you are not holding a gun. This DOES affect gameplay, but not to a major extent.
 //
-//	- MAJOR BUGS (bugs which impact gameplay or character creation in any way, no matter how small):
-//	- MAJOR BUG: For some reason, particles are suddenly broken??? Not everyone spawns with their character's particles attached. They were working before today, I don't know what I did that could have broken them.
+//	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
+//	- None! For now, at least.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

@@ -450,10 +450,11 @@ native bool CF_IsPlayerCharacter(int client);
  * @param visible		Should the weapon be visible?
  * @param unequip		Should whichever weapon(s) currently in this weapon's slot be removed before equipping this weapon?
  * @param ForceClass	Class to force this weapon to use the animations of, if using ViewChange. 1-9 for the mercs, anything above 9 is considered all-class.
+ * @param spawn			If true, ammo is applied one frame later instead of instantly so it doesn't interfere with the resupply event.
  *
  * @return The entity index of the spawned weapon, -1 if not valid.
  */
-native int CF_SpawnWeapon(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255] = "", bool visible = true, bool unequip = true, int ForceClass = 0);
+native int CF_SpawnWeapon(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255] = "", bool visible = true, bool unequip = true, int ForceClass = 0, bool spawn = false);
 
 /**
  * Gets the class of the player's current character.
@@ -520,18 +521,20 @@ native int CF_AttachWearable(int client, int index, bool visible, int paint, int
  *						CF_ResourceType_Healing: directly adds "coefficient" * on_heal to the user's current ult charge.
  *						CF_ResourceType_Kill: directly adds "coefficient" * on_kill to the user's current ult charge.
  *						CF_ResourceType_Percentage: directly fills the user's ult charge by "coefficient"-percent. IE 0.2 would fill ult charge by 20%.
+ * @param IgnoreCD		If set to true, the ult charge is given even if the user's ultimate is on cooldown.
  *
  */
-native CF_GiveUltCharge(int client, float coefficient, CF_ResourceType ResourceType = CF_ResourceType_Generic);
+native CF_GiveUltCharge(int client, float coefficient, CF_ResourceType ResourceType = CF_ResourceType_Generic, bool IgnoreCD = false);
 
 /**
  * Sets a client's ult charge.
  *
  * @param client		The client to set the ult charge of.
  * @param amt			The new ult charge.
+ * @param IgnoreCD		If set to true, the ult charge is given even if the user's ultimate is on cooldown.
  *
  */
-native CF_SetUltCharge(int client, float amt);
+native CF_SetUltCharge(int client, float amt, bool IgnoreCD = false);
 
 /**
  * Gets a client's ult charge.

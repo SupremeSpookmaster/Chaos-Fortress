@@ -41,12 +41,13 @@ public Native_CF_SpawnWeapon(Handle plugin, int numParams)
  	bool unequip = GetNativeCell(12) != 0;
  	bool useVC = CF_GetCharacterUsingViewChange(client);
  	int ForceClass = GetNativeCell(13);
+ 	bool spawn = GetNativeCell(14);
  	
- 	return SpawnWeapon_Special(client, name, index, level, qual, slot, reserve, clip, att, override, visible, unequip, useVC, ForceClass);
+ 	return SpawnWeapon_Special(client, name, index, level, qual, slot, reserve, clip, att, override, visible, unequip, useVC, ForceClass, spawn);
  }
 
 //Credit to Artvin and Batfoxkid for this, I just took it from Zombie Riot and modified some things.
-stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255], bool visible, bool unequip, bool useVC, int ForceClass)
+stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255], bool visible, bool unequip, bool useVC, int ForceClass, bool spawn)
 {
 	if(StrEqual(name, "saxxy", false))	// if "saxxy" is specified as the name, replace with appropiate name
 	{ 
@@ -142,8 +143,33 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 	
 	if (slot < 2)
 	{
+		#if defined TESTING
+		
 		SetAmmo(client, entity, reserve);
 		SetClip(client, entity, clip);
+		
+		#else
+
+		//The following functionality completely obliterates bots and makes them constantly swarm the resupply locker.
+		//This causes them to constantly have their character recreated. For just one client? This is no issue.
+		//20+ bots all doing it at the same time? Say goodbye to your server performance.
+		//I don't intend to make CF work with bots, so I won't bother fixing this myself, but it DOES make testing very difficult, hence the #if defined TESTING.
+		if (!spawn)
+		{
+			SetAmmo(client, entity, reserve);
+			SetClip(client, entity, clip);
+		}
+		else
+		{
+			DataPack pack = new DataPack();
+			RequestFrame(CFW_GiveAmmoOnDelay, pack);
+			WritePackCell(pack, GetClientUserId(client));
+			WritePackCell(pack, EntIndexToEntRef(entity));
+			WritePackCell(pack, reserve);
+			WritePackCell(pack, clip);
+		}
+		
+		#endif
 	}
 	
 	if (ForceClass > 0 && useVC)
@@ -152,6 +178,22 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 	}
 	
 	return entity;
+}
+
+public void CFW_GiveAmmoOnDelay(DataPack pack)
+{
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	int weapon = EntRefToEntIndex(ReadPackCell(pack));
+	int reserve = ReadPackCell(pack);
+	int clip = ReadPackCell(pack);
+	delete pack;
+	
+	if (!IsValidClient(client) || !IsValidEntity(weapon))
+		return;
+		
+	SetAmmo(client, weapon, reserve);
+	SetClip(client, weapon, clip);
 }
 
 //Below is borrowed from DarthNinja

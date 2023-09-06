@@ -373,7 +373,7 @@ public void CFA_ReduceUltCharge_CharacterSwitch(int client)
 	if (newCharge > f_UltCharge[client])
 		newCharge = f_UltCharge[client];
 		
-	CF_SetUltCharge(client, newCharge);
+	CF_SetUltCharge(client, newCharge, true);
 }
 
 public void CFA_ToggleHUD(int client, bool toggle)
@@ -519,15 +519,6 @@ public Action CFA_HeldM2PreThink(int client)
 	
 	if (!b_HoldingM2[client])
 	{
-		Call_StartForward(g_OnHeldEnd);
-		
-		Call_PushCell(client);
-		Call_PushCell(CF_AbilityType_M2);
-		
-		Call_Finish();
-		
-		CF_EndHeldAbilitySlot(client, 2);
-		
 		CF_ApplyAbilityCooldown(client, f_M2CD[client], CF_AbilityType_M2, true);
 		if (b_UsingResources[client])
 		{
@@ -543,6 +534,16 @@ public Action CFA_HeldM2PreThink(int client)
 		
 		CF_PlayRandomSound(client, "", "sound_heldend_m2");
 		b_ForceEndHeldM2[client] = false;
+		
+		Call_StartForward(g_OnHeldEnd);
+		
+		Call_PushCell(client);
+		Call_PushCell(CF_AbilityType_M2);
+		
+		Call_Finish();
+		
+		CF_EndHeldAbilitySlot(client, 2);
+		
 		SDKUnhook(client, SDKHook_PreThink, CFA_HeldM2PreThink);
 	}
 	
@@ -556,15 +557,6 @@ public Action CFA_HeldM3PreThink(int client)
 	
 	if (!b_HoldingM3[client])
 	{
-		Call_StartForward(g_OnHeldEnd);
-		
-		Call_PushCell(client);
-		Call_PushCell(CF_AbilityType_M3);
-		
-		Call_Finish();
-		
-		CF_EndHeldAbilitySlot(client, 3);
-		
 		CF_ApplyAbilityCooldown(client, f_M3CD[client], CF_AbilityType_M3, true);
 		if (b_UsingResources[client])
 		{
@@ -580,6 +572,16 @@ public Action CFA_HeldM3PreThink(int client)
 		
 		CF_PlayRandomSound(client, "", "sound_heldend_m3");
 		b_ForceEndHeldM3[client] = false;
+		
+		Call_StartForward(g_OnHeldEnd);
+		
+		Call_PushCell(client);
+		Call_PushCell(CF_AbilityType_M3);
+		
+		Call_Finish();
+		
+		CF_EndHeldAbilitySlot(client, 3);
+		
 		SDKUnhook(client, SDKHook_PreThink, CFA_HeldM3PreThink);
 	}
 	
@@ -592,15 +594,6 @@ public Action CFA_HeldReloadPreThink(int client)
 	
 	if (!b_HoldingReload[client])
 	{
-		Call_StartForward(g_OnHeldEnd);
-		
-		Call_PushCell(client);
-		Call_PushCell(CF_AbilityType_Reload);
-		
-		Call_Finish();
-		
-		CF_EndHeldAbilitySlot(client, 4);
-		
 		CF_ApplyAbilityCooldown(client, f_ReloadCD[client], CF_AbilityType_Reload, true);
 		if (b_UsingResources[client])
 		{
@@ -616,6 +609,16 @@ public Action CFA_HeldReloadPreThink(int client)
 		
 		CF_PlayRandomSound(client, "", "sound_heldend_reload");
 		b_ForceEndHeldReload[client] = false;
+		
+		Call_StartForward(g_OnHeldEnd);
+		
+		Call_PushCell(client);
+		Call_PushCell(CF_AbilityType_Reload);
+		
+		Call_Finish();
+		
+		CF_EndHeldAbilitySlot(client, 4);
+		
 		SDKUnhook(client, SDKHook_PreThink, CFA_HeldReloadPreThink);
 	}
 	
@@ -756,6 +759,10 @@ public Native_CF_GiveUltCharge(Handle plugin, int numParams)
 		
 	float amt = GetNativeCell(2);
 	CF_ResourceType type = GetNativeCell(3);
+	bool IgnoreCD = GetNativeCell(4);
+	
+	if (CF_GetAbilityCooldown(client, CF_AbilityType_Ult) > 0.0 && !IgnoreCD)
+		return;
 	
 	if (type != CF_ResourceType_Generic)
 	{
@@ -799,6 +806,11 @@ public Native_CF_SetUltCharge(Handle plugin, int numParams)
 		return;
 		
 	float amt = GetNativeCell(2);
+	
+	bool IgnoreCD = GetNativeCell(3);
+	
+	if (CF_GetAbilityCooldown(client, CF_AbilityType_Ult) > 0.0 && !IgnoreCD)
+		return;
 	
 	if (amt < 0.0)
 		amt = 0.0;

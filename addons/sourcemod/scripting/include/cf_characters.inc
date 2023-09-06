@@ -49,6 +49,19 @@ public const float f_ClassBaseHP[] =
 	125.0
 };
 
+public const float f_ClassBaseSpeed[] =
+{
+	400.0,
+	240.0,
+	300.0,
+	280.0,
+	230.0,
+	300.0,
+	320.0,
+	300.0,
+	320.0
+};
+
 //Store configs and names in two separate arrays so we aren't reading every single character's config every single time someone opens the !characters menu:
 Handle CF_Characters_Configs;
 Handle CF_Characters_Names;
@@ -87,6 +100,8 @@ char s_DefaultCharacter[255];
 Handle c_DesiredCharacter;
 
 Queue g_CharacterParticles[MAXPLAYERS + 1];
+
+float f_Speed[MAXPLAYERS + 1];
 
 public void CFC_MakeNatives()
 {
@@ -992,9 +1007,16 @@ public void CF_ResetMadeStatus(int client)
 
 	char conf[255];
 	GetClientCookie(client, c_DesiredCharacter, conf, sizeof(conf));
-	if (StrEqual(conf, ""))
+	if (!CF_CharacterExists(conf))
 	{
-		conf = s_DefaultCharacter;
+		if (!CF_CharacterExists(s_DefaultCharacter) || IsFakeClient(client))
+		{
+			GetArrayString(CF_Characters_Configs, GetRandomInt(0, GetArraySize(CF_Characters_Configs) - 1), conf, sizeof(conf));
+		}
+		else
+		{
+			conf = s_DefaultCharacter;
+		}
 	}
 	
 	ConfigMap map = new ConfigMap(conf);
@@ -1034,6 +1056,7 @@ public void CF_ResetMadeStatus(int client)
 	
 	char model[255];
 	map.Get("character.model", model, sizeof(model));
+	f_Speed[client] = GetFloatFromConfigMap(map, "character.speed", 300.0);
 	if (CheckFile(model))
 	{
 		if (!useVC)
@@ -1076,6 +1099,7 @@ public void CF_ResetMadeStatus(int client)
 	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
 	TF2_SetPlayerClass(client, Classes[class]);
 	CF_UpdateCharacterHP(client, Classes[class - 1], true);
+	CF_UpdateCharacterSpeed(client, Classes[class - 1]);
 	
 	if (useVC)
 	{
@@ -1125,6 +1149,23 @@ public void CF_ResetMadeStatus(int client)
  	Call_PushCell(client);
  	
  	Call_Finish();
+ }
+ 
+ public bool CF_CharacterExists(char conf[255])
+ {
+ 	if (StrEqual(conf, ""))
+ 		return false;
+ 		
+ 	for (int i = 0; i < GetArraySize(CF_Characters_Configs); i++)
+ 	{
+ 		char item[255];
+ 		GetArrayString(CF_Characters_Configs, i, item, sizeof(item));
+ 		
+ 		if (StrEqual(item, conf))
+ 			return true;
+ 	}
+ 	
+ 	return false;
  }
  
  #if defined USE_PREVIEWS
@@ -1248,7 +1289,7 @@ public void CF_ResetMadeStatus(int client)
 		}
 		bool unequip = GetBoolFromConfigMap(subsection, "unequip", true);
 			
-		int weapon = CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, ForceClass);
+		int weapon = CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, ForceClass, true);
 		if (IsValidEntity(weapon))
 		{
 			subsection.Get("fire_ability", s_WeaponFireAbility[weapon], 255);
@@ -1410,6 +1451,38 @@ public void CF_ResetMadeStatus(int client)
 		RequestFrame(CF_GiveMaxHP, pack);
 		WritePackCell(pack, client);
 		WritePackCell(pack, RoundFloat(maxHP));
+	}
+ }
+ 
+ public void CF_UpdateCharacterSpeed(int client, TFClassType class)
+ {
+ 	if (!IsValidClient(client))
+ 		return;
+ 	
+ 	int num = 0;
+ 	while (Classes[num] != class)
+ 	{
+ 		num++;
+ 	}
+ 	
+ 	if (num > 8)
+ 		return;
+ 	
+ 	//for some bizarre reason, it freaks out and sets the HP to something in the billions if I don't separate these:
+ 	float targSpd = f_Speed[client];
+ 	float baseSpd = f_ClassBaseSpeed[num];
+ 	float speed = targSpd / baseSpd;
+ 	
+ 	TF2Attrib_RemoveByDefIndex(client, 54);
+ 	TF2Attrib_RemoveByDefIndex(client, 107);
+ 	
+	if (speed < 1.0)
+	{
+		TF2Attrib_SetByDefIndex(client, 54, speed);
+	}
+	else
+	{
+		TF2Attrib_SetByDefIndex(client, 107, speed);
 	}
  }
  

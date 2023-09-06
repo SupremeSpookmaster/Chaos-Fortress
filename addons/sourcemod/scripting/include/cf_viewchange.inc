@@ -333,6 +333,7 @@ void ViewChange_Switch(int client, int active, const char[] buffer = "")
 			
 			TF2_SetPlayerClass(client, class, _, false);
 			CF_UpdateCharacterHP(client, class, false);
+			CF_UpdateCharacterSpeed(client, class);
 				
 			ViewChange_UpdateHands(client, CF_GetCharacterClass(client));
 
