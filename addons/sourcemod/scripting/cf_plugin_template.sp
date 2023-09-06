@@ -1,4 +1,4 @@
-#include <cf_include.inc>
+#include <cf_include>
 #include <sdkhooks>
 #include <tf2_stocks>
 

@@ -15,8 +15,6 @@
 
 int i_CFRoundState = 0;						//The current round state.
 
-float f_ChargeRetain = 0.0;
-
 GlobalForward g_OnPlayerKilled;
 GlobalForward g_OnRoundStateChanged;
 
@@ -108,7 +106,7 @@ public void CF_OnPluginStart()
 	{
 	    subsection.Get("default_character", s_DefaultCharacter, 255);
 	    Format(s_DefaultCharacter, sizeof(s_DefaultCharacter), "configs/chaos_fortress/%s.cfg", s_DefaultCharacter);
-	    f_ChargeRetain = GetFloatFromConfigMap(subsection, "charge_retain", 0.0);
+	    CFA_SetChargeRetain(GetFloatFromConfigMap(subsection, "charge_retain", 0.0));
 	    b_DisplayRole = GetBoolFromConfigMap(subsection, "display_role", false);
 	    
 	    if (IsValidClient(admin))
@@ -184,7 +182,7 @@ public void CF_OnPluginStart()
  	if (!deadRinger)
  	{
  		CF_UnmakeCharacter(victim, false);
- 		CFA_PlayerKilled(attacker);
+ 		CFA_PlayerKilled(attacker, victim);
  	}
  	
  	CFKS_PlayerKilled(victim, attacker, deadRinger);

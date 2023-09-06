@@ -58,26 +58,26 @@ ConfigMap Characters;
 Menu CF_CharactersMenu;
 Menu CF_ClientMenu[MAXPLAYERS + 1] = { null, ... };
 
+#if defined USE_PREVIEWS
 int i_CFPreviewModel[MAXPLAYERS + 1] = { -1, ... };
 int i_PreviewOwner[2049] = { -1, ... };
 int i_CFPreviewProp[MAXPLAYERS + 1] = { -1, ... };
 int i_CFPreviewWeapon[MAXPLAYERS + 1] = { -1, ... };
+float f_CFPreviewRotation[MAXPLAYERS + 1] = { 0.0, ... };
+bool b_SpawnPreviewParticleNextFrame[MAXPLAYERS + 1] = { false, ... };
+#endif
+
 int i_CharacterParticleOwner[2049] = { -1, ... };
 int i_CharacterModelIndex[MAXPLAYERS+1];
 
-float f_CFPreviewRotation[MAXPLAYERS + 1] = { 0.0, ... };
-//These would have been so damn cool but there are too many situations in which it just wouldn't look good...
-//int i_CFPreviewStage[MAXPLAYERS + 1] = { -1, ... };
-//int i_CFPreviewCam[MAXPLAYERS + 1] = { -1, ... };
-
 bool b_DisplayRole = true;
 bool b_CharacterApplied[MAXPLAYERS + 1] = { false, ... }; //Whether or not the client's character has been applied to them already. If true: skip MakeCharacter for that client. Set to false automatically on death, round end, disconnect, and if the player changes their character selection.
-bool b_SpawnPreviewParticleNextFrame[MAXPLAYERS + 1] = { false, ... };
 bool b_ReadingLore[MAXPLAYERS + 1] = { false, ... };
 bool b_IsDead[MAXPLAYERS + 1] = { false, ... };
 
 char s_CharacterConfig[MAXPLAYERS+1][255];	//The config currently used for this player's character. If empty: that player is not a character.
 char s_CharacterConfigInMenu[MAXPLAYERS+1][255];	//The config currently used this player's info menu.
+char s_PreviousCharacter[MAXPLAYERS+1][255];
 char s_WeaponFireAbility[2049][255];
 char s_WeaponFirePlugin[2049][255];
 char s_WeaponFireSound[2049][255];
@@ -990,8 +990,7 @@ public void CF_ResetMadeStatus(int client)
  	if (!IsValidClient(client))
  		return;
 
-	char conf[255], currentConf[255];
-	CF_GetPlayerConfig(client, currentConf, sizeof(currentConf));
+	char conf[255];
 	GetClientCookie(client, c_DesiredCharacter, conf, sizeof(conf));
 	if (StrEqual(conf, ""))
 	{
@@ -1003,6 +1002,7 @@ public void CF_ResetMadeStatus(int client)
 		return;
 		
 	CF_SetPlayerConfig(client, conf);
+	SetClientCookie(client, c_DesiredCharacter, conf);
 		
 	ConfigMap GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 		
@@ -1091,9 +1091,10 @@ public void CF_ResetMadeStatus(int client)
 	
  	b_CharacterApplied[client] = true;
  	
- 	if (!StrEqual(conf, currentConf))	//We are respawning as a new character, default to spawn_intro
+ 	if (!StrEqual(conf, s_PreviousCharacter[client]))	//We are respawning as a new character, default to spawn_intro
  	{
- 		CF_PlayRandomSound(client, conf, "sound_spawn"); //This is sound_spawn_intro
+ 		CF_PlayRandomSound(client, conf, "sound_spawn");
+ 		CFA_ReduceUltCharge_CharacterSwitch(client);
  	}
  	else if (b_IsDead[client])
  	{
@@ -1460,6 +1461,7 @@ public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] classname,
  */
  public void CF_UnmakeCharacter(int client, bool isCharacterChange)
  {
+ 	CF_GetPlayerConfig(client, s_PreviousCharacter[client], 255);
  	CF_SetPlayerConfig(client, "");
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKUnhook(client, SDKHook_WeaponSwitchPost, CFDMG_OnTakeDamageAlive);

@@ -7,23 +7,28 @@
 //#define DEBUG_SOUNDS
 //#define USE_PREVIEWS
 
-//	- TO-DO LIST AND ALL CURRENT BUGS:
-//
+//	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Everything that happens on client disconnect.
-//	- TODO: Cookies system.
-//	- TODO: Collision forwards.
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
-//	- TODO: Fix all major bugs, obviously.
 //	- TODO: Figure out why natives that don't return ints are throwing compiler warnings (they still work, the warnings are just annoying).
-//	- TODO: Viewchange system weapon size support.
-//	- TODO: Viewchange system custom hands support, maybe?
 //	- TODO: Detect healing and give resources/ult charge for it.
+//	- TODO: All remaining sound cues.
 //
-//	- MINOR BUG: Switching weapons with viewchange has no transition animation, it is *instant.* This looks ugly, but it isn't horrible and doesn't have a major impact on gameplay (it might make headshots like 10% harder if people abuse it but that's all).
+//	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
+//	- OPTIONAL TODO: Viewchange system weapon size support.
+//	- OPTIONAL TODO: Viewchange system custom hands support.
+//	- OPTIONAL TODO: Collision forwards.
+//
+//	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
+//	- MINOR BUG: Switching weapon classes (IE switching from engineer's wrench to spy's revolver) with viewchange has no transition animation, it is *instant.* This looks ugly, but it isn't horrible and doesn't have a major impact on gameplay (it might make headshots like 10% harder if people abuse it but that's all).
 //			- No known fix.
 //	- MINOR BUG: Characters who use viewchange are still holding their weapons on death. This is ugly and it would be best to make it fall like a phys prop.
+//			- Spawn a phys prop at the fake weapon wearable's location when the player dies and copy the wearable's model index, then delete the wearable.
 //	- MINOR BUG: Melee weapons which use viewchange have a noticeable delay of roughly ~0.5s before viewchange gets applied. This doesn't affect gameplay and is only visible in first person view, but is EXTREMELY ugly.
 //			- No known fix.
+//
+//	- MAJOR BUGS (bugs which impact gameplay or character creation in any way, no matter how small):
+//	- MAJOR BUG: For some reason, particles are suddenly broken??? Not everyone spawns with their character's particles attached. They were working before today, I don't know what I did that could have broken them.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
@@ -169,6 +174,12 @@ public Action CF_ReloadCharacters(int client, int args)
 	
 	return Plugin_Continue;
 }
+
+public void OnClientDisconnect(int client)
+{
+	CF_UnmakeCharacter(client, false);
+}
+
 #if defined DEBUG_ONTAKEDAMAGE
 
 public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,

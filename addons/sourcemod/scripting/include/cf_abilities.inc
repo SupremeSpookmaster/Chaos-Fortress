@@ -23,6 +23,7 @@ float f_ResourcesOnDamage[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ResourcesOnHurt[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ResourcesOnHeal[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ResourcesOnKill[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ChargeRetain = 0.0;
 
 char s_UltName[MAXPLAYERS + 1][255];
 char s_M2Name[MAXPLAYERS + 1][255];
@@ -100,6 +101,7 @@ public void CFA_MapStart()
 
 public Action CFA_HUDTimer(Handle timer)
 {
+	int rState = CF_GetRoundState();
 	for (int client = 1; client <= MaxClients; client++)
 	{
 		if (CF_IsPlayerCharacter(client) && b_UseHUD[client])
@@ -110,7 +112,7 @@ public Action CFA_HUDTimer(Handle timer)
 				
 				if (b_CharacterHasUlt[client])
 				{
-					if (CF_GetAbilityCooldown(client, CF_AbilityType_Ult) < 0.1)
+					if (CF_GetAbilityCooldown(client, CF_AbilityType_Ult) < 0.1 && rState == 1)
 					{
 						CF_GiveUltCharge(client, f_UltChargeOnRegen[client]/10.0, CF_ResourceType_Percentage);
 					}
@@ -120,7 +122,11 @@ public Action CFA_HUDTimer(Handle timer)
 				
 				if (b_UsingResources[client] && !b_ResourceIsUlt[client])
 				{
-					CF_GiveSpecialResource(client, 1.0, CF_ResourceType_Regen);
+					if (rState == 1)
+					{
+						CF_GiveSpecialResource(client, 1.0, CF_ResourceType_Regen);
+					}
+					
 					Format(HUDText, sizeof(HUDText), "%s\n%s: %i/%i\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundFloat(f_Resources[client]), RoundFloat(f_ResourceMax[client]));
 				}
 				
@@ -209,9 +215,9 @@ public Action CFA_HUDTimer(Handle timer)
 	return Plugin_Continue;
 }
 
-public void CFA_PlayerKilled(int attacker)
+public void CFA_PlayerKilled(int attacker, int victim)
 {
-	if (CF_IsPlayerCharacter(attacker))
+	if (CF_IsPlayerCharacter(attacker) && attacker != victim)
 	{
 		CF_GiveSpecialResource(attacker, 1.0, CF_ResourceType_Kill);
 		CF_GiveUltCharge(attacker, 1.0, CF_ResourceType_Kill);
@@ -353,6 +359,21 @@ public void CFA_InitializeResources(int client, ConfigMap map)
 	{
 		b_UsingResources[client] = false;
 	}
+}
+
+public void CFA_SetChargeRetain(float amt)
+{
+	f_ChargeRetain = amt;
+}
+
+public void CFA_ReduceUltCharge_CharacterSwitch(int client)
+{
+	float newCharge = f_UltChargeRequired[client] * f_ChargeRetain;
+	
+	if (newCharge > f_UltCharge[client])
+		newCharge = f_UltCharge[client];
+		
+	CF_SetUltCharge(client, newCharge);
 }
 
 public void CFA_ToggleHUD(int client, bool toggle)

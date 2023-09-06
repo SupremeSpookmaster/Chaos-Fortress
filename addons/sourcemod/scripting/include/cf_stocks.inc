@@ -291,7 +291,7 @@ public bool TraceEntityFilterPlayer_GAT(entity, contentsMask)
 	return entity > MaxClients;
 }
 
-void GetAngleToPoint(int ent, float TargetLoc[3], float DummyAngles[3], const float Output[3], float xOff = 0.0, float yOff = 0.0, float zOff = 0.0)
+stock void GetAngleToPoint(int ent, float TargetLoc[3], float DummyAngles[3], const float Output[3], float xOff = 0.0, float yOff = 0.0, float zOff = 0.0)
 {
 	float ang[3], pos[3], fVecFinal[3], fFinalPos[3];
 
