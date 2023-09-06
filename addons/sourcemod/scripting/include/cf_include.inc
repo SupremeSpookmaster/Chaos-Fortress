@@ -297,6 +297,22 @@ forward void CF_OnHeldEnd(int client, CF_AbilityType type);
  *
  */
 forward void CF_OnHeldEnd_Ability(int client, char pluginName[255], char abilityName[255]);
+
+/**
+ * Called when a player is transformed into a character. This occurs when the player spawns and whenever they resupply.
+ *
+ * @param client			The client who was transformed into a character.
+ *
+ */
+forward void CF_OnCharacterCreated(int client);
+
+/**
+ * Called when a player's character is removed, or they are made to no longer be a character. This occurs when the player dies and whenever the round state changes.
+ *
+ * @param client			The client whose character was removed.
+ *
+ */
+forward void CF_OnCharacterRemoved(int client);
 	
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////

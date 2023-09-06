@@ -223,6 +223,14 @@ public void CF_OnPluginStart()
  {
  	i_CFRoundState = state;
  	
+ 	if (state == 0)
+ 	{
+ 		for (int i = 1; i <= MaxClients; i++)
+ 		{
+ 			CF_UnmakeCharacter(i, false);
+ 		}
+ 	}
+ 	
  	Call_StartForward(g_OnRoundStateChanged);
  	
  	Call_PushCell(state);

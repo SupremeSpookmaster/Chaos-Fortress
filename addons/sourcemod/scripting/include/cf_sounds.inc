@@ -113,15 +113,14 @@ bool CF_PlayRandomSound(int source, char Config[255], char Sound[255], float dam
 		CF_GetPlayerConfig(source, ourConf, sizeof(ourConf));
 	}
 	
-	if (!FileExists(ourConf) && !FileExists(ourConf, true))
-		return false;
-	
 	char snd[255] = ""; char checkFile[255];
 	KeyValType kvType = CF_GetRandomSound(ourConf, Sound, snd);
 	Format(checkFile, sizeof(checkFile), "sound/%s", snd);
 	
 	if (!CheckFile(checkFile))
 		return false;
+		
+	PrecacheSound(snd);
 	
 	switch(kvType)
 	{
@@ -132,9 +131,12 @@ bool CF_PlayRandomSound(int source, char Config[255], char Sound[255], float dam
 		}
 		case KeyValType_Section:
 		{
-			char path[255];
-			Format(path, sizeof(path), "character.sounds.%s.%s", Sound, snd);
-			ReplaceString(path, sizeof(path), ".", "\\.");
+			char path[255], tempSnd[255];
+			
+			tempSnd = snd;
+			ReplaceString(tempSnd, sizeof(tempSnd), ".", "\\.");
+			
+			Format(path, sizeof(path), "character.sounds.%s.%s", Sound, tempSnd);
 			
 			ConfigMap cfgMap = new ConfigMap(ourConf);
 			ConfigMap section = cfgMap.GetSection(path);

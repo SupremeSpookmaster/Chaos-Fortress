@@ -78,6 +78,9 @@ bool b_IsDead[MAXPLAYERS + 1] = { false, ... };
 
 char s_CharacterConfig[MAXPLAYERS+1][255];	//The config currently used for this player's character. If empty: that player is not a character.
 char s_CharacterConfigInMenu[MAXPLAYERS+1][255];	//The config currently used this player's info menu.
+char s_WeaponFireAbility[2049][255];
+char s_WeaponFirePlugin[2049][255];
+char s_WeaponFireSound[2049][255];
 //char s_DesiredCharacterConfig[MAXPLAYERS+1][255];	//The config of the character this player will become next time they spawn.
 char s_DefaultCharacter[255];
 
@@ -98,6 +101,9 @@ public void CFC_MakeNatives()
 	CreateNative("CF_AttachWearable", Native_CF_AttachWearable);
 }
 
+GlobalForward g_OnCharacterCreated;
+GlobalForward g_OnCharacterRemoved;
+
 public void CFC_MakeForwards()
 {
 	CF_Characters_Configs = CreateArray(255);
@@ -111,11 +117,17 @@ public void CFC_MakeForwards()
 	PrecacheModel(MODEL_PREVIEW_STAGE);
 	PrecacheModel(MODEL_PREVIEW_UNKNOWN);
 	PrecacheSound(SOUND_CHARACTER_PREVIEW);
+	
+	g_OnCharacterCreated = new GlobalForward("CF_OnCharacterCreated", ET_Ignore, Param_Cell);
+	g_OnCharacterRemoved = new GlobalForward("CF_OnCharacterRemoved", ET_Ignore, Param_Cell);
 }
 
 public void CFC_OnEntityDestroyed(int entity)
 {
 	i_CharacterParticleOwner[entity] = -1;
+	s_WeaponFireAbility[entity] = "";
+	s_WeaponFirePlugin[entity] = "";
+	s_WeaponFireSound[entity] = "";
 }
 
 /**
@@ -482,7 +494,7 @@ public Action CFC_OpenMenu(int client, int args)
 		
 		if (TF2_GetClientTeam(client) == TFTeam_Red)
 		{
-			int part = SpawnParticle(aimLoc, "teleportedin_red", 2.0); //TODO: This needs to get its render flags adjusted because it is a particle
+			int part = SpawnParticle(aimLoc, "teleportedin_red", 2.0);
 			i_PreviewOwner[part] = GetClientUserId(client);
 			SetEdictFlags(part, GetEdictFlags(part)&(~FL_EDICT_ALWAYS));
 			SDKHook(part, SDKHook_SetTransmit, CF_PreviewModelTransmit);
@@ -583,18 +595,20 @@ public Action CFC_OpenMenu(int client, int args)
  	ConfigMap section = Character.GetSection("character.menu_display");
  	if (section == null)
  	{
- 		Character = new ConfigMap("data/chaos_fortress/game_rules.cfg");
+ 		ConfigMap rules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
  		
- 		if (Character == null)		//Don't bother printing an error to the console because this should get thrown in SetGameRules if it's going to get thrown here, unless someone is deliberately deleting server files in which case that's their own fault.
+ 		if (rules == null)		//Don't bother printing an error to the console because this should get thrown in SetGameRules if it's going to get thrown here, unless someone is deliberately deleting server files in which case that's their own fault.
  			return;
  		
- 		section = Character.GetSection("game_rules.character_defaults.menu_display");
+ 		section = rules.GetSection("game_rules.character_defaults.menu_display");
  		
  		if (section == null)
  		{
  			PrintToServer("ERROR: Character config ''%s'' does not have default menu information, and neither does your game_rules.cfg.");
  			return;
  		}
+ 		
+ 		DeleteCfg(rules);
  	}
  	
  	//Should be impossible to reach this code without a valid section ConfigMap so don't bother doing security checks:
@@ -1104,6 +1118,12 @@ public void CF_ResetMadeStatus(int client)
  	
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
+ 	
+ 	Call_StartForward(g_OnCharacterCreated);
+ 	
+ 	Call_PushCell(client);
+ 	
+ 	Call_Finish();
  }
  
  #if defined USE_PREVIEWS
@@ -1227,8 +1247,14 @@ public void CF_ResetMadeStatus(int client)
 		}
 		bool unequip = GetBoolFromConfigMap(subsection, "unequip", true);
 			
-		CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, ForceClass);
-			
+		int weapon = CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, ForceClass);
+		if (IsValidEntity(weapon))
+		{
+			subsection.Get("fire_ability", s_WeaponFireAbility[weapon], 255);
+			subsection.Get("fire_plugin", s_WeaponFirePlugin[weapon], 255);
+			subsection.Get("fire_sound", s_WeaponFireSound[weapon], 255);
+		}
+		
 		i++;
 		Format(secName, sizeof(secName), "weapon_%i", i);
 		subsection = weapons.GetSection(secName);
@@ -1391,8 +1417,25 @@ public void CF_ResetMadeStatus(int client)
  	ResetPack(pack);
  	int client = ReadPackCell(pack);
  	int hp = ReadPackCell(pack);
+ 	delete pack;
+ 	
  	SetEntProp(client, Prop_Send, "m_iHealth", hp);
  }
+ 
+public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] classname, bool &result)
+{
+	if (!StrEqual(s_WeaponFireAbility[weapon], ""))
+	{
+		CF_DoAbility(client, s_WeaponFirePlugin[weapon], s_WeaponFireAbility[weapon]);
+	}
+	
+	if (!StrEqual(s_WeaponFireSound[weapon], ""))
+	{
+		CF_PlayRandomSound(client, "", s_WeaponFireSound[weapon]);
+	}
+	
+	return Plugin_Continue;
+}
  
  public Native_CF_GetCharacterMaxHealth(Handle plugin, int numParams)
  {
@@ -1417,14 +1460,18 @@ public void CF_ResetMadeStatus(int client)
  */
  public void CF_UnmakeCharacter(int client, bool isCharacterChange)
  {
- 	//TODO: Write the code for this, also write a forward called CF_OnCharacterUnmade and have this call it.
- 	//For now we have this temporary debug code.
  	CF_SetPlayerConfig(client, "");
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKUnhook(client, SDKHook_WeaponSwitchPost, CFDMG_OnTakeDamageAlive);
  	b_CharacterApplied[client] = false;
  	
  	CFC_DeleteParticles(client);
+ 	
+ 	Call_StartForward(g_OnCharacterRemoved);
+ 	
+ 	Call_PushCell(client);
+ 	
+ 	Call_Finish();
  }
  
  public Native_CF_GetPlayerConfig(Handle plugin, int numParams)

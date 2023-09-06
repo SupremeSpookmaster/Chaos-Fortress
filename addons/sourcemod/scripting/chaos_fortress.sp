@@ -24,8 +24,6 @@
 //	- MINOR BUG: Characters who use viewchange are still holding their weapons on death. This is ugly and it would be best to make it fall like a phys prop.
 //	- MINOR BUG: Melee weapons which use viewchange have a noticeable delay of roughly ~0.5s before viewchange gets applied. This doesn't affect gameplay and is only visible in first person view, but is EXTREMELY ugly.
 //			- No known fix.
-//
-//	- MAJOR BUG: The memory leak has been 99% wiped out (and I mean that literally, there is over a 99% reduction in memory usage over the previous version). However, my fix was imperfect, so there are still leaks in some places. I missed a few spots, no clue where, will need to conduct a far more meticulous search at a later point.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
