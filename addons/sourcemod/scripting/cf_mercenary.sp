@@ -1,7 +1,7 @@
 #include <cf_include>
 #include <sdkhooks>
 #include <tf2_stocks>
-#include <spooky_stocks>
+#include <cf_stocks>
 
 #define MERC		"cf_mercenary"
 #define SPRINT		"merc_sprint"
@@ -11,11 +11,6 @@
 #define SPRINT_PARTICLE_BLUE	"scout_dodge_blue"
 
 public void OnMapStart()
-{
-	
-}
-
-public void CF_OnCharacterCreated(int client)
 {
 	
 }
@@ -182,7 +177,9 @@ public void Frag_Throw(int client, char abilityName[255])
 		SetEntPropEnt(grenade, Prop_Send, "m_hOwnerEntity", client);
 		SetEntProp(grenade,    Prop_Send, "m_bCritical", 0);
 		SetEntProp(grenade,    Prop_Send, "m_iTeamNum",     team, 1);
-		SetEntPropFloat(grenade, Prop_Send, "m_flDamage", damage);	//Am I seriously going to need to use fucking dhooks to make a basic in-game entity work like it's supposed to...?
+		SetEntPropFloat(grenade, Prop_Send, "m_flDamage", damage);
+		int offs = FindSendPropInfo("CTFGrenadePipebombProjectile", "m_bDefensiveBomb") - 4;
+		SetEntDataFloat(grenade, offs, damage);
 		SetEntData(grenade, FindSendPropInfo("CTFGrenadePipebombProjectile", "m_nSkin"), (team-2), 1, true);
 		
 		DispatchSpawn(grenade);

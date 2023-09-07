@@ -15,6 +15,7 @@
 //	- TODO: Figure out why natives that don't return ints are throwing compiler warnings (they still work, the warnings are just annoying).
 //	- TODO: Detect healing and give resources/ult charge for it.
 //	- TODO: All remaining sound cues.
+//	- TODO: Temporary weapon spawning, IE spawn a minigun and then go back to your normal guns after X seconds.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- OPTIONAL TODO: Viewchange system weapon size support.

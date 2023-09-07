@@ -971,3 +971,63 @@ stock int CreateWearable(int client, int itemindex, char atts[255] = "", int pai
 	
 	return hat;
 } 
+
+bool SpookPack_Casting[MAXPLAYERS+1] = {false, ...};
+
+stock void SpookPack_CastEffect(int client)
+{
+	if (!IsValidMulti(client, true, true, false))
+		return;
+		
+	TF2_RemoveWeaponSlot(client, 5);
+	int spellbook = CF_SpawnWeapon(client, "tf_weapon_spellbook", 1070, 100, 5, 5, 0, 0, "178 ; 0.0");
+	SpookPack_Casting[client] = true;
+	FakeClientCommand(client, "use tf_weapon_spellbook");
+			
+	SetEntProp(spellbook, Prop_Send, "m_iSpellCharges", 1);
+	SetEntProp(spellbook, Prop_Send, "m_iSelectedSpellIndex", 0);	
+	CreateTimer(0.3, delete_spellbook, client, TIMER_FLAG_NO_MAPCHANGE);
+}
+
+public void SpookPack_OnEntityCreated(int entity, const char[] classname)
+{
+	if (StrContains(classname, "fireball") != -1)
+	{
+		SDKHook(entity, SDKHook_SpawnPost, DeleteFireball);
+	}
+}
+
+public Action DeleteFireball(int ent)
+{
+	if (!IsValidEdict(ent))
+		return Plugin_Continue;
+		
+	int owner = GetEntPropEnt(ent, Prop_Send, "m_hOwnerEntity");
+	if (SpookPack_Casting[owner])
+	{
+		TeleportEntity(ent, OFF_THE_MAP, NULL_VECTOR, NULL_VECTOR);
+		AcceptEntityInput(ent, "Kill");
+		RemoveEntity(ent);
+		SpookPack_Casting[owner] = false;
+	}
+	
+	return Plugin_Continue;
+}
+
+public Action delete_spellbook(Handle Fusion_delete_spellbook_handle, int client)
+{
+	if (IsValidClient(client))
+	{
+		int melee = GetPlayerWeaponSlot(client, 2);
+		if (IsValidEdict(melee))
+		{
+			char weapon[255], command[255];
+			GetEntityClassname(melee, weapon, 255);
+			Format(command, sizeof(command), "use %s", weapon);
+			FakeClientCommand(client, command);
+			TF2_RemoveWeaponSlot(client, 5);
+		}
+	}	
+	
+	return Plugin_Continue;
+}
