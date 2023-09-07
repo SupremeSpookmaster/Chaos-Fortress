@@ -29,9 +29,10 @@
 //	- MINOR BUG: Melee weapons which use viewchange have a noticeable delay of roughly ~0.5s before viewchange gets applied. This doesn't affect gameplay and is only visible in first person view, but is EXTREMELY ugly.
 //			- No known fix.
 //	- MINOR BUG: You can pick up ammo even if your held weapon is at max capacity, but only sometimes??? Also, ammo pickups only fill your active weapon, and you cannot pick up ammo if you are not holding a gun. This DOES affect gameplay, but not to a major extent.
+//	- MINOR BUG: For some reason, player ragdolls get equipped with some weird plaid cosmetic that I think is a heavy misc???????????????????????????
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
-//	- MAJOR BUG: The "You spawned as: X!" and "You switched to: X!" HUD messages do not always show up.
+//	- None, for now.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

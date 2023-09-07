@@ -72,6 +72,11 @@ public void CFA_MakeNatives()
 	CreateNative("CF_ActivateAbilitySlot", Native_CF_ActivateAbilitySlot);
 	CreateNative("CF_EndHeldAbilitySlot", Native_CF_EndHeldAbilitySlot);
 	CreateNative("CF_EndHeldAbility", Native_CF_EndHeldAbility);
+	CreateNative("CF_HasAbility", Native_CF_HasAbility);
+	CreateNative("CF_GetArgI", Native_CF_GetArgI);
+	CreateNative("CF_GetArgF", Native_CF_GetArgF);
+	CreateNative("CF_GetArgS", Native_CF_GetArgS);
+	CreateNative("CF_GetAbilitySlot", Native_CF_GetAbilitySlot);
 }
 
 public void CFA_MakeForwards()
@@ -261,7 +266,7 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map)
 	{
 		subsection.Get("name", s_M2Name[client], 255);
 		f_M2CD[client] = GetFloatFromConfigMap(subsection, "cooldown", 0.0);
-		CF_ApplyAbilityCooldown(client, GetFloatFromConfigMap(subsection, "starting_cd", 0.0), CF_AbilityType_M2, true);
+		CF_ApplyAbilityCooldown(client, GetFloatFromConfigMap(subsection, "starting_cd", 0.0), CF_AbilityType_M2, true, false);
 		b_M2IsHeld[client] = GetBoolFromConfigMap(subsection, "held", false);
 		if (b_UsingResources[client])
 		{
@@ -281,7 +286,7 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map)
 	{
 		subsection.Get("name", s_M3Name[client], 255);
 		f_M3CD[client] = GetFloatFromConfigMap(subsection, "cooldown", 0.0);
-		CF_ApplyAbilityCooldown(client, GetFloatFromConfigMap(subsection, "starting_cd", 0.0), CF_AbilityType_M3, true);
+		CF_ApplyAbilityCooldown(client, GetFloatFromConfigMap(subsection, "starting_cd", 0.0), CF_AbilityType_M3, true, false);
 		b_M3IsHeld[client] = GetBoolFromConfigMap(subsection, "held", false);
 		if (b_UsingResources[client])
 		{
@@ -301,7 +306,7 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map)
 	{
 		subsection.Get("name", s_ReloadName[client], 255);
 		f_ReloadCD[client] = GetFloatFromConfigMap(subsection, "cooldown", 0.0);
-		CF_ApplyAbilityCooldown(client, GetFloatFromConfigMap(subsection, "starting_cd", 0.0), CF_AbilityType_Reload, true);
+		CF_ApplyAbilityCooldown(client, GetFloatFromConfigMap(subsection, "starting_cd", 0.0), CF_AbilityType_Reload, true, false);
 		b_ReloadIsHeld[client] = GetBoolFromConfigMap(subsection, "held", false);
 		if (b_UsingResources[client])
 		{
@@ -484,6 +489,7 @@ public void CF_AttemptHeldAbility(int client, CF_AbilityType type, int button)
 				soundSlot = "sound_heldstart_m2";
 				SDKUnhook(client, SDKHook_PreThink, CFA_HeldM2PreThink);
 				SDKHook(client, SDKHook_PreThink, CFA_HeldM2PreThink);
+				b_ForceEndHeldM2[client] = false;
 				b_HoldingM2[client] = true;
 			}
 			case CF_AbilityType_M3:
@@ -492,6 +498,7 @@ public void CF_AttemptHeldAbility(int client, CF_AbilityType type, int button)
 				soundSlot = "sound_heldstart_m3";
 				SDKUnhook(client, SDKHook_PreThink, CFA_HeldM3PreThink);
 				SDKHook(client, SDKHook_PreThink, CFA_HeldM3PreThink);
+				b_ForceEndHeldM3[client] = false;
 				b_HoldingM3[client] = true;
 			}
 			case CF_AbilityType_Reload:
@@ -500,6 +507,7 @@ public void CF_AttemptHeldAbility(int client, CF_AbilityType type, int button)
 				soundSlot = "sound_heldstart_reload";
 				SDKUnhook(client, SDKHook_PreThink, CFA_HeldReloadPreThink);
 				SDKHook(client, SDKHook_PreThink, CFA_HeldReloadPreThink);
+				b_ForceEndHeldReload[client] = false;
 				b_HoldingReload[client] = true;
 			}
 		}
@@ -519,7 +527,27 @@ public Action CFA_HeldM2PreThink(int client)
 	
 	if (!b_HoldingM2[client])
 	{
-		CF_ApplyAbilityCooldown(client, f_M2CD[client], CF_AbilityType_M2, true);
+		EndHeldM2(client, true);
+	}
+	
+	//TODO: If the player respawns or dies for any reason during a held ability, a bunch of shit will break. Make a method to reset all held variables and call it in MakeCharacter and PlayerKilled.
+	return Plugin_Continue;
+}
+
+public void EndHeldM2(int client, bool TriggerCallback)
+{
+	if (!IsValidClient(client))
+		return;
+		
+	SDKUnhook(client, SDKHook_PreThink, CFA_HeldM2PreThink);
+	
+	if (TriggerCallback)
+	{
+		CF_EndHeldAbilitySlot(client, 2);
+	}
+	else
+	{
+		CF_ApplyAbilityCooldown(client, f_M2CD[client], CF_AbilityType_M2, true, false);
 		if (b_UsingResources[client])
 		{
 			if (b_ResourceIsUlt[client])
@@ -531,24 +559,18 @@ public Action CFA_HeldM2PreThink(int client)
 				CF_GiveSpecialResource(client, -f_M2Cost[client], CF_ResourceType_Generic);
 			}
 		}
-		
+			
 		CF_PlayRandomSound(client, "", "sound_heldend_m2");
 		b_ForceEndHeldM2[client] = false;
-		
+		b_HoldingM2[client] = false;
+			
 		Call_StartForward(g_OnHeldEnd);
-		
+			
 		Call_PushCell(client);
 		Call_PushCell(CF_AbilityType_M2);
-		
+			
 		Call_Finish();
-		
-		CF_EndHeldAbilitySlot(client, 2);
-		
-		SDKUnhook(client, SDKHook_PreThink, CFA_HeldM2PreThink);
 	}
-	
-	//TODO: If the player respawns or dies for any reason during a held ability, a bunch of shit will break. Make a method to reset all held variables and call it in MakeCharacter and PlayerKilled.
-	return Plugin_Continue;
 }
 
 public Action CFA_HeldM3PreThink(int client)
@@ -557,7 +579,26 @@ public Action CFA_HeldM3PreThink(int client)
 	
 	if (!b_HoldingM3[client])
 	{
-		CF_ApplyAbilityCooldown(client, f_M3CD[client], CF_AbilityType_M3, true);
+		EndHeldM3(client, true);
+	}
+	
+	return Plugin_Continue;
+}
+
+public void EndHeldM3(int client, bool TriggerCallback)
+{
+	if (!IsValidClient(client))
+		return;
+		
+	SDKUnhook(client, SDKHook_PreThink, CFA_HeldM3PreThink);	
+	
+	if (TriggerCallback)
+	{	
+		CF_EndHeldAbilitySlot(client, 3);	
+	}
+	else
+	{
+		CF_ApplyAbilityCooldown(client, f_M3CD[client], CF_AbilityType_M3, true, false);
 		if (b_UsingResources[client])
 		{
 			if (b_ResourceIsUlt[client])
@@ -569,23 +610,18 @@ public Action CFA_HeldM3PreThink(int client)
 				CF_GiveSpecialResource(client, -f_M3Cost[client], CF_ResourceType_Generic);
 			}
 		}
-		
+			
 		CF_PlayRandomSound(client, "", "sound_heldend_m3");
 		b_ForceEndHeldM3[client] = false;
-		
+		b_HoldingM3[client] = false;
+			
 		Call_StartForward(g_OnHeldEnd);
-		
+			
 		Call_PushCell(client);
 		Call_PushCell(CF_AbilityType_M3);
 		
 		Call_Finish();
-		
-		CF_EndHeldAbilitySlot(client, 3);
-		
-		SDKUnhook(client, SDKHook_PreThink, CFA_HeldM3PreThink);
 	}
-	
-	return Plugin_Continue;
 }
 
 public Action CFA_HeldReloadPreThink(int client)
@@ -594,7 +630,26 @@ public Action CFA_HeldReloadPreThink(int client)
 	
 	if (!b_HoldingReload[client])
 	{
-		CF_ApplyAbilityCooldown(client, f_ReloadCD[client], CF_AbilityType_Reload, true);
+		EndHeldReload(client, true);
+	}
+	
+	return Plugin_Continue;
+}
+
+public void EndHeldReload(int client, bool TriggerCallback)
+{
+	if (!IsValidClient(client))
+		return;
+	
+	SDKUnhook(client, SDKHook_PreThink, CFA_HeldReloadPreThink);
+
+	if (TriggerCallback)
+	{
+		CF_EndHeldAbilitySlot(client, 4);
+	}
+	else
+	{
+		CF_ApplyAbilityCooldown(client, f_ReloadCD[client], CF_AbilityType_Reload, true, false);
 		if (b_UsingResources[client])
 		{
 			if (b_ResourceIsUlt[client])
@@ -606,23 +661,18 @@ public Action CFA_HeldReloadPreThink(int client)
 				CF_GiveSpecialResource(client, -f_ReloadCost[client], CF_ResourceType_Generic);
 			}
 		}
-		
+			
 		CF_PlayRandomSound(client, "", "sound_heldend_reload");
 		b_ForceEndHeldReload[client] = false;
-		
+		b_HoldingReload[client] = false;
+			
 		Call_StartForward(g_OnHeldEnd);
-		
+			
 		Call_PushCell(client);
 		Call_PushCell(CF_AbilityType_Reload);
-		
+			
 		Call_Finish();
-		
-		CF_EndHeldAbilitySlot(client, 4);
-		
-		SDKUnhook(client, SDKHook_PreThink, CFA_HeldReloadPreThink);
 	}
-	
-	return Plugin_Continue;
 }
 
 public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
@@ -702,7 +752,7 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 			CF_GiveSpecialResource(client, -cost);
 		}
 		
-		CF_ApplyAbilityCooldown(client, cooldown, type, true);
+		CF_ApplyAbilityCooldown(client, cooldown, type, true, false);
 	}
 	else
 	{
@@ -926,9 +976,57 @@ public Native_CF_ApplyAbilityCooldown(Handle plugin, int numParams)
 	float cd = GetNativeCell(2);
 	CF_AbilityType type = GetNativeCell(3);
 	bool override = GetNativeCell(4);
+	bool delay = GetNativeCell(5);
 	
 	float gameTime = GetGameTime();
 	
+	if (delay)
+	{
+		DataPack pack = new DataPack();
+		RequestFrame(ApplyCDOnDelay, pack);
+		WritePackCell(pack, GetClientUserId(client));
+		WritePackFloat(pack, gameTime);
+		WritePackCell(pack, type);
+		WritePackFloat(pack, cd);
+		WritePackCell(pack, override);
+	}
+	else
+	{
+		switch (type)
+		{
+			case CF_AbilityType_Ult:
+			{
+				f_UltCDEndTime[client] = (override || GetGameTime() >= f_UltCDEndTime[client]) ? gameTime + cd : f_UltCDEndTime[client] + cd;
+			}
+			case CF_AbilityType_M2:
+			{
+				f_M2CDEndTime[client] = (override || GetGameTime() >= f_M2CDEndTime[client]) ? gameTime + cd : f_M2CDEndTime[client] + cd;
+			}
+			case CF_AbilityType_M3:
+			{
+				f_M3CDEndTime[client] = (override || GetGameTime() >= f_M3CDEndTime[client]) ? gameTime + cd : f_M3CDEndTime[client] + cd;
+			}
+			case CF_AbilityType_Reload:
+			{
+				f_ReloadCDEndTime[client] = (override || GetGameTime() >= f_ReloadCDEndTime[client]) ? gameTime + cd : f_ReloadCDEndTime[client] + cd;
+			}
+		}
+	}
+}
+
+public void ApplyCDOnDelay(DataPack pack)
+{
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	float gameTime = ReadPackFloat(pack);
+	CF_AbilityType type = ReadPackCell(pack);
+	float cd = ReadPackFloat(pack);
+	bool override = ReadPackCell(pack);
+	delete pack;
+	
+	if (!IsValidClient(client))
+		return;
+		
 	switch (type)
 	{
 		case CF_AbilityType_Ult:
@@ -1096,15 +1194,15 @@ public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
 	{
 		case 2:
 		{
-			b_ForceEndHeldM2[client] = true;
+			EndHeldM2(client, false);
 		}
 		case 3:
 		{
-			b_ForceEndHeldM3[client] = true;
+			EndHeldM3(client, false);
 		}
 		case 4:
 		{
-			b_ForceEndHeldReload[client] = true;
+			EndHeldReload(client, false);
 		}
 	}
 	
@@ -1134,4 +1232,283 @@ public Native_CF_EndHeldAbility(Handle plugin, int numParams)
 public void Nope(int client)
 {
 	EmitSoundToClient(client, NOPE);
+}
+
+public Native_CF_HasAbility(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return false;
+		
+	char conf[255], targetPlugin[255], targetAbility[255], pluginName[255], abName[255];
+	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	
+	ConfigMap map = new ConfigMap(conf);
+	if (map == null)
+		return false;
+		
+	GetNativeString(2, targetPlugin, sizeof(targetPlugin));
+	GetNativeString(3, targetAbility, sizeof(targetAbility));
+		
+	ConfigMap abilities = map.GetSection("character.abilities");
+	if (abilities == null)
+		return false;
+		
+	bool ReturnValue = false;
+		
+	int i = 1;
+	char secName[255];
+	Format(secName, sizeof(secName), "ability_%i", i);
+		
+	ConfigMap subsection = abilities.GetSection(secName);
+	while (subsection != null)
+	{
+		subsection.Get("ability_name", abName, sizeof(abName));
+		subsection.Get("plugin_name", pluginName, sizeof(pluginName));
+		
+		if (StrEqual(targetPlugin, pluginName) && StrEqual(targetAbility, abName))
+		{
+			ReturnValue = true;
+			break;
+		}
+		
+		i++;
+		Format(secName, sizeof(secName), "ability_%i", i);
+		subsection = abilities.GetSection(secName);
+	}
+	
+	DeleteCfg(map);
+	
+	return ReturnValue;
+}
+
+public Native_CF_GetArgI(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return -1;
+		
+	char conf[255], targetPlugin[255], targetAbility[255], argName[255], pluginName[255], abName[255];
+	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	
+	ConfigMap map = new ConfigMap(conf);
+	if (map == null)
+		return -1;
+		
+	GetNativeString(2, targetPlugin, sizeof(targetPlugin));
+	GetNativeString(3, targetAbility, sizeof(targetAbility));
+	GetNativeString(4, argName, sizeof(argName));
+		
+	ConfigMap abilities = map.GetSection("character.abilities");
+	if (abilities == null)
+		return -1;
+		
+	int ReturnValue = -1;
+		
+	int i = 1;
+	char secName[255];
+	Format(secName, sizeof(secName), "ability_%i", i);
+		
+	ConfigMap subsection = abilities.GetSection(secName);
+	while (subsection != null)
+	{
+		subsection.Get("ability_name", abName, sizeof(abName));
+		subsection.Get("plugin_name", pluginName, sizeof(pluginName));
+		
+		if (StrEqual(targetPlugin, pluginName) && StrEqual(targetAbility, abName))
+		{
+			ReturnValue = GetIntFromConfigMap(subsection, argName, -1);
+			break;
+		}
+		
+		i++;
+		Format(secName, sizeof(secName), "ability_%i", i);
+		subsection = abilities.GetSection(secName);
+	}
+	
+	DeleteCfg(map);
+	
+	return ReturnValue;
+}
+
+public Native_CF_GetArgF(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return -1.0;
+		
+	char conf[255], targetPlugin[255], targetAbility[255], argName[255], pluginName[255], abName[255];
+	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	
+	ConfigMap map = new ConfigMap(conf);
+	if (map == null)
+		return -1.0;
+		
+	GetNativeString(2, targetPlugin, sizeof(targetPlugin));
+	GetNativeString(3, targetAbility, sizeof(targetAbility));
+	GetNativeString(4, argName, sizeof(argName));
+		
+	ConfigMap abilities = map.GetSection("character.abilities");
+	if (abilities == null)
+		return -1.0;
+		
+	float ReturnValue = -1.0;
+		
+	int i = 1;
+	char secName[255];
+	Format(secName, sizeof(secName), "ability_%i", i);
+		
+	ConfigMap subsection = abilities.GetSection(secName);
+	while (subsection != null)
+	{
+		subsection.Get("ability_name", abName, sizeof(abName));
+		subsection.Get("plugin_name", pluginName, sizeof(pluginName));
+		
+		if (StrEqual(targetPlugin, pluginName) && StrEqual(targetAbility, abName))
+		{
+			ReturnValue = GetFloatFromConfigMap(subsection, argName, -1.0);
+			break;
+		}
+		
+		i++;
+		Format(secName, sizeof(secName), "ability_%i", i);
+		subsection = abilities.GetSection(secName);
+	}
+	
+	DeleteCfg(map);
+	
+	return ReturnValue;
+}
+
+public Native_CF_GetAbilitySlot(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return CF_AbilityType_None;
+		
+	char conf[255], targetPlugin[255], targetAbility[255], pluginName[255], abName[255];
+	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	
+	ConfigMap map = new ConfigMap(conf);
+	if (map == null)
+		return CF_AbilityType_None;
+		
+	GetNativeString(2, targetPlugin, sizeof(targetPlugin));
+	GetNativeString(3, targetAbility, sizeof(targetAbility));
+		
+	ConfigMap abilities = map.GetSection("character.abilities");
+	if (abilities == null)
+		return CF_AbilityType_None;
+		
+	CF_AbilityType ReturnValue = CF_AbilityType_None;
+		
+	int i = 1;
+	char secName[255];
+	Format(secName, sizeof(secName), "ability_%i", i);
+		
+	ConfigMap subsection = abilities.GetSection(secName);
+	while (subsection != null)
+	{
+		subsection.Get("ability_name", abName, sizeof(abName));
+		subsection.Get("plugin_name", pluginName, sizeof(pluginName));
+		
+		if (StrEqual(targetPlugin, pluginName) && StrEqual(targetAbility, abName))
+		{
+			switch(GetIntFromConfigMap(subsection, "slot", -1))
+			{
+				case 1:
+				{
+					ReturnValue = CF_AbilityType_Ult;
+				}
+				case 2:
+				{
+					ReturnValue = CF_AbilityType_M2;
+				}
+				case 3:
+				{
+					ReturnValue = CF_AbilityType_M3;
+				}
+				case 4:
+				{
+					ReturnValue = CF_AbilityType_Reload;
+				}
+				default:
+				{
+					ReturnValue = CF_AbilityType_Custom;
+				}
+			}
+			
+			break;
+		}
+		
+		i++;
+		Format(secName, sizeof(secName), "ability_%i", i);
+		subsection = abilities.GetSection(secName);
+	}
+	
+	DeleteCfg(map);
+	
+	return ReturnValue;
+}
+
+public Native_CF_GetArgS(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	int size = GetNativeCell(6);
+	
+	if (!CF_IsPlayerCharacter(client))
+	{
+		SetNativeString(5, "", size, false);
+		return;
+	}
+		
+	char conf[255], targetPlugin[255], targetAbility[255], argName[255], pluginName[255], abName[255];
+	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	
+	ConfigMap map = new ConfigMap(conf);
+	if (map == null)
+	{
+		SetNativeString(5, "", size, false);
+		return;
+	}
+		
+	GetNativeString(2, targetPlugin, sizeof(targetPlugin));
+	GetNativeString(3, targetAbility, sizeof(targetAbility));
+	GetNativeString(4, argName, sizeof(argName));
+		
+	ConfigMap abilities = map.GetSection("character.abilities");
+	if (abilities == null)
+	{
+		SetNativeString(5, "", size, false);
+		return;
+	}
+		
+	int i = 1;
+	char secName[255];
+	Format(secName, sizeof(secName), "ability_%i", i);
+		
+	ConfigMap subsection = abilities.GetSection(secName);
+	while (subsection != null)
+	{
+		subsection.Get("ability_name", abName, sizeof(abName));
+		subsection.Get("plugin_name", pluginName, sizeof(pluginName));
+		
+		if (StrEqual(targetPlugin, pluginName) && StrEqual(targetAbility, abName))
+		{
+			char arg[255]; 
+			subsection.Get(argName, arg, sizeof(arg));
+			SetNativeString(5, arg, size, false);
+			break;
+		}
+		
+		i++;
+		Format(secName, sizeof(secName), "ability_%i", i);
+		subsection = abilities.GetSection(secName);
+	}
+	
+	DeleteCfg(map);
 }

@@ -19,7 +19,22 @@ enum CF_AbilityType
     CF_AbilityType_Ult = 0,
     CF_AbilityType_M2,
     CF_AbilityType_M3,
-    CF_AbilityType_Reload
+    CF_AbilityType_Reload,
+    CF_AbilityType_Custom,
+    CF_AbilityType_None
+};
+
+enum CF_ClassToken
+{
+    CF_ClassToken_Scout = 5003,
+    CF_ClassToken_Sniper,
+    CF_ClassToken_Soldier,
+    CF_ClassToken_Demoman,
+    CF_ClassToken_Heavy,
+    CF_ClassToken_Medic,
+    CF_ClassToken_Pyro,
+    CF_ClassToken_Spy,
+    CF_ClassToken_Engineer
 };
 
   ////////////////////////////////////////
@@ -589,9 +604,10 @@ native float CF_GetSpecialResource(int client);
  * @param duration		The duration the ability should be placed on cooldown.
  * @param type			The slot which should be placed on cooldown. If ult is blocked, you will also be unable to gain ult charge.
  * @param override		If true, this new cooldown will completely override any existing cooldowns. Otherwise, it is simply added to the current cooldown.
+ * @param delay 		Set to true to delay the cooldown application by one frame so it doesn't interfere with other cooldown application sources. Enabled by default.
  *
  */
-native CF_ApplyAbilityCooldown(int client, float duration, CF_AbilityType type, bool override = false);
+native CF_ApplyAbilityCooldown(int client, float duration, CF_AbilityType type, bool override = false, bool delay = true);
 
 /**
  * Retrieves the remaining cooldown of the client's given ability slot.
@@ -629,7 +645,7 @@ native CF_EndHeldAbilitySlot(int client, int slot);
  * @param abilityName			The ability name of the ability to end, as specified in the config as "ability_name".
  *
  */
-native CF_EndHeldAbility(int client, int slot);
+native CF_EndHeldAbility(int client, char pluginName[255], char abilityName[255]);
 
 /**
  * Activates every ability a client's character has, which uses a given ability slot.
@@ -639,3 +655,63 @@ native CF_EndHeldAbility(int client, int slot);
  *
  */
 native CF_ActivateAbilitySlot(int client, int slot);
+
+/**
+ * Checks if a given character has a specified ability.
+ *
+ * @param client		The client whose abilities to check.
+ * @param pluginName			The plugin name of the ability, as specified in the config as "plugin_name".
+ * @param abilityName	The ability name of the ability, as specified in the config as "ability_name".
+ *
+ * @return True if the client's character has the specified ability, false if not.
+ */
+native bool CF_HasAbility(int client, char pluginName[255], char abilityName[255]);
+
+/**
+ * Gets an int value from a specified ability's arg.
+ *
+ * @param client		The client whose abilities to check.
+ * @param pluginName	The plugin name of the ability, as specified in the config as "plugin_name".
+ * @param abilityName	The ability name of the ability, as specified in the config as "ability_name".
+ * @param argName		The arg to check.
+ *
+ * @return An int equal to the value obtained from the given ability's specified arg, -1 if no such value was present.
+ */
+native int CF_GetArgI(int client, char pluginName[255], char abilityName[255], char argName[255]);
+
+/**
+ * Gets a float value from a specified ability's arg.
+ *
+ * @param client		The client whose abilities to check.
+ * @param pluginName	The plugin name of the ability, as specified in the config as "plugin_name".
+ * @param abilityName	The ability name of the ability, as specified in the config as "ability_name".
+ * @param argName		The arg to check.
+ *
+ * @return A float equal to the value obtained from the given ability's specified arg, -1.0 if no such value was present.
+ */
+native float CF_GetArgF(int client, char pluginName[255], char abilityName[255], char argName[255]);
+
+/**
+ * Gets an ability slot from a specified ability.
+ *
+ * @param client		The client whose abilities to check.
+ * @param pluginName	The plugin name of the ability, as specified in the config as "plugin_name".
+ * @param abilityName	The ability name of the ability, as specified in the config as "ability_name".
+ *
+ * @return A CF_AbilityType pertaining to the chosen ability's slot, CF_AbilityType_None if the ability doesn't exist or the client is invalid/not a character.
+ */
+native CF_AbilityType CF_GetAbilitySlot(int client, char pluginName[255], char abilityName[255]);
+
+/**
+ * Gets a string value from a specified ability's arg.
+ *
+ * @param client		The client whose abilities to check.
+ * @param pluginName	The plugin name of the ability, as specified in the config as "plugin_name".
+ * @param abilityName	The ability name of the ability, as specified in the config as "ability_name".
+ * @param argName		The arg to check.
+ * @param buffer		Output buffer.
+ * @param size			Size of the output buffer.
+ *
+ * @return The string obtained from the given ability's specified arg (empty if the arg was not found), stored in the output buffer.
+ */
+native CF_GetArgS(int client, char pluginName[255], char abilityName[255], char argName[255], char output[255], int size);

@@ -1005,6 +1005,10 @@ public void CF_ResetMadeStatus(int client)
  	if (!IsValidClient(client))
  		return;
 
+	EndHeldM2(client, true);
+	EndHeldM3(client, true);
+	EndHeldReload(client, true);
+
 	char conf[255];
 	GetClientCookie(client, c_DesiredCharacter, conf, sizeof(conf));
 	if (!CF_CharacterExists(conf))
@@ -1711,7 +1715,11 @@ public Native_CF_AttachParticle(Handle plugin, int numParams)
 		i_CharacterParticleOwner[particle] = GetClientUserId(client);
 		SDKHook(particle, SDKHook_SetTransmit, CFC_ParticleTransmit);
 		g_CharacterParticles[client].Push(EntIndexToEntRef(particle));
+		
+		return particle;
 	}
+	
+	return -1;
 }
 
 public Native_CF_AttachWearable(Handle plugin, int numParams)
@@ -1736,5 +1744,8 @@ public Native_CF_AttachWearable(Handle plugin, int numParams)
 	if (IsValidEntity(wearable))
 	{
 		SDKCall_EquipWearable(client, wearable);
+		return wearable;
 	}
+	
+	return -1;
 }

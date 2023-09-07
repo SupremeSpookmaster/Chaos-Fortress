@@ -106,6 +106,9 @@ public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Outp
  */
 bool CF_PlayRandomSound(int source, char Config[255], char Sound[255], float damage = 0.0)
 {
+	if (!CF_IsPlayerCharacter(source))
+		return false;
+		
 	char ourConf[255];
 	strcopy(ourConf, 255, Config);
 	if (CF_IsPlayerCharacter(source) && StrEqual(ourConf, ""))
