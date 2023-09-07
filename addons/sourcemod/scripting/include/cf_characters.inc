@@ -1005,9 +1005,10 @@ public void CF_ResetMadeStatus(int client)
  	if (!IsValidClient(client))
  		return;
 
-	EndHeldM2(client, true);
-	EndHeldM3(client, true);
-	EndHeldReload(client, true);
+	//EndHeldM2(client, true);
+	//EndHeldM3(client, true);
+	//EndHeldReload(client, true);
+	ResetHeldButtonStats(client);
 
 	char conf[255];
 	GetClientCookie(client, c_DesiredCharacter, conf, sizeof(conf));

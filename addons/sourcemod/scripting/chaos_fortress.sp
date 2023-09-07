@@ -16,6 +16,7 @@
 //	- TODO: Detect healing and give resources/ult charge for it.
 //	- TODO: All remaining sound cues.
 //	- TODO: Temporary weapon spawning, IE spawn a minigun and then go back to your normal guns after X seconds.
+//	- TODO: Add a variable to the HeldAbilityEnd forward that states whether or not the ability ended because of a resupply event.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- OPTIONAL TODO: Viewchange system weapon size support.

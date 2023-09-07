@@ -675,6 +675,22 @@ public void EndHeldReload(int client, bool TriggerCallback)
 	}
 }
 
+public void ResetHeldButtonStats(int client)
+{
+	b_ForceEndHeldM2[client] = false;
+	b_HoldingM2[client] = false;
+	
+	b_ForceEndHeldM3[client] = false;
+	b_HoldingM3[client] = false;
+	
+	b_ForceEndHeldReload[client] = false;
+	b_HoldingReload[client] = false;
+	
+	SDKUnhook(client, SDKHook_PreThink, CFA_HeldM2PreThink);
+	SDKUnhook(client, SDKHook_PreThink, CFA_HeldM3PreThink);
+	SDKUnhook(client, SDKHook_PreThink, CFA_HeldReloadPreThink);
+}
+
 public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 {
 	if (!CF_CanPlayerUseAbilitySlot(client, type))
