@@ -10,8 +10,10 @@
 #define SPRINT_PARTICLE_RED		"scout_dodge_red"
 #define SPRINT_PARTICLE_BLUE	"scout_dodge_blue"
 
-//The first of the actual characters can now be created.
-//Should take a day, tops. This character is very simple, most of the work will be finding a model.
+public void OnMapStart()
+{
+	
+}
 
 public void CF_OnCharacterCreated(int client)
 {
@@ -173,5 +175,28 @@ public void Frag_Throw(int client, char abilityName[255])
 	float damage = CF_GetArgF(client, MERC, abilityName, "damage");
 	float velocity = CF_GetArgF(client, MERC, abilityName, "velocity");
 	
-	
+	int grenade = CreateEntityByName("tf_projectile_pipe");
+	if (IsValidEntity(grenade))
+	{
+		int team = GetClientTeam(client);
+		SetEntPropEnt(grenade, Prop_Send, "m_hOwnerEntity", client);
+		SetEntProp(grenade,    Prop_Send, "m_bCritical", 0);
+		SetEntProp(grenade,    Prop_Send, "m_iTeamNum",     team, 1);
+		SetEntPropFloat(grenade, Prop_Send, "m_flDamage", damage);	//Am I seriously going to need to use fucking dhooks to make a basic in-game entity work like it's supposed to...?
+		SetEntData(grenade, FindSendPropInfo("CTFGrenadePipebombProjectile", "m_nSkin"), (team-2), 1, true);
+		
+		DispatchSpawn(grenade);
+
+		float pos[3], vecAngles[3], vecVelocity[3];
+		GetClientEyeAngles(client, vecAngles);
+		GetClientEyePosition(client, pos);
+		vecAngles[0] -= 8.0;
+		
+		vecVelocity[0] = Cosine(DegToRad(vecAngles[0]))*Cosine(DegToRad(vecAngles[1]))*velocity;
+		vecVelocity[1] = Cosine(DegToRad(vecAngles[0]))*Sine(DegToRad(vecAngles[1]))*velocity;
+		vecVelocity[2] = Sine(DegToRad(vecAngles[0])) * velocity;
+		vecVelocity[2] *= -1;
+		
+		TeleportEntity(grenade, pos, vecAngles, vecVelocity);
+	}
 }
