@@ -299,19 +299,21 @@ forward Action CF_OnHeldStart(int client, CF_AbilityType type);
  *
  * @param client			The client whose held ability was ended.
  * @param type				The type of held ability (M2, M3, or Reload).
+ * @param resupply			If true, the ability was ended due to the resupply event instead of the button being released.
  *
  */
-forward void CF_OnHeldEnd(int client, CF_AbilityType type);
+forward void CF_OnHeldEnd(int client, CF_AbilityType type, bool resupply);
 
 /**
  * Called when a held ability ends, referencing a specific ability.
  *
  * @param client			The client whose held ability was ended.
+ * @param resupply			If true, the ability was ended due to the resupply event instead of the button being released.
  * @param pluginName		The plugin name of the held ability which was ended, specified as "plugin_name" in the character's config.
  * @param abilityName		The ability name of the held ability which was ended, specified as "ability_name" in the character's config.
  *
  */
-forward void CF_OnHeldEnd_Ability(int client, char pluginName[255], char abilityName[255]);
+forward void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255], char abilityName[255]);
 
 /**
  * Called when a player is transformed into a character. This occurs when the player spawns and whenever they resupply.
@@ -633,9 +635,10 @@ native CF_DoAbility(int client, char pluginName[255], char abilityName[255]);
  *
  * @param client		The client whose ability to end.
  * @param slot			The slot to end (2 for M2, 3 for M3, 4 for Reload).
+ * @param resupply		If true, this is treated as if the ability was ended by the resupply event.
  *
  */
-native CF_EndHeldAbilitySlot(int client, int slot);
+native CF_EndHeldAbilitySlot(int client, int slot, bool resupply);
 
 /**
  * Ends a specific held ability.
@@ -643,9 +646,10 @@ native CF_EndHeldAbilitySlot(int client, int slot);
  * @param client		The client whose ability to end.
  * @param pluginName			The plugin name of the ability to end, as specified in the config as "plugin_name".
  * @param abilityName			The ability name of the ability to end, as specified in the config as "ability_name".
+ * @param resupply		If set to true, this is treated as if the ability was ended by the resupply event.
  *
  */
-native CF_EndHeldAbility(int client, char pluginName[255], char abilityName[255]);
+native CF_EndHeldAbility(int client, char pluginName[255], char abilityName[255], bool resupply);
 
 /**
  * Activates every ability a client's character has, which uses a given ability slot.

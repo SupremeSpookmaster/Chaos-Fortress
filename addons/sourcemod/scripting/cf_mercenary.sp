@@ -28,11 +28,11 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	}
 }
 
-public void CF_OnHeldEnd_Ability(int client, char pluginName[255], char abilityName[255])
+public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255], char abilityName[255])
 {
 	if (StrContains(abilityName, SPRINT) != -1)
 	{
-		Sprint_End(client);
+		Sprint_End(client, false, resupply);
 	}
 }
 
@@ -76,42 +76,45 @@ public void Sprint_Begin(int client, char abilityName[255])
 	SDKHook(client, SDKHook_PreThink, Sprint_PreThink);
 }
 
-void Sprint_End(int client, bool TimeLimit = false)
+void Sprint_End(int client, bool TimeLimit = false, bool resupply = false)
 {
 	if (!Sprint_Active[client])
 		return;
 	
 	Sprint_Active[client] = false;
 	
-	float useTime = GetGameTime() - Sprint_StartTime[client];
-	float cd = useTime * Sprint_CD[client];
-	
-	if (cd > Sprint_MaxCD[client])
-		cd = Sprint_MaxCD[client];
-		
-	if (cd < Sprint_MinCD[client])
-		cd = Sprint_MinCD[client];
-	
-	if (TimeLimit)
+	if (!resupply)
 	{
-		switch(Sprint_Slot[client])
+		float useTime = GetGameTime() - Sprint_StartTime[client];
+		float cd = useTime * Sprint_CD[client];
+		
+		if (cd > Sprint_MaxCD[client])
+			cd = Sprint_MaxCD[client];
+			
+		if (cd < Sprint_MinCD[client])
+			cd = Sprint_MinCD[client];
+		
+		if (TimeLimit)
 		{
-			case CF_AbilityType_M2:
+			switch(Sprint_Slot[client])
 			{
-				CF_EndHeldAbilitySlot(client, 2);
-			}
-			case CF_AbilityType_M3:
-			{
-				CF_EndHeldAbilitySlot(client, 3);
-			}
-			case CF_AbilityType_Reload:
-			{
-				CF_EndHeldAbilitySlot(client, 4);
+				case CF_AbilityType_M2:
+				{
+					CF_EndHeldAbilitySlot(client, 2, false);
+				}
+				case CF_AbilityType_M3:
+				{
+					CF_EndHeldAbilitySlot(client, 3, false);
+				}
+				case CF_AbilityType_Reload:
+				{
+					CF_EndHeldAbilitySlot(client, 4, false);
+				}
 			}
 		}
+	
+		CF_ApplyAbilityCooldown(client, cd, Sprint_Slot[client], true);
 	}
-
-	CF_ApplyAbilityCooldown(client, cd, Sprint_Slot[client], true);
 
 	Sprint_RemoveAttributes(client);
 	SDKUnhook(client, SDKHook_PreThink, Sprint_PreThink);

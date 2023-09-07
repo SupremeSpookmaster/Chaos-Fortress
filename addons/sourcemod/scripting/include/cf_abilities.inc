@@ -87,8 +87,8 @@ public void CFA_MakeForwards()
 	g_OnM3Used = new GlobalForward("CF_OnM3Used", ET_Event, Param_Cell);
 	g_OnReloadUsed = new GlobalForward("CF_OnReloadUsed", ET_Event, Param_Cell);
 	g_OnHeldStart = new GlobalForward("CF_OnHeldStart", ET_Event, Param_Cell, Param_Cell);
-	g_OnHeldEnd = new GlobalForward("CF_OnHeldEnd", ET_Event, Param_Cell, Param_Cell);
-	g_OnHeldEnd_Ability = new GlobalForward("CF_OnHeldEnd_Ability", ET_Event, Param_Cell, Param_String, Param_String);
+	g_OnHeldEnd = new GlobalForward("CF_OnHeldEnd", ET_Event, Param_Cell, Param_Cell, Param_Cell);
+	g_OnHeldEnd_Ability = new GlobalForward("CF_OnHeldEnd_Ability", ET_Event, Param_Cell, Param_Cell, Param_String, Param_String);
 }
 
 Handle HudSync;
@@ -534,7 +534,7 @@ public Action CFA_HeldM2PreThink(int client)
 	return Plugin_Continue;
 }
 
-public void EndHeldM2(int client, bool TriggerCallback)
+void EndHeldM2(int client, bool TriggerCallback, bool resupply = false)
 {
 	if (!IsValidClient(client))
 		return;
@@ -543,7 +543,7 @@ public void EndHeldM2(int client, bool TriggerCallback)
 	
 	if (TriggerCallback)
 	{
-		CF_EndHeldAbilitySlot(client, 2);
+		CF_EndHeldAbilitySlot(client, 2, resupply);
 	}
 	else
 	{
@@ -560,7 +560,9 @@ public void EndHeldM2(int client, bool TriggerCallback)
 			}
 		}
 			
-		CF_PlayRandomSound(client, "", "sound_heldend_m2");
+		if (!resupply)
+			CF_PlayRandomSound(client, "", "sound_heldend_m2");
+			
 		b_ForceEndHeldM2[client] = false;
 		b_HoldingM2[client] = false;
 			
@@ -568,6 +570,7 @@ public void EndHeldM2(int client, bool TriggerCallback)
 			
 		Call_PushCell(client);
 		Call_PushCell(CF_AbilityType_M2);
+		Call_PushCell(resupply);
 			
 		Call_Finish();
 	}
@@ -585,7 +588,7 @@ public Action CFA_HeldM3PreThink(int client)
 	return Plugin_Continue;
 }
 
-public void EndHeldM3(int client, bool TriggerCallback)
+void EndHeldM3(int client, bool TriggerCallback, bool resupply = false)
 {
 	if (!IsValidClient(client))
 		return;
@@ -594,7 +597,7 @@ public void EndHeldM3(int client, bool TriggerCallback)
 	
 	if (TriggerCallback)
 	{	
-		CF_EndHeldAbilitySlot(client, 3);	
+		CF_EndHeldAbilitySlot(client, 3, resupply);	
 	}
 	else
 	{
@@ -610,8 +613,10 @@ public void EndHeldM3(int client, bool TriggerCallback)
 				CF_GiveSpecialResource(client, -f_M3Cost[client], CF_ResourceType_Generic);
 			}
 		}
+		
+		if (!resupply)
+			CF_PlayRandomSound(client, "", "sound_heldend_m3");
 			
-		CF_PlayRandomSound(client, "", "sound_heldend_m3");
 		b_ForceEndHeldM3[client] = false;
 		b_HoldingM3[client] = false;
 			
@@ -619,6 +624,7 @@ public void EndHeldM3(int client, bool TriggerCallback)
 			
 		Call_PushCell(client);
 		Call_PushCell(CF_AbilityType_M3);
+		Call_PushCell(resupply);
 		
 		Call_Finish();
 	}
@@ -636,7 +642,7 @@ public Action CFA_HeldReloadPreThink(int client)
 	return Plugin_Continue;
 }
 
-public void EndHeldReload(int client, bool TriggerCallback)
+void EndHeldReload(int client, bool TriggerCallback, bool resupply = false)
 {
 	if (!IsValidClient(client))
 		return;
@@ -645,7 +651,7 @@ public void EndHeldReload(int client, bool TriggerCallback)
 
 	if (TriggerCallback)
 	{
-		CF_EndHeldAbilitySlot(client, 4);
+		CF_EndHeldAbilitySlot(client, 4, resupply);
 	}
 	else
 	{
@@ -662,7 +668,9 @@ public void EndHeldReload(int client, bool TriggerCallback)
 			}
 		}
 			
-		CF_PlayRandomSound(client, "", "sound_heldend_reload");
+		if (!resupply)
+			CF_PlayRandomSound(client, "", "sound_heldend_reload");
+			
 		b_ForceEndHeldReload[client] = false;
 		b_HoldingReload[client] = false;
 			
@@ -670,6 +678,7 @@ public void EndHeldReload(int client, bool TriggerCallback)
 			
 		Call_PushCell(client);
 		Call_PushCell(CF_AbilityType_Reload);
+		Call_PushCell(resupply);
 			
 		Call_Finish();
 	}
@@ -1167,6 +1176,7 @@ public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
 		return;
 		
 	int slot = GetNativeCell(2);
+	bool resupply = GetNativeCell(3);
 	
 	char conf[255], pluginName[255], abName[255];
 	CF_GetPlayerConfig(client, conf, sizeof(conf));
@@ -1195,6 +1205,7 @@ public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
 			Call_StartForward(g_OnHeldEnd_Ability);
 			
 			Call_PushCell(client);
+			Call_PushCell(resupply);
 			Call_PushString(pluginName);
 			Call_PushString(abName);
 		
@@ -1210,15 +1221,15 @@ public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
 	{
 		case 2:
 		{
-			EndHeldM2(client, false);
+			EndHeldM2(client, false, resupply);
 		}
 		case 3:
 		{
-			EndHeldM3(client, false);
+			EndHeldM3(client, false, resupply);
 		}
 		case 4:
 		{
-			EndHeldReload(client, false);
+			EndHeldReload(client, false, resupply);
 		}
 	}
 	
@@ -1235,10 +1246,12 @@ public Native_CF_EndHeldAbility(Handle plugin, int numParams)
 	char pluginName[255], abName[255];
 	GetNativeString(2, pluginName, sizeof(pluginName));
 	GetNativeString(3, abName, sizeof(abName));
+	bool resupply = GetNativeCell(4);
 	
 	Call_StartForward(g_OnHeldEnd_Ability);
 			
 	Call_PushCell(client);
+	Call_PushCell(resupply);
 	Call_PushString(pluginName);
 	Call_PushString(abName);
 		
