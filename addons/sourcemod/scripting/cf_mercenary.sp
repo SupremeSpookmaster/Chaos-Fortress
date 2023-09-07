@@ -141,7 +141,7 @@ public void Sprint_ApplyAttributes(int client)
 {
 	Sprint_RemoveAttributes(client);
 	
-	int particle = CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? SPRINT_PARTICLE_RED : SPRINT_PARTICLE_BLUE, "root", _, _, _, 20.0);
+	int particle = CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? SPRINT_PARTICLE_RED : SPRINT_PARTICLE_BLUE, "root", _, _, _, 40.0);
 	if (IsValidEntity(particle))
 	{
 		Sprint_Particle[client] = EntIndexToEntRef(particle);

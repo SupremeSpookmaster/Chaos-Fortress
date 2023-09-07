@@ -33,7 +33,7 @@
 //	- MINOR BUG: For some reason, player ragdolls get equipped with some weird plaid cosmetic that I think is a heavy misc???????????????????????????
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
-//	- None, for now.
+//	- MAJOR BUG: The good news: downloads work, Mercenary looks AMAZING and is going to be PERFECT once his hands and gun are added as well. The bad news: something I did broke a bunch of shit on non-viewchange characters, and brought the memory leak back...
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
