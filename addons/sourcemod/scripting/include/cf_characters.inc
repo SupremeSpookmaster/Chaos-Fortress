@@ -1137,17 +1137,7 @@ public void CF_ResetMadeStatus(int client)
  	}
  	
  	SetHudTextParams(-1.0, 0.33, 5.0, r, 120, b, 255, 0, 5.0, 0.8, 0.4);
- 	
- 	if (b_IsDead[client] || !b_CharacterApplied[client])
- 	{
- 		ShowHudText(client, -1, "You spawned as: %s!", name);
- 		CPrintToChat(client, "Attempted to display: ''You spawned as: %s!''", name);
- 	}
- 	else if (!StrEqual(conf, s_PreviousCharacter[client]))
- 	{
- 		ShowHudText(client, -1, "You switched to: %s!", name);
- 		CPrintToChat(client, "Attempted to display: ''You switched to: %s!''", name);
- 	}
+ 	ShowHudText(client, -1, "You spawned as: %s", name);
  	
  	bool hasUlt = CFA_InitializeUltimate(client, map);
  	bool hasAbilities = CFA_InitializeAbilities(client, map);
