@@ -1047,36 +1047,13 @@ public Action delete_spellbook(Handle Fusion_delete_spellbook_handle, int client
 	return Plugin_Continue;
 }
 
-stock void ForceViewmodelAnimation(int client, int sequence, float duration = 0.0)
+stock void ForceViewmodelAnimation(int client, int sequence)
 {
     int ent = GetEntPropEnt(client, Prop_Send, "m_hViewModel");
     if (!IsValidEdict(ent)) 
     	return;
-    	
-    if (duration > 0.0)
-    {
-    	DataPack pack = new DataPack();
-    	CreateDataTimer(duration, RevertVMAnim, pack, TIMER_FLAG_NO_MAPCHANGE);
-    	WritePackCell(pack, EntIndexToEntRef(ent));
-    	WritePackCell(pack, GetEntProp(ent, Prop_Send, "m_nSequence"));
-    }
     
     SetEntProp(ent, Prop_Send, "m_nSequence", sequence);
-} 
-
-public Action RevertVMAnim(Handle revert, DataPack pack)
-{
-	ResetPack(pack);
-	int ent = EntRefToEntIndex(ReadPackCell(pack));
-	int sequence = ReadPackCell(pack);
-	delete pack;
-	
-	if (IsValidEdict(ent))
-	{
-		SetEntProp(ent, Prop_Send, "m_nSequence", sequence);
-	}
-	
-	return Plugin_Continue;
 }
 
 stock void HidePlayerWeapon(int client, float duration)
@@ -1084,14 +1061,16 @@ stock void HidePlayerWeapon(int client, float duration)
 	int ent = -1;
 	while ((ent = FindEntityByClassname(ent, "tf_wearable_vm")) != -1)
 	{
-		int owner = GetEntPropEnt(ent, Prop_Send, "m_hOwnerEntity");
-		if (owner == client)
+		if (IsValidEntity(ent))
 		{
-			SetEntityRenderMode(ent, RENDER_TRANSALPHA);
-			SetEntityRenderColor(ent, 0, 0, 0, 0);
-			
-			if (duration > 0.0)
-		    	CreateTimer(duration, UnhideWeapon, EntIndexToEntRef(ent), TIMER_FLAG_NO_MAPCHANGE);
+			int owner = GetEntPropEnt(ent, Prop_Send, "m_hOwnerEntity");
+			if (owner == client)
+			{
+				SetEntProp(ent, Prop_Send, "m_fEffects", EF_NODRAW);
+				
+				if (duration > 0.0)
+			    	CreateTimer(duration, UnhideWeapon, EntIndexToEntRef(ent), TIMER_FLAG_NO_MAPCHANGE);
+			}
 		}
 	}
 } 
@@ -1101,7 +1080,7 @@ public Action UnhideWeapon(Handle unhide, int ref)
 	int ent = EntRefToEntIndex(ref);
 	if (IsValidEdict(ent))
 	{
-		SetEntityRenderColor(ent, 255, 255, 255, 255);
+		SetEntProp(ent, Prop_Send, "m_fEffects",  GetEntProp(ent, Prop_Send, "m_fEffects") & ~EF_NODRAW);
 	}
 	
 	return Plugin_Continue;

@@ -178,7 +178,7 @@ public void Frag_Throw(int client, char abilityName[255])
 	float damage = CF_GetArgF(client, MERC, abilityName, "damage");
 	float velocity = CF_GetArgF(client, MERC, abilityName, "velocity");
 	
-	ForceViewmodelAnimation(client, 18, 0.5);
+	ForceViewmodelAnimation(client, 18);
 	HidePlayerWeapon(client, 0.5);
 	Frag_ThrowTime[client] = GetGameTime();
 		
