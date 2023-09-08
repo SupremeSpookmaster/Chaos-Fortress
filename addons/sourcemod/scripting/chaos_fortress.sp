@@ -10,14 +10,9 @@
 //#define TESTING
 //
 //	- TODAY'S PLANS (things I intend to complete with my work for today):
-//		- Add modularity to the viewchange system to let people have more granular control over its features (allow devs to choose between no viewchange, only first person, only third person, and full viewchange).
-//				- BUG: Characters that are supposed to only use third person viewchange use first person vc as well, but the first person vc is broken for a short period when switching weapons.
-//				- BUG: Using no viewchange at all breaks your max health.
-//		- Allow custom weapon models and size to be applied even if viewchange is disabled.
-//		- Viewchange weapon size support.
-//		- Viewchange custom hands support.
+//		- Weapon size support.
+//		- Custom hands support.
 //		- Temporary weapon spawning.
-//		- Fix shit being broken on non-viewchange characters.
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Everything that happens on client disconnect.
@@ -30,17 +25,10 @@
 //	- OPTIONAL TODO: Collision forwards.
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
-//	- MINOR BUG: Switching weapon classes (IE switching from engineer's wrench to spy's revolver) with viewchange has no transition animation, it is *instant.* This looks ugly, but it isn't horrible and doesn't have a major impact on gameplay (it might make headshots like 10% harder if people abuse it but that's all).
-//			- No known fix.
-//	- MINOR BUG: Characters who use viewchange are still holding their weapons on death. This is ugly and it would be best to make it fall like a phys prop.
-//			- Spawn a phys prop at the fake weapon wearable's location when the player dies and copy the wearable's model index, then delete the wearable.
-//	- MINOR BUG: Melee weapons which use viewchange have a noticeable delay of roughly ~0.5s before viewchange gets applied. This doesn't affect gameplay and is only visible in first person view, but is EXTREMELY ugly.
-//			- No known fix.
-//	- MINOR BUG: You can pick up ammo even if your held weapon is at max capacity, but only sometimes??? Also, ammo pickups only fill your active weapon, and you cannot pick up ammo if you are not holding a gun. This DOES affect gameplay, but not to a major extent.
 //	- MINOR BUG: For some reason, player ragdolls get equipped with some weird plaid cosmetic that I think is a heavy misc???????????????????????????
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
-//	- MAJOR BUG: The good news: downloads work, Mercenary looks AMAZING and is going to be PERFECT once his hands and gun are added as well. The bad news: something I did broke max HP non-viewchange characters, and also brought the memory leak back...
+//	- MAJOR BUG: You can't pick up ammo. At all.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

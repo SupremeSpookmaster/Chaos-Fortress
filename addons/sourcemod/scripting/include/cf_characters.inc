@@ -1333,6 +1333,21 @@ public void CF_ResetMadeStatus(int client)
 			subsection.Get("fire_ability", s_WeaponFireAbility[weapon], 255);
 			subsection.Get("fire_plugin", s_WeaponFirePlugin[weapon], 255);
 			subsection.Get("fire_sound", s_WeaponFireSound[weapon], 255);
+			
+			ConfigMap custAtts = subsection.GetSection("custom_attributes");
+			if (custAtts != null)
+			{
+				StringMapSnapshot snap = custAtts.Snapshot();
+				
+				for (int i = 0; i < snap.Length; i++)
+				{
+					char custAtt[255], custVal[255];
+					snap.GetKey(i, custAtt, sizeof(custAtt));
+					custAtts.Get(custAtt, custVal, sizeof(custVal));
+					
+					TF2Attrib_SetFromStringValue(weapon, custAtt, custVal);
+				}
+			}
 		}
 		
 		i++;

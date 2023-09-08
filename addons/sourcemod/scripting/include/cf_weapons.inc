@@ -168,11 +168,6 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 		#endif
 	}
 	
-	/*if (ForceClass > 0 && CF_GetViewChangeType(client) != CF_ViewChangeType_None)
-	{
-		ViewChange_SetForceClass(entity, ForceClass);
-	}*/
-	
 	return entity;
 }
 
