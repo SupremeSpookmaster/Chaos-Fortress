@@ -738,3 +738,27 @@ native CF_GetArgS(int client, char pluginName[255], char abilityName[255], char 
  * @return A CF_ViewChangeType representing the client's viewchange.
  */
 native CF_ViewChangeType CF_GetViewChangeType(int client);
+
+/**
+ * Gets a random sound from a given boss config.
+ *
+ * @param Config 				The config to grab the sound from. Must be a direct path such as "configs/chaos_fortress/character.cfg". You can obtain this easily with CF_GetCharacterConfig.
+ * @param Sound					The sound section to grab from, such as "sound_kill".
+ * @param Output				The output buffer.
+ * @param len					The length of the output buffer.
+ *
+ * @return A KeyValType corresponding to the chosen sound. KeyValType_Value for sounds without special settings, KeyValType_Section for sounds with special settings, and KeyValType_Null for invalid sounds.
+ */
+native KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Output[255], int len);
+
+/**
+ * Plays a random sound from a client's boss config, as specified by the settings below.
+ *
+ * @param source				The source to play the sound from. If this is a valid client, Config can be left blank to automatically grab their current character config.
+ * @param Config				The config to grab the sound from. If source is a valid client and you leave this blank, the config is automatically grabbed from that client's current character.
+ * @param Sound					The sound section to grab from, such as "sound_kill".
+ * @param damage				The optional damage dealt to trigger this sound, used by sound_bighit.
+ *
+ * @return		True if the sound was played, false otherwise.
+ */
+native bool CF_PlayRandomSound(int source, char Config[255], char Sound[255], float damage = 0.0)

@@ -11,18 +11,13 @@ int CF_SndChans[10] = {
 	SNDCHAN_WEAPON
 };
 
-//TODO: I forgot to make these natives, so they can't be used by ability plugins... Fix this tomorrow...
+public void CFS_MakeNatives()
+{
+	CreateNative("CF_GetRandomSound", Native_CF_GetRandomSound);
+	CreateNative("CF_PlayRandomSound", Native_CF_PlayRandomSound);
+}
 
-/**
- * Gets a random sound from a given boss config.
- *
- * @param Config 				The config to grab the sound from. Must be a direct path such as "configs/chaos_fortress/character.cfg". You can obtain this easily with CF_GetCharacterConfig.
- * @param Sound					The sound section to grab from, such as "sound_kill".
- * @param Output				The output buffer.
- *
- * @return A KeyValType corresponding to the chosen sound. KeyValType_Value for sounds without special settings, KeyValType_Section for sounds with special settings, and KeyValType_Null for invalid sounds.
- */
-public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Output[255])
+public KeyValType GetRand(char Config[255], char Sound[255], char Output[255])
 {
 	ConfigMap cfgMap = new ConfigMap(Config);
 	
@@ -96,17 +91,7 @@ public KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Outp
 	return ReturnValue;
 }
 
-/**
- * Plays a random sound from a client's boss config, as specified by the settings below.
- *
- * @param source				The source to play the sound from. If this is a valid client, Config can be left blank to automatically grab their current character config.
- * @param Config				The config to grab the sound from. If source is a valid client and you leave this blank, the config is automatically grabbed from that client's current character.
- * @param Sound					The sound section to grab from, such as "sound_kill".
- * @param damage				The optional damage dealt to trigger this sound, used by sound_bighit.
- *
- * @return		True if the sound was played, false otherwise.
- */
-bool CF_PlayRandomSound(int source, char Config[255], char Sound[255], float damage = 0.0)
+bool PlayRand(int source, char Config[255], char Sound[255], float damage = 0.0)
 {
 	if (!CF_IsPlayerCharacter(source))
 		return false;
@@ -119,7 +104,7 @@ bool CF_PlayRandomSound(int source, char Config[255], char Sound[255], float dam
 	}
 	
 	char snd[255] = ""; char checkFile[255];
-	KeyValType kvType = CF_GetRandomSound(ourConf, Sound, snd);
+	KeyValType kvType = CF_GetRandomSound(ourConf, Sound, snd, sizeof(snd));
 	Format(checkFile, sizeof(checkFile), "sound/%s", snd);
 	
 	if (!CheckFile(checkFile))
@@ -185,4 +170,25 @@ bool CF_PlayRandomSound(int source, char Config[255], char Sound[255], float dam
 			return false;
 		}
 	}
+}
+
+public Native_CF_GetRandomSound(Handle plugin, int numParams)
+{
+	char Config[255], Sound[255], Output[255];
+	GetNativeString(1, Config, sizeof(Config));
+	GetNativeString(2, Sound, sizeof(Sound));
+	KeyValType ReturnVal = GetRand(Config, Sound, Output);
+	int len = GetNativeCell(4);
+	SetNativeString(3, Output, len, false);
+	return ReturnVal;
+}
+
+public Native_CF_PlayRandomSound(Handle plugin, int numParams)
+{
+	int source = GetNativeCell(1);
+	char Config[255], Sound[255];
+	GetNativeString(2, Config, sizeof(Config));
+	GetNativeString(3, Sound, sizeof(Sound));
+	float damage = GetNativeCell(4);
+	return PlayRand(source, Config, Sound, damage);
 }

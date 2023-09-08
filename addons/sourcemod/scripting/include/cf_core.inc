@@ -34,6 +34,7 @@ public void CF_MakeNatives()
 	CFC_MakeNatives();
 	CFW_MakeNatives();
 	CFA_MakeNatives();
+	CFS_MakeNatives();
 }
 
 /**

@@ -117,7 +117,7 @@ void Sprint_End(int client, bool TimeLimit = false, bool resupply = false)
 		}
 	
 		CF_ApplyAbilityCooldown(client, cd, Sprint_Slot[client], true);
-		//CF_PlayRandomSound(client, "", "sound_merc_sprint_end");
+		CF_PlayRandomSound(client, "", "sound_merc_sprint_end");
 	}
 
 	Sprint_RemoveAttributes(client);
@@ -145,7 +145,7 @@ public void Sprint_ApplyAttributes(int client)
 {
 	Sprint_RemoveAttributes(client);
 	
-	int particle = CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? SPRINT_PARTICLE_RED : SPRINT_PARTICLE_BLUE, "root", _, _, _, 40.0);
+	int particle = CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? SPRINT_PARTICLE_RED : SPRINT_PARTICLE_BLUE, "root", _, _, _, 75.0);
 	if (IsValidEntity(particle))
 	{
 		Sprint_Particle[client] = EntIndexToEntRef(particle);
@@ -158,7 +158,7 @@ public void Sprint_ApplyAttributes(int client)
 	{
 		Sprint_Wearable[client] = EntIndexToEntRef(wearable);
 		TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.0001);
-		//CF_PlayRandomSound(client, "", "sound_merc_sprint_start");
+		CF_PlayRandomSound(client, "", "sound_merc_sprint_start");
 	}
 }
 
@@ -179,7 +179,7 @@ public void Frag_Throw(int client, char abilityName[255])
 	float velocity = CF_GetArgF(client, MERC, abilityName, "velocity");
 	
 	ForceViewmodelAnimation(client, 18);
-	HidePlayerWeapon(client, 0.5);
+	//HidePlayerWeapon(client, 0.5);
 	Frag_ThrowTime[client] = GetGameTime();
 		
 	DataPack pack = new DataPack();
@@ -225,7 +225,7 @@ public Action Frag_ThrowOnDelay(Handle throwIt, DataPack pack)
 		vecVelocity[2] *= -1;
 		
 		TeleportEntity(grenade, pos, vecAngles, vecVelocity);
-		//CF_PlayRandomSound(client, "", "sound_merc_grenade");
+		CF_PlayRandomSound(client, "", "sound_merc_grenade");
 	}
 	
 	return Plugin_Continue;
