@@ -17,6 +17,21 @@ float OFF_THE_MAP[3] = {1182792704.0, 1182792704.0, -964690944.0};
 
 float PhysProp_CurrentSpeed[2049] = { 0.0, ... };
 
+enum ViewmodelSequence
+{
+	VMS_Melee_Swing_1 = 8,
+	VMS_Melee_Swing_2,
+	VMS_Melee_Swing_3,
+	VMS_Melee_Idle,
+	VMS_Melee_Draw,
+	VMS_Melee_Swing_4,
+	VMS_Melee_Swing_5,
+	VMS_Melee_Swing_6,
+	VMS_Jarate_Draw,
+	VMS_Jarate_Idle,
+	VMS_Jarate_Throw
+};
+
 /**
  * Checks if a client is valid.
  *
@@ -1030,4 +1045,69 @@ public Action delete_spellbook(Handle Fusion_delete_spellbook_handle, int client
 	}	
 	
 	return Plugin_Continue;
+}
+
+stock void ForceViewmodelAnimation(int client, int sequence, float duration = 0.0)
+{
+    int ent = GetEntPropEnt(client, Prop_Send, "m_hViewModel");
+    if (!IsValidEdict(ent)) 
+    	return;
+    	
+    if (duration > 0.0)
+    {
+    	DataPack pack = new DataPack();
+    	CreateDataTimer(duration, RevertVMAnim, pack, TIMER_FLAG_NO_MAPCHANGE);
+    	WritePackCell(pack, EntIndexToEntRef(ent));
+    	WritePackCell(pack, GetEntProp(ent, Prop_Send, "m_nSequence"));
+    }
+    
+    SetEntProp(ent, Prop_Send, "m_nSequence", sequence);
+} 
+
+public Action RevertVMAnim(Handle revert, DataPack pack)
+{
+	ResetPack(pack);
+	int ent = EntRefToEntIndex(ReadPackCell(pack));
+	int sequence = ReadPackCell(pack);
+	delete pack;
+	
+	if (IsValidEdict(ent))
+	{
+		SetEntProp(ent, Prop_Send, "m_nSequence", sequence);
+	}
+	
+	return Plugin_Continue;
+}
+
+stock void HidePlayerWeapon(int client, float duration)
+{
+	int ent = -1;
+	while ((ent = FindEntityByClassname(ent, "tf_wearable_vm")) != -1)
+	{
+		int owner = GetEntPropEnt(ent, Prop_Send, "m_hOwnerEntity");
+		if (owner == client)
+		{
+			SetEntityRenderMode(ent, RENDER_TRANSALPHA);
+			SetEntityRenderColor(ent, 0, 0, 0, 0);
+			
+			if (duration > 0.0)
+		    	CreateTimer(duration, UnhideWeapon, EntIndexToEntRef(ent), TIMER_FLAG_NO_MAPCHANGE);
+		}
+	}
+} 
+
+public Action UnhideWeapon(Handle unhide, int ref)
+{
+	int ent = EntRefToEntIndex(ref);
+	if (IsValidEdict(ent))
+	{
+		SetEntityRenderColor(ent, 255, 255, 255, 255);
+	}
+	
+	return Plugin_Continue;
+}
+
+stock int TF2_GetActiveWeapon(int client)
+{
+	return GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
 }

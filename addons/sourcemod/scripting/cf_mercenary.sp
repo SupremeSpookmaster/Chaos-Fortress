@@ -15,7 +15,10 @@ public void OnMapStart()
 	
 }
 
-public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
+float Frag_ThrowTime[MAXPLAYERS + 1] = { 0.0, ... };
+float Frag_LastShootTime[MAXPLAYERS + 1] = { 0.0, ... };
+
+public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]) //TODO: Allow devs to return an action to block this...
 {
 	if (StrContains(abilityName, SPRINT) != -1)
 	{
@@ -114,6 +117,7 @@ void Sprint_End(int client, bool TimeLimit = false, bool resupply = false)
 		}
 	
 		CF_ApplyAbilityCooldown(client, cd, Sprint_Slot[client], true);
+		//CF_PlayRandomSound(client, "", "sound_merc_sprint_end");
 	}
 
 	Sprint_RemoveAttributes(client);
@@ -154,6 +158,7 @@ public void Sprint_ApplyAttributes(int client)
 	{
 		Sprint_Wearable[client] = EntIndexToEntRef(wearable);
 		TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.0001);
+		//CF_PlayRandomSound(client, "", "sound_merc_sprint_start");
 	}
 }
 
@@ -173,6 +178,28 @@ public void Frag_Throw(int client, char abilityName[255])
 	float damage = CF_GetArgF(client, MERC, abilityName, "damage");
 	float velocity = CF_GetArgF(client, MERC, abilityName, "velocity");
 	
+	ForceViewmodelAnimation(client, 18, 0.5);
+	HidePlayerWeapon(client, 0.5);
+	Frag_ThrowTime[client] = GetGameTime();
+		
+	DataPack pack = new DataPack();
+	CreateTimer(0.18, Frag_ThrowOnDelay, pack, TIMER_FLAG_NO_MAPCHANGE);
+	WritePackCell(pack, GetClientUserId(client));
+	WritePackFloat(pack, damage);
+	WritePackFloat(pack, velocity);
+}
+
+public Action Frag_ThrowOnDelay(Handle throwIt, DataPack pack)
+{
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	float damage = ReadPackFloat(pack);
+	float velocity = ReadPackFloat(pack);
+	delete pack;
+	
+	if (!IsValidMulti(client))
+		return Plugin_Continue;
+		
 	int grenade = CreateEntityByName("tf_projectile_pipe");
 	if (IsValidEntity(grenade))
 	{
@@ -198,5 +225,20 @@ public void Frag_Throw(int client, char abilityName[255])
 		vecVelocity[2] *= -1;
 		
 		TeleportEntity(grenade, pos, vecAngles, vecVelocity);
+		//CF_PlayRandomSound(client, "", "sound_merc_grenade");
 	}
+	
+	return Plugin_Continue;
+}
+
+public Action CF_OnPlayerRunCmd(int client, int &buttons, int &impulse, int &weapon)
+{
+	if (GetGameTime() - Frag_ThrowTime[client] <= 0.5)
+	{
+		buttons = buttons & ~IN_ATTACK;
+		return Plugin_Changed;
+	}
+	else if (buttons & IN_ATTACK != 0) { Frag_LastShootTime[client] = GetGameTime(); }
+	
+	return Plugin_Continue;
 }

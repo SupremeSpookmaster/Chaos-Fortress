@@ -11,6 +11,8 @@ int CF_SndChans[10] = {
 	SNDCHAN_WEAPON
 };
 
+//TODO: I forgot to make these natives, so they can't be used by ability plugins... Fix this tomorrow...
+
 /**
  * Gets a random sound from a given boss config.
  *
