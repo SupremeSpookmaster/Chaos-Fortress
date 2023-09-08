@@ -114,6 +114,9 @@ void ViewChange_SetOverrideIndex(int entity, int override)
 
 void ViewChange_PlayerModel(int client)
 {
+	if (!ViewChangeHasTP(client))
+		return;
+		
 	int team = GetClientTeam(client);
 	int entity = CreateEntityByName("tf_wearable");
 	if(entity > MaxClients)	// Weapon viewmodel
@@ -275,58 +278,59 @@ void ViewChange_Switch(int client, int active, const char[] buffer = "")
 				}
 			}
 			
-			SetEntProp(entity, Prop_Send, "m_nModelIndex", HandIndex[class]);
+			if (ViewChangeHasFP(client))
+				SetEntProp(entity, Prop_Send, "m_nModelIndex", HandIndex[class]);
 
-			entity = CreateEntityByName("tf_wearable_vm");
-			if(entity > MaxClients)	// Weapon viewmodel
+			int ent2 = CreateEntityByName("tf_wearable_vm");
+			if(ent2 > MaxClients)	// Weapon viewmodel
 			{
 				int team = GetClientTeam(client);
 				if(i_WeaponModelIndexOverride[active] > 0)
-					SetEntProp(entity, Prop_Send, "m_nModelIndex", i_WeaponModelIndexOverride[active]);
+					SetEntProp(ent2, Prop_Send, "m_nModelIndex", i_WeaponModelIndexOverride[active]);
 				else
-					SetEntProp(entity, Prop_Send, "m_nModelIndex", GetEntProp(active, Prop_Send, "m_iWorldModelIndex"));
+					SetEntProp(ent2, Prop_Send, "m_nModelIndex", GetEntProp(active, Prop_Send, "m_iWorldModelIndex"));
 				
-				SetEntProp(entity, Prop_Send, "m_fEffects", 129);
-				SetEntProp(entity, Prop_Send, "m_iTeamNum", team);
-				SetEntProp(entity, Prop_Send, "m_nSkin", team-2);
-				SetEntProp(entity, Prop_Send, "m_usSolidFlags", 4);
-				SetEntityCollisionGroup(entity, 11);
-				SetEntProp(entity, Prop_Send, "m_bValidatedAttachedEntity", 1);
+				SetEntProp(ent2, Prop_Send, "m_fEffects", 129);
+				SetEntProp(ent2, Prop_Send, "m_iTeamNum", team);
+				SetEntProp(ent2, Prop_Send, "m_nSkin", team-2);
+				SetEntProp(ent2, Prop_Send, "m_usSolidFlags", 4);
+				SetEntityCollisionGroup(ent2, 11);
+				SetEntProp(ent2, Prop_Send, "m_bValidatedAttachedEntity", 1);
 				
-				DispatchSpawn(entity);
+				DispatchSpawn(ent2);
 				SetVariantString("!activator");
-				ActivateEntity(entity);
+				ActivateEntity(ent2);
 
-				WeaponRef[client] = EntIndexToEntRef(entity);
-				SetEntPropFloat(entity, Prop_Send, "m_flPoseParameter", GetEntPropFloat(active, Prop_Send, "m_flPoseParameter"));
+				WeaponRef[client] = EntIndexToEntRef(ent2);
+				SetEntPropFloat(ent2, Prop_Send, "m_flPoseParameter", GetEntPropFloat(active, Prop_Send, "m_flPoseParameter"));
 
-				SDKCall_EquipWearable(client, entity);
+				SDKCall_EquipWearable(client, ent2);
 			}
 
-			entity = CreateEntityByName("tf_wearable");
-			if(entity > MaxClients)	// Weapon worldmodel
+			ent2 = CreateEntityByName("tf_wearable");
+			if(ent2 > MaxClients)	// Weapon worldmodel
 			{
 				int team = GetClientTeam(client);
 				if(i_WeaponModelIndexOverride[active] > 0)
-					SetEntProp(entity, Prop_Send, "m_nModelIndex", i_WeaponModelIndexOverride[active]);
+					SetEntProp(ent2, Prop_Send, "m_nModelIndex", i_WeaponModelIndexOverride[active]);
 				else
-					SetEntProp(entity, Prop_Send, "m_nModelIndex", GetEntProp(active, Prop_Send, "m_iWorldModelIndex"));
+					SetEntProp(ent2, Prop_Send, "m_nModelIndex", GetEntProp(active, Prop_Send, "m_iWorldModelIndex"));
 				
-				SetEntProp(entity, Prop_Send, "m_fEffects", 129);
-				SetEntProp(entity, Prop_Send, "m_iTeamNum", team);
-				SetEntProp(entity, Prop_Send, "m_nSkin", team-2);
-				SetEntProp(entity, Prop_Send, "m_usSolidFlags", 4);
-				SetEntityCollisionGroup(entity, 11);
-				SetEntProp(entity, Prop_Send, "m_bValidatedAttachedEntity", 1);
+				SetEntProp(ent2, Prop_Send, "m_fEffects", 129);
+				SetEntProp(ent2, Prop_Send, "m_iTeamNum", team);
+				SetEntProp(ent2, Prop_Send, "m_nSkin", team-2);
+				SetEntProp(ent2, Prop_Send, "m_usSolidFlags", 4);
+				SetEntityCollisionGroup(ent2, 11);
+				SetEntProp(ent2, Prop_Send, "m_bValidatedAttachedEntity", 1);
 				
-				DispatchSpawn(entity);
+				DispatchSpawn(ent2);
 				SetVariantString("!activator");
-				ActivateEntity(entity);
+				ActivateEntity(ent2);
 
-				i_Viewmodel_WeaponModel[client] = EntIndexToEntRef(entity);
-				SetEntPropFloat(entity, Prop_Send, "m_flPoseParameter", GetEntPropFloat(active, Prop_Send, "m_flPoseParameter"));
+				i_Viewmodel_WeaponModel[client] = EntIndexToEntRef(ent2);
+				SetEntPropFloat(ent2, Prop_Send, "m_flPoseParameter", GetEntPropFloat(active, Prop_Send, "m_flPoseParameter"));
 
-				SDKCall_EquipWearable(client, entity);
+				SDKCall_EquipWearable(client, ent2);
 			}
 			
 			HidePlayerWeaponModel(client, active);
@@ -359,6 +363,9 @@ void ViewChange_DeleteHands(int client)
 
 int ViewChange_UpdateHands(int client, TFClassType class)
 {
+	if (!ViewChangeHasFP(client))
+		return -1;
+		
 	ViewChange_DeleteHands(client);
 	
 	int entity = EntRefToEntIndex(HandRef[client]);
@@ -425,6 +432,9 @@ void UnHidePlayerWeaponModel(int client, int entity = -1)
 
 void UpdatePlayerFakeModel(int client)
 {
+	if (!ViewChangeHasTP(client))
+		return;
+		
 	int PlayerModel = EntRefToEntIndex(i_Viewmodel_PlayerModel[client]);
 	if(PlayerModel > 0)
 	{

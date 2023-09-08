@@ -111,7 +111,7 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 	if(entity == -1)
 		return -1;
 
-	if (useVC)
+	/*if ((CF_GetViewChangeType(client) != CF_ViewChangeType_None))
 	{
 		TFClassType wepClass = TF2_GetWeaponClass(index, CF_GetCharacterClass(client), TF2_GetClassnameSlot(name, true));
 		TF2_SetPlayerClass(client, wepClass, _, false);
@@ -119,20 +119,16 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 		TF2_SetPlayerClass(client, CF_GetCharacterClass(client), _, false);
 	}
 	else
-	{
+	{*/
 		EquipPlayerWeapon(client, entity);
-	}
+	//}
 
 	if(visible)
 	{
 		SetEntProp(entity, Prop_Send, "m_bValidatedAttachedEntity", 1);
-		if (CheckFile(override) && useVC)
+		if (CheckFile(override))
 		{
-			ViewChange_SetOverrideIndex(entity, PrecacheModel(override));
-		}
-		else if (!useVC)
-		{
-			UnHidePlayerWeaponModel(client, entity);
+			//ViewChange_SetOverrideIndex(entity, PrecacheModel(override));
 		}
 	}
 	else
@@ -172,10 +168,10 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 		#endif
 	}
 	
-	if (ForceClass > 0 && useVC)
+	/*if (ForceClass > 0 && CF_GetViewChangeType(client) != CF_ViewChangeType_None)
 	{
 		ViewChange_SetForceClass(entity, ForceClass);
-	}
+	}*/
 	
 	return entity;
 }

@@ -37,6 +37,14 @@ enum CF_ClassToken
     CF_ClassToken_Engineer
 };
 
+enum CF_ViewChangeType
+{
+	CF_ViewChangeType_None = 0,
+	CF_ViewChangeType_FirstPerson,
+	CF_ViewChangeType_ThirdPerson,
+	CF_ViewChangeType_Full
+};
+
   ////////////////////////////////////////
  ////////////// FORWARDS: ///////////////
 ////////////////////////////////////////
@@ -483,7 +491,9 @@ native int CF_SpawnWeapon(int client, char[] name, int index, int level, int qua
 native TFClassType CF_GetCharacterClass(int client);
 
 /**
- * Checks if the player's current character is using the ViewChange system.
+ * DEPRECATED! USE CF_GetViewChangeType INSTEAD!
+ * 
+ * OLD FUNCTIONALITY: Checks if the player's current character is using the ViewChange system.
  *
  * @param client		The client to check.
  *
@@ -719,3 +729,12 @@ native CF_AbilityType CF_GetAbilitySlot(int client, char pluginName[255], char a
  * @return The string obtained from the given ability's specified arg (empty if the arg was not found), stored in the output buffer.
  */
 native CF_GetArgS(int client, char pluginName[255], char abilityName[255], char argName[255], char output[255], int size);
+
+/**
+ * Gets the chosen client's viewchange type.
+ *
+ * @param client		The client whose viewchange to check.
+ *
+ * @return A CF_ViewChangeType representing the client's viewchange.
+ */
+native CF_ViewChangeType CF_GetViewChangeType(int client);
