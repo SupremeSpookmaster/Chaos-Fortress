@@ -15,9 +15,6 @@ public void OnMapStart()
 	
 }
 
-float Frag_ThrowTime[MAXPLAYERS + 1] = { 0.0, ... };
-float Frag_LastShootTime[MAXPLAYERS + 1] = { 0.0, ... };
-
 public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]) //TODO: Allow devs to return an action to block this...
 {
 	if (StrContains(abilityName, SPRINT) != -1)
@@ -177,10 +174,6 @@ public void Frag_Throw(int client, char abilityName[255])
 		
 	float damage = CF_GetArgF(client, MERC, abilityName, "damage");
 	float velocity = CF_GetArgF(client, MERC, abilityName, "velocity");
-	
-	ForceViewmodelAnimation(client, 18);
-	//HidePlayerWeapon(client, 0.5);
-	Frag_ThrowTime[client] = GetGameTime();
 		
 	DataPack pack = new DataPack();
 	CreateTimer(0.18, Frag_ThrowOnDelay, pack, TIMER_FLAG_NO_MAPCHANGE);
@@ -227,18 +220,6 @@ public Action Frag_ThrowOnDelay(Handle throwIt, DataPack pack)
 		TeleportEntity(grenade, pos, vecAngles, vecVelocity);
 		CF_PlayRandomSound(client, "", "sound_merc_grenade");
 	}
-	
-	return Plugin_Continue;
-}
-
-public Action CF_OnPlayerRunCmd(int client, int &buttons, int &impulse, int &weapon)
-{
-	if (GetGameTime() - Frag_ThrowTime[client] <= 0.5)
-	{
-		buttons = buttons & ~IN_ATTACK;
-		return Plugin_Changed;
-	}
-	else if (buttons & IN_ATTACK != 0) { Frag_LastShootTime[client] = GetGameTime(); }
 	
 	return Plugin_Continue;
 }

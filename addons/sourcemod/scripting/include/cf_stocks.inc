@@ -1058,20 +1058,14 @@ stock void ForceViewmodelAnimation(int client, int sequence)
 
 stock void HidePlayerWeapon(int client, float duration)
 {
-	int ent = -1;
-	while ((ent = FindEntityByClassname(ent, "tf_wearable_vm")) != -1)
+	int ent = TF2_GetActiveWeapon(client);
+	if (!IsValidEdict(ent))
+		return;
+		
+	SetEntProp(ent, Prop_Send, "m_bBeingRepurposedForTaunt", 1);
+	if (duration > 0.0)
 	{
-		if (IsValidEntity(ent))
-		{
-			int owner = GetEntPropEnt(ent, Prop_Send, "m_hOwnerEntity");
-			if (owner == client)
-			{
-				SetEntProp(ent, Prop_Send, "m_fEffects", EF_NODRAW);
-				
-				if (duration > 0.0)
-			    	CreateTimer(duration, UnhideWeapon, EntIndexToEntRef(ent), TIMER_FLAG_NO_MAPCHANGE);
-			}
-		}
+		CreateTimer(duration, UnhideWeapon, EntIndexToEntRef(ent), TIMER_FLAG_NO_MAPCHANGE);
 	}
 } 
 
@@ -1080,7 +1074,7 @@ public Action UnhideWeapon(Handle unhide, int ref)
 	int ent = EntRefToEntIndex(ref);
 	if (IsValidEdict(ent))
 	{
-		SetEntProp(ent, Prop_Send, "m_fEffects",  GetEntProp(ent, Prop_Send, "m_fEffects") & ~EF_NODRAW);
+		SetEntProp(ent, Prop_Send, "m_bBeingRepurposedForTaunt", 0);
 	}
 	
 	return Plugin_Continue;
@@ -1089,4 +1083,12 @@ public Action UnhideWeapon(Handle unhide, int ref)
 stock int TF2_GetActiveWeapon(int client)
 {
 	return GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+}
+
+stock void StringToLower(char input[255])
+{
+	for (int i = 0; i < sizeof(input); i++)
+	{
+		input[i] = CharToLower(input[i]);
+	}
 }

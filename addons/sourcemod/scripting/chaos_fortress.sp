@@ -26,9 +26,11 @@
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
 //	- MINOR BUG: For some reason, player ragdolls get equipped with some weird plaid cosmetic that I think is a heavy misc???????????????????????????
+//	- MINOR BUG: Death sounds aren't caught by sound_replace.
+//	- MINOR BUG: Killstreaks don't reset on round change.
+//	- MINOR BUG: If you are stunned or taunting while using a custom weapon model, your weapon model is still visible which looks ugly. This isn't a problem with my plugin, but I still need to fix it pre-release somehow.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
-//	- MAJOR BUG: You can't pick up ammo. At all.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

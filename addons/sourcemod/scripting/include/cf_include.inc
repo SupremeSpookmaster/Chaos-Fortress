@@ -338,6 +338,21 @@ forward void CF_OnCharacterCreated(int client);
  *
  */
 forward void CF_OnCharacterRemoved(int client);
+
+/**
+ * Called when Chaos Fortress' internal sound hook gets called. Useful so you don't need to make your own sound hooks for every plugin that needs one.
+ *
+ * @param strSound		The sound that was played.
+ * @param entity		The source of the sound.
+ * @param channel		The sound's channel.
+ * @param volume		The sound's volume.
+ * @param level			The sound's level.
+ * @param pitch			The sound's pitch.
+ * @param flags			The sound's flags.
+ *
+ * @return		Plugin_Continue to play the sound normally, Plugin_Changed if you changed any variables, and Plugin_Handled or Plugin_Stop to prevent the sound from playing.
+ */
+forward Action CF_SoundHook(char strSound[PLATFORM_MAX_PATH], int &entity, int &channel, float &volume, int &level, int &pitch, int &flags);
 	
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////

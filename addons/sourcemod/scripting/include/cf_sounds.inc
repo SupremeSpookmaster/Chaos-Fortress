@@ -11,6 +11,16 @@ int CF_SndChans[10] = {
 	SNDCHAN_WEAPON
 };
 
+GlobalForward g_SoundHook;
+
+float f_LastSoundHook[MAXPLAYERS + 1] = { 0.0, ... };
+
+public void CFS_OnPluginStart()
+{
+	g_SoundHook = new GlobalForward("CF_SoundHook", ET_Event, Param_String, Param_CellByRef, Param_CellByRef, Param_FloatByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);
+	AddNormalSoundHook(view_as<NormalSHook>(NormalSoundHook));
+}
+
 public void CFS_MakeNatives()
 {
 	CreateNative("CF_GetRandomSound", Native_CF_GetRandomSound);
@@ -131,45 +141,161 @@ bool PlayRand(int source, char Config[255], char Sound[255], float damage = 0.0)
 			ConfigMap cfgMap = new ConfigMap(ourConf);
 			ConfigMap section = cfgMap.GetSection(path);
 			
-			if (section == null)
-				return false;
+			bool ReturnVal = false;
+			if (section != null)
+			{			
+				int level = GetIntFromConfigMap(section, "level", 100);
+				bool onlySelf = GetBoolFromConfigMap(section, "source", false);
+				float volume = GetFloatFromConfigMap(section, "volume", 1.0);
+				int channel = GetIntFromConfigMap(section, "channel", 7);
+				bool global = GetBoolFromConfigMap(section, "global", false);
+				float chance = GetFloatFromConfigMap(section, "chance", 1.0);
 				
-			int level = GetIntFromConfigMap(section, "level", 100);
-			bool onlySelf = GetBoolFromConfigMap(section, "source", false);
-			float volume = GetFloatFromConfigMap(section, "volume", 1.0);
-			int channel = GetIntFromConfigMap(section, "channel", 7);
-			bool global = GetBoolFromConfigMap(section, "global", false);
-			float chance = GetFloatFromConfigMap(section, "chance", 1.0);
-			
-			DeleteCfg(cfgMap);
-			
-			if (GetRandomFloat(0.0, 1.0) <= chance)
-			{
-				if (global)
+				if (GetRandomFloat(0.0, 1.0) <= chance)
 				{
-					EmitSoundToAll(snd, _, CF_SndChans[channel], level, _, volume);
-				}
-				else if (onlySelf && IsValidClient(source))
-				{
-					EmitSoundToClient(source, snd, _, CF_SndChans[channel], level, _, volume);
+					if (global)
+					{
+						EmitSoundToAll(snd, _, CF_SndChans[channel], level, _, volume);
+					}
+					else if (onlySelf && IsValidClient(source))
+					{
+						EmitSoundToClient(source, snd, _, CF_SndChans[channel], level, _, volume);
+					}
+					else
+					{
+						EmitSoundToAll(snd, source, CF_SndChans[channel], level, _, volume);
+					}
+					
+					ReturnVal =  true;
 				}
 				else
 				{
-					EmitSoundToAll(snd, source, CF_SndChans[channel], level, _, volume);
+					ReturnVal = false;
 				}
-				
-				return true;
 			}
-			else
-			{
-				return false;
-			}
+			DeleteCfg(cfgMap);
+			return ReturnVal;
 		}
 		default:
 		{
 			return false;
 		}
 	}
+}
+
+public bool PlaySpecificReplacement(int client, char sound[PLATFORM_MAX_PATH])
+{
+	if (!CF_IsPlayerCharacter(client))
+		return false;
+		
+	char Sound[255], conf[255];
+	Format(Sound, sizeof(Sound), "%s", sound);
+	StringToLower(Sound);
+	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	
+	ConfigMap map = new ConfigMap(conf);
+	if (map == null)
+		return false;
+		
+	StringMapSnapshot snap = map.GetSection("character.sounds").Snapshot();
+	
+	bool played = false;
+	
+	for (int i = 0; i < snap.Length; i++)
+	{
+		char name[255], tempName[255];
+		snap.GetKey(i, name, sizeof(name));
+		Format(tempName, sizeof(tempName), "%s", name);
+		ReplaceString(tempName, sizeof(tempName), "sound_replace_", "");
+		
+		if (StrContains(Sound, tempName) != -1)
+		{
+			played = PlayRand(client, "", name);
+			break;
+		}
+	}
+	
+	return played;
+}
+
+public Action NormalSoundHook(int clients[64],int &numClients,char strSound[PLATFORM_MAX_PATH],int &entity,int &channel,float &volume,int &level,int &pitch,int &flags)
+{
+	Call_StartForward(g_SoundHook);
+	
+	Call_PushString(strSound);
+	Call_PushCellRef(entity);
+	Call_PushCellRef(channel);
+	Call_PushFloatRef(volume);
+	Call_PushCellRef(level);
+	Call_PushCellRef(pitch);
+	Call_PushCellRef(flags);
+	
+	Action result;
+	Call_Finish(result);
+	
+	if (result != Plugin_Stop && result != Plugin_Handled)
+	{
+		if (CF_IsPlayerCharacter(entity) && StrContains(strSound, "vo/") != -1)
+		{
+			if (GetGameTime() - f_LastSoundHook[entity] > 0.01)
+			{
+				char SoundA[255], SoundB[255];
+				Format(SoundB, sizeof(SoundB), "%s", strSound);
+				StringToLower(SoundB);
+				Format(SoundA, sizeof(SoundA), "sound_replace_%s", SoundB);
+				ReplaceString(SoundA, sizeof(SoundA), ".mp3", "");
+				ReplaceString(SoundA, sizeof(SoundA), ".wav", "");
+				
+				/*
+				
+				//Guaranteed to replace scout_cheers03 specifically:
+				"sound_replace_vo/scout_cheers03"
+				{
+					"1"		"mysound.mp3"
+				}
+				
+				//Guaranteed to replace any class dialogue containing the name "scout_cheers", not including scout_cheers03.
+				"sound_replace_scout_cheers"
+				{
+					"1"		"myothersound.mp3"
+				}
+				
+				//Replaces ALL class dialogue, not including any sound which contains "scout_cheers".
+				"sound_replace_all"
+				{
+					"1"		"mythirdsound.mp3"
+				}
+				
+				*/
+				
+				bool played = false;
+				
+				if (PlayRand(entity, "", SoundA))
+				{
+					played = true;
+				}
+				else
+				{
+					played = PlaySpecificReplacement(entity, strSound);
+				}
+				
+				if (!played)
+				{
+					played = PlayRand(entity, "", "sound_replace_all");
+				}
+				
+				if (played)
+				{
+					f_LastSoundHook[entity] = GetGameTime();
+					return Plugin_Handled;
+				}
+			}
+		}
+		
+		return Plugin_Continue;
+	}
+	
+	return Plugin_Handled;
 }
 
 public Native_CF_GetRandomSound(Handle plugin, int numParams)
