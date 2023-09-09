@@ -898,7 +898,7 @@ public Native_CF_SetUltCharge(Handle plugin, int numParams)
 	f_UltCharge[client] = amt;
 }
 
-public Native_CF_GetUltCharge(Handle plugin, int numParams)
+public any Native_CF_GetUltCharge(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
 	
@@ -978,7 +978,7 @@ public Native_CF_SetSpecialResource(Handle plugin, int numParams)
 	f_Resources[client] = amt;
 }
 
-public Native_CF_GetSpecialResource(Handle plugin, int numParams)
+public any Native_CF_GetSpecialResource(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
 	
@@ -996,7 +996,7 @@ public Native_CF_ApplyAbilityCooldown(Handle plugin, int numParams)
 	int client = GetNativeCell(1);
 	
 	if (!CF_IsPlayerCharacter(client))
-		return 0.0;
+		return;
 		
 	float cd = GetNativeCell(2);
 	CF_AbilityType type = GetNativeCell(3);
@@ -1073,7 +1073,7 @@ public void ApplyCDOnDelay(DataPack pack)
 	}
 }
 
-public Native_CF_GetAbilityCooldown(Handle plugin, int numParams)
+public any Native_CF_GetAbilityCooldown(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
 	
@@ -1103,6 +1103,8 @@ public Native_CF_GetAbilityCooldown(Handle plugin, int numParams)
 			return gameTime >= f_ReloadCDEndTime[client] ? 0.0 : f_ReloadCDEndTime[client] - gameTime;
 		}
 	}
+	
+	return 0.0;
 }
 
 public Native_CF_DoAbility(Handle plugin, int numParams)
@@ -1362,7 +1364,7 @@ public Native_CF_GetArgI(Handle plugin, int numParams)
 	return ReturnValue;
 }
 
-public Native_CF_GetArgF(Handle plugin, int numParams)
+public any Native_CF_GetArgF(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
 	
@@ -1412,7 +1414,7 @@ public Native_CF_GetArgF(Handle plugin, int numParams)
 	return ReturnValue;
 }
 
-public Native_CF_GetAbilitySlot(Handle plugin, int numParams)
+public any Native_CF_GetAbilitySlot(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
 	

@@ -37,14 +37,6 @@ enum CF_ClassToken
     CF_ClassToken_Engineer
 };
 
-enum CF_ViewChangeType
-{
-	CF_ViewChangeType_None = 0,
-	CF_ViewChangeType_FirstPerson,
-	CF_ViewChangeType_ThirdPerson,
-	CF_ViewChangeType_Full
-};
-
   ////////////////////////////////////////
  ////////////// FORWARDS: ///////////////
 ////////////////////////////////////////
@@ -464,7 +456,7 @@ native CF_SetPlayerConfig(int client, char[] confName);
  * 
  * @return Returns a float value equal to the max health of the client's character, 0.0 if the client is invalid or their character has no specified max HP.
  */
-native CF_GetCharacterMaxHealth(int client);
+native any CF_GetCharacterMaxHealth(int client);
 
 /**
  * Determines whether or not the chosen client is a character.
@@ -504,18 +496,7 @@ native int CF_SpawnWeapon(int client, char[] name, int index, int level, int qua
  *
  * @return The class of the player's character, TFClass_Unknown if invalid.
  */
-native TFClassType CF_GetCharacterClass(int client);
-
-/**
- * DEPRECATED! USE CF_GetViewChangeType INSTEAD!
- * 
- * OLD FUNCTIONALITY: Checks if the player's current character is using the ViewChange system.
- *
- * @param client		The client to check.
- *
- * @return True if the client is valid and is a character which uses ViewChange, false otherwise.
- */
-native bool CF_GetCharacterUsingViewChange(int client);
+native any CF_GetCharacterClass(int client);
 
 /**
  * Attaches a particle to a client, using Chaos Fortress' system to automatically handle several important things particles need.
@@ -587,7 +568,7 @@ native CF_SetUltCharge(int client, float amt, bool IgnoreCD = false);
  * @return	A float value equal to the client's current ult charge, 0.0 if the client is invalid or not a character.
  *
  */
-native float CF_GetUltCharge(int client);
+native any CF_GetUltCharge(int client);
 
 /**
  * Gives a client some of their special resource, based on the given ResourceType. Does nothing if the client's special resource has is_ult enabled.
@@ -623,7 +604,7 @@ native CF_SetSpecialResource(int client, float amt);
  * @return	A float value equal to the client's current resources, 0.0 if the client is invalid, not a character, not using resources, or has is_ult enabled on their special resource.
  *
  */
-native float CF_GetSpecialResource(int client);
+native any CF_GetSpecialResource(int client);
 
 /**
  * Applies a cooldown to an ability slot, given a set of parameters.
@@ -635,7 +616,7 @@ native float CF_GetSpecialResource(int client);
  * @param delay 		Set to true to delay the cooldown application by one frame so it doesn't interfere with other cooldown application sources. Enabled by default.
  *
  */
-native CF_ApplyAbilityCooldown(int client, float duration, CF_AbilityType type, bool override = false, bool delay = true);
+native void CF_ApplyAbilityCooldown(int client, float duration, CF_AbilityType type, bool override = false, bool delay = true);
 
 /**
  * Retrieves the remaining cooldown of the client's given ability slot.
@@ -644,7 +625,7 @@ native CF_ApplyAbilityCooldown(int client, float duration, CF_AbilityType type, 
  * @param type			CF_AbilityType pertaining to the given slot.
  *
  */
-native float CF_GetAbilityCooldown(int client, CF_AbilityType type);
+native any CF_GetAbilityCooldown(int client, CF_AbilityType type);
 
 /**
  * Activates a given ability, if it exists on the character.
@@ -719,7 +700,7 @@ native int CF_GetArgI(int client, char pluginName[255], char abilityName[255], c
  *
  * @return A float equal to the value obtained from the given ability's specified arg, -1.0 if no such value was present.
  */
-native float CF_GetArgF(int client, char pluginName[255], char abilityName[255], char argName[255]);
+native any CF_GetArgF(int client, char pluginName[255], char abilityName[255], char argName[255]);
 
 /**
  * Gets an ability slot from a specified ability.
@@ -730,7 +711,7 @@ native float CF_GetArgF(int client, char pluginName[255], char abilityName[255],
  *
  * @return A CF_AbilityType pertaining to the chosen ability's slot, CF_AbilityType_None if the ability doesn't exist or the client is invalid/not a character.
  */
-native CF_AbilityType CF_GetAbilitySlot(int client, char pluginName[255], char abilityName[255]);
+native any CF_GetAbilitySlot(int client, char pluginName[255], char abilityName[255]);
 
 /**
  * Gets a string value from a specified ability's arg.
@@ -747,15 +728,6 @@ native CF_AbilityType CF_GetAbilitySlot(int client, char pluginName[255], char a
 native CF_GetArgS(int client, char pluginName[255], char abilityName[255], char argName[255], char output[255], int size);
 
 /**
- * Gets the chosen client's viewchange type.
- *
- * @param client		The client whose viewchange to check.
- *
- * @return A CF_ViewChangeType representing the client's viewchange.
- */
-native CF_ViewChangeType CF_GetViewChangeType(int client);
-
-/**
  * Gets a random sound from a given boss config.
  *
  * @param Config 				The config to grab the sound from. Must be a direct path such as "configs/chaos_fortress/character.cfg". You can obtain this easily with CF_GetCharacterConfig.
@@ -765,7 +737,7 @@ native CF_ViewChangeType CF_GetViewChangeType(int client);
  *
  * @return A KeyValType corresponding to the chosen sound. KeyValType_Value for sounds without special settings, KeyValType_Section for sounds with special settings, and KeyValType_Null for invalid sounds.
  */
-native KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Output[255], int len);
+native any CF_GetRandomSound(char Config[255], char Sound[255], char Output[255], int len);
 
 /**
  * Plays a random sound from a client's boss config, as specified by the settings below.

@@ -7,7 +7,7 @@ public void CFW_OnPluginStart()
 
 public void CFW_MapStart()
 {
-	ViewChange_MapStart();
+	//ViewChange_MapStart();
 }
 
 public void CFW_MakeNatives()
@@ -39,15 +39,14 @@ public Native_CF_SpawnWeapon(Handle plugin, int numParams)
  	
  	bool visible = GetNativeCell(11) != 0;
  	bool unequip = GetNativeCell(12) != 0;
- 	bool useVC = CF_GetCharacterUsingViewChange(client);
  	int ForceClass = GetNativeCell(13);
  	bool spawn = GetNativeCell(14);
  	
- 	return SpawnWeapon_Special(client, name, index, level, qual, slot, reserve, clip, att, override, visible, unequip, useVC, ForceClass, spawn);
+ 	return SpawnWeapon_Special(client, name, index, level, qual, slot, reserve, clip, att, override, visible, unequip, ForceClass, spawn);
  }
 
 //Credit to Artvin and Batfoxkid for this, I just took it from Zombie Riot and modified some things.
-stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255], bool visible, bool unequip, bool useVC, int ForceClass, bool spawn)
+stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255], bool visible, bool unequip, int ForceClass, bool spawn)
 {
 	if(StrEqual(name, "saxxy", false))	// if "saxxy" is specified as the name, replace with appropiate name
 	{ 
@@ -110,26 +109,12 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 	delete hWeapon;
 	if(entity == -1)
 		return -1;
-
-	/*if ((CF_GetViewChangeType(client) != CF_ViewChangeType_None))
-	{
-		TFClassType wepClass = TF2_GetWeaponClass(index, CF_GetCharacterClass(client), TF2_GetClassnameSlot(name, true));
-		TF2_SetPlayerClass(client, wepClass, _, false);
-		EquipPlayerWeapon(client, entity);
-		TF2_SetPlayerClass(client, CF_GetCharacterClass(client), _, false);
-	}
-	else
-	{*/
-		EquipPlayerWeapon(client, entity);
-	//}
+		
+	EquipPlayerWeapon(client, entity);
 
 	if(visible)
 	{
 		SetEntProp(entity, Prop_Send, "m_bValidatedAttachedEntity", 1);
-		if (CheckFile(override))
-		{
-			//ViewChange_SetOverrideIndex(entity, PrecacheModel(override));
-		}
 	}
 	else
 	{

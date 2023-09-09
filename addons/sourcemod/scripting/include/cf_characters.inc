@@ -81,7 +81,6 @@ bool b_SpawnPreviewParticleNextFrame[MAXPLAYERS + 1] = { false, ... };
 #endif
 
 int i_CharacterParticleOwner[2049] = { -1, ... };
-int i_CharacterModelIndex[MAXPLAYERS+1];
 
 bool b_DisplayRole = true;
 bool b_CharacterApplied[MAXPLAYERS + 1] = { false, ... }; //Whether or not the client's character has been applied to them already. If true: skip MakeCharacter for that client. Set to false automatically on death, round end, disconnect, and if the player changes their character selection.
@@ -103,8 +102,6 @@ Queue g_CharacterParticles[MAXPLAYERS + 1];
 
 float f_Speed[MAXPLAYERS + 1];
 
-CF_ViewChangeType VCType[MAXPLAYERS + 1] = { CF_ViewChangeType_None, ... };
-
 public void CFC_MakeNatives()
 {
 	CreateNative("CF_GetRoundState", Native_CF_GetRoundState);
@@ -113,10 +110,8 @@ public void CFC_MakeNatives()
 	CreateNative("CF_IsPlayerCharacter", Native_CF_IsPlayerCharacter);
 	CreateNative("CF_GetCharacterClass", Native_CF_GetCharacterClass);
 	CreateNative("CF_GetCharacterMaxHealth", Native_CF_GetCharacterMaxHealth);
-	CreateNative("CF_GetCharacterUsingViewChange", Native_CF_GetCharacterUsingViewChange);
 	CreateNative("CF_AttachParticle", Native_CF_AttachParticle);
 	CreateNative("CF_AttachWearable", Native_CF_AttachWearable);
-	CreateNative("CF_GetViewChangeType", Native_CF_GetViewChangeType);
 }
 
 GlobalForward g_OnCharacterCreated;
@@ -1034,11 +1029,6 @@ public void CF_ResetMadeStatus(int client)
 	SetClientCookie(client, c_DesiredCharacter, conf);
 		
 	ConfigMap GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
-		
-	//int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
-	//TF2_SetPlayerClass(client, Classes[class]);
-	
-	//ViewChange_DeleteAll(client);
 	
 	int entity;
 	while((entity = FindEntityByClassname(entity, "tf_wearable")) != -1)
@@ -1059,45 +1049,14 @@ public void CF_ResetMadeStatus(int client)
 		}
 	}
 	
-	/*int vc = GetIntFromConfigMap(map, "character.use_viewchange", 0);
-	switch (vc)
-	{
-		case 1:
-		{
-			VCType[client] = CF_ViewChangeType_FirstPerson;
-		}
-		case 2:
-		{
-			VCType[client] = CF_ViewChangeType_ThirdPerson;
-		}
-		case 3:
-		{
-			VCType[client] = CF_ViewChangeType_Full;
-		}
-		default:
-		{
-			VCType[client] = CF_ViewChangeType_None;
-		}
-	}*/
-	
 	char model[255], name[255];
 	map.Get("character.model", model, sizeof(model));
 	map.Get("character.name", name, sizeof(name));
 	f_Speed[client] = GetFloatFromConfigMap(map, "character.speed", 300.0);
 	if (CheckFile(model))
 	{
-		//if (!ViewChangeHasTP(client))
-		//{
-			SetVariantString(model);
-			AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
-		/*}
-		else
-		{
-			SetVariantString("");
-			AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
-			i_CharacterModelIndex[client] = PrecacheModel(model);
-			ViewChange_PlayerModel(client);
-		}*/
+		SetVariantString(model);
+		AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
 	}
 	
 	ConfigMap wearables = map.GetSection("character.wearables");
@@ -1120,7 +1079,6 @@ public void CF_ResetMadeStatus(int client)
 	if (weapons != null)
 	{
 		CFC_GiveWeapons(client, weapons);
-		//delete weapons;
 	}
 	
 	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
@@ -1128,16 +1086,10 @@ public void CF_ResetMadeStatus(int client)
 	CF_UpdateCharacterHP(client, Classes[class], true);
 	CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
 	
-	/*if (ViewChangeHasFP(client))
-	{
-		ViewChange_UpdateHands(client, CF_GetCharacterClass(client));
-	}*/
-	
 	ConfigMap particles = map.GetSection("character.particles");
 	if (particles != null)
 	{
 		CFC_AttachParticles(client, particles);
-		//delete particles;
 	}
  	
  	if (!StrEqual(conf, s_PreviousCharacter[client]))	//We are respawning as a new character, default to spawn_intro
@@ -1172,12 +1124,6 @@ public void CF_ResetMadeStatus(int client)
  	
  	DeleteCfg(map);
  	DeleteCfg(GameRules);
- 	
- 	/*SDKUnhook(client, SDKHook_WeaponSwitchPost, ViewChange_WeaponSwitch);
- 	if (CF_GetViewChangeType(client) != CF_ViewChangeType_None)
- 	{
- 		SDKHook(client, SDKHook_WeaponSwitchPost, ViewChange_WeaponSwitch);
- 	}*/
  	
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
@@ -1339,10 +1285,10 @@ public void CF_ResetMadeStatus(int client)
 			{
 				StringMapSnapshot snap = custAtts.Snapshot();
 				
-				for (int i = 0; i < snap.Length; i++)
+				for (int j = 0; j < snap.Length; j++)
 				{
 					char custAtt[255], custVal[255];
-					snap.GetKey(i, custAtt, sizeof(custAtt));
+					snap.GetKey(j, custAtt, sizeof(custAtt));
 					custAtts.Get(custAtt, custVal, sizeof(custVal));
 					
 					TF2Attrib_SetFromStringValue(weapon, custAtt, custVal);
@@ -1568,7 +1514,7 @@ public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] classname,
 	return Plugin_Continue;
 }
  
- public Native_CF_GetCharacterMaxHealth(Handle plugin, int numParams)
+ public any Native_CF_GetCharacterMaxHealth(Handle plugin, int numParams)
  {
  	int client = GetNativeCell(1);
  	
@@ -1669,7 +1615,7 @@ public Native_CF_IsPlayerCharacter(Handle plugin, int numParams)
 	return ReturnValue;
 }
 
-public Native_CF_GetCharacterClass(Handle plugin, int numParams)
+public any Native_CF_GetCharacterClass(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
 	
@@ -1693,32 +1639,6 @@ public Native_CF_GetCharacterClass(Handle plugin, int numParams)
 	}
 }
 
-public Native_CF_GetCharacterUsingViewChange(Handle plugin, int numParams)
-{
-	int client = GetNativeCell(1);
-	
-	if (!CF_IsPlayerCharacter(client))
-		return false;
-		
-	char conf[255];
-	CF_GetPlayerConfig(client, conf, 255);
-	ConfigMap map = new ConfigMap(conf);
-	int num = GetIntFromConfigMap(map, "character.use_viewchange", 0);
-	DeleteCfg(map);
-	
-	return num;
-}
-
-public Native_CF_GetViewChangeType(Handle plugin, int numParams)
-{
-	int client = GetNativeCell(1);
-	
-	if (!CF_IsPlayerCharacter(client))
-		return CF_ViewChangeType_None;
-		
-	return VCType[client];
-}
-
 public Native_CF_AttachParticle(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
@@ -1738,16 +1658,7 @@ public Native_CF_AttachParticle(Handle plugin, int numParams)
 	float zOff = GetNativeCell(7);
 		
 	
-	int particle;  
-	
-	/*if (ViewChangeHasTP(client))
-	{
-		particle = AttachParticleToEntity_ViewChange(client, partName, point, lifespan, xOff, yOff, zOff);
-	}
-	else
-	{*/
-		particle = AttachParticleToEntity(client, partName, point, lifespan, xOff, yOff, zOff);
-	//}
+	int particle = AttachParticleToEntity(client, partName, point, lifespan, xOff, yOff, zOff);
 	
 	if (IsValidEntity(particle))
 	{
@@ -1770,9 +1681,6 @@ public Native_CF_AttachWearable(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return -1;
 		
-	//if (g_CharacterParticles[client] == null)
-	//	g_CharacterParticles[client] = new Queue();
-		
 	char atts[255];
 	int index = GetNativeCell(2);
 	bool visible = GetNativeCell(3);
@@ -1789,20 +1697,4 @@ public Native_CF_AttachWearable(Handle plugin, int numParams)
 	}
 	
 	return -1;
-}
-
-bool ViewChangeHasTP(int client)
-{
-	if (!IsValidClient(client))
-		return false;
-		
-	return VCType[client] == CF_ViewChangeType_ThirdPerson || VCType[client] == CF_ViewChangeType_Full;
-}
-
-bool ViewChangeHasFP(int client)
-{
-	if (!IsValidClient(client))
-		return false;
-		
-	return VCType[client] == CF_ViewChangeType_FirstPerson || VCType[client] == CF_ViewChangeType_Full;
 }

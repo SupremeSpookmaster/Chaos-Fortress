@@ -13,7 +13,7 @@ int CF_SndChans[10] = {
 
 GlobalForward g_SoundHook;
 
-float f_LastSoundHook[MAXPLAYERS + 1] = { 0.0, ... };
+//float f_LastSoundHook[MAXPLAYERS + 1] = { 0.0, ... };
 
 public void CFS_OnPluginStart()
 {
@@ -48,6 +48,7 @@ public KeyValType GetRand(char Config[255], char Sound[255], char Output[255])
 	
 	char key[255];
 	snap.GetKey(chosen, key, sizeof(key));
+	delete snap;
 	
 	#if defined DEBUG_SOUNDS
 	PrintToServer("CF_GetRandomSound retrieved a ConfigMap with the following path: %s.%s", snd, key);
@@ -215,6 +216,9 @@ public bool PlaySpecificReplacement(int client, char sound[PLATFORM_MAX_PATH])
 		}
 	}
 	
+	DeleteCfg(map);
+	delete snap;
+	
 	return played;
 }
 
@@ -237,14 +241,12 @@ public Action NormalSoundHook(int clients[64],int &numClients,char strSound[PLAT
 	{
 		if (CF_IsPlayerCharacter(entity) && StrContains(strSound, "vo/") != -1)
 		{
-			if (true/*GetGameTime() - f_LastSoundHook[entity] > 0.01*/)
-			{
-				char SoundA[255], SoundB[255];
-				Format(SoundB, sizeof(SoundB), "%s", strSound);
-				StringToLower(SoundB);
-				Format(SoundA, sizeof(SoundA), "sound_replace_%s", SoundB);
-				ReplaceString(SoundA, sizeof(SoundA), ".mp3", "");
-				ReplaceString(SoundA, sizeof(SoundA), ".wav", "");
+			char SoundA[255], SoundB[255];
+			Format(SoundB, sizeof(SoundB), "%s", strSound);
+			StringToLower(SoundB);
+			Format(SoundA, sizeof(SoundA), "sound_replace_%s", SoundB);
+			ReplaceString(SoundA, sizeof(SoundA), ".mp3", "");
+			ReplaceString(SoundA, sizeof(SoundA), ".wav", "");
 				
 				/*
 				
@@ -268,37 +270,35 @@ public Action NormalSoundHook(int clients[64],int &numClients,char strSound[PLAT
 				
 				*/
 				
-				bool played = false;
+			bool played = false;
 				
-				if (PlayRand(entity, "", SoundA))
-				{
-					played = true;
-				}
-				else
-				{
-					played = PlaySpecificReplacement(entity, strSound);
-				}
+			if (PlayRand(entity, "", SoundA))
+			{
+				played = true;
+			}
+			else
+			{
+				played = PlaySpecificReplacement(entity, strSound);
+			}
 				
-				if (!played)
-				{
-					played = PlayRand(entity, "", "sound_replace_all");
-				}
+			if (!played)
+			{
+				played = PlayRand(entity, "", "sound_replace_all");
+			}
 				
-				if (played)
-				{
-					f_LastSoundHook[entity] = GetGameTime();
-					return Plugin_Handled;
-				}
+			if (played)
+			{
+				return Plugin_Handled;
 			}
 		}
 		
-		return Plugin_Continue;
+		return result;
 	}
 	
 	return Plugin_Handled;
 }
 
-public Native_CF_GetRandomSound(Handle plugin, int numParams)
+public any Native_CF_GetRandomSound(Handle plugin, int numParams)
 {
 	char Config[255], Sound[255], Output[255];
 	GetNativeString(1, Config, sizeof(Config));

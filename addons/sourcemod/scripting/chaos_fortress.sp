@@ -15,7 +15,6 @@
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Everything that happens on client disconnect.
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
-//	- TODO: Figure out why natives that don't return ints are throwing compiler warnings (they still work, the warnings are just annoying).
 //	- TODO: Detect healing and give resources/ult charge for it.
 //	- TODO: All remaining sound cues:
 //			-sound_spawn_happy
@@ -303,6 +302,5 @@ public void OnEntityDestroyed(int entity)
 	if (!IsValidEntity(entity) || entity < 0 || entity > 2049)
 		return;
 		
-	ViewChange_OnEntityDestroyed(entity);
 	CFC_OnEntityDestroyed(entity);
 }
