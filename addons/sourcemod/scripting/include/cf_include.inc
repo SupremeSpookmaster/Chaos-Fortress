@@ -373,8 +373,9 @@ native CF_GetKillstreak(int client);
  * @param client		The client whose killstreak to set.
  * @param kills			The new killstreak.
  * @param killer		The player who scored the kill. Used for announcing the end of a long killstreak.
+ * @param announce		Announces the change in the killstreak in accordance with game_rules.cfg if set to true.
  */
-native CF_SetKillstreak(int client, int kills, int killer)
+native CF_SetKillstreak(int client, int kills, int killer, bool announce = true)
 
 /**
  * Determines whether or not the chosen client was holding M2 during the previous frame.

@@ -237,7 +237,7 @@ public Action NormalSoundHook(int clients[64],int &numClients,char strSound[PLAT
 	{
 		if (CF_IsPlayerCharacter(entity) && StrContains(strSound, "vo/") != -1)
 		{
-			if (GetGameTime() - f_LastSoundHook[entity] > 0.01)
+			if (true/*GetGameTime() - f_LastSoundHook[entity] > 0.01*/)
 			{
 				char SoundA[255], SoundB[255];
 				Format(SoundB, sizeof(SoundB), "%s", strSound);

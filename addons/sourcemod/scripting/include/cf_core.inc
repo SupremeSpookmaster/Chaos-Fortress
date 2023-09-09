@@ -181,13 +181,22 @@ public void CF_OnPluginStart()
  	
  	Call_Finish();
  	
+ 	CFKS_PlayerKilled(victim, attacker, deadRinger);
+ 	
  	if (!deadRinger)
  	{
- 		CF_UnmakeCharacter(victim, false);
+ 		RequestFrame(UnmakeAfterDelay, GetClientUserId(victim));
  		CFA_PlayerKilled(attacker, victim);
  	}
- 	
- 	CFKS_PlayerKilled(victim, attacker, deadRinger);
+ }
+ 
+ public void UnmakeAfterDelay(int id)
+ {
+ 	int victim = GetClientOfUserId(id);
+ 	if (IsValidClient(victim))
+ 	{
+ 		CF_UnmakeCharacter(victim, false);
+ 	}
  }
  
  /**
@@ -223,14 +232,13 @@ public void CF_OnPluginStart()
  {
  	i_CFRoundState = state;
  	
- 	//This breaks character particles. The goal was to reset everybody's character stats, which is easy but man I'm tired so I'll do it the right way later.
- 	/*if (state == 0)
+ 	if (state == 0)
  	{
  		for (int i = 1; i <= MaxClients; i++)
  		{
- 			CF_UnmakeCharacter(i, false);
+ 			CF_SetKillstreak(i, 0, 0, false);
  		}
- 	}*/
+ 	}
  	
  	Call_StartForward(g_OnRoundStateChanged);
  	
