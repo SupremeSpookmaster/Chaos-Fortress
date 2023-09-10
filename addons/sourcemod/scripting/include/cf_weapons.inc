@@ -1,5 +1,32 @@
 #include <cf_viewchange>
 
+char s_WeaponFireAbility[2049][255];
+char s_WeaponFirePlugin[2049][255];
+char s_WeaponFireSound[2049][255];
+
+public void CFW_OnEntityDestroyed(int entity)
+{
+	i_CharacterParticleOwner[entity] = -1;
+	s_WeaponFireAbility[entity] = "";
+	s_WeaponFirePlugin[entity] = "";
+	s_WeaponFireSound[entity] = "";
+}
+
+public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] classname, bool &result)
+{
+	if (!StrEqual(s_WeaponFireAbility[weapon], ""))
+	{
+		CF_DoAbility(client, s_WeaponFirePlugin[weapon], s_WeaponFireAbility[weapon]);
+	}
+	
+	if (!StrEqual(s_WeaponFireSound[weapon], ""))
+	{
+		CF_PlayRandomSound(client, "", s_WeaponFireSound[weapon]);
+	}
+	
+	return Plugin_Continue;
+}
+
 public void CFW_OnPluginStart()
 {
 	ViewChange_PluginStart();
@@ -41,12 +68,16 @@ public Native_CF_SpawnWeapon(Handle plugin, int numParams)
  	bool unequip = GetNativeCell(12) != 0;
  	int ForceClass = GetNativeCell(13);
  	bool spawn = GetNativeCell(14);
+ 	char fireAbility[255], firePlugin[255], fireSound[255];
+ 	GetNativeString(15, fireAbility, sizeof(fireAbility));
+ 	GetNativeString(16, firePlugin, sizeof(firePlugin));
+ 	GetNativeString(17, fireSound, sizeof(fireSound));
  	
- 	return SpawnWeapon_Special(client, name, index, level, qual, slot, reserve, clip, att, override, visible, unequip, ForceClass, spawn);
+ 	return SpawnWeapon_Special(client, name, index, level, qual, slot, reserve, clip, att, override, visible, unequip, ForceClass, spawn, fireAbility, firePlugin, fireSound);
  }
 
 //Credit to Artvin and Batfoxkid for this, I just took it from Zombie Riot and modified some things.
-stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255], bool visible, bool unequip, int ForceClass, bool spawn)
+stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255], bool visible, bool unequip, int ForceClass, bool spawn, char fireAbility[255], char firePlugin[255], char fireSound[255])
 {
 	if(StrEqual(name, "saxxy", false))	// if "saxxy" is specified as the name, replace with appropiate name
 	{ 
@@ -152,6 +183,10 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 		
 		#endif
 	}
+	
+	strcopy(s_WeaponFireAbility[client], 255, fireAbility);
+	strcopy(s_WeaponFirePlugin[client], 255, firePlugin);
+	strcopy(s_WeaponFireSound[client], 255, fireSound);
 	
 	return entity;
 }

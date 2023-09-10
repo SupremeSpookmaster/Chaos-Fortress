@@ -77,6 +77,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_GetArgF", Native_CF_GetArgF);
 	CreateNative("CF_GetArgS", Native_CF_GetArgS);
 	CreateNative("CF_GetAbilitySlot", Native_CF_GetAbilitySlot);
+	CreateNative("CF_GetAbilityConfigMapPath", Native_CF_GetAbilityConfigMapPath);
 }
 
 public void CFA_MakeForwards()
@@ -1533,6 +1534,64 @@ public Native_CF_GetArgS(Handle plugin, int numParams)
 			char arg[255]; 
 			subsection.Get(argName, arg, sizeof(arg));
 			SetNativeString(5, arg, size, false);
+			break;
+		}
+		
+		i++;
+		Format(secName, sizeof(secName), "ability_%i", i);
+		subsection = abilities.GetSection(secName);
+	}
+	
+	DeleteCfg(map);
+}
+
+public Native_CF_GetAbilityConfigMapPath(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	int length = GetNativeCell(6);
+	
+	if (!CF_IsPlayerCharacter(client))
+	{
+		SetNativeString(5, "", length);
+		return;
+	}
+		
+	char conf[255], targetPlugin[255], targetAbility[255], section[255], pluginName[255], abName[255];
+	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	
+	ConfigMap map = new ConfigMap(conf);
+	if (map == null)
+	{
+		SetNativeString(5, "", length);
+		return;
+	}
+		
+	GetNativeString(2, targetPlugin, sizeof(targetPlugin));
+	GetNativeString(3, targetAbility, sizeof(targetAbility));
+	GetNativeString(4, section, sizeof(section));
+		
+	ConfigMap abilities = map.GetSection("character.abilities");
+	if (abilities == null)
+	{
+		SetNativeString(5, "", length);
+		return;
+	}
+		
+	int i = 1;
+	char secName[255];
+	Format(secName, sizeof(secName), "ability_%i", i);
+		
+	ConfigMap subsection = abilities.GetSection(secName);
+	while (subsection != null)
+	{
+		subsection.Get("ability_name", abName, sizeof(abName));
+		subsection.Get("plugin_name", pluginName, sizeof(pluginName));
+		
+		if (StrEqual(targetPlugin, pluginName) && StrEqual(targetAbility, abName))
+		{
+			char path[255];
+			Format(path, sizeof(path), "character.abilities.%s.%s", secName, section);
+			SetNativeString(5, path, length);
 			break;
 		}
 		

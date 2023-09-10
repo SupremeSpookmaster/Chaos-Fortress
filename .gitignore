@@ -13,8 +13,10 @@
 # Excluded Files:
 !addons/sourcemod/plugins/chaos_fortress.smx
 !chaos_fortress.sp
+!cf_generic_abilities.sp
 !cf_mercenary.sp
 !cf_plugin_template.sp
+!cf_soundpack.sp
 !cf_abilities.inc
 !cf_buttons.inc
 !cf_characters.inc

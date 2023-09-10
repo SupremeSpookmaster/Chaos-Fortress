@@ -90,9 +90,6 @@ bool b_IsDead[MAXPLAYERS + 1] = { false, ... };
 char s_CharacterConfig[MAXPLAYERS+1][255];	//The config currently used for this player's character. If empty: that player is not a character.
 char s_CharacterConfigInMenu[MAXPLAYERS+1][255];	//The config currently used this player's info menu.
 char s_PreviousCharacter[MAXPLAYERS+1][255];
-char s_WeaponFireAbility[2049][255];
-char s_WeaponFirePlugin[2049][255];
-char s_WeaponFireSound[2049][255];
 //char s_DesiredCharacterConfig[MAXPLAYERS+1][255];	//The config of the character this player will become next time they spawn.
 char s_DefaultCharacter[255];
 
@@ -133,14 +130,6 @@ public void CFC_MakeForwards()
 	
 	g_OnCharacterCreated = new GlobalForward("CF_OnCharacterCreated", ET_Ignore, Param_Cell);
 	g_OnCharacterRemoved = new GlobalForward("CF_OnCharacterRemoved", ET_Ignore, Param_Cell);
-}
-
-public void CFC_OnEntityDestroyed(int entity)
-{
-	i_CharacterParticleOwner[entity] = -1;
-	s_WeaponFireAbility[entity] = "";
-	s_WeaponFirePlugin[entity] = "";
-	s_WeaponFireSound[entity] = "";
 }
 
 /**
@@ -1273,13 +1262,14 @@ public void CF_ResetMadeStatus(int client)
 		}
 		bool unequip = GetBoolFromConfigMap(subsection, "unequip", true);
 			
-		int weapon = CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, ForceClass, true);
+		char fireAbility[255], firePlugin[255], fireSound[255];
+		subsection.Get("fire_ability", fireAbility, 255);
+		subsection.Get("fire_plugin", firePlugin, 255);
+		subsection.Get("fire_sound", fireSound, 255);	
+			
+		int weapon = CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, ForceClass, true, fireAbility, firePlugin, fireSound);
 		if (IsValidEntity(weapon))
 		{
-			subsection.Get("fire_ability", s_WeaponFireAbility[weapon], 255);
-			subsection.Get("fire_plugin", s_WeaponFirePlugin[weapon], 255);
-			subsection.Get("fire_sound", s_WeaponFireSound[weapon], 255);
-			
 			ConfigMap custAtts = subsection.GetSection("custom_attributes");
 			if (custAtts != null)
 			{
@@ -1293,6 +1283,8 @@ public void CF_ResetMadeStatus(int client)
 					
 					TF2Attrib_SetFromStringValue(weapon, custAtt, custVal);
 				}
+				
+				delete snap;
 			}
 		}
 		
@@ -1498,21 +1490,6 @@ public void CF_ResetMadeStatus(int client)
  	
  	SetEntProp(client, Prop_Send, "m_iHealth", hp);
  }
- 
-public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] classname, bool &result)
-{
-	if (!StrEqual(s_WeaponFireAbility[weapon], ""))
-	{
-		CF_DoAbility(client, s_WeaponFirePlugin[weapon], s_WeaponFireAbility[weapon]);
-	}
-	
-	if (!StrEqual(s_WeaponFireSound[weapon], ""))
-	{
-		CF_PlayRandomSound(client, "", s_WeaponFireSound[weapon]);
-	}
-	
-	return Plugin_Continue;
-}
  
  public any Native_CF_GetCharacterMaxHealth(Handle plugin, int numParams)
  {

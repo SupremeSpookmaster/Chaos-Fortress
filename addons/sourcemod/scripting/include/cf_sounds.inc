@@ -40,7 +40,10 @@ public KeyValType GetRand(char Config[255], char Sound[255], char Output[255])
 	ConfigMap newMap = cfgMap.GetSection(snd);
 	
 	if (newMap == null)
+	{
+		DeleteCfg(cfgMap);
 		return KeyValType_Null;
+	}
 		
 	StringMapSnapshot snap = newMap.Snapshot();
 	

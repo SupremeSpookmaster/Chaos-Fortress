@@ -175,6 +175,9 @@ public void Frag_Throw(int client, char abilityName[255])
 	float damage = CF_GetArgF(client, MERC, abilityName, "damage");
 	float velocity = CF_GetArgF(client, MERC, abilityName, "velocity");
 		
+	ForceViewmodelAnimation(client, 18);
+	HidePlayerWeapon(client, 0.8);
+		
 	DataPack pack = new DataPack();
 	CreateTimer(0.18, Frag_ThrowOnDelay, pack, TIMER_FLAG_NO_MAPCHANGE);
 	WritePackCell(pack, GetClientUserId(client));

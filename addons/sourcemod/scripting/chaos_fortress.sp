@@ -28,6 +28,7 @@
 //			-sound_ultimate_activation_self
 //			-sound_ultimate_react_friendly
 //			-sound_ultimate_react_hostile
+//	- TODO: Translations
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- OPTIONAL TODO: Collision forwards.
@@ -38,6 +39,8 @@
 //	- MINOR BUG: Third person animations frequently show you holding the wrong weapon, IE you have your SMG out but it shows your melee. Again, not a problem with my plugin but I will need to find a fix.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
+//	- MAJOR BUG: That Godforsaken memory leak is still alive. How many times do I need to shoot it in the head before it just stays dead?
+//	- MAJOR BUG: If a weapon using a custom model from Suza's plugin and it gets removed and then you are forced to another weapon, the old weapon's model stays. It fixes itself when you switch weapons. This will mess with gameplay due to recognition.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
@@ -302,5 +305,5 @@ public void OnEntityDestroyed(int entity)
 	if (!IsValidEntity(entity) || entity < 0 || entity > 2049)
 		return;
 		
-	CFC_OnEntityDestroyed(entity);
+	CFW_OnEntityDestroyed(entity);
 }

@@ -484,10 +484,13 @@ native bool CF_IsPlayerCharacter(int client);
  * @param unequip		Should whichever weapon(s) currently in this weapon's slot be removed before equipping this weapon?
  * @param ForceClass	Class to force this weapon to use the animations of, if using ViewChange. 1-9 for the mercs, anything above 9 is considered all-class.
  * @param spawn			If true, ammo is applied one frame later instead of instantly so it doesn't interfere with the resupply event.
+ * @param fireAbility	The ability to activate when this weapon fires, optional.
+ * @param firePlugin	The plugin of the ability to activate when this weapon fires, optional.
+ * @param fireSound		The sound slot to use when this weapon fires, optional.
  *
  * @return The entity index of the spawned weapon, -1 if not valid.
  */
-native int CF_SpawnWeapon(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255] = "", bool visible = true, bool unequip = true, int ForceClass = 0, bool spawn = false);
+native int CF_SpawnWeapon(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255] = "", bool visible = true, bool unequip = true, int ForceClass = 0, bool spawn = false, char fireAbility[255] = "", char firePlugin[255] = "", char fireSound[255] = "");
 
 /**
  * Gets the class of the player's current character.
@@ -726,6 +729,20 @@ native any CF_GetAbilitySlot(int client, char pluginName[255], char abilityName[
  * @return The string obtained from the given ability's specified arg (empty if the arg was not found), stored in the output buffer.
  */
 native CF_GetArgS(int client, char pluginName[255], char abilityName[255], char argName[255], char output[255], int size);
+
+/**
+ * Gets a string value from a specified ability's arg.
+ *
+ * @param client		The client whose abilities to check.
+ * @param pluginName	The plugin name of the ability, as specified in the config as "plugin_name".
+ * @param abilityName	The ability name of the ability, as specified in the config as "ability_name".
+ * @param section		The section you want the ConfigMap to lead to. For example, if your ability has a section you want to retrieve called "custom_attributes", you would pass custom_attributes to this value.
+ * @param output		Output buffer.
+ * @param size			Output buffer size.
+ *
+ * @return A string representing the config's path to the given section, intended to be used to create a ConfigMap.
+ */
+native CF_GetAbilityConfigMapPath(int client, char pluginName[255], char abilityName[255], char section[255], char output[255], int size);
 
 /**
  * Gets a random sound from a given boss config.

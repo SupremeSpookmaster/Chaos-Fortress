@@ -1063,6 +1063,8 @@ stock void HidePlayerWeapon(int client, float duration)
 		return;
 		
 	SetEntProp(ent, Prop_Send, "m_bBeingRepurposedForTaunt", 1);
+	SetEntityRenderMode(ent, RENDER_TRANSALPHA);
+	SetEntityRenderColor(ent, 0, 0, 0, 0);
 	if (duration > 0.0)
 	{
 		CreateTimer(duration, UnhideWeapon, EntIndexToEntRef(ent), TIMER_FLAG_NO_MAPCHANGE);
@@ -1075,6 +1077,8 @@ public Action UnhideWeapon(Handle unhide, int ref)
 	if (IsValidEdict(ent))
 	{
 		SetEntProp(ent, Prop_Send, "m_bBeingRepurposedForTaunt", 0);
+		SetEntityRenderMode(ent, RENDER_TRANSALPHA);
+		SetEntityRenderColor(ent, 255, 255, 255, 255);
 	}
 	
 	return Plugin_Continue;
