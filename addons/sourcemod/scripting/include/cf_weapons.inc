@@ -4,12 +4,15 @@ char s_WeaponFireAbility[2049][255];
 char s_WeaponFirePlugin[2049][255];
 char s_WeaponFireSound[2049][255];
 
+bool b_WeaponIsVisible[2049] = { false, ... };
+
 public void CFW_OnEntityDestroyed(int entity)
 {
 	i_CharacterParticleOwner[entity] = -1;
 	s_WeaponFireAbility[entity] = "";
 	s_WeaponFirePlugin[entity] = "";
 	s_WeaponFireSound[entity] = "";
+	b_WeaponIsVisible[entity] = false;
 }
 
 public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] classname, bool &result)
@@ -40,6 +43,9 @@ public void CFW_MapStart()
 public void CFW_MakeNatives()
 {
 	CreateNative("CF_SpawnWeapon", Native_CF_SpawnWeapon);
+	CreateNative("CF_GetWeaponAbility", Native_CF_GetWeaponAbility);
+	CreateNative("CF_GetWeaponSound", Native_CF_GetWeaponSound);
+	CreateNative("CF_GetWeaponVisibility", Native_CF_GetWeaponVisibility);
 }
 
 public Native_CF_SpawnWeapon(Handle plugin, int numParams)
@@ -184,9 +190,10 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 		#endif
 	}
 	
-	strcopy(s_WeaponFireAbility[client], 255, fireAbility);
-	strcopy(s_WeaponFirePlugin[client], 255, firePlugin);
-	strcopy(s_WeaponFireSound[client], 255, fireSound);
+	strcopy(s_WeaponFireAbility[entity], 255, fireAbility);
+	strcopy(s_WeaponFirePlugin[entity], 255, firePlugin);
+	strcopy(s_WeaponFireSound[entity], 255, fireSound);
+	b_WeaponIsVisible[entity] = visible;
 	
 	return entity;
 }
@@ -207,44 +214,53 @@ public void CFW_GiveAmmoOnDelay(DataPack pack)
 	SetClip(client, weapon, clip);
 }
 
-//Below is borrowed from DarthNinja
-stock void SetAmmo(int client, int weapon, int newAmmo)
-{
-	if (IsValidEntity(weapon))
-	{
-		int iOffset = GetEntProp(weapon, Prop_Send, "m_iPrimaryAmmoType", 1)*4;
-		int iAmmoTable = FindSendPropInfo("CTFPlayer", "m_iAmmo");
-		SetEntData(client, iAmmoTable+iOffset, newAmmo, 4, true);
-	}
-}
-
-stock int GetAmmo(int client, int weapon)
-{
-	int value = -1;
-	if (IsValidEntity(weapon))
-	{
-		int iOffset = GetEntProp(weapon, Prop_Send, "m_iPrimaryAmmoType", 1)*4;
-		int iAmmoTable = FindSendPropInfo("CTFPlayer", "m_iAmmo");
-		value = GetEntData(client, iAmmoTable+iOffset);
-	}
-	
-	return value;
-}
-
-stock void SetClip(int client, int weapon, int newAmmo)
-{
-	if (IsValidEntity(weapon))
-	{
-		int iAmmoTable = FindSendPropInfo("CTFWeaponBase", "m_iClip1");
-		SetEntData(weapon, iAmmoTable, newAmmo, 4, true);
-	}
-}
-//Above is borrowed from DarthNinja
-
 //Don't let characters who just happen to be spies or engineers have sappers or PDAs.
 public Action TF2Items_OnGiveNamedItem(client, String:classname[], iItemDefinitionIndex, &Handle:hItem)
 {
     switch (iItemDefinitionIndex)
     {    case 735, 736, 810, 831, 933, 1080, 1102, 25, 26, 28, 737: return Plugin_Handled;    }
     return Plugin_Continue;
+}
+
+public Native_CF_GetWeaponAbility(Handle plugin, int numParams)
+{
+	int ent = GetNativeCell(1);
+	int abLen = GetNativeCell(3);
+	int plugLen = GetNativeCell(5);
+	
+	if (!IsValidEntity(ent))
+	{
+		SetNativeString(2, "", abLen);
+		SetNativeString(4, "", plugLen);
+		return;
+	}
+	
+	SetNativeString(2, s_WeaponFireAbility[ent], abLen);
+	SetNativeString(4, s_WeaponFirePlugin[ent], plugLen);
+}
+
+public Native_CF_GetWeaponSound(Handle plugin, int numParams)
+{
+	int ent = GetNativeCell(1);
+	int len = GetNativeCell(3);
+	
+	if (!IsValidEntity(ent))
+	{
+		SetNativeString(2, "", len);
+		return;
+	}
+	
+	SetNativeString(2, s_WeaponFireSound[ent], len);
+}
+
+public any Native_CF_GetWeaponVisibility(Handle plugin, int numParams)
+{
+	int ent = GetNativeCell(1);
+	
+	if (!IsValidEntity(ent))
+	{
+		return false;
+	}
+	
+	return b_WeaponIsVisible[ent];
 }

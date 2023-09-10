@@ -1096,3 +1096,75 @@ stock void StringToLower(char input[255])
 		input[i] = CharToLower(input[i]);
 	}
 }
+
+stock void GetAttribStringFromWeapon(int weapon, char output[255])
+{
+	if (!IsValidEntity(weapon))
+		return;
+		
+	int indices[20];
+	TF2Attrib_ListDefIndices(weapon, indices, sizeof(indices));
+	
+	for (int i = 0; i < sizeof(indices); i++)
+	{
+		if (indices[i] <= 3018)	//Anything above 3018 is a custom attribute, so we need to ignore them to avoid going over the attribute limit.
+		{
+			Address addy = TF2Attrib_GetByDefIndex(weapon, indices[i]);
+				
+			if (addy != Address_Null)
+			{
+				if (i != 0)
+				{
+					Format(output, 255, "%s ; %i ; %f", output, indices[i], TF2Attrib_GetValue(addy));
+				}
+				else
+				{
+					Format(output, 255, "%i ; %f", indices[i], TF2Attrib_GetValue(addy));
+				}
+			}
+		}
+	}
+}
+
+//Below is borrowed from DarthNinja
+stock void SetAmmo(int client, int weapon, int newAmmo)
+{
+	if (IsValidEntity(weapon))
+	{
+		int iOffset = GetEntProp(weapon, Prop_Send, "m_iPrimaryAmmoType", 1)*4;
+		int iAmmoTable = FindSendPropInfo("CTFPlayer", "m_iAmmo");
+		SetEntData(client, iAmmoTable+iOffset, newAmmo, 4, true);
+	}
+}
+
+stock int GetAmmo(int client, int weapon)
+{
+	int value = -1;
+	if (IsValidEntity(weapon))
+	{
+		int iOffset = GetEntProp(weapon, Prop_Send, "m_iPrimaryAmmoType", 1)*4;
+		int iAmmoTable = FindSendPropInfo("CTFPlayer", "m_iAmmo");
+		value = GetEntData(client, iAmmoTable+iOffset);
+	}
+	
+	return value;
+}
+
+stock void SetClip(int client, int weapon, int newAmmo)
+{
+	if (IsValidEntity(weapon))
+	{
+		int iAmmoTable = FindSendPropInfo("CTFWeaponBase", "m_iClip1");
+		SetEntData(weapon, iAmmoTable, newAmmo, 4, true);
+	}
+}
+
+stock GetClip(int weapon)
+{
+    if (IsValidEntity(weapon))
+    {
+        return GetEntProp(weapon, Prop_Send, "m_iClip1");
+    }
+    return 0;
+} 
+//Above is borrowed from DarthNinja

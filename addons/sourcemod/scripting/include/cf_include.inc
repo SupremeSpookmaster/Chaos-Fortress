@@ -493,6 +493,39 @@ native bool CF_IsPlayerCharacter(int client);
 native int CF_SpawnWeapon(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255] = "", bool visible = true, bool unequip = true, int ForceClass = 0, bool spawn = false, char fireAbility[255] = "", char firePlugin[255] = "", char fireSound[255] = "");
 
 /**
+ * Gets the ability name and plugin name of a given weapon.
+ *
+ * @param weapon			The weapon to check.
+ * @param abBuffer			Buffer to use for the ability name.
+ * @param abLen				Length of the ability buffer.
+ * @param plugBuffer		Buffer to use for the plugin name.
+ * @param plugLen			Length of the plugin buffer.
+ *
+ * @return The ability and plugin names of the ability used by the given weapon when it attacks, stored in abBuffer and plugBuffer respectively.
+ */
+native CF_GetWeaponAbility(int weapon, char abBuffer[255], int abLen, char plugBuffer[255], int plugLen);
+
+/**
+ * Gets the sound slot used by a given weapon.
+ *
+ * @param weapon			The weapon to check.
+ * @param buffer			Buffer to use for the sound slot.
+ * @param len				Length of the buffer.
+ *
+ * @return The sound slot used by the given weapon, stored in buffer.
+ */
+native CF_GetWeaponSound(int weapon, char buffer[255], int len);
+
+/**
+ * Gets the visibility of a given weapon.
+ *
+ * @param weapon			The weapon to check.
+ *
+ * @return True if the weapon is visible, false if it is not or if it is invalid.
+ */
+native any CF_GetWeaponVisibility(int weapon);
+
+/**
  * Gets the class of the player's current character.
  *
  * @param client		The client to check.

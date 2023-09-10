@@ -2,27 +2,118 @@
 #include <sdkhooks>
 #include <tf2_stocks>
 #include <cf_stocks>
+#include <tf_custom_attributes>
+#include <tf2utils>
 
 #define GENERIC				"cf_generic_abilities"
 
 #define WEAPON				"generic_weapon"
 #define CONDS				"generic_conditions"
 
-int Weapon_OriginalWeapon[MAXPLAYERS + 1][5];
-
 float Weapon_EndTime[2049] = { 0.0, ... };
 
 Handle g_hSDKSetItem;
 
+enum struct OldWeapon
+{
+	int itemIndex; 		//Done 
+	int itemLevel; 		//Done 
+	int quality; 	//Done 
+	int reserve;	//Done 
+	int clip; 		//Done
+	int slot;		//Done
+	
+	char classname[255]; 	//Done
+	char atts[255]; 		//Done
+	char fireAbility[255]; 	//Done
+	char firePlugin[255]; 	//Done
+	char fireSound[255];	//Done
+	
+	bool visible;			//Done
+	
+	KeyValues CustAtts;
+
+	void Delete()
+	{
+		this.itemIndex = -1;
+		this.itemLevel = -1;
+		this.quality = -1;
+		this.reserve = -1;
+		this.clip = -1;
+		this.slot = -1;
+		
+		strcopy(this.classname, 255, "");
+		strcopy(this.fireAbility, 255, "");
+		strcopy(this.firePlugin, 255, "");
+		strcopy(this.fireSound, 255, "");
+		strcopy(this.atts, 255, "");
+
+		this.visible = false;
+		
+		delete this.CustAtts;
+		
+		return;
+	}
+	
+	void CopyFromWeapon(int weapon, int weaponSlot, int client)
+	{
+		if (!IsValidEntity(weapon) || !IsValidMulti(client))
+			return;
+		
+		this.reserve = GetAmmo(client, weapon);
+		this.clip = GetClip(weapon);
+		this.itemIndex = GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex");
+		this.itemLevel = GetEntProp(weapon, Prop_Send, "m_iEntityLevel");
+		this.quality = GetEntProp(weapon, Prop_Send, "m_iEntityQuality");
+		
+		GetEntityClassname(weapon, this.classname, 255);
+		GetAttribStringFromWeapon(weapon, this.atts);
+		CF_GetWeaponAbility(weapon, this.fireAbility, 255, this.firePlugin, 255);
+		CF_GetWeaponSound(weapon, this.fireSound, 255);
+		this.visible = CF_GetWeaponVisibility(weapon);
+		
+		this.slot = weaponSlot;
+		
+		this.CustAtts = TF2CustAttr_GetAttributeKeyValues(weapon);
+			
+		return;
+	}
+	
+	int GiveBack(int client)
+	{
+		if (!IsValidMulti(client))
+			return -1;
+			
+		int ReturnValue = -1;
+		
+		if (!StrEqual(this.classname, ""))
+		{
+			ReturnValue = CF_SpawnWeapon(client, this.classname, this.itemIndex, this.itemLevel, this.quality, this.slot, this.reserve, this.clip, this.atts, "", this.visible, true, -1, false, this.fireAbility, this.firePlugin, this.fireSound);
+			
+			if (IsValidEntity(ReturnValue))
+			{
+				TF2CustAttr_UseKeyValues(ReturnValue, this.CustAtts);
+			}
+		
+			this.Delete();
+		}
+		
+		return ReturnValue;
+	}
+}
+
+OldWeapon ClientOldWeapons[MAXPLAYERS + 1][5];
+
 public void OnPluginStart()
 {
-	/*GameData gamedata = LoadGameConfigFile("tf2.attributes");
-	StartPrepSDKCall(SDKCall_Entity);
-	PrepSDKCall_SetVirtual(gamedata.GetOffset("CEconItemView::operator=") - 1);
-	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer);
+	GameData gamedata = LoadGameConfigFile("tf2.attributes");
+	StartPrepSDKCall(SDKCall_Raw);
+	PrepSDKCall_SetFromConf(gamedata, SDKConf_Signature, "CEconItemView::operator=");
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_ByValue);
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_ByValue);
 	g_hSDKSetItem = EndPrepSDKCall();
-	if(!g_hSDKSetItem)
-		LogError("[Gamedata] Could not find CEconItemView::operator=");*/
+	if (g_hSDKSetItem == INVALID_HANDLE)
+		LogError("Gamedata error: failed to locate CEconItemView::operator=");
 }
 
 public void OnEntityDestroyed(int entity)
@@ -69,6 +160,15 @@ public void Weapon_Activate(int client, char abilityName[255])
 	
 	float duration = CF_GetArgF(client, GENERIC, abilityName, "duration");
 	
+	int current = GetPlayerWeaponSlot(client, weaponSlot);
+	if (IsValidEntity(current) && duration > 0.0)
+	{
+		if (Weapon_EndTime[current] == 0.0)	//Make sure it is not also a timed weapon
+		{
+			ClientOldWeapons[client][weaponSlot].CopyFromWeapon(current, weaponSlot, client);
+		}
+	}
+	
 	int weapon = CF_SpawnWeapon(client, classname, index, level, quality, weaponSlot, reserve, clip, atts, "", visible, unequip, -1, false, fireAbility, firePlugin, fireSound);
 	if (IsValidEntity(weapon))
 	{
@@ -99,18 +199,7 @@ public void Weapon_Activate(int client, char abilityName[255])
 		DeleteCfg(map);
 		
 		if (duration > 0.0)
-		{
-			int current = GetPlayerWeaponSlot(client, weaponSlot);
-			if (IsValidEntity(current))
-			{
-				if (Weapon_EndTime[current] == 0.0)	//Make sure it is not also a timed weapon
-				{
-					//TODO: Store the client's current weapon
-					//int m_ItemOffset = FindSendPropInfo("CTFWearable", "m_Item");
-					//SDKCall(g_hSDKSetItem, GetEntityAddress(Weapon_OriginalWeapon[client][weaponSlot]) + view_as<Address>(m_ItemOffset), GetEntityAddress(current) + view_as<Address>(m_ItemOffset));
-				}
-			}
-			
+		{	
 			Weapon_EndTime[weapon] = GetGameTime() + duration;
 			
 			SDKUnhook(client, SDKHook_PreThink, Weapon_PreThink);
@@ -139,7 +228,7 @@ public Action Weapon_PreThink(int client)
 					
 				if (GetGameTime() >= Weapon_EndTime[wep])
 				{
-					bool switchBack = TF2_GetActiveWeapon(client) == wep;
+					bool holdingRemovedWeapon = TF2_GetActiveWeapon(client) == wep;
 					
 					char classname[255];
 					GetEntityClassname(wep, classname, sizeof(classname));
@@ -149,28 +238,11 @@ public Action Weapon_PreThink(int client)
 					TF2_RemoveWeaponSlot(client, i);
 					RemoveEntity(wep);
 					
-					if (IsValidEntity(Weapon_OriginalWeapon[client][i]) && Weapon_OriginalWeapon[client][i] > 0)
+					int newWep = ClientOldWeapons[client][i].GiveBack(client);
+					if (!IsValidEntity(newWep) && holdingRemovedWeapon)	//The new weapon failed to spawn meaning the client did not originally have a weapon in this slot, force-switch them to their first valid weapon.
 					{
-						EquipPlayerWeapon(client, Weapon_OriginalWeapon[client][i]);
-						if (switchBack)
-						{
-							Weapon_SwitchToWeapon(client, Weapon_OriginalWeapon[client][i]);
-						}
-						Weapon_OriginalWeapon[client][i] = -1;
-					}
-					else if (switchBack)
-					{
-						//RequestFrame(Weapon_SwitchBackOnDelay, client);
 						Weapon_SwitchBackOnDelay(client);
 					}
-					/*if (Weapon_OriginalWeapon[client][i] != null)
-					{
-						int entity = TF2Items_GiveNamedItem(client, Weapon_OriginalWeapon[client][i]);
-						delete Weapon_OriginalWeapon[client][i];
-						
-						if(entity != -1)
-							EquipPlayerWeapon(client, entity);
-					}*/
 				}
 			}
 		}
@@ -207,11 +279,12 @@ int Weapon_FindFirstValidWeapon(int client)
 
 void Weapon_SwitchToWeapon(int client, int weapon)
 {
-	SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", weapon);
+	TF2Util_SetPlayerActiveWeapon(client, weapon);
+	/*SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", weapon);
 	
 	char classname[255];
 	GetEntityClassname(weapon, classname, sizeof(classname));
-	FakeClientCommandEx(client, "use %s", classname);
+	FakeClientCommandEx(client, "use %s", classname);*/
 }
 
 public void Conds_Activate(int client, char abilityName[255])
