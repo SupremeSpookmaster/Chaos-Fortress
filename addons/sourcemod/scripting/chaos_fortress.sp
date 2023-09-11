@@ -19,7 +19,6 @@
 //	- TODO: All remaining sound cues:
 //			-sound_spawn_happy
 //			-sound_spawn_angry
-//			-sound_spawn
 //			-sound_killed
 //			-sound_assist
 //			-sound_ultimate_ready
@@ -29,24 +28,22 @@
 //			-sound_ultimate_react_friendly
 //			-sound_ultimate_react_hostile
 //	- TODO: Translations
+//	- TODO: Fork Suza's viewchange plugin and edit to remove weapons during taunts, then re-link to the fork in the prerequisites section of the README.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- OPTIONAL TODO: Collision forwards.
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
 //	- MINOR BUG: For some reason, player ragdolls get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? This has no effect on gameplay but it's honestly fucking baffling.
-//	- MINOR BUG: If you are stunned or taunting while using a custom weapon model, your weapon model is still visible which looks ugly. This isn't a problem with my plugin, but I still need to fix it pre-release somehow.
-//	- MINOR BUG: Third person animations frequently show you holding the wrong weapon, IE you have your SMG out but it shows your melee. Again, not a problem with my plugin but I will need to find a fix.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- MAJOR BUG: That Godforsaken memory leak is still alive. How many times do I need to shoot it in the head before it just stays dead?
-//	- MAJOR BUG: If a weapon using a custom model from Suza's plugin and it gets removed and then you are forced to another weapon, the old weapon's model stays. It fixes itself when you switch weapons. This will mess with gameplay due to recognition.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
 #define PLUGIN_AUTHOR         "Spookmaster"
 #define PLUGIN_DESCRIPTION    "Team Fortress 2 with custom classes!"
-#define PLUGIN_VERSION        "0.0.1"
+#define PLUGIN_VERSION        "0.2.0"
 #define PLUGIN_URL            "https://github.com/SupremeSpookmaster/Chaos-Fortress"
 
 #pragma semicolon 1

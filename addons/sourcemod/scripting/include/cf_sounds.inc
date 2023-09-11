@@ -105,7 +105,7 @@ public KeyValType GetRand(char Config[255], char Sound[255], char Output[255])
 	return ReturnValue;
 }
 
-bool PlayRand(int source, char Config[255], char Sound[255], float damage = 0.0)
+bool PlayRand(int source, char Config[255], char Sound[255])
 {
 	if (!CF_IsPlayerCharacter(source))
 		return false;
@@ -318,6 +318,5 @@ public Native_CF_PlayRandomSound(Handle plugin, int numParams)
 	char Config[255], Sound[255];
 	GetNativeString(2, Config, sizeof(Config));
 	GetNativeString(3, Sound, sizeof(Sound));
-	float damage = GetNativeCell(4);
-	return PlayRand(source, Config, Sound, damage);
+	return PlayRand(source, Config, Sound);
 }
