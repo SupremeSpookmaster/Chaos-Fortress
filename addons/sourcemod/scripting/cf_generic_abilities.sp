@@ -268,7 +268,6 @@ public Action Weapon_PreThink(int client)
 					if (!IsValidEntity(newWep) && holdingRemovedWeapon)	//The new weapon failed to spawn meaning the client did not originally have a weapon in this slot, force-switch them to their first valid weapon.
 					{
 						Weapon_SwitchBackOnDelay(client);
-						CPrintToChat(client, "Invalid weapon");
 					}
 				}
 			}
