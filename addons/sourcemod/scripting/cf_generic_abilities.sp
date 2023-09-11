@@ -2,8 +2,6 @@
 #include <sdkhooks>
 #include <tf2_stocks>
 #include <cf_stocks>
-#include <tf_custom_attributes>
-#include <tf2utils>
 
 #define GENERIC				"cf_generic_abilities"
 
@@ -90,9 +88,20 @@ enum struct OldWeapon
 		{
 			ReturnValue = CF_SpawnWeapon(client, this.classname, this.itemIndex, this.itemLevel, this.quality, this.slot, this.reserve, this.clip, this.atts, "", this.visible, true, -1, false, this.fireAbility, this.firePlugin, this.fireSound);
 			
-			if (IsValidEntity(ReturnValue))
+			if (IsValidEntity(ReturnValue) && this.CustAtts)
 			{
-				TF2CustAttr_UseKeyValues(ReturnValue, this.CustAtts);
+				if (KvGotoFirstSubKey(this.CustAtts, false))
+				{
+					do
+				    {
+						char key[255], value[255];
+						KvGetSectionName(this.CustAtts, key, sizeof(key));
+						KvGetString(this.CustAtts, NULL_STRING, value, sizeof(value));
+				        
+						TF2CustAttr_SetString(ReturnValue, key, value);
+						TF2Attrib_SetFromStringValue(ReturnValue, key, value);
+				    } while (KvGotoNextKey(this.CustAtts, false));
+				}
 			}
 		
 			this.Delete();
@@ -103,6 +112,22 @@ enum struct OldWeapon
 }
 
 OldWeapon ClientOldWeapons[MAXPLAYERS + 1][5];
+
+public void CF_OnCharacterRemoved(int client)
+{
+	Weapon_ClearAllOldWeapons(client);
+}
+
+public void Weapon_ClearAllOldWeapons(int client)
+{
+	if (client > 0 && client < MaxClients + 1)
+	{
+		for (int i = 0; i < 5; i++)
+		{
+			ClientOldWeapons[client][i].Delete();
+		}
+	}
+}
 
 public void OnPluginStart()
 {
@@ -190,6 +215,7 @@ public void Weapon_Activate(int client, char abilityName[255])
 				snap.GetKey(j, custAtt, sizeof(custAtt));
 				custAtts.Get(custAtt, custVal, sizeof(custVal));
 					
+				TF2CustAttr_SetString(weapon, custAtt, custVal);
 				TF2Attrib_SetFromStringValue(weapon, custAtt, custVal);
 			}
 			
@@ -242,6 +268,7 @@ public Action Weapon_PreThink(int client)
 					if (!IsValidEntity(newWep) && holdingRemovedWeapon)	//The new weapon failed to spawn meaning the client did not originally have a weapon in this slot, force-switch them to their first valid weapon.
 					{
 						Weapon_SwitchBackOnDelay(client);
+						CPrintToChat(client, "Invalid weapon");
 					}
 				}
 			}

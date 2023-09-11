@@ -1281,6 +1281,7 @@ public void CF_ResetMadeStatus(int client)
 					snap.GetKey(j, custAtt, sizeof(custAtt));
 					custAtts.Get(custAtt, custVal, sizeof(custVal));
 					
+					TF2CustAttr_SetString(weapon, custAtt, custVal);
 					TF2Attrib_SetFromStringValue(weapon, custAtt, custVal);
 				}
 				

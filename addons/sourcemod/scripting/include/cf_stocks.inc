@@ -10,6 +10,8 @@
 #include <queue>
 #include <clientprefs>
 #include <tf_econ_data>
+#include <tf_custom_attributes>
+#include <tf2utils>
 
 #define EF_NODRAW	32
 
