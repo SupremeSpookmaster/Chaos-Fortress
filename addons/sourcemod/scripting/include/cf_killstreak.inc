@@ -88,6 +88,10 @@ int i_KillstreakGodlike = 0;
 int i_CFKillstreak[MAXPLAYERS+1] = {0, ...};
 
 float f_CFKillstreakForwardTime[MAXPLAYERS + 1] = { 0.0, ... };
+float f_KillValue;
+float f_DeathValue;
+float f_KDA_Angry;
+float f_KDA_Happy;
 
 bool b_AnnounceKillstreaks = false;
 
@@ -97,11 +101,21 @@ public void CFKS_MakeNatives()
 {
 	CreateNative("CF_GetKillstreak", Native_CF_GetKillstreak);
 	CreateNative("CF_SetKillstreak", Native_CF_SetKillstreak);
+	CreateNative("CF_GetKD", Native_CF_GetKD);
+	CreateNative("CF_GetCharacterEmotion", Native_CF_GetCharacterEmotion);
 }
 
 public void CFKS_MakeForwards()
 {
 	g_OnKillstreakChanged = new GlobalForward("CF_OnKillstreakChanged", ET_Ignore, Param_Cell, Param_Cell);
+}
+
+public void CFKS_ApplyKDARules(float KillValue, float DeathValue, float KDA_Angry, float KDA_Happy)
+{
+	f_KillValue = KillValue;
+	f_DeathValue = DeathValue;
+	f_KDA_Angry = KDA_Angry;
+	f_KDA_Happy = KDA_Happy;
 }
 
 /**
@@ -284,4 +298,33 @@ public Native_CF_SetKillstreak(Handle plugin, int numParams)
 	}
  		
  	return ReturnValue;
+}
+
+public any Native_CF_GetKD(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	if (!IsValidClient(client))
+		return 0.0;
+		
+	float kills = float(GetEntProp(client, Prop_Data, "m_iFrags")) * f_KillValue;
+	float deaths = float(GetEntProp(client, Prop_Data, "m_iDeaths")) * f_DeathValue;
+	
+	return kills / deaths;
+}
+
+public any Native_CF_GetCharacterEmotion(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	if (!IsValidClient(client))
+		return CF_Emotion_Neutral;
+		
+	float kda = CF_GetKD(client);
+	
+	if (kda <= f_KDA_Angry)
+		return CF_Emotion_Angry;
+		
+	if (kda >= f_KDA_Happy)
+		return CF_Emotion_Happy;
+		
+	return CF_Emotion_Neutral;
 }

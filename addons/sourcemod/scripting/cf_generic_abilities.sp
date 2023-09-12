@@ -7,6 +7,7 @@
 
 #define WEAPON				"generic_weapon"
 #define CONDS				"generic_conditions"
+#define COOLDOWN			"generic_cooldown"
 
 float Weapon_EndTime[2049] = { 0.0, ... };
 
@@ -159,6 +160,11 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	if (StrContains(abilityName, CONDS) != -1)
 	{
 		Conds_Activate(client, abilityName);
+	}
+	
+	if (StrContains(abilityName, COOLDOWN) != -1)
+	{
+		Cooldown_Activate(client, abilityName);
 	}
 }
 
@@ -333,4 +339,31 @@ public void Conds_Activate(int client, char abilityName[255])
 			TF2_AddCondition(client, cond, StringToFloat(conds[i + 1]));
 		}
 	}
+}
+
+public void Cooldown_Activate(int client, char abilityName[255])
+{
+	CF_AbilityType type = CF_AbilityType_Custom;
+	
+	switch(CF_GetArgI(client, GENERIC, abilityName, "cd_slot"))
+	{
+		case 1:
+		{
+			type = CF_AbilityType_Ult;
+		}
+		case 2:
+		{
+			type = CF_AbilityType_M2;
+		}
+		case 3:
+		{
+			type = CF_AbilityType_M3;
+		}
+		case 4:
+		{
+			type = CF_AbilityType_Reload;
+		}
+	}
+	
+	CF_ApplyAbilityCooldown(client, CF_GetArgF(client, GENERIC, abilityName, "duration"), type, CF_GetArgI(client, GENERIC, abilityName, "override") != 0, CF_GetArgI(client, GENERIC, abilityName, "delay") != 0);
 }

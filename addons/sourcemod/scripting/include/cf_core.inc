@@ -100,6 +100,16 @@ public void CF_OnPluginStart()
 	    CFA_SetChargeRetain(GetFloatFromConfigMap(subsection, "charge_retain", 0.0));
 	    b_DisplayRole = GetBoolFromConfigMap(subsection, "display_role", false);
 	    
+	    float KillValue = GetFloatFromConfigMap(subsection, "value_kills", 1.0);
+	    float DeathValue = GetFloatFromConfigMap(subsection, "value_deaths", 1.0);
+	    float KDA_Angry = GetFloatFromConfigMap(subsection, "kd_angry", 0.33);
+	    float KDA_Happy = GetFloatFromConfigMap(subsection, "kd_happy", 2.33);
+	    
+	    CFKS_ApplyKDARules(KillValue, DeathValue, KDA_Angry, KDA_Happy);
+	    
+	    float interval = GetFloatFromConfigMap(subsection, "chat_interval", 180.0);
+	    CFA_ApplyChatInterval(interval);
+	    
 	    if (IsValidClient(admin))
 	    {
 	    	PrintToConsole(admin, "\nNew game rules under general_rules:");

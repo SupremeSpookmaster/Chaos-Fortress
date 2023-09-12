@@ -120,6 +120,9 @@ public void CFC_MakeForwards()
 	CF_Characters_Names = CreateArray(255);
 	
 	RegConsoleCmd("characters", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
+	RegConsoleCmd("character", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
+	RegConsoleCmd("setcharacter", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
+	RegConsoleCmd("changecharacter", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
 	
 	c_DesiredCharacter = RegClientCookie("DesiredCharacter", "The character this player has chosen to spawn as. If blank: reverts to the default character.", CookieAccess_Private);
 	
@@ -1086,12 +1089,30 @@ public void CF_ResetMadeStatus(int client)
  	
  	if (!StrEqual(conf, s_PreviousCharacter[client]))	//We are respawning as a new character, default to spawn_intro
  	{
- 		CF_PlayRandomSound(client, conf, "sound_spawn");
+ 		bool played = CF_PlayRandomSound(client, conf, "sound_spawn_intro");
+ 		if (!played)
+ 			CF_PlayRandomSound(client, "", "sound_spawn_neutral");
+ 		
  		CFA_ReduceUltCharge_CharacterSwitch(client);
  	}
  	else if (b_IsDead[client])
  	{
- 		//TODO: sound_spawn_happy, sound_spawn_neutral, sound_spawn_angry
+ 		bool played = false;
+ 		
+ 		switch(CF_GetCharacterEmotion(client))
+ 		{
+ 			case CF_Emotion_Angry:
+ 			{
+ 				played = CF_PlayRandomSound(client, "", "sound_spawn_angry");
+ 			}
+ 			case CF_Emotion_Happy:
+ 			{
+ 				played = CF_PlayRandomSound(client, "", "sound_spawn_happy");
+ 			}
+ 		}
+ 		
+ 		if (!played)
+ 			CF_PlayRandomSound(client, "", "sound_spawn_neutral");
  	}
  	
  	int r = 255;

@@ -105,8 +105,26 @@ public void CFA_MapStart()
 	PrecacheSound(NOPE);
 }
 
+float f_ChatInterval;
+float f_NextChatMessage;
+
+public void CFA_ApplyChatInterval(float interval)
+{
+	f_ChatInterval = interval;
+	f_NextChatMessage = GetGameTime() + interval;
+}
+
 public Action CFA_HUDTimer(Handle timer)
 {
+	if (f_ChatInterval > 0.0)
+	{
+		float gt = GetGameTime();
+		if (gt >= f_NextChatMessage) //TODO: Repurpose bvb_tips for Chaos Fortress.
+		{
+			CPrintToChatAll("{indigo}[Chaos Fortress] {default}Do you want to change your character? Just type {olive}/characters{default} into chat! You may also type {olive}/cfhelp{default} for more help with this game mode.");
+			f_NextChatMessage = GetGameTime() + f_ChatInterval;
+		}
+	}
 	int rState = CF_GetRoundState();
 	for (int client = 1; client <= MaxClients; client++)
 	{

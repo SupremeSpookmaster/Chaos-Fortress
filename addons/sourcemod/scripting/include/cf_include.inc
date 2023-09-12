@@ -37,6 +37,13 @@ enum CF_ClassToken
     CF_ClassToken_Engineer
 };
 
+enum CF_Emotion
+{
+	CF_Emotion_Neutral = 0,
+	CF_Emotion_Angry,
+	CF_Emotion_Happy
+};
+
   ////////////////////////////////////////
  ////////////// FORWARDS: ///////////////
 ////////////////////////////////////////
@@ -808,3 +815,21 @@ native bool CF_PlayRandomSound(int source, char Config[255], char Sound[255]);
  *
  */
 native CF_SilenceCharacter(int client, float duration);
+
+/**
+ * Retrieves the given client's current K/D, using the rules specified in game_rules.
+ *
+ * @param client				The client whose K/D to retrieve.
+ *
+ * @return	A float value equal to the client's K/D.
+ */
+native any CF_GetKD(int client);
+
+/**
+ * Retrieves the given client's current "emotion", based on their K/D. Currently this is used only for spawn sounds, further functionality may be implemented in the future.
+ *
+ * @param client				The client whose "emotion" to retrieve.
+ *
+ * @return	CF_Emotion_Angry if the client's K/D is too low, CF_Emotion_Happy if it is high, CF_Emotion_Neutral for anything in-between.
+ */
+native any CF_GetCharacterEmotion(int client);
