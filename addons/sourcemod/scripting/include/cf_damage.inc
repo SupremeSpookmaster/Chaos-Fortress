@@ -54,10 +54,13 @@ public Action CFDMG_OnTakeDamageAlive(victim, &attacker, &inflictor, &Float:dama
 		}
 	}
 	
-	CF_GiveSpecialResource(attacker, damage, CF_ResourceType_DamageDealt);
-	CF_GiveUltCharge(attacker, damage, CF_ResourceType_DamageDealt);
-	CF_GiveSpecialResource(victim, damage, CF_ResourceType_DamageTaken);
-	CF_GiveUltCharge(victim, damage, CF_ResourceType_DamageTaken);
+	if (CF_GetRoundState() == 1 && attacker != victim)
+	{
+		CF_GiveSpecialResource(attacker, damage, CF_ResourceType_DamageDealt);
+		CF_GiveUltCharge(attacker, damage, CF_ResourceType_DamageDealt);
+		CF_GiveSpecialResource(victim, damage, CF_ResourceType_DamageTaken);
+		CF_GiveUltCharge(victim, damage, CF_ResourceType_DamageTaken);
+	}
 
 	return ReturnValue;
 }

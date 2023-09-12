@@ -225,7 +225,7 @@ public void Frag_NoJarate(int client)
 	SDKUnhook(client, SDKHook_WeaponCanSwitchTo, Frag_BlockWeaponSwitch);
 }
 
-public Action CF_OnPlayerRunCmd(int client, int &buttons, int &impulese, int &weapon)
+public Action CF_OnPlayerRunCmd(int client, int &buttons, int &impulse, int &weapon)
 {
 	if (Frag_HasJarate[client])
 	{

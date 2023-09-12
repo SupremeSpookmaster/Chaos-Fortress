@@ -51,7 +51,7 @@ enum CF_ClassToken
  *
  * @return					Return Plugin_Continue to proceed as normal, Plugin_Changed if you altered any of these variables, or Plugin_Handled to prevent the command from being run.
  */
-forward Action CF_OnPlayerRunCmd(int client, int &buttons, int &impulse, int &weapon)
+forward Action CF_OnPlayerRunCmd(int client, int &buttons, int &impulse, int &weapon);
 
 /**
  * Called when a character presses M2.
@@ -63,7 +63,7 @@ forward Action CF_OnPlayerRunCmd(int client, int &buttons, int &impulse, int &we
  *
  * @return					Return Plugin_Continue to proceed as normal, Plugin_Changed if you altered any of these variables, or Plugin_Handled to prevent the command from being run.
  */
-forward Action CF_OnPlayerM2(int client, int &buttons, int &impulse, int &weapon)
+forward Action CF_OnPlayerM2(int client, int &buttons, int &impulse, int &weapon);
 
 /**
  * Called when a character presses M3.
@@ -75,7 +75,7 @@ forward Action CF_OnPlayerM2(int client, int &buttons, int &impulse, int &weapon
  *
  * @return					Return Plugin_Continue to proceed as normal, Plugin_Changed if you altered any of these variables, or Plugin_Handled to prevent the command from being run.
  */
-forward Action CF_OnPlayerM3(int client, int &buttons, int &impulse, int &weapon)
+forward Action CF_OnPlayerM3(int client, int &buttons, int &impulse, int &weapon);
 
 /**
  * Called when a character presses their reload button.
@@ -87,7 +87,7 @@ forward Action CF_OnPlayerM3(int client, int &buttons, int &impulse, int &weapon
  *
  * @return					Return Plugin_Continue to proceed as normal, Plugin_Changed if you altered any of these variables, or Plugin_Handled to prevent the command from being run.
  */
-forward Action CF_OnPlayerReload(int client, int &buttons, int &impulse, int &weapon)
+forward Action CF_OnPlayerReload(int client, int &buttons, int &impulse, int &weapon);
 
 /**
  * Called when a character presses their scoreboard button.
@@ -99,7 +99,7 @@ forward Action CF_OnPlayerReload(int client, int &buttons, int &impulse, int &we
  *
  * @return					Return Plugin_Continue to proceed as normal, Plugin_Changed if you altered any of these variables, or Plugin_Handled to prevent the command from being run.
  */
-forward Action CF_OnPlayerTab(int client, int &buttons, int &impulse, int &weapon)
+forward Action CF_OnPlayerTab(int client, int &buttons, int &impulse, int &weapon);
 
 /**
  * Called when a character presses their jump button. NOTICE: This runs even if they are already in the air, it is purely to detect the button press.
@@ -111,7 +111,7 @@ forward Action CF_OnPlayerTab(int client, int &buttons, int &impulse, int &weapo
  *
  * @return					Return Plugin_Continue to proceed as normal, Plugin_Changed if you altered any of these variables, or Plugin_Handled to prevent the command from being run.
  */
-forward Action CF_OnPlayerJump(int client, int &buttons, int &impulse, int &weapon)
+forward Action CF_OnPlayerJump(int client, int &buttons, int &impulse, int &weapon);
 
 /**
  * Called when a character presses their crouch button. NOTICE: This runs even if they are already in the air, it is purely to detect the button press.
@@ -123,14 +123,14 @@ forward Action CF_OnPlayerJump(int client, int &buttons, int &impulse, int &weap
  *
  * @return					Return Plugin_Continue to proceed as normal, Plugin_Changed if you altered any of these variables, or Plugin_Handled to prevent the command from being run.
  */
-forward Action CF_OnPlayerCrouch(int client, int &buttons, int &impulse, int &weapon)
+forward Action CF_OnPlayerCrouch(int client, int &buttons, int &impulse, int &weapon);
 
 /**
  * Called when a character calls for medic, AKA when they press the E key.
  *
  * @param client			The client who ran the command.
  */
-forward void CF_OnPlayerCallForMedic(int client)
+forward void CF_OnPlayerCallForMedic(int client);
 
 /**
  * Called when a character takes damage, before any modifications have been made by Chaos Fortress.
@@ -155,7 +155,7 @@ forward void CF_OnPlayerCallForMedic(int client)
  * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */
 forward Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
-	float damageForce[3], float damagePosition[3], int &damagecustom)
+	float damageForce[3], float damagePosition[3], int &damagecustom);
 	
 /**
  * Called when a character takes damage, after CF_OnTakeDamageAlive_Pre has been called.
@@ -174,7 +174,7 @@ forward Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflicto
  * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */
 forward Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
-	float damageForce[3], float damagePosition[3], int &damagecustom)
+	float damageForce[3], float damagePosition[3], int &damagecustom);
 
 /**
  * Called when a character takes damage, after CF_OnTakeDamageAlive_Pre and CF_OnTakeDamageAlive_Bonus have been called.
@@ -193,7 +193,7 @@ forward Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflic
  * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */
 forward Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
-	float damageForce[3], float damagePosition[3], int &damagecustom)
+	float damageForce[3], float damagePosition[3], int &damagecustom);
 	
 /**
  * Called when a character takes damage, after all of Chaos Fortress' other OnTakeDamageAlive forwards have been called.
@@ -212,7 +212,7 @@ forward Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &i
  * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */
 forward Action CF_OnTakeDamageAlive_Post(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
-	float damageForce[3], float damagePosition[3], int &damagecustom)
+	float damageForce[3], float damagePosition[3], int &damagecustom);
 	
 /**
  * Called when a player's Chaos Fortress killstreak is changed.
@@ -220,7 +220,7 @@ forward Action CF_OnTakeDamageAlive_Post(int victim, int &attacker, int &inflict
  * @param client			The client whose killstreak was changed.
  * @param kills				The new killstreak.
  */
-forward void CF_OnKillstreakChanged(int client, int kills)
+forward void CF_OnKillstreakChanged(int client, int kills);
 
 /**
  * Called when a character is killed.
@@ -230,14 +230,14 @@ forward void CF_OnKillstreakChanged(int client, int kills)
  * @param attacker			The player who is credited for the kill.
  * @param deadRinger		0 if the kill was real, 1 if it was a dead ringer.
  */
-forward void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int deadRinger)
+forward void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int deadRinger);
 
 /**
  * Called when the Chaos Fortress round state is changed.
  *
  * @param state				The new round state. 0: Pre-game/setup time/waiting for players, 1: round in progress, 2: round has ended.
  */
-forward void CF_OnRoundStateChanged(int state)
+forward void CF_OnRoundStateChanged(int state);
 
 /**
  * Called when a player activates an ability.

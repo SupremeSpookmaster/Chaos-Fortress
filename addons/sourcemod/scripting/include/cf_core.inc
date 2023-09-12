@@ -71,18 +71,7 @@ public void CF_OnPluginStart()
  	CFW_MapStart();
  	
  	CFA_MapStart();
- 	
- 	//CF_PrecacheAnnouncerDialogue();
  }
- 
- /**
- * Precaches the dialogue used for announcers.
- */
- /*public void CF_PrecacheAnnouncerDialogue()
- {
- 	//TODO: After reading game_rules, add a check here to only precache files which will be needed.
- 	//This may not actually be necessary, we already precache killstreak announcer dialogue and the in-game announcer should be enough for in-game events.
- }*/
  
 /**
  * Sets the game rules for Chaos Fortress by reading game_rules.cfg.
@@ -256,9 +245,9 @@ public Native_CF_GetRoundState(Handle plugin, int numParams)
 	return i_CFRoundState;
 }
 
+#if defined USE_PREVIEWS
 public void OnGameFrame()
 {
-	#if defined USE_PREVIEWS
 	CFC_OGF();
-	#endif
 }
+#endif

@@ -123,10 +123,12 @@ public void CFC_MakeForwards()
 	
 	c_DesiredCharacter = RegClientCookie("DesiredCharacter", "The character this player has chosen to spawn as. If blank: reverts to the default character.", CookieAccess_Private);
 	
+	#if defined USE_PREVIEWS
 	PrecacheModel(MODEL_PREVIEW_DOORS);
 	PrecacheModel(MODEL_PREVIEW_STAGE);
 	PrecacheModel(MODEL_PREVIEW_UNKNOWN);
 	PrecacheSound(SOUND_CHARACTER_PREVIEW);
+	#endif
 	
 	g_OnCharacterCreated = new GlobalForward("CF_OnCharacterCreated", ET_Ignore, Param_Cell);
 	g_OnCharacterRemoved = new GlobalForward("CF_OnCharacterRemoved", ET_Ignore, Param_Cell);
@@ -274,10 +276,12 @@ public void CFC_MakeForwards()
  	}
  
  	CF_ManageCharacterFiles(Character);
+ 	DeleteCfg(Character);	//MARKED FOR POTENTIAL ERROR
  }
  
  public void CF_BuildCharactersMenu()
  {
+ 	delete CF_CharactersMenu;
  	CF_CharactersMenu = new Menu(CFC_Menu);
 	CF_CharactersMenu.SetTitle("Welcome to Chaos Fortress!\nWhich character would you like to spawn as?");
 	
@@ -728,7 +732,6 @@ public Action CFC_OpenMenu(int client, int args)
 			
 			if (Character == null)
 			{
-				DeleteCfg(Character);
 				PrintToServer("ERROR: Somehow, an invalid character config (%s) was added to the !characters menu.", s_CharacterConfigInMenu[client]);
 				CPrintToChat(client, "{indigo}[Chaos Fortress] {crimson}ERROR: {default}Somehow, an invalid character config {olive}(%s){default} was added to the !characters menu. This should be impossible. Please inform your server's developer.", s_CharacterConfigInMenu[client]);
 				return;
@@ -1396,10 +1399,10 @@ public void CF_ResetMadeStatus(int client)
  	if (victim > 0 && victim <= MaxClients && !deadRinger)
  	{
  		b_IsDead[victim] = true;
- 		if (CF_IsPlayerCharacter(victim))
+ 		/*if (CF_IsPlayerCharacter(victim))
  		{
  			TF2_SetPlayerClass(victim, CF_GetCharacterClass(victim));
- 		}
+ 		}*/
  	}
  }
  
@@ -1417,11 +1420,9 @@ public void CF_ResetMadeStatus(int client)
  	if (num > 8)
  		return;
  	
- 	//for some bizarre reason, it freaks out and sets the HP to something in the billions if I don't separate these:
  	float maxHP = CF_GetCharacterMaxHealth(client);
  	float deduction = f_ClassBaseHP[num];
  	float health = maxHP - deduction;
- 	//CPrintToChatAll("Max is %.2f, deduction is %.2f, health is %.2f", maxHP, deduction, health);
  	
  	TF2Attrib_RemoveByDefIndex(client, 125);
  	TF2Attrib_RemoveByDefIndex(client, 26);
@@ -1444,11 +1445,11 @@ public void CF_ResetMadeStatus(int client)
 	}
  }
  
- public void GiveMaxHP_V2(int client)
+ /*public void GiveMaxHP_V2(int client)
  {
  	SetEntProp(client, Prop_Data, "m_iMaxHealth", RoundFloat(CF_GetCharacterMaxHealth(client)));
  	SetEntProp(client, Prop_Send, "m_iHealth", RoundFloat(CF_GetCharacterMaxHealth(client)));
- }
+ }*/
  
  public void CF_UpdateCharacterSpeed(int client, TFClassType class)
  {
@@ -1515,19 +1516,18 @@ public void CF_ResetMadeStatus(int client)
  */
  public void CF_UnmakeCharacter(int client, bool isCharacterChange)
  {
- 	CF_GetPlayerConfig(client, s_PreviousCharacter[client], 255);
- 	CF_SetPlayerConfig(client, "");
- 	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
- 	SDKUnhook(client, SDKHook_WeaponSwitchPost, CFDMG_OnTakeDamageAlive);
- 	b_CharacterApplied[client] = false;
- 	
- 	CFC_DeleteParticles(client);
- 	
  	Call_StartForward(g_OnCharacterRemoved);
  	
  	Call_PushCell(client);
  	
  	Call_Finish();
+ 	
+ 	CF_GetPlayerConfig(client, s_PreviousCharacter[client], 255);
+ 	CF_SetPlayerConfig(client, "");
+ 	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
+ 	b_CharacterApplied[client] = false;
+ 	
+ 	CFC_DeleteParticles(client);
  }
  
  public Native_CF_GetPlayerConfig(Handle plugin, int numParams)
@@ -1550,6 +1550,8 @@ public void CF_ResetMadeStatus(int client)
 	{
 		SetNativeString(2, "", size + 1, false);
 	}
+	
+	return;
 }
 
 public Native_CF_SetPlayerConfig(Handle plugin, int numParams)

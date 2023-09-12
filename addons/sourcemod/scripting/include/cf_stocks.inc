@@ -270,7 +270,7 @@ stock void ChangeModelSkin(int model, char skin[255])
 	}
 }
 
-public Action Timer_RemoveEntity(Handle Timer_RemoveEntity, int entityId)
+public Action Timer_RemoveEntity(Handle removeEnt, int entityId)
 {
 	int entity = EntRefToEntIndex(entityId);
 	if (IsValidEntity(entity) && entity > MaxClients)

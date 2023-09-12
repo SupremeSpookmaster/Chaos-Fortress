@@ -223,7 +223,7 @@ public Action CFA_HUDTimer(Handle timer)
 
 public void CFA_PlayerKilled(int attacker, int victim)
 {
-	if (CF_IsPlayerCharacter(attacker) && attacker != victim)
+	if (CF_IsPlayerCharacter(attacker) && attacker != victim && CF_GetRoundState() == 1)
 	{
 		CF_GiveSpecialResource(attacker, 1.0, CF_ResourceType_Kill);
 		CF_GiveUltCharge(attacker, 1.0, CF_ResourceType_Kill);
@@ -253,8 +253,6 @@ public bool CFA_InitializeUltimate(int client, ConfigMap map)
 	
 	return b_CharacterHasUlt[client];
 }
-
-//TODO: CF_DoAbility, CF_ActivateAbilitySlot, add ult charge to every currently-detected event
 
 public bool CFA_InitializeAbilities(int client, ConfigMap map)
 {
@@ -1146,7 +1144,10 @@ public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
+	{
+		DeleteCfg(map);
 		return;
+	}
 		
 	int i = 1;
 	char secName[255];
@@ -1189,9 +1190,11 @@ public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
 		return;
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
-	delete map;
 	if (abilities == null)
+	{
+		DeleteCfg(map);
 		return;
+	}
 		
 	int i = 1;
 	char secName[255];
@@ -1285,7 +1288,10 @@ public Native_CF_HasAbility(Handle plugin, int numParams)
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
+	{
+		DeleteCfg(map);
 		return false;
+	}
 		
 	bool ReturnValue = false;
 		
@@ -1335,7 +1341,10 @@ public Native_CF_GetArgI(Handle plugin, int numParams)
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
+	{
+		DeleteCfg(map);
 		return -1;
+	}
 		
 	int ReturnValue = -1;
 		
@@ -1385,7 +1394,10 @@ public any Native_CF_GetArgF(Handle plugin, int numParams)
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
+	{
+		DeleteCfg(map);
 		return -1.0;
+	}
 		
 	float ReturnValue = -1.0;
 		
@@ -1434,7 +1446,10 @@ public any Native_CF_GetAbilitySlot(Handle plugin, int numParams)
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
+	{
+		DeleteCfg(map);
 		return CF_AbilityType_None;
+	}
 		
 	CF_AbilityType ReturnValue = CF_AbilityType_None;
 		
@@ -1515,6 +1530,7 @@ public Native_CF_GetArgS(Handle plugin, int numParams)
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
 	{
+		DeleteCfg(map);
 		SetNativeString(5, "", size, false);
 		return;
 	}
@@ -1573,6 +1589,7 @@ public Native_CF_GetAbilityConfigMapPath(Handle plugin, int numParams)
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
 	{
+		DeleteCfg(map);
 		SetNativeString(5, "", length);
 		return;
 	}

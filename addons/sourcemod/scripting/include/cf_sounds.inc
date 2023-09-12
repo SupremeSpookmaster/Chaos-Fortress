@@ -251,27 +251,27 @@ public Action NormalSoundHook(int clients[64],int &numClients,char strSound[PLAT
 			ReplaceString(SoundA, sizeof(SoundA), ".mp3", "");
 			ReplaceString(SoundA, sizeof(SoundA), ".wav", "");
 				
-				/*
+			/*
 				
-				//Guaranteed to replace scout_cheers03 specifically:
-				"sound_replace_vo/scout_cheers03"
-				{
-					"1"		"mysound.mp3"
-				}
+			//Guaranteed to replace scout_cheers03 specifically:
+			"sound_replace_vo/scout_cheers03"
+			{
+				"1"		"mysound.mp3"
+			}
 				
-				//Guaranteed to replace any class dialogue containing the name "scout_cheers", not including scout_cheers03.
-				"sound_replace_scout_cheers"
-				{
-					"1"		"myothersound.mp3"
-				}
+			//Guaranteed to replace any class dialogue containing the name "scout_cheers", not including scout_cheers03.
+			"sound_replace_scout_cheers"
+			{
+				"1"		"myothersound.mp3"
+			}
 				
-				//Replaces ALL class dialogue, not including any sound which contains "scout_cheers".
-				"sound_replace_all"
-				{
-					"1"		"mythirdsound.mp3"
-				}
+			//Replaces ALL class dialogue, not including any sound which contains "scout_cheers".
+			"sound_replace_all"
+			{
+				"1"		"mythirdsound.mp3"
+			}
 				
-				*/
+			*/
 				
 			bool played = false;
 				
