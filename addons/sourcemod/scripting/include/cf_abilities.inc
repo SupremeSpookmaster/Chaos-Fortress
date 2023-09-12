@@ -228,6 +228,10 @@ public void CFA_PlayerKilled(int attacker, int victim)
 		CF_GiveSpecialResource(attacker, 1.0, CF_ResourceType_Kill);
 		CF_GiveUltCharge(attacker, 1.0, CF_ResourceType_Kill);
 	}
+	
+	bool played = CF_PlayRandomSound(victim, "", "sound_killed");
+	if (played)
+		CF_SilenceCharacter(victim, 2.0);
 }
 
 public bool CFA_InitializeUltimate(int client, ConfigMap map)
@@ -760,7 +764,11 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 		
 		if (type == CF_AbilityType_Ult)
 		{
-			//TODO: ult sound
+			bool played = CF_PlayRandomSound(client, "", "sound_ultimate_activation");
+			//TODO: Here we go again... ultimate_activation_friendly, ultimate_activation_hostile, ultimate_activation_self, sound_ultimate_react_friendly, sound_ultimate_react_hostile
+			
+			if (played)
+				CF_SilenceCharacter(client, 1.0);
 		}
 		else
 		{
@@ -889,12 +897,18 @@ public Native_CF_SetUltCharge(Handle plugin, int numParams)
 	if (amt < 0.0)
 		amt = 0.0;
 		
-	if (amt >= f_UltChargeRequired[client])	//TODO: Trigger sound here
+	if (amt >= f_UltChargeRequired[client])
 	{
 		amt = f_UltChargeRequired[client];
 	}
 	
+	float oldCharge = f_UltCharge[client];
 	f_UltCharge[client] = amt;
+	
+	if (oldCharge < f_UltChargeRequired[client] && f_UltCharge[client] >= f_UltChargeRequired[client])
+	{
+		CF_PlayRandomSound(client, "", "sound_ultimate_ready");
+	}
 }
 
 public any Native_CF_GetUltCharge(Handle plugin, int numParams)

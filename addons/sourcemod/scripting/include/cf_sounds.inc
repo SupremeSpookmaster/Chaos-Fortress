@@ -14,6 +14,7 @@ int CF_SndChans[10] = {
 GlobalForward g_SoundHook;
 
 float f_LastSoundHook[MAXPLAYERS + 1] = { 0.0, ... };
+float f_Silenced[MAXPLAYERS + 1] = { 0.0, ... };
 
 public void CFS_OnPluginStart()
 {
@@ -25,6 +26,7 @@ public void CFS_MakeNatives()
 {
 	CreateNative("CF_GetRandomSound", Native_CF_GetRandomSound);
 	CreateNative("CF_PlayRandomSound", Native_CF_PlayRandomSound);
+	CreateNative("CF_SilenceCharacter", Native_CF_SilenceCharacter);
 }
 
 public KeyValType GetRand(char Config[255], char Sound[255], char Output[255])
@@ -244,7 +246,8 @@ public Action NormalSoundHook(int clients[64],int &numClients,char strSound[PLAT
 	{
 		if (CF_IsPlayerCharacter(entity) && StrContains(strSound, "vo/") != -1)
 		{
-			if (GetGameTime() >= f_LastSoundHook[entity])
+			float gameTime = GetGameTime();
+			if (gameTime >= f_LastSoundHook[entity] && gameTime >= f_Silenced[entity])
 			{
 				char SoundA[255], SoundB[255];
 				Format(SoundB, sizeof(SoundB), "%s", strSound);
@@ -328,4 +331,13 @@ public Native_CF_PlayRandomSound(Handle plugin, int numParams)
 	GetNativeString(2, Config, sizeof(Config));
 	GetNativeString(3, Sound, sizeof(Sound));
 	return PlayRand(source, Config, Sound);
+}
+
+public Native_CF_SilenceCharacter(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	float duration = GetNativeCell(2);
+	
+	if (IsValidClient(client))
+		f_Silenced[client] = GetGameTime() + duration;
 }

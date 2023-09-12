@@ -798,4 +798,13 @@ native any CF_GetRandomSound(char Config[255], char Sound[255], char Output[255]
  *
  * @return		True if the sound was played, false otherwise.
  */
-native bool CF_PlayRandomSound(int source, char Config[255], char Sound[255])
+native bool CF_PlayRandomSound(int source, char Config[255], char Sound[255]);
+
+/**
+ * Temporarily blocks all class dialogue on a given character.
+ *
+ * @param client				The client to silence.
+ * @param duration				The duration of the silence.
+ *
+ */
+native CF_SilenceCharacter(int client, float duration);

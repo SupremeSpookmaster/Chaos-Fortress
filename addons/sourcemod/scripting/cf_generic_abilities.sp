@@ -192,6 +192,10 @@ public void Weapon_Activate(int client, char abilityName[255])
 		{
 			ClientOldWeapons[client][weaponSlot].CopyFromWeapon(current, weaponSlot, client);
 		}
+		else	//If it is a timed weapon, delete it so its custom attributes handle doesn't stick around and hog memory.
+		{
+			ClientOldWeapons[client][weaponSlot].Delete();
+		}
 	}
 	
 	int weapon = CF_SpawnWeapon(client, classname, index, level, quality, weaponSlot, reserve, clip, atts, "", visible, unequip, -1, false, fireAbility, firePlugin, fireSound);

@@ -17,16 +17,9 @@
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
 //	- TODO: Detect healing and give resources/ult charge for it.
 //	- TODO: All remaining sound cues:
-//			-sound_spawn_happy
+//			-sound_spawn_happy - track (kills + (0.66 * assists))/deaths and store it in a K/D/A ratio, add options to game_rules to determine which values make a character happy/angry/neutral
 //			-sound_spawn_angry
-//			-sound_killed
 //			-sound_assist
-//			-sound_ultimate_ready
-//			-sound_ultimate_activation_friendly
-//			-sound_ultimate_activation_hostile
-//			-sound_ultimate_activation_self
-//			-sound_ultimate_react_friendly
-//			-sound_ultimate_react_hostile
 //	- TODO: Translations
 //	- TODO: Fork Suza's viewchange plugin and edit to remove weapons during taunts, then re-link to the fork in the prerequisites section of the README.
 //
@@ -37,7 +30,7 @@
 //	- MINOR BUG: For some reason, player ragdolls get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? This has no effect on gameplay but it's honestly fucking baffling.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
-//	- None!
+//	- MAJOR BUG: MERCENARY - Using frag grenade during THE BIG GUNS permanently removes all of your weapons.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
