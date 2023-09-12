@@ -128,6 +128,16 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 		
 	PrecacheSound(snd);
 	
+	int ultType = 0;
+	if (StrEqual(Sound, "sound_ultimate_activation"))
+		ultType = 1;
+	if (StrEqual(Sound, "sound_ultimate_activation_friendly"))
+		ultType = 2;
+	if (StrEqual(Sound, "sound_ultimate_activation_hostile"))
+		ultType = 3;
+	if (StrEqual(Sound, "sound_ultimate_activation_self"))
+		ultType = 4;
+	
 	switch(kvType)
 	{
 		case KeyValType_Value:

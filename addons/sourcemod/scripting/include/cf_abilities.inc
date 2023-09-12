@@ -783,7 +783,19 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 		if (type == CF_AbilityType_Ult)
 		{
 			bool played = CF_PlayRandomSound(client, "", "sound_ultimate_activation");
-			//TODO: Here we go again... ultimate_activation_friendly, ultimate_activation_hostile, ultimate_activation_self, sound_ultimate_react_friendly, sound_ultimate_react_hostile
+			
+			if (!played)
+			{
+				played = CF_PlayRandomSound(client, "", "sound_ultimate_activation_self");
+				
+				bool played2 = CF_PlayRandomSound(client, "", "sound_ultimate_activation_friendly");
+				if (!played)
+					played = played2;
+					
+				played2 = CF_PlayRandomSound(client, "", "sound_ultimate_activation_hostile");
+				if (!played)
+					played = played2;
+			}
 			
 			if (played)
 				CF_SilenceCharacter(client, 1.0);
