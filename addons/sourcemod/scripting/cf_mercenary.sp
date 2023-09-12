@@ -39,7 +39,10 @@ public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255]
 public void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int deadRinger)
 {
 	if (!deadRinger && IsValidClient(victim))
+	{
 		Sprint_End(victim);
+		Frag_NoJarate(victim);
+	}
 }
 
 float Sprint_MaxTime[MAXPLAYERS + 1] = { 0.0, ... };
@@ -167,34 +170,121 @@ public Action Sprint_PreThink(int client)
 	return Plugin_Continue;
 }
 
+float Frag_DMG[MAXPLAYERS + 1] = { 0.0, ... };
+float Frag_Velocity[MAXPLAYERS + 1] = { 0.0, ... };
+bool Frag_HasJarate[MAXPLAYERS + 1] = { false, ... };
+
 public void Frag_Throw(int client, char abilityName[255])
 {
 	if (!IsValidMulti(client))
 		return;
 		
-	float damage = CF_GetArgF(client, MERC, abilityName, "damage");
-	float velocity = CF_GetArgF(client, MERC, abilityName, "velocity");
-		
-	ForceViewmodelAnimation(client, 18);
-	HidePlayerWeapon(client, 0.8);
-		
-	DataPack pack = new DataPack();
-	CreateTimer(0.18, Frag_ThrowOnDelay, pack, TIMER_FLAG_NO_MAPCHANGE);
-	WritePackCell(pack, GetClientUserId(client));
-	WritePackFloat(pack, damage);
-	WritePackFloat(pack, velocity);
+	Frag_DMG[client] = CF_GetArgF(client, MERC, abilityName, "damage");
+	Frag_Velocity[client] = CF_GetArgF(client, MERC, abilityName, "velocity");
+	Frag_HasJarate[client] = CF_GetArgI(client, MERC, abilityName, "is_jarate") != 0;
+	
+	if (!Frag_HasJarate[client])
+	{
+		CreateTimer(0.18, Frag_ThrowOnDelay, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+	}
+	else
+	{
+		CF_DoAbility(client, "cf_generic_abilities", "generic_weapon_frag");
+		SDKHook(client, SDKHook_WeaponCanSwitchTo, Frag_BlockWeaponSwitch);
+	}
 }
 
-public Action Frag_ThrowOnDelay(Handle throwIt, DataPack pack)
+public Action Frag_BlockWeaponSwitch(int client, int weapon)
 {
-	ResetPack(pack);
-	int client = GetClientOfUserId(ReadPackCell(pack));
-	float damage = ReadPackFloat(pack);
-	float velocity = ReadPackFloat(pack);
-	delete pack;
-	
-	if (!IsValidMulti(client))
+	if (!IsValidEntity(weapon))
 		return Plugin_Continue;
+		
+	if (!Frag_HasJarate[client])
+	{
+		SDKUnhook(client, SDKHook_WeaponCanSwitchTo, Frag_BlockWeaponSwitch);
+		return Plugin_Continue;
+	}
+		
+	char classname[255];
+	GetEntityClassname(weapon, classname, sizeof(classname));
+	
+	if (StrEqual(classname, "tf_weapon_jar"))
+		return Plugin_Continue;
+		
+	return Plugin_Handled;
+}
+
+public void CF_OnCharacterCreated(int client)
+{
+	Frag_NoJarate(client);
+}
+
+public void Frag_NoJarate(int client)
+{
+	Frag_HasJarate[client] = false;
+	SDKUnhook(client, SDKHook_WeaponCanSwitchTo, Frag_BlockWeaponSwitch);
+}
+
+public Action CF_OnPlayerRunCmd(int client, int &buttons, int &impulese, int &weapon)
+{
+	if (Frag_HasJarate[client])
+	{
+		int wep = TF2_GetActiveWeapon(client);
+		if (IsValidEntity(wep))
+		{
+			char classname[255];
+			GetEntityClassname(wep, classname, sizeof(classname));
+			
+			if (StrEqual(classname, "tf_weapon_jar"))
+			{
+				buttons |= IN_ATTACK;
+				return Plugin_Changed;
+			}
+		}
+	}
+	
+	return Plugin_Continue;
+}
+
+public void OnEntityCreated(int entity, const char[] classname)
+{
+	if (StrEqual(classname, "tf_projectile_jar"))
+	{
+		SDKHook(entity, SDKHook_SpawnPost, Frag_JarSpawn);
+	}
+}
+
+public Action Frag_JarSpawn(int jar)
+{
+	int creator = GetEntPropEnt(jar, Prop_Send, "m_hOwnerEntity");
+	
+	if (!IsValidClient(creator))
+		return Plugin_Continue;
+		
+	if (Frag_HasJarate[creator])
+	{
+		Frag_Activate(creator);
+		Frag_NoJarate(creator);
+		RemoveEntity(jar);
+	}
+	
+	return Plugin_Continue;
+}
+
+public Action Frag_ThrowOnDelay(Handle throwIt, int id)
+{
+	int client = GetClientOfUserId(id);
+	
+	if (IsValidMulti(client))
+			Frag_Activate(client);
+	
+	return Plugin_Continue;
+}
+
+public void Frag_Activate(int client)
+{
+	if (!IsValidClient(client))
+		return;
 		
 	int grenade = CreateEntityByName("tf_projectile_pipe");
 	if (IsValidEntity(grenade))
@@ -203,9 +293,9 @@ public Action Frag_ThrowOnDelay(Handle throwIt, DataPack pack)
 		SetEntPropEnt(grenade, Prop_Send, "m_hOwnerEntity", client);
 		SetEntProp(grenade,    Prop_Send, "m_bCritical", 0);
 		SetEntProp(grenade,    Prop_Send, "m_iTeamNum",     team, 1);
-		SetEntPropFloat(grenade, Prop_Send, "m_flDamage", damage);
+		SetEntPropFloat(grenade, Prop_Send, "m_flDamage", Frag_DMG[client]);
 		int offs = FindSendPropInfo("CTFGrenadePipebombProjectile", "m_bDefensiveBomb") - 4;
-		SetEntDataFloat(grenade, offs, damage);
+		SetEntDataFloat(grenade, offs, Frag_DMG[client]);
 		SetEntData(grenade, FindSendPropInfo("CTFGrenadePipebombProjectile", "m_nSkin"), (team-2), 1, true);
 		
 		DispatchSpawn(grenade);
@@ -215,14 +305,12 @@ public Action Frag_ThrowOnDelay(Handle throwIt, DataPack pack)
 		GetClientEyePosition(client, pos);
 		vecAngles[0] -= 8.0;
 		
-		vecVelocity[0] = Cosine(DegToRad(vecAngles[0]))*Cosine(DegToRad(vecAngles[1]))*velocity;
-		vecVelocity[1] = Cosine(DegToRad(vecAngles[0]))*Sine(DegToRad(vecAngles[1]))*velocity;
-		vecVelocity[2] = Sine(DegToRad(vecAngles[0])) * velocity;
+		vecVelocity[0] = Cosine(DegToRad(vecAngles[0]))*Cosine(DegToRad(vecAngles[1]))*Frag_Velocity[client];
+		vecVelocity[1] = Cosine(DegToRad(vecAngles[0]))*Sine(DegToRad(vecAngles[1]))*Frag_Velocity[client];
+		vecVelocity[2] = Sine(DegToRad(vecAngles[0])) * Frag_Velocity[client];
 		vecVelocity[2] *= -1;
 		
 		TeleportEntity(grenade, pos, vecAngles, vecVelocity);
 		CF_PlayRandomSound(client, "", "sound_merc_grenade");
 	}
-	
-	return Plugin_Continue;
 }
