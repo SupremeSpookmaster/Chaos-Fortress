@@ -13,7 +13,7 @@ int CF_SndChans[10] = {
 
 GlobalForward g_SoundHook;
 
-//float f_LastSoundHook[MAXPLAYERS + 1] = { 0.0, ... };
+float f_LastSoundHook[MAXPLAYERS + 1] = { 0.0, ... };
 
 public void CFS_OnPluginStart()
 {
@@ -244,52 +244,61 @@ public Action NormalSoundHook(int clients[64],int &numClients,char strSound[PLAT
 	{
 		if (CF_IsPlayerCharacter(entity) && StrContains(strSound, "vo/") != -1)
 		{
-			char SoundA[255], SoundB[255];
-			Format(SoundB, sizeof(SoundB), "%s", strSound);
-			StringToLower(SoundB);
-			Format(SoundA, sizeof(SoundA), "sound_replace_%s", SoundB);
-			ReplaceString(SoundA, sizeof(SoundA), ".mp3", "");
-			ReplaceString(SoundA, sizeof(SoundA), ".wav", "");
-				
-			/*
-				
-			//Guaranteed to replace scout_cheers03 specifically:
-			"sound_replace_vo/scout_cheers03"
+			if (GetGameTime() >= f_LastSoundHook[entity])
 			{
-				"1"		"mysound.mp3"
-			}
+				char SoundA[255], SoundB[255];
+				Format(SoundB, sizeof(SoundB), "%s", strSound);
+				StringToLower(SoundB);
+				Format(SoundA, sizeof(SoundA), "sound_replace_%s", SoundB);
+				ReplaceString(SoundA, sizeof(SoundA), ".mp3", "");
+				ReplaceString(SoundA, sizeof(SoundA), ".wav", "");
+					
+				/*
+					
+				//Guaranteed to replace scout_cheers03 specifically:
+				"sound_replace_vo/scout_cheers03"
+				{
+					"1"		"mysound.mp3"
+				}
+					
+				//Guaranteed to replace any class dialogue containing the name "scout_cheers", not including scout_cheers03.
+				"sound_replace_scout_cheers"
+				{
+					"1"		"myothersound.mp3"
+				}
+					
+				//Replaces ALL class dialogue, not including any sound which contains "scout_cheers".
+				"sound_replace_all"
+				{
+					"1"		"mythirdsound.mp3"
+				}
+					
+				*/
+					
+				bool played = false;
+					
+				if (PlayRand(entity, "", SoundA))
+				{
+					played = true;
+				}
+				else
+				{
+					played = PlaySpecificReplacement(entity, strSound);
+				}
+					
+				if (!played)
+				{
+					played = PlayRand(entity, "", "sound_replace_all");
+				}
 				
-			//Guaranteed to replace any class dialogue containing the name "scout_cheers", not including scout_cheers03.
-			"sound_replace_scout_cheers"
-			{
-				"1"		"myothersound.mp3"
-			}
-				
-			//Replaces ALL class dialogue, not including any sound which contains "scout_cheers".
-			"sound_replace_all"
-			{
-				"1"		"mythirdsound.mp3"
-			}
-				
-			*/
-				
-			bool played = false;
-				
-			if (PlayRand(entity, "", SoundA))
-			{
-				played = true;
+				f_LastSoundHook[entity] = GetGameTime() + 0.01;
+					
+				if (played)
+				{
+					return Plugin_Handled;
+				}
 			}
 			else
-			{
-				played = PlaySpecificReplacement(entity, strSound);
-			}
-				
-			if (!played)
-			{
-				played = PlayRand(entity, "", "sound_replace_all");
-			}
-				
-			if (played)
 			{
 				return Plugin_Handled;
 			}

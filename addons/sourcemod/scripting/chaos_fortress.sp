@@ -37,7 +37,7 @@
 //	- MINOR BUG: For some reason, player ragdolls get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? This has no effect on gameplay but it's honestly fucking baffling.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
-//	- MAJOR BUG: That Godforsaken memory leak is still alive. How many times do I need to shoot it in the head before it just stays dead?
+//	- None!
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
