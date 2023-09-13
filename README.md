@@ -43,9 +43,25 @@ Let's say you want to add or remove a character, or you have a handful of charac
 ## *Game Mode Configuration Options*
 All configurable options specific to this game mode are described in and can be controlled in **[game_rules.cfg](addons/sourcemod/data/chaos_fortress/game_rules.cfg)**.
 
-## *Credits*
+## *Programming Credits*
 Though I do consider myself to be a decent programmer, I have never made a game mode before. As such, I encountered a lot of hurdles during development which, try as I might, I couldn't get over with my existing skill set. For these, I turned to a handful of fellow developers for a helping hand. Without those who are listed here, this mod would be nowhere near my fairly lofty quality standards, and in some cases, would never have even been finished in the first place. Words cannot express my gratitude to these people.
+<details>
+
+<summary>Click to view programming credits.</summary>
+
   - **[Artvin](https://github.com/artvin01)** and **[Batfoxkid](https://github.com/Batfoxkid)** (Creators of ***[TF2 Zombie Riot](https://github.com/artvin01/TF2-Zombie-Riot)***, which I borrowed code from at certain points, lots of general advice and support)
   - **[Zabaniya001, AKA Suza](https://github.com/Zabaniya001/Zabaniya001)** (Various tips and tricks, help regarding code cleanliness and performance, lots of help with unfamiliar coding territory)
   - **[CookieCat](https://github.com/CookieCat45)** (Help with finding netprops when I was unable to find them myself)
   - ...And of course, myself: **[Spookmaster](https://github.com/SupremeSpookmaster)** (Lead Dev, Game Mode Creator, All Default Characters)
+</details>
+
+## *Content Credits*
+No matter how good you are at programming, you're not going to get very far in game development if you don't have good assets. As I like to say: without a programmer, you don't have a game, but without the rest of the crew, you don't have a good game. As such, in making the default characters for Chaos Fortress, I made thorough use of TF2's long history of content mods to cover assets that couldn't be handled by the files available in base TF2. And so, just like with this game mode's programmers, I want to take a moment to give full credit to the original creators of all of the assets I repurposed for this project.
+<details>
+
+<summary>Click to view content credits.</summary>
+
+### Mercenary
+ - **[DannyBoi151](https://gamebanana.com/members/1382615)** and **[stiffy360](https://gamebanana.com/members/707880)** (ported the **[Fruit Shop Fiend](https://gamebanana.com/mods/197791)** to TF2, which I used for Mercenary's assault rifle)
+ - **[Stachekip](https://www.youtube.com/user/Stachekip)** (Voice actor for the Mercenary from **[Open Fortress](https://openfortress.fun/)**, whom Mercenary was originally intended to be before he was converted to a sniper OC to cut down on downloads)
+</details>
