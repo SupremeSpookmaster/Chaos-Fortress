@@ -10,7 +10,7 @@
 //#define TESTING
 //
 //	- TODAY'S PLANS (things I intend to complete with my work for today):
-//		- Finalize sound cues so Mercenary can be finished.
+//		- Begin working on Spookmaster Bones *or* Orbital Sniper. Not sure which should be first.
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Everything that happens on client disconnect.

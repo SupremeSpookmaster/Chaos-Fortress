@@ -11,12 +11,21 @@
 [Tt]humbs.db
 
 # Excluded Files:
+
+#Compiled Plugins
 !addons/sourcemod/plugins/chaos_fortress.smx
+!addons/sourcemod/plugins/cf_abilities/cf_generic_abilities.smx
+!addons/sourcemod/plugins/cf_abilities/cf_mercenary.smx
+!addons/sourcemod/plugins/cf_abilities/cf_soundpack.smx
+
+#Source Code
 !chaos_fortress.sp
 !cf_generic_abilities.sp
 !cf_mercenary.sp
 !cf_plugin_template.sp
 !cf_soundpack.sp
+
+#Include Files
 !cf_abilities.inc
 !cf_buttons.inc
 !cf_characters.inc

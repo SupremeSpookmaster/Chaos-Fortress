@@ -1170,3 +1170,29 @@ stock GetClip(int weapon)
     return 0;
 } 
 //Above is borrowed from DarthNinja
+
+/**
+ * Retrieves the client's enemy team.
+ *
+ * @param client      The client to check.
+ *
+ * @error		Invalid client index.
+ *
+ * @return		The client's enemy team (TFTeam value).
+ */
+stock TFTeam grabEnemyTeam(int client) //Grabs a client's opposing team and returns it.
+{
+	TFTeam targTeam = TFTeam_Red;
+	
+	if (IsValidClient(client))
+	{
+		TFTeam userTeam = TF2_GetClientTeam(client);
+		
+		if (userTeam == TFTeam_Red)
+		{
+			targTeam = TFTeam_Blue;
+		}
+	}
+	
+	return targTeam;
+}

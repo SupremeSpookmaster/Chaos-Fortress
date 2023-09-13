@@ -797,6 +797,44 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 					played = played2;
 			}
 			
+			char conf[255];
+			CF_GetPlayerConfig(client, conf, sizeof(conf));
+			ConfigMap map = new ConfigMap(conf);
+			if (map != null)
+			{
+				float distance = GetFloatFromConfigMap(map, "character.ultimate_stats.radius", 800.0);
+				float pos[3];
+				GetClientAbsOrigin(client, pos);
+				
+				for (int i = 1; i <= MaxClients; i++)
+				{
+					if (IsValidMulti(i, true, true))
+					{ 
+						float otherPos[3];
+						GetClientAbsOrigin(i, otherPos);
+						
+						if (GetVectorDistance(pos, otherPos, true) <= Pow(distance, 2.0))
+						{
+							bool otherPlayed = false;
+							
+							if (TF2_GetClientTeam(i) == TF2_GetClientTeam(client))
+							{
+								otherPlayed = CF_PlayRandomSound(i, "", "sound_ultimate_react_friendly");
+							}
+							else
+							{
+								otherPlayed = CF_PlayRandomSound(i, "", "sound_ultimate_react_hostile");
+							}
+							
+							if (otherPlayed)
+								CF_SilenceCharacter(i, 2.0);
+						}
+					}
+				}
+				
+				DeleteCfg(map);
+			}
+			
 			if (played)
 				CF_SilenceCharacter(client, 1.0);
 		}

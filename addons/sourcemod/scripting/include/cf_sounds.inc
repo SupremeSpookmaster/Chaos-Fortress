@@ -127,76 +127,98 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 		return false;
 		
 	PrecacheSound(snd);
+	int playMode = 0;
 	
 	int ultType = 0;
 	if (StrEqual(Sound, "sound_ultimate_activation"))
 		ultType = 1;
-	if (StrEqual(Sound, "sound_ultimate_activation_friendly"))
-		ultType = 2;
-	if (StrEqual(Sound, "sound_ultimate_activation_hostile"))
-		ultType = 3;
-	if (StrEqual(Sound, "sound_ultimate_activation_self"))
-		ultType = 4;
+	if (StrEqual(Sound, "sound_ultimate_activation_friendly")) { ultType = 2; playMode = 2; }
+	if (StrEqual(Sound, "sound_ultimate_activation_hostile")) { ultType = 3; playMode = 3; }
+	if (StrEqual(Sound, "sound_ultimate_activation_self")) { ultType = 4; playMode = 1; }
 	
-	switch(kvType)
+	int level = 100;
+	float volume = 1.0;
+	int channel = ultType != 0 ? 4 : 7;
+	bool global = ultType != 0;
+	
+	bool CanPlay = true;
+	
+	if (kvType == KeyValType_Section)
 	{
-		case KeyValType_Value:
-		{
-			EmitSoundToAll(snd, source, SNDCHAN_VOICE);
-			return true;
-		}
-		case KeyValType_Section:
-		{
-			char path[255], tempSnd[255];
+		char path[255], tempSnd[255];
 			
-			tempSnd = snd;
-			ReplaceString(tempSnd, sizeof(tempSnd), ".", "\\.");
+		tempSnd = snd;
+		ReplaceString(tempSnd, sizeof(tempSnd), ".", "\\.");
 			
-			Format(path, sizeof(path), "character.sounds.%s.%s", Sound, tempSnd);
+		Format(path, sizeof(path), "character.sounds.%s.%s", Sound, tempSnd);
 			
-			ConfigMap cfgMap = new ConfigMap(ourConf);
-			ConfigMap section = cfgMap.GetSection(path);
+		ConfigMap cfgMap = new ConfigMap(ourConf);
+		ConfigMap section = cfgMap.GetSection(path);
 			
-			bool ReturnVal = false;
-			if (section != null)
-			{			
-				int level = GetIntFromConfigMap(section, "level", 100);
-				bool onlySelf = GetBoolFromConfigMap(section, "source", false);
-				float volume = GetFloatFromConfigMap(section, "volume", 1.0);
-				int channel = GetIntFromConfigMap(section, "channel", 7);
-				bool global = GetBoolFromConfigMap(section, "global", false);
-				float chance = GetFloatFromConfigMap(section, "chance", 1.0);
+		if (section != null)
+		{			
+			level = GetIntFromConfigMap(section, "level", 100);
+			
+			if (ultType == 0)
+				playMode = GetIntFromConfigMap(section, "source", 0);
 				
-				if (GetRandomFloat(0.0, 1.0) <= chance)
+			volume = GetFloatFromConfigMap(section, "volume", 1.0);
+			
+			if (ultType == 0)
+				channel = GetIntFromConfigMap(section, "channel", 7);
+				
+			if (ultType == 0)
+				global = GetBoolFromConfigMap(section, "global", false);
+				
+			float chance = GetFloatFromConfigMap(section, "chance", 1.0);
+				
+			CanPlay = GetRandomFloat(0.0, 1.0) <= chance;
+		}
+		else
+		{
+			CanPlay = false;
+		}
+		
+		DeleteCfg(cfgMap);
+	}
+	
+	if (CanPlay)
+	{
+		TFTeam targTeam = TFTeam_Unassigned;
+		
+		switch(playMode)
+		{
+			case 0:	//Everyone
+			{
+				EmitSoundToAll(snd, global ? SOUND_FROM_PLAYER : source, CF_SndChans[channel], level, _, volume);
+			}
+			case 1:	//Self only
+			{
+				EmitSoundToClient(source, snd, _, CF_SndChans[channel], level, _, volume);
+			}
+			case 2: //Allies only
+			{
+				targTeam = TF2_GetClientTeam(source);
+			}
+			case 3:	//Enemies only
+			{
+				targTeam = grabEnemyTeam(source);
+			}
+		}
+		
+		if (targTeam != TFTeam_Unassigned)
+		{
+			for (int i = 1; i <= MaxClients; i++)
+			{
+				if (IsValidMulti(i, false, _, true, targTeam) && i != source)
 				{
-					if (global)
-					{
-						EmitSoundToAll(snd, _, CF_SndChans[channel], level, _, volume);
-					}
-					else if (onlySelf && IsValidClient(source))
-					{
-						EmitSoundToClient(source, snd, _, CF_SndChans[channel], level, _, volume);
-					}
-					else
-					{
-						EmitSoundToAll(snd, source, CF_SndChans[channel], level, _, volume);
-					}
-					
-					ReturnVal =  true;
-				}
-				else
-				{
-					ReturnVal = false;
+					EmitSoundToClient(i, snd, global ? SOUND_FROM_PLAYER : source, CF_SndChans[channel], level, _, volume);
 				}
 			}
-			DeleteCfg(cfgMap);
-			return ReturnVal;
-		}
-		default:
-		{
-			return false;
 		}
 	}
+	
+	return CanPlay;
 }
 
 public bool PlaySpecificReplacement(int client, char sound[PLATFORM_MAX_PATH])
