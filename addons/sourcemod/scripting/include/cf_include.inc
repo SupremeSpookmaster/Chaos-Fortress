@@ -353,6 +353,51 @@ forward void CF_OnCharacterRemoved(int client);
  */
 forward Action CF_SoundHook(char strSound[PLATFORM_MAX_PATH], int &entity, int &channel, float &volume, int &level, int &pitch, int &flags);
 	
+/**
+ * Called when a character is given their special resource.
+ * WARNING: DO NOT CALL CF_GiveSpecialResource OR CF_SetSpecialResource IN THIS CALLBACK UNLESS YOU KNOW WHAT YOU ARE DOING!
+ *
+ * @param client		The client who received the special resource.
+ * @param amt			The amount given.
+ *
+ * @return		Plugin_Continue to give the resource normally, modify amt and return Plugin_Changed to change the amount given, and Plugin_Handled or Plugin_Stop to prevent the resource from being given.
+ */
+forward Action CF_OnSpecialResourceGiven(int client, float &amt);
+
+/**
+ * Called when a character's special resource is set.
+ * WARNING: DO NOT CALL CF_GiveSpecialResource OR CF_SetSpecialResource IN THIS CALLBACK UNLESS YOU KNOW WHAT YOU ARE DOING!
+ *
+ * @param client		The client who received the special resource.
+ * @param current		The client's current special resource, before changes are applied.
+ * @param amt			The client's new special resource.
+ *
+ * @return		Plugin_Continue to set special resource normally, modify amt and return Plugin_Changed to change the client's special resource, and Plugin_Handled or Plugin_Stop to prevent the ult charge from being set.
+ */
+forward Action CF_OnSpecialResourceApplied(int client, float current, float &amt);
+
+/**
+ * Called when a character is given any amount of ult charge.
+ * WARNING: DO NOT CALL CF_GiveUltCharge OR CF_SetUltCharge IN THIS CALLBACK UNLESS YOU KNOW WHAT YOU ARE DOING!
+ *
+ * @param client		The client who received the ult charge.
+ * @param amt			The amount given.
+ *
+ * @return		Plugin_Continue to give the ult charge normally, modify amt and return Plugin_Changed to change the amount given, and Plugin_Handled or Plugin_Stop to prevent the ult charge from being given.
+ */
+forward Action CF_OnUltChargeGiven(int client, float &amt);
+
+/**
+ * Called when a character's ult charge is set.
+ * WARNING: DO NOT CALL CF_GiveUltCharge OR CF_SetUltCharge IN THIS CALLBACK UNLESS YOU KNOW WHAT YOU ARE DOING!
+ *
+ * @param client		The client who received the ult charge.
+ * @param current		The client's current ult charge, before changes are applied.
+ * @param amt			The client's new ult charge.
+ *
+ * @return		Plugin_Continue to set ult charge normally, modify amt and return Plugin_Changed to change the client's ult charge, and Plugin_Handled or Plugin_Stop to prevent the ult charge from being set.
+ */
+forward Action CF_OnUltChargeApplied(int client, float current, float &amt);
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
 ///////////////////////////////////////
@@ -549,6 +594,7 @@ native any CF_GetCharacterClass(int client);
  * @param client		The client to attach the particle to.
  * @param particle		The particle's name.
  * @param point			The attachment point of the particle.
+ * @param preserve		If set to true, this particle is not removed on resupply unless the player becomes a different character.
  * @param lifespan		Optional particle duration, 0.0 or below for infinite.
  * @param xOff			Optional X-axis offset, in hammer units.
  * @param yOff			Optional Y-axis offset, in hammer units.
@@ -556,7 +602,7 @@ native any CF_GetCharacterClass(int client);
  *
  * @return The entity index of the spawned particle, -1 if invalid.
  */
-native int CF_AttachParticle(int client, char particle[255], char point[255], float lifespan = 0.0, float xOff = 0.0, float yOff = 0.0, float zOff = 0.0);
+native int CF_AttachParticle(int client, char particle[255], char point[255], bool preserve = false, float lifespan = 0.0, float xOff = 0.0, float yOff = 0.0, float zOff = 0.0);
 
 /**
  * Attaches a wearable to a client, using Chaos Fortress' system to automatically handle several important things particles need.
@@ -568,12 +614,13 @@ native int CF_AttachParticle(int client, char particle[255], char point[255], fl
  * @param visible		Set to false if you want to hide the wearable from view.
  * @param paint			Any number 1-29 will paint the wearable, if applicable. See the Chaos Fortress wiki page for a list: https://github.com/SupremeSpookmaster/Chaos-Fortress/wiki/Miscellaneous-Data#paint-indexes
  * @param style			Optional style override for cosmetic wearables.
+ * @param preserve		If set to true, the wearable is not removed on resupply unless the player's character is changed.
  * @param atts			Optional item attributes for the wearable.
  * @param lifespan		Optional lifespan for the wearable, 0.0 or below for infinite.
  *
  * @return The entity index of the spawned wearable, -1 if invalid.
  */
-native int CF_AttachWearable(int client, int index, bool visible, int paint, int style, char atts[255] = "", float lifespan = 0.0);
+native int CF_AttachWearable(int client, int index, bool visible, int paint, int style, bool preserve = false, char atts[255] = "", float lifespan = 0.0);
 
 /**
  * Gives a client ult charge, based on the parameters given. This can also remove ult charge if "coefficient" is negative.

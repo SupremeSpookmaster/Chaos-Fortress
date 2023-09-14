@@ -145,7 +145,7 @@ public void Sprint_ApplyAttributes(int client)
 {
 	Sprint_RemoveAttributes(client);
 	
-	int particle = CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? SPRINT_PARTICLE_RED : SPRINT_PARTICLE_BLUE, "root", _, _, _, 75.0);
+	int particle = CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? SPRINT_PARTICLE_RED : SPRINT_PARTICLE_BLUE, "root", _, _, _, _, 75.0);
 	if (IsValidEntity(particle))
 	{
 		Sprint_Particle[client] = EntIndexToEntRef(particle);
@@ -153,7 +153,7 @@ public void Sprint_ApplyAttributes(int client)
 	
 	char atts[255];
 	Format(atts, sizeof(atts), "442 ; %.4f", Sprint_Potency[client]);
-	int wearable = CF_AttachWearable(client, view_as<int>(CF_ClassToken_Soldier), false, 0, 0, atts);
+	int wearable = CF_AttachWearable(client, view_as<int>(CF_ClassToken_Soldier), false, 0, 0, _, atts);
 	if (IsValidEntity(wearable))
 	{
 		Sprint_Wearable[client] = EntIndexToEntRef(wearable);

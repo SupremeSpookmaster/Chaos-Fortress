@@ -57,6 +57,10 @@ GlobalForward g_OnReloadUsed;
 GlobalForward g_OnHeldStart;
 GlobalForward g_OnHeldEnd;
 GlobalForward g_OnHeldEnd_Ability;
+GlobalForward g_ResourceGiven;
+GlobalForward g_UltChargeGiven;
+GlobalForward g_ResourceApplied;
+GlobalForward g_UltChargeApplied;
 
 public void CFA_MakeNatives()
 {
@@ -90,6 +94,10 @@ public void CFA_MakeForwards()
 	g_OnHeldStart = new GlobalForward("CF_OnHeldStart", ET_Event, Param_Cell, Param_Cell);
 	g_OnHeldEnd = new GlobalForward("CF_OnHeldEnd", ET_Event, Param_Cell, Param_Cell, Param_Cell);
 	g_OnHeldEnd_Ability = new GlobalForward("CF_OnHeldEnd_Ability", ET_Event, Param_Cell, Param_Cell, Param_String, Param_String);
+	g_ResourceGiven = new GlobalForward("CF_OnSpecialResourceGiven", ET_Event, Param_Cell, Param_FloatByRef);
+	g_UltChargeGiven = new GlobalForward("CF_OnUltChargeGiven", ET_Event, Param_Cell, Param_FloatByRef);
+	g_ResourceApplied = new GlobalForward("CF_OnSpecialResourceApplied", ET_Event, Param_Cell, Param_Float, Param_FloatByRef);
+	g_UltChargeApplied = new GlobalForward("CF_OnUltChargeApplied", ET_Event, Param_Cell, Param_Float, Param_FloatByRef);
 }
 
 Handle HudSync;
@@ -945,7 +953,16 @@ public Native_CF_GiveUltCharge(Handle plugin, int numParams)
 		}
 	}
 	
-	CF_SetUltCharge(client, f_UltCharge[client] + amt);
+	Call_StartForward(g_UltChargeGiven);
+	
+	Call_PushCell(client);
+	Call_PushFloatRef(amt);
+	
+	Action result;
+	Call_Finish(result);
+	
+	if (result != Plugin_Handled && result != Plugin_Stop)
+		CF_SetUltCharge(client, f_UltCharge[client] + amt);
 }
 
 public Native_CF_SetUltCharge(Handle plugin, int numParams)
@@ -962,20 +979,32 @@ public Native_CF_SetUltCharge(Handle plugin, int numParams)
 	if (CF_GetAbilityCooldown(client, CF_AbilityType_Ult) > 0.0 && !IgnoreCD)
 		return;
 	
-	if (amt < 0.0)
-		amt = 0.0;
+	Call_StartForward(g_UltChargeApplied);
+	
+	Call_PushCell(client);
+	Call_PushFloat(f_UltCharge[client]);
+	Call_PushFloatRef(amt);
+	
+	Action result;
+	Call_Finish(result);
+	
+	if (result != Plugin_Handled && result != Plugin_Stop)
+	{
+		if (amt < 0.0)
+			amt = 0.0;
+			
+		if (amt >= f_UltChargeRequired[client])
+		{
+			amt = f_UltChargeRequired[client];
+		}
 		
-	if (amt >= f_UltChargeRequired[client])
-	{
-		amt = f_UltChargeRequired[client];
-	}
-	
-	float oldCharge = f_UltCharge[client];
-	f_UltCharge[client] = amt;
-	
-	if (oldCharge < f_UltChargeRequired[client] && f_UltCharge[client] >= f_UltChargeRequired[client])
-	{
-		CF_PlayRandomSound(client, "", "sound_ultimate_ready");
+		float oldCharge = f_UltCharge[client];
+		f_UltCharge[client] = amt;
+		
+		if (oldCharge < f_UltChargeRequired[client] && f_UltCharge[client] >= f_UltChargeRequired[client])
+		{
+			CF_PlayRandomSound(client, "", "sound_ultimate_ready");
+		}
 	}
 }
 
@@ -1033,7 +1062,16 @@ public Native_CF_GiveSpecialResource(Handle plugin, int numParams)
 		}
 	}
 	
-	CF_SetSpecialResource(client, f_Resources[client] + amt);
+	Call_StartForward(g_ResourceGiven);
+	
+	Call_PushCell(client);
+	Call_PushFloatRef(amt);
+	
+	Action result;
+	Call_Finish(result);
+	
+	if (result != Plugin_Handled && result != Plugin_Stop)
+		CF_SetSpecialResource(client, f_Resources[client] + amt);
 }
 
 public Native_CF_SetSpecialResource(Handle plugin, int numParams)
@@ -1048,15 +1086,28 @@ public Native_CF_SetSpecialResource(Handle plugin, int numParams)
 		
 	float amt = GetNativeCell(2);
 	
-	if (amt < 0.0)
-		amt = 0.0;
-		
-	if (amt >= f_ResourceMax[client])
-	{
-		amt = f_ResourceMax[client];
-	}
+	Call_StartForward(g_ResourceApplied);
 	
-	f_Resources[client] = amt;
+	Call_PushCell(client);
+	Call_PushFloat(f_Resources[client]);
+	Call_PushFloatRef(amt);
+	
+	Action result;
+	Call_Finish(result);
+	
+	
+	if (result != Plugin_Handled && result != Plugin_Stop)
+	{
+		if (amt < 0.0)
+			amt = 0.0;
+			
+		if (amt >= f_ResourceMax[client])
+		{
+			amt = f_ResourceMax[client];
+		}
+		
+		f_Resources[client] = amt;
+	}
 }
 
 public any Native_CF_GetSpecialResource(Handle plugin, int numParams)

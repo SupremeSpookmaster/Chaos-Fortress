@@ -65,6 +65,7 @@ public const float f_ClassBaseSpeed[] =
 //Store configs and names in two separate arrays so we aren't reading every single character's config every single time someone opens the !characters menu:
 Handle CF_Characters_Configs;
 Handle CF_Characters_Names;
+Handle CF_CharacterParticles[MAXPLAYERS + 1] = { null, ... };
 
 ConfigMap Characters;
 
@@ -86,6 +87,8 @@ bool b_DisplayRole = true;
 bool b_CharacterApplied[MAXPLAYERS + 1] = { false, ... }; //Whether or not the client's character has been applied to them already. If true: skip MakeCharacter for that client. Set to false automatically on death, round end, disconnect, and if the player changes their character selection.
 bool b_ReadingLore[MAXPLAYERS + 1] = { false, ... };
 bool b_IsDead[MAXPLAYERS + 1] = { false, ... };
+bool b_CharacterParticlePreserved[2049] = { false, ... };
+bool b_WearableIsPreserved[2049] = { false, ... };
 
 char s_CharacterConfig[MAXPLAYERS+1][255];	//The config currently used for this player's character. If empty: that player is not a character.
 char s_CharacterConfigInMenu[MAXPLAYERS+1][255];	//The config currently used this player's info menu.
@@ -95,7 +98,7 @@ char s_DefaultCharacter[255];
 
 Handle c_DesiredCharacter;
 
-Queue g_CharacterParticles[MAXPLAYERS + 1];
+//Queue CF_CharacterParticles[MAXPLAYERS + 1];
 
 float f_Speed[MAXPLAYERS + 1];
 
@@ -135,6 +138,12 @@ public void CFC_MakeForwards()
 	
 	g_OnCharacterCreated = new GlobalForward("CF_OnCharacterCreated", ET_Ignore, Param_Cell);
 	g_OnCharacterRemoved = new GlobalForward("CF_OnCharacterRemoved", ET_Ignore, Param_Cell);
+}
+
+public void CFC_OnEntityDestroyed(int entity)
+{
+	b_CharacterParticlePreserved[entity] = false;
+	b_WearableIsPreserved[entity] = false;
 }
 
 /**
@@ -1020,6 +1029,8 @@ public void CF_ResetMadeStatus(int client)
 	if (map == null)
 		return;
 		
+	bool IsNewCharacter = !StrEqual(conf, s_PreviousCharacter[client]);
+		
 	CF_SetPlayerConfig(client, conf);
 	SetClientCookie(client, c_DesiredCharacter, conf);
 		
@@ -1029,7 +1040,7 @@ public void CF_ResetMadeStatus(int client)
 	while((entity = FindEntityByClassname(entity, "tf_wearable")) != -1)
 	{
 		int owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
-		if (owner == client)
+		if (owner == client && (IsNewCharacter || !b_WearableIsPreserved[entity]))
 		{
 			TF2_RemoveWearable(owner, entity);
 		}
@@ -1038,7 +1049,7 @@ public void CF_ResetMadeStatus(int client)
 	while((entity = FindEntityByClassname(entity, "tf_wearable_vm")) != -1)
 	{
 		int owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
-		if (owner == client)
+		if (owner == client && (IsNewCharacter || !b_WearableIsPreserved[entity]))
 		{
 			TF2_RemoveWearable(owner, entity);
 		}
@@ -1084,10 +1095,10 @@ public void CF_ResetMadeStatus(int client)
 	ConfigMap particles = map.GetSection("character.particles");
 	if (particles != null)
 	{
-		CFC_AttachParticles(client, particles);
+		CFC_AttachParticles(client, particles, IsNewCharacter);
 	}
  	
- 	if (!StrEqual(conf, s_PreviousCharacter[client]))	//We are respawning as a new character, default to spawn_intro
+ 	if (IsNewCharacter)	//We are respawning as a new character, default to spawn_intro
  	{
  		bool played = CF_PlayRandomSound(client, conf, "sound_spawn_intro");
  		if (!played)
@@ -1241,7 +1252,7 @@ public void CF_ResetMadeStatus(int client)
 		int style = GetIntFromConfigMap(subsection, "style", 0);
 		//TODO: Maybe add support for wearable scale?
 		
-		CF_AttachWearable(client, index, visible, paint, style, atts, 0.0);
+		CF_AttachWearable(client, index, visible, paint, style, true, atts, 0.0);
 		
 		i++;
 		Format(secName, sizeof(secName), "wearable_%i", i);
@@ -1319,25 +1330,39 @@ public void CF_ResetMadeStatus(int client)
 	}
  }
  
- public void CFC_DeleteParticles(int client)
+ void CFC_DeleteParticles(int client, bool IgnorePreserve = false)
  {
  	if (!IsValidClient(client))
  		return;
  		
- 	if (g_CharacterParticles[client] == null)
- 		return;
+ 	if (CF_CharacterParticles[client] == null)
+		return;
  		
- 	while (!g_CharacterParticles[client].Empty)
+ 	for (int i = 0; i < GetArraySize(CF_CharacterParticles[client]); i++)
  	{
- 		int part = EntRefToEntIndex(g_CharacterParticles[client].Pop());
+ 		int part = EntRefToEntIndex(GetArrayCell(CF_CharacterParticles[client], i));
+ 		bool RemoveIt = false;
  		
- 		if (IsValidEdict(part))
+ 		if (IsValidEntity(part))
  		{
- 			RemoveEntity(part);
+ 			if (IgnorePreserve || !b_CharacterParticlePreserved[part])
+ 			{
+ 				RemoveIt = true;
+ 				RemoveEntity(part);
+ 			}
+ 		}
+ 		else
+ 			RemoveIt = true;
+ 			
+ 		if (RemoveIt)
+ 		{
+ 			RemoveFromArray(CF_CharacterParticles[client], i);
+ 			i--;
  		}
  	}
  	
- 	delete g_CharacterParticles[client];
+ 	if (GetArraySize(CF_CharacterParticles[client]) < 1)
+ 		delete CF_CharacterParticles[client];
  }
  
  #if defined USE_PREVIEWS
@@ -1379,10 +1404,12 @@ public void CF_ResetMadeStatus(int client)
  }
  #endif
  
- public void CFC_AttachParticles(int client, ConfigMap particles)
+ public void CFC_AttachParticles(int client, ConfigMap particles, bool IgnorePreserve)
  {
- 	CFC_DeleteParticles(client);
- 	g_CharacterParticles[client] = new Queue();
+ 	CFC_DeleteParticles(client, IgnorePreserve);
+ 	
+ 	if (CF_CharacterParticles[client] == null)
+ 		CF_CharacterParticles[client] = CreateArray(16);
  	
  	int i = 1;
 	char secName[255];
@@ -1407,7 +1434,7 @@ public void CF_ResetMadeStatus(int client)
 		float yOff = GetFloatFromConfigMap(subsection, "y_offset", 0.0);
 		float zOff = GetFloatFromConfigMap(subsection, "z_offset", 0.0);
 		
-		CF_AttachParticle(client, partName, point, 0.0, xOff, yOff, zOff);
+		CF_AttachParticle(client, partName, point, _, 0.0, xOff, yOff, zOff);
 		
 		i++;
 		Format(secName, sizeof(secName), "particle_%i", i);
@@ -1548,7 +1575,7 @@ public void CF_ResetMadeStatus(int client)
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	b_CharacterApplied[client] = false;
  	
- 	CFC_DeleteParticles(client);
+ 	CFC_DeleteParticles(client, true);
  }
  
  public Native_CF_GetPlayerConfig(Handle plugin, int numParams)
@@ -1647,18 +1674,18 @@ public Native_CF_AttachParticle(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return -1;
 		
-	if (g_CharacterParticles[client] == null)
-		g_CharacterParticles[client] = new Queue();
+	if (CF_CharacterParticles[client] == null)
+		CF_CharacterParticles[client] = CreateArray(16);
 		
 	char partName[255], point[255];
 	GetNativeString(2, partName, sizeof(partName));
 	GetNativeString(3, point, sizeof(point));
-	float lifespan = GetNativeCell(4);
-	float xOff = GetNativeCell(5);
-	float yOff = GetNativeCell(6);
-	float zOff = GetNativeCell(7);
+	bool preserve = GetNativeCell(4);
+	float lifespan = GetNativeCell(5);
+	float xOff = GetNativeCell(6);
+	float yOff = GetNativeCell(7);
+	float zOff = GetNativeCell(8);
 		
-	
 	int particle = AttachParticleToEntity(client, partName, point, lifespan, xOff, yOff, zOff);
 	
 	if (IsValidEntity(particle))
@@ -1666,8 +1693,9 @@ public Native_CF_AttachParticle(Handle plugin, int numParams)
 		SetEdictFlags(particle, GetEdictFlags(particle)&(~FL_EDICT_ALWAYS));
 			
 		i_CharacterParticleOwner[particle] = GetClientUserId(client);
+		b_CharacterParticlePreserved[particle] = preserve;
 		SDKHook(particle, SDKHook_SetTransmit, CFC_ParticleTransmit);
-		g_CharacterParticles[client].Push(EntIndexToEntRef(particle));
+		PushArrayCell(CF_CharacterParticles[client], EntIndexToEntRef(particle));
 		
 		return particle;
 	}
@@ -1687,13 +1715,15 @@ public Native_CF_AttachWearable(Handle plugin, int numParams)
 	bool visible = GetNativeCell(3);
 	int paint = GetNativeCell(4);
 	int style = GetNativeCell(5);
-	GetNativeString(6, atts, sizeof(atts));
-	float lifespan = GetNativeCell(7);
+	bool preserve = GetNativeCell(6);
+	GetNativeString(7, atts, sizeof(atts));
+	float lifespan = GetNativeCell(8);
 		
 	int wearable = CreateWearable(client, index, atts, paint, style, visible, lifespan);
 	if (IsValidEntity(wearable))
 	{
 		SDKCall_EquipWearable(client, wearable);
+		b_WearableIsPreserved[wearable] = preserve;
 		return wearable;
 	}
 	
