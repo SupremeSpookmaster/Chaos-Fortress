@@ -8,6 +8,8 @@
 #define WEAPON				"generic_weapon"
 #define CONDS				"generic_conditions"
 #define COOLDOWN			"generic_cooldown"
+#define PARTICLE			"generic_particle"
+#define WEARABLE			"generic_wearable"
 
 float Weapon_EndTime[2049] = { 0.0, ... };
 
@@ -165,6 +167,16 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	if (StrContains(abilityName, COOLDOWN) != -1)
 	{
 		Cooldown_Activate(client, abilityName);
+	}
+	
+	if (StrContains(abilityName, PARTICLE) != -1)
+	{
+		Particle_Activate(client, abilityName);
+	}
+	
+	if (StrContains(abilityName, WEARABLE) != -1)
+	{
+		Wearable_Activate(client, abilityName);
 	}
 }
 
@@ -366,4 +378,43 @@ public void Cooldown_Activate(int client, char abilityName[255])
 	}
 	
 	CF_ApplyAbilityCooldown(client, CF_GetArgF(client, GENERIC, abilityName, "duration"), type, CF_GetArgI(client, GENERIC, abilityName, "override") != 0, CF_GetArgI(client, GENERIC, abilityName, "delay") != 0);
+}
+
+public void Particle_Activate(int client, char abilityName[255])
+{
+	char name[255], point[255];
+	
+	if (TF2_GetClientTeam(client) == TFTeam_Red)
+	{
+		CF_GetArgS(client, GENERIC, abilityName, "name_red", name, sizeof(name));
+	}
+	else
+	{
+		CF_GetArgS(client, GENERIC, abilityName, "name_blue", name, sizeof(name));
+	}
+	
+	CF_GetArgS(client, GENERIC, abilityName, "attachment_point", point, sizeof(point));
+	bool preserve = CF_GetArgI(client, GENERIC, abilityName, "preserve") != 0;
+	float lifespan = CF_GetArgF(client, GENERIC, abilityName, "duration");
+	float xOff = CF_GetArgF(client, GENERIC, abilityName, "x_offset");
+	float yOff = CF_GetArgF(client, GENERIC, abilityName, "y_offset");
+	float zOff = CF_GetArgF(client, GENERIC, abilityName, "z_offset");
+	
+	CF_AttachParticle(client, name, point, preserve, lifespan, xOff, yOff, zOff);
+}
+
+public void Wearable_Activate(int client, char abilityName[255])
+{
+	int index = CF_GetArgI(client, GENERIC, abilityName, "index");
+	bool visible = CF_GetArgI(client, GENERIC, abilityName, "visible") != 0;
+	int paint = CF_GetArgI(client, GENERIC, abilityName, "paint");
+	int style = CF_GetArgI(client, GENERIC, abilityName, "style");
+	
+	char atts[255];
+	CF_GetArgS(client, GENERIC, abilityName, "attributes", atts, sizeof(atts));
+	
+	float lifespan = CF_GetArgF(client, GENERIC, abilityName, "duration");
+	bool preserve = CF_GetArgI(client, GENERIC, abilityName, "preserve") != 0;
+	
+	CF_AttachWearable(client, index, visible, paint, style, preserve, atts, lifespan);
 }

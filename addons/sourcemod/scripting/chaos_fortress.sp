@@ -11,7 +11,7 @@
 //
 //	- TODAY'S PLANS (things I intend to complete with my work for today):
 //		- Begin working on Spookmaster Bones *or* Orbital Sniper. Not sure which should be first.
-//		- cf_generic_particle that just attaches a particle to the player, cf_generic_ability_cap that blocks an ability from being used after X uses
+//		- cf_generic_particle that just attaches a particle to the player, cf_generic_ability_cap that blocks an ability slot from being used after X uses
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Everything that happens on client disconnect.
