@@ -1065,15 +1065,18 @@ public void CF_ResetMadeStatus(int client)
 		AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
 	}
 	
-	ConfigMap wearables = map.GetSection("character.wearables");
-	if (wearables == null)
+	if (IsNewCharacter)
 	{
-		wearables = GameRules.GetSection("game_rules.character_defaults.wearables");
-	}
-	
-	if (wearables != null)
-	{
-		CFC_GiveWearables(client, wearables);
+		ConfigMap wearables = map.GetSection("character.wearables");
+		if (wearables == null)
+		{
+			wearables = GameRules.GetSection("game_rules.character_defaults.wearables");
+		}
+		
+		if (wearables != null)
+		{
+			CFC_GiveWearables(client, wearables);
+		}
 	}
 	
 	ConfigMap weapons = map.GetSection("character.weapons");
@@ -1092,10 +1095,13 @@ public void CF_ResetMadeStatus(int client)
 	CF_UpdateCharacterHP(client, Classes[class], true);
 	CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
 	
-	ConfigMap particles = map.GetSection("character.particles");
-	if (particles != null)
+	if (IsNewCharacter)
 	{
-		CFC_AttachParticles(client, particles, IsNewCharacter);
+		ConfigMap particles = map.GetSection("character.particles");
+		if (particles != null)
+		{
+			CFC_AttachParticles(client, particles, IsNewCharacter);
+		}
 	}
  	
  	if (IsNewCharacter)	//We are respawning as a new character, default to spawn_intro
@@ -1434,7 +1440,7 @@ public void CF_ResetMadeStatus(int client)
 		float yOff = GetFloatFromConfigMap(subsection, "y_offset", 0.0);
 		float zOff = GetFloatFromConfigMap(subsection, "z_offset", 0.0);
 		
-		CF_AttachParticle(client, partName, point, _, 0.0, xOff, yOff, zOff);
+		CF_AttachParticle(client, partName, point, true, 0.0, xOff, yOff, zOff);
 		
 		i++;
 		Format(secName, sizeof(secName), "particle_%i", i);
