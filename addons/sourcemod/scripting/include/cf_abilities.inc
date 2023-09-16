@@ -23,6 +23,7 @@ float f_ResourcesOnDamage[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ResourcesOnHurt[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ResourcesOnHeal[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ResourcesOnKill[MAXPLAYERS + 1] = { 0.0, ... };
+float f_NextResourceRegen[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ChargeRetain = 0.0;
 
 char s_UltName[MAXPLAYERS + 1][255];
@@ -154,12 +155,19 @@ public Action CFA_HUDTimer(Handle timer)
 				
 				if (b_UsingResources[client] && !b_ResourceIsUlt[client])
 				{
-					if (rState == 1)
+					if (rState == 1 && GetGameTime() >= f_NextResourceRegen[client])
 					{
 						CF_GiveSpecialResource(client, 1.0, CF_ResourceType_Regen);
 					}
 					
-					Format(HUDText, sizeof(HUDText), "%s\n%s: %i/%i\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundFloat(f_Resources[client]), RoundFloat(f_ResourceMax[client]));
+					if (f_ResourceMax[client] > 0.0)
+					{
+						Format(HUDText, sizeof(HUDText), "%s\n%s: %i/%i\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundFloat(f_Resources[client]), RoundFloat(f_ResourceMax[client]));
+					}
+					else
+					{
+						Format(HUDText, sizeof(HUDText), "%s\n%s: %i\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundFloat(f_Resources[client]));
+					}
 				}
 				
 				if (b_HasM2[client])
@@ -284,9 +292,9 @@ public bool CFA_InitializeUltimate(int client, ConfigMap map)
 	return b_CharacterHasUlt[client];
 }
 
-public bool CFA_InitializeAbilities(int client, ConfigMap map)
+public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 {
-	CFA_InitializeResources(client, map);
+	CFA_InitializeResources(client, map, NewChar);
 	
 	bool AtLeastOne = false;
 	
@@ -356,7 +364,7 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map)
 	return AtLeastOne;
 }
 
-public void CFA_InitializeResources(int client, ConfigMap map)
+public void CFA_InitializeResources(int client, ConfigMap map, bool NewChar)
 {
 	ConfigMap subsection = map.GetSection("character.special_resource");
 	if (subsection != null)
@@ -371,13 +379,24 @@ public void CFA_InitializeResources(int client, ConfigMap map)
 			float preserve = GetFloatFromConfigMap(subsection, "preserve", 0.0) * f_Resources[client];
 			f_ResourceMax[client] = GetFloatFromConfigMap(subsection, "max", 0.0);
 			
-			if (preserve > start)
+			bool IgnoreResupply = GetBoolFromConfigMap(subsection, "ignore_resupply", true);
+			
+			CPrintToChat(client, "Ignore resupply: %b", IgnoreResupply);
+			
+			if (!IgnoreResupply || NewChar)
 			{
-				CF_SetSpecialResource(client, preserve);
+				if (preserve > start && !NewChar)
+				{
+					CF_SetSpecialResource(client, preserve);
+				}
+				else
+				{
+					CF_SetSpecialResource(client, start);
+				}
 			}
 			else
 			{
-				CF_SetSpecialResource(client, start);
+				f_NextResourceRegen[client] = GetGameTime() + 0.2;
 			}
 			
 			f_ResourcesOnRegen[client] = GetFloatFromConfigMap(subsection, "on_regen", 0.0);
@@ -391,6 +410,7 @@ public void CFA_InitializeResources(int client, ConfigMap map)
 	}
 	else
 	{
+		CF_SetSpecialResource(client, 0.0);
 		b_UsingResources[client] = false;
 	}
 }
@@ -577,7 +597,7 @@ void EndHeldM2(int client, bool TriggerCallback, bool resupply = false)
 	else
 	{
 		CF_ApplyAbilityCooldown(client, f_M2CD[client], CF_AbilityType_M2, true, false);
-		if (b_UsingResources[client])
+		if (b_UsingResources[client] && !resupply)
 		{
 			if (b_ResourceIsUlt[client])
 			{
@@ -631,7 +651,7 @@ void EndHeldM3(int client, bool TriggerCallback, bool resupply = false)
 	else
 	{
 		CF_ApplyAbilityCooldown(client, f_M3CD[client], CF_AbilityType_M3, true, false);
-		if (b_UsingResources[client])
+		if (b_UsingResources[client] && !resupply)
 		{
 			if (b_ResourceIsUlt[client])
 			{
@@ -685,7 +705,7 @@ void EndHeldReload(int client, bool TriggerCallback, bool resupply = false)
 	else
 	{
 		CF_ApplyAbilityCooldown(client, f_ReloadCD[client], CF_AbilityType_Reload, true, false);
-		if (b_UsingResources[client])
+		if (b_UsingResources[client] && !resupply)
 		{
 			if (b_ResourceIsUlt[client])
 			{
@@ -1005,6 +1025,16 @@ public Native_CF_SetUltCharge(Handle plugin, int numParams)
 		{
 			CF_PlayRandomSound(client, "", "sound_ultimate_ready");
 		}
+		
+		if (oldCharge != amt)
+		{
+			CF_ActivateAbilitySlot(client, 10);
+			
+			if (amt > oldCharge)
+				CF_ActivateAbilitySlot(client, 8);
+			else
+				CF_ActivateAbilitySlot(client, 9);
+		}
 	}
 }
 
@@ -1101,12 +1131,24 @@ public Native_CF_SetSpecialResource(Handle plugin, int numParams)
 		if (amt < 0.0)
 			amt = 0.0;
 			
-		if (amt >= f_ResourceMax[client])
+		if (amt >= f_ResourceMax[client] && f_ResourceMax[client] > 0.0)
 		{
 			amt = f_ResourceMax[client];
 		}
 		
+		float oldResources = f_Resources[client];
+		
 		f_Resources[client] = amt;
+		
+		if (amt != oldResources)
+		{
+			CF_ActivateAbilitySlot(client, 7);
+			
+			if (amt > oldResources)
+				CF_ActivateAbilitySlot(client, 5);
+			else
+				CF_ActivateAbilitySlot(client, 6);
+		}
 	}
 }
 
@@ -1598,29 +1640,11 @@ public any Native_CF_GetAbilitySlot(Handle plugin, int numParams)
 		
 		if (StrEqual(targetPlugin, pluginName) && StrEqual(targetAbility, abName))
 		{
-			switch(GetIntFromConfigMap(subsection, "slot", -1))
-			{
-				case 1:
-				{
-					ReturnValue = CF_AbilityType_Ult;
-				}
-				case 2:
-				{
-					ReturnValue = CF_AbilityType_M2;
-				}
-				case 3:
-				{
-					ReturnValue = CF_AbilityType_M3;
-				}
-				case 4:
-				{
-					ReturnValue = CF_AbilityType_Reload;
-				}
-				default:
-				{
-					ReturnValue = CF_AbilityType_Custom;
-				}
-			}
+			int slotNum = GetIntFromConfigMap(subsection, "slot", -1);
+			if (slotNum < 1)
+				ReturnValue = CF_AbilityType_Custom;
+			else
+				ReturnValue = view_as<CF_AbilityType>(slotNum - 1);
 			
 			break;
 		}

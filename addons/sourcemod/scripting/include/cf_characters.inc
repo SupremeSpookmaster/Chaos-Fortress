@@ -1002,7 +1002,7 @@ public void CF_ResetMadeStatus(int client)
  *
  * @param client			The client to convert.
  */
- public void CF_MakeCharacter(int client)
+ void CF_MakeCharacter(int client, bool callForward = true)
  {
  	if (!IsValidClient(client))
  		return;
@@ -1013,9 +1013,9 @@ public void CF_ResetMadeStatus(int client)
 
 	char conf[255];
 	GetClientCookie(client, c_DesiredCharacter, conf, sizeof(conf));
-	if (!CF_CharacterExists(conf))
+	if (!CF_CharacterExists(conf) || IsFakeClient(client))
 	{
-		if (!CF_CharacterExists(s_DefaultCharacter) || IsFakeClient(client))
+		if (!CF_CharacterExists(s_DefaultCharacter))
 		{
 			GetArrayString(CF_Characters_Configs, GetRandomInt(0, GetArraySize(CF_Characters_Configs) - 1), conf, sizeof(conf));
 		}
@@ -1029,7 +1029,8 @@ public void CF_ResetMadeStatus(int client)
 	if (map == null)
 		return;
 		
-	bool IsNewCharacter = !StrEqual(conf, s_PreviousCharacter[client]);
+	bool IsNewCharacter = !StrEqual(conf, s_PreviousCharacter[client]) || b_IsDead[client];
+	CPrintToChat(client, "New character: %b", IsNewCharacter);
 		
 	CF_SetPlayerConfig(client, conf);
 	SetClientCookie(client, c_DesiredCharacter, conf);
@@ -1040,7 +1041,7 @@ public void CF_ResetMadeStatus(int client)
 	while((entity = FindEntityByClassname(entity, "tf_wearable")) != -1)
 	{
 		int owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
-		if (owner == client && (IsNewCharacter || !b_WearableIsPreserved[entity]))
+		if (owner == client && !b_WearableIsPreserved[entity])
 		{
 			TF2_RemoveWearable(owner, entity);
 		}
@@ -1049,7 +1050,7 @@ public void CF_ResetMadeStatus(int client)
 	while((entity = FindEntityByClassname(entity, "tf_wearable_vm")) != -1)
 	{
 		int owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
-		if (owner == client && (IsNewCharacter || !b_WearableIsPreserved[entity]))
+		if (owner == client && !b_WearableIsPreserved[entity])
 		{
 			TF2_RemoveWearable(owner, entity);
 		}
@@ -1065,18 +1066,15 @@ public void CF_ResetMadeStatus(int client)
 		AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
 	}
 	
-	if (IsNewCharacter)
+	ConfigMap wearables = map.GetSection("character.wearables");
+	if (wearables == null)
 	{
-		ConfigMap wearables = map.GetSection("character.wearables");
-		if (wearables == null)
-		{
-			wearables = GameRules.GetSection("game_rules.character_defaults.wearables");
-		}
+		wearables = GameRules.GetSection("game_rules.character_defaults.wearables");
+	}
 		
-		if (wearables != null)
-		{
-			CFC_GiveWearables(client, wearables);
-		}
+	if (wearables != null)
+	{
+		CFC_GiveWearables(client, wearables);
 	}
 	
 	ConfigMap weapons = map.GetSection("character.weapons");
@@ -1091,20 +1089,18 @@ public void CF_ResetMadeStatus(int client)
 	}
 	
 	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
+	
 	TF2_SetPlayerClass(client, Classes[class]);
 	CF_UpdateCharacterHP(client, Classes[class], true);
 	CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
 	
-	if (IsNewCharacter)
+	ConfigMap particles = map.GetSection("character.particles");
+	if (particles != null)
 	{
-		ConfigMap particles = map.GetSection("character.particles");
-		if (particles != null)
-		{
-			CFC_AttachParticles(client, particles, IsNewCharacter);
-		}
+		CFC_AttachParticles(client, particles, IsNewCharacter);
 	}
  	
- 	if (IsNewCharacter)	//We are respawning as a new character, default to spawn_intro
+ 	if (!StrEqual(conf, s_PreviousCharacter[client]))	//We are respawning as a new character, default to spawn_intro
  	{
  		bool played = CF_PlayRandomSound(client, conf, "sound_spawn_intro");
  		if (!played)
@@ -1144,7 +1140,7 @@ public void CF_ResetMadeStatus(int client)
  	ShowHudText(client, -1, "You spawned as: %s", name);
  	
  	bool hasUlt = CFA_InitializeUltimate(client, map);
- 	bool hasAbilities = CFA_InitializeAbilities(client, map);
+ 	bool hasAbilities = CFA_InitializeAbilities(client, map, IsNewCharacter);
  	
  	CFA_ToggleHUD(client, hasUlt || hasAbilities);
  	
@@ -1158,11 +1154,14 @@ public void CF_ResetMadeStatus(int client)
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	
- 	Call_StartForward(g_OnCharacterCreated);
- 	
- 	Call_PushCell(client);
- 	
- 	Call_Finish();
+ 	if (callForward)
+ 	{
+	 	Call_StartForward(g_OnCharacterCreated);
+	 	
+	 	Call_PushCell(client);
+	 	
+	 	Call_Finish();
+	 }
  }
  
  public bool CF_CharacterExists(char conf[255])
@@ -1440,7 +1439,7 @@ public void CF_ResetMadeStatus(int client)
 		float yOff = GetFloatFromConfigMap(subsection, "y_offset", 0.0);
 		float zOff = GetFloatFromConfigMap(subsection, "z_offset", 0.0);
 		
-		CF_AttachParticle(client, partName, point, true, 0.0, xOff, yOff, zOff);
+		CF_AttachParticle(client, partName, point, false, 0.0, xOff, yOff, zOff);
 		
 		i++;
 		Format(secName, sizeof(secName), "particle_%i", i);

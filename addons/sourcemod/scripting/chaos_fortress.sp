@@ -11,7 +11,9 @@
 //
 //	- TODAY'S PLANS (things I intend to complete with my work for today):
 //		- Begin working on Spookmaster Bones *or* Orbital Sniper. Not sure which should be first.
-//		- cf_generic_particle that just attaches a particle to the player, cf_generic_ability_cap that blocks an ability slot from being used after X uses
+//		- cf_generic_ability_cap that blocks an ability slot from being used after X uses
+//		- Repurpose cf_generic_particle and cf_generic_wearable to work via configmaps so single activations can have multiple particles/wearables without needing to copy/paste the ability in the cfg.
+//		- CURRENTLY UNTESTED: cf_generic_particle/wearable
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Everything that happens on client disconnect.
@@ -26,7 +28,9 @@
 //	- MINOR BUG: For some reason, player ragdolls get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? This has no effect on gameplay but it's honestly fucking baffling.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
-//	- None!
+//	- The following are likely fixed, but I'm done for the day so I'm not going to bother testing them:
+//			- Switching from a character who uses resources and has ignore_resupply active to one who does not use resources, and then back allows you to preserve all of your resources between lives.
+//			- SPOOKMASTER BONES: If you switch to a different character via resupply while you have at least one soul, the particles remain.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
@@ -127,11 +131,11 @@ public void PlayerReset(Event gEvent, const char[] sEvName, bool bDontBroadcast)
 	
 	if (IsValidClient(client))
 	{
-		//Do it twice in a row because otherwise switching from a character who uses viewchange to one that does not breaks a lot of things.
-		//I have no clue why. 
+		//Do it twice in a row because otherwise your viewmodels get screwed the first time you spawn.
+		//I have no clue why. Yes, I tried delaying the class change by a frame. No, it did not work.
 		//Yes, I am aware this is EXTREMELY suboptimal, no I am not happy I had to do it, but I'm sick of trying to make this thing work seamlessly so I just tossed in a hack and called it a day.
 		CF_MakeCharacter(client);
-		CF_MakeCharacter(client);
+		CF_MakeCharacter(client, false);
 	}
 	
 	#if defined DEBUG_CHARACTER_CREATION

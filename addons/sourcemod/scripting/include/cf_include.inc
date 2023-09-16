@@ -20,6 +20,12 @@ enum CF_AbilityType
     CF_AbilityType_M2,
     CF_AbilityType_M3,
     CF_AbilityType_Reload,
+    CF_AbilityType_SpecialResourceGained,
+    CF_AbilityType_SpecialResourceLost,
+    CF_AbilityType_SpecialResourceChanged,
+    CF_AbilityType_UltChargeGained,
+    CF_AbilityType_UltChargeLost,
+    CF_AbilityType_UltChargeChanged,
     CF_AbilityType_Custom,
     CF_AbilityType_None
 };
@@ -701,7 +707,7 @@ native any CF_GetSpecialResource(int client);
  *
  * @param client		The client to set the cooldown of.
  * @param duration		The duration the ability should be placed on cooldown.
- * @param type			The slot which should be placed on cooldown. If ult is blocked, you will also be unable to gain ult charge.
+ * @param type			The slot which should be placed on cooldown. If ult is blocked, you will also be unable to gain ult charge. This only works with CF_AbilityType_Ult, M2, M3, and Reload.
  * @param override		If true, this new cooldown will completely override any existing cooldowns. Otherwise, it is simply added to the current cooldown.
  * @param delay 		Set to true to delay the cooldown application by one frame so it doesn't interfere with other cooldown application sources. Enabled by default.
  *
@@ -712,7 +718,7 @@ native void CF_ApplyAbilityCooldown(int client, float duration, CF_AbilityType t
  * Retrieves the remaining cooldown of the client's given ability slot.
  *
  * @param client		The client to set the cooldown of.
- * @param type			CF_AbilityType pertaining to the given slot.
+ * @param type			CF_AbilityType pertaining to the given slot. This only works with CF_AbilityType_Ult, M2, M3, and Reload.
  *
  */
 native any CF_GetAbilityCooldown(int client, CF_AbilityType type);
