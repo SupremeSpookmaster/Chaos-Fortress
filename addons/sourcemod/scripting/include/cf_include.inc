@@ -886,3 +886,39 @@ native any CF_GetKD(int client);
  * @return	CF_Emotion_Angry if the client's K/D is too low, CF_Emotion_Happy if it is high, CF_Emotion_Neutral for anything in-between.
  */
 native any CF_GetCharacterEmotion(int client);
+
+/**
+ * Checks if a client's specified ability slot is blocked. Only works for CF_AbilityType_Ult, M2, M3, and Reload, all others return false.
+ *
+ * @param client				The client whose ability slot to check.
+ * @param type					The ability slot to check.
+ *
+ * @return	True if the slot is blocked, false if it is not or if the client/type is invalid.
+ */
+native any CF_IsAbilitySlotBlocked(int client, CF_AbilityType type);
+
+/**
+ * Blocks a specified ability slot from being used. Only works for CF_AbilityType_Ult, M2, M3, and Reload.
+ *
+ * @param client				The client whose ability slot to block.
+ * @param type					The ability slot to block.
+ */
+native CF_BlockAbilitySlot(int client, CF_AbilityType type);
+
+/**
+ * Unblocks a specified ability slot. Only works for CF_AbilityType_Ult, M2, M3, and Reload.
+ *
+ * @param client				The client whose ability slot to unblock.
+ * @param type					The ability slot to unblock.
+ */
+native CF_UnblockAbilitySlot(int client, CF_AbilityType type);
+
+/**
+ * Heals a specified player for a specified amount, and gives the healer credit for it.
+ *
+ * @param client				The client to heal.
+ * @param healer				The client who performed the healing (does not need to be a valid client).
+ * @param amt					The amount of healing given.
+ * @param hpMult				The maximum percentage of the client's max HP for this to heal to. For example: 1.5 would allow this instance to heal the client up to a maximum of 150% of their max HP.
+ */
+native CF_HealPlayer(int client, int healer, float amt, float hpMult);

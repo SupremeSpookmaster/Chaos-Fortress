@@ -10,6 +10,10 @@
 #define COOLDOWN			"generic_cooldown"
 #define PARTICLE			"generic_particle"
 #define WEARABLE			"generic_wearable"
+#define BLOCK				"generic_block"
+#define UNBLOCK				"generic_unblock"
+#define TOGGLE				"generic_toggle"
+#define LIMIT				"generic_limit"
 
 float Weapon_EndTime[2049] = { 0.0, ... };
 
@@ -17,20 +21,20 @@ Handle g_hSDKSetItem;
 
 enum struct OldWeapon
 {
-	int itemIndex; 		//Done 
-	int itemLevel; 		//Done 
-	int quality; 	//Done 
-	int reserve;	//Done 
-	int clip; 		//Done
-	int slot;		//Done
+	int itemIndex; 		
+	int itemLevel; 		
+	int quality; 	
+	int reserve;	
+	int clip; 		
+	int slot;	
 	
-	char classname[255]; 	//Done
-	char atts[255]; 		//Done
-	char fireAbility[255]; 	//Done
-	char firePlugin[255]; 	//Done
-	char fireSound[255];	//Done
+	char classname[255]; 	
+	char atts[255]; 		
+	char fireAbility[255]
+	char firePlugin[255]; 
+	char fireSound[255];
 	
-	bool visible;			//Done
+	bool visible;
 	
 	KeyValues CustAtts;
 
@@ -116,9 +120,15 @@ enum struct OldWeapon
 
 OldWeapon ClientOldWeapons[MAXPLAYERS + 1][5];
 
+int Limit_NumUses[MAXPLAYERS + 1][4];
+
 public void CF_OnCharacterRemoved(int client)
 {
 	Weapon_ClearAllOldWeapons(client);
+	for (int i = 0; i < 4; i++)
+	{
+		Limit_NumUses[client][i] = 0;
+	}
 }
 
 public void Weapon_ClearAllOldWeapons(int client)
@@ -177,6 +187,61 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	if (StrContains(abilityName, WEARABLE) != -1)
 	{
 		Wearable_Activate(client, abilityName);
+	}
+	
+	if (StrContains(abilityName, BLOCK) != -1)
+	{
+		Block_Activate(client, abilityName);
+	}
+	
+	if (StrContains(abilityName, UNBLOCK) != -1)
+	{
+		Unblock_Activate(client, abilityName);
+	}
+	
+	if (StrContains(abilityName, TOGGLE) != -1)
+	{
+		Toggle_Activate(client, abilityName);
+	}
+	
+	if (StrContains(abilityName, LIMIT) != -1)
+	{
+		Limit_Activate(client, abilityName);
+	}
+}
+
+public void Block_Activate(int client, char abilityName[255])
+{
+	CF_AbilityType type = view_as<CF_AbilityType>(CF_GetArgI(client, GENERIC, abilityName, "target_slot") - 1);
+	CF_BlockAbilitySlot(client, type);
+}
+
+public void Unblock_Activate(int client, char abilityName[255])
+{
+	CF_AbilityType type = view_as<CF_AbilityType>(CF_GetArgI(client, GENERIC, abilityName, "target_slot") - 1);
+	CF_UnblockAbilitySlot(client, type);
+}
+
+public void Toggle_Activate(int client, char abilityName[255])
+{
+	CF_AbilityType type = view_as<CF_AbilityType>(CF_GetArgI(client, GENERIC, abilityName, "target_slot") - 1);
+	if (!CF_IsAbilitySlotBlocked(client, type))
+		CF_BlockAbilitySlot(client, type);
+	else
+		CF_UnblockAbilitySlot(client, type);
+}
+
+public void Limit_Activate(int client, char abilityName[255])
+{
+	int slot = CF_GetArgI(client, GENERIC, abilityName, "target_slot") - 1;
+	int limit = CF_GetArgI(client, GENERIC, abilityName, "max_uses");
+	
+	Limit_NumUses[client][slot]++;
+	
+	if (Limit_NumUses[client][slot] >= limit)
+	{
+		CF_AbilityType type = view_as<CF_AbilityType>(slot);
+		CF_BlockAbilitySlot(client, type);
 	}
 }
 
@@ -328,11 +393,6 @@ int Weapon_FindFirstValidWeapon(int client)
 void Weapon_SwitchToWeapon(int client, int weapon)
 {
 	TF2Util_SetPlayerActiveWeapon(client, weapon);
-	/*SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", weapon);
-	
-	char classname[255];
-	GetEntityClassname(weapon, classname, sizeof(classname));
-	FakeClientCommandEx(client, "use %s", classname);*/
 }
 
 public void Conds_Activate(int client, char abilityName[255])

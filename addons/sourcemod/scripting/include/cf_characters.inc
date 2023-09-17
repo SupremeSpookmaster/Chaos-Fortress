@@ -1030,6 +1030,8 @@ public void CF_ResetMadeStatus(int client)
 		return;
 		
 	bool IsNewCharacter = !StrEqual(conf, s_PreviousCharacter[client]) || b_IsDead[client];
+	if (IsNewCharacter)
+		CF_UnmakeCharacter(client, true);
 	CPrintToChat(client, "New character: %b", IsNewCharacter);
 		
 	CF_SetPlayerConfig(client, conf);
@@ -1257,7 +1259,7 @@ public void CF_ResetMadeStatus(int client)
 		int style = GetIntFromConfigMap(subsection, "style", 0);
 		//TODO: Maybe add support for wearable scale?
 		
-		CF_AttachWearable(client, index, visible, paint, style, true, atts, 0.0);
+		CF_AttachWearable(client, index, visible, paint, style, false, atts, 0.0);
 		
 		i++;
 		Format(secName, sizeof(secName), "wearable_%i", i);
@@ -1575,6 +1577,10 @@ public void CF_ResetMadeStatus(int client)
  	
  	Call_Finish();
  	
+ 	CF_UnblockAbilitySlot(client, CF_AbilityType_Ult);
+ 	CF_UnblockAbilitySlot(client, CF_AbilityType_M2);
+ 	CF_UnblockAbilitySlot(client, CF_AbilityType_M3);
+ 	CF_UnblockAbilitySlot(client, CF_AbilityType_Reload);
  	CF_GetPlayerConfig(client, s_PreviousCharacter[client], 255);
  	CF_SetPlayerConfig(client, "");
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);

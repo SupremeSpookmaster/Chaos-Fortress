@@ -24,6 +24,7 @@
 !cf_mercenary.sp
 !cf_plugin_template.sp
 !cf_soundpack.sp
+!cf_spookmaster.sp
 
 #Include Files
 !cf_abilities.inc

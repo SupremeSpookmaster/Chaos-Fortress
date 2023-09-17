@@ -1196,3 +1196,15 @@ stock TFTeam grabEnemyTeam(int client) //Grabs a client's opposing team and retu
 	
 	return targTeam;
 }
+
+stock float GetAttributeValue(int entity, int attribute, float defaultVal)
+{
+	if (!IsValidEntity(entity))
+		return defaultVal;
+		
+	Address addy = TF2Attrib_GetByDefIndex(entity, attribute);
+	if (addy == Address_Null)
+		return defaultVal;
+		
+	return TF2Attrib_GetValue(addy);
+}

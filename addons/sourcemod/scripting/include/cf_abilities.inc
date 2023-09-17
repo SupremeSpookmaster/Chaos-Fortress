@@ -49,6 +49,10 @@ bool b_HoldingM3[MAXPLAYERS + 1] = { false, ... };
 bool b_ForceEndHeldM2[MAXPLAYERS + 1] = { false, ... };
 bool b_ForceEndHeldM3[MAXPLAYERS + 1] = { false, ... };
 bool b_ForceEndHeldReload[MAXPLAYERS + 1] = { false, ... };
+bool b_UltBlocked[MAXPLAYERS + 1] = { false, ... };
+bool b_M2Blocked[MAXPLAYERS + 1] = { false, ... };
+bool b_M3Blocked[MAXPLAYERS + 1] = { false, ... };
+bool b_ReloadBlocked[MAXPLAYERS + 1] = { false, ... };
 
 GlobalForward g_OnAbility;
 GlobalForward g_OnUltUsed;
@@ -83,6 +87,10 @@ public void CFA_MakeNatives()
 	CreateNative("CF_GetArgS", Native_CF_GetArgS);
 	CreateNative("CF_GetAbilitySlot", Native_CF_GetAbilitySlot);
 	CreateNative("CF_GetAbilityConfigMapPath", Native_CF_GetAbilityConfigMapPath);
+	CreateNative("CF_IsAbilitySlotBlocked", Native_CF_IsAbilitySlotBlocked);
+	CreateNative("CF_BlockAbilitySlot", Native_CF_BlockAbilitySlot);
+	CreateNative("CF_UnblockAbilitySlot", Native_CF_UnblockAbilitySlot);
+	CreateNative("CF_HealPlayer", Native_CF_HealPlayer);
 }
 
 public void CFA_MakeForwards()
@@ -150,7 +158,14 @@ public Action CFA_HUDTimer(Handle timer)
 						CF_GiveUltCharge(client, f_UltChargeOnRegen[client]/10.0, CF_ResourceType_Percentage);
 					}
 					
-					Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE %s\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0), f_UltCharge[client] >= f_UltChargeRequired[client] ? "(READY, CALL FOR MEDIC)" : "");
+					if (b_UltBlocked[client])
+					{
+						Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE [BLOCKED]\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0));
+					}
+					else
+					{
+						Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE %s\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0), f_UltCharge[client] >= f_UltChargeRequired[client] ? "(READY, CALL FOR MEDIC)" : "");
+					}
 				}
 				
 				if (b_UsingResources[client] && !b_ResourceIsUlt[client])
@@ -172,76 +187,97 @@ public Action CFA_HUDTimer(Handle timer)
 				
 				if (b_HasM2[client])
 				{
-					if (b_UsingResources[client] && f_M2Cost[client] > 0.0)
+					if (b_M2Blocked[client])
 					{
-						if (b_ResourceIsUlt[client])
-						{
-							Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult.]", HUDText, (f_M2Cost[client]/f_UltChargeRequired[client]) * 100.0);
-						}
-						else
-						{
-							Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundFloat(f_M2Cost[client]), f_M2Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
-						}
-					}
-					
-					float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M2);
-					if (remCD > 0.0)
-					{
-						Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_M2Name[client], remCD);
+						Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M2Name[client]);
 					}
 					else
 					{
-						Format(HUDText, sizeof(HUDText), "%s %s %s\n", HUDText, s_M2Name[client], b_M2IsHeld[client] ? (b_HoldingM2[client] ? "[ACTIVE]" : "[Hold M2]") : "[M2]");
+						if (b_UsingResources[client] && f_M2Cost[client] > 0.0)
+						{
+							if (b_ResourceIsUlt[client])
+							{
+								Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult.]", HUDText, (f_M2Cost[client]/f_UltChargeRequired[client]) * 100.0);
+							}
+							else
+							{
+								Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundFloat(f_M2Cost[client]), f_M2Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+							}
+						}
+						
+						float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M2);
+						if (remCD > 0.0)
+						{
+							Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_M2Name[client], remCD);
+						}
+						else
+						{
+							Format(HUDText, sizeof(HUDText), "%s %s %s\n", HUDText, s_M2Name[client], b_M2IsHeld[client] ? (b_HoldingM2[client] ? "[ACTIVE]" : "[Hold M2]") : "[M2]");
+						}
 					}
 				}
 				
 				if (b_HasM3[client])
 				{
-					if (b_UsingResources[client] && f_M3Cost[client] > 0.0)
+					if (b_M3Blocked[client])
 					{
-						if (b_ResourceIsUlt[client])
-						{
-							Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult.]", HUDText, (f_M3Cost[client]/f_UltChargeRequired[client]) * 100.0);
-						}
-						else
-						{
-							Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundFloat(f_M3Cost[client]), f_M3Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
-						}
-					}
-					
-					float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M3);
-					if (remCD > 0.0)
-					{
-						Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_M3Name[client], remCD);
+						Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M3Name[client]);
 					}
 					else
 					{
-						Format(HUDText, sizeof(HUDText), "%s %s %s\n", HUDText, s_M3Name[client], b_M3IsHeld[client] ? (b_HoldingM3[client] ? "[ACTIVE]" : "[Hold M3]") : "[M3]");
+						if (b_UsingResources[client] && f_M3Cost[client] > 0.0)
+						{
+							if (b_ResourceIsUlt[client])
+							{
+								Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult.]", HUDText, (f_M3Cost[client]/f_UltChargeRequired[client]) * 100.0);
+							}
+							else
+							{
+								Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundFloat(f_M3Cost[client]), f_M3Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+							}
+						}
+						
+						float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M3);
+						if (remCD > 0.0)
+						{
+							Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_M3Name[client], remCD);
+						}
+						else
+						{
+							Format(HUDText, sizeof(HUDText), "%s %s %s\n", HUDText, s_M3Name[client], b_M3IsHeld[client] ? (b_HoldingM3[client] ? "[ACTIVE]" : "[Hold M3]") : "[M3]");
+						}
 					}
 				}
 				
 				if (b_HasReload[client])
 				{
-					if (b_UsingResources[client] && f_ReloadCost[client] > 0.0)
+					if (b_ReloadBlocked[client])
 					{
-						if (b_ResourceIsUlt[client])
-						{
-							Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult.]", HUDText, (f_ReloadCost[client]/f_UltChargeRequired[client]) * 100.0);
-						}
-						else
-						{
-							Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundFloat(f_ReloadCost[client]), f_ReloadCost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
-						}
-					}
-					
-					float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_Reload);
-					if (remCD > 0.0)
-					{
-						Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_ReloadName[client], remCD);
+						Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_ReloadName[client]);
 					}
 					else
 					{
-						Format(HUDText, sizeof(HUDText), "%s %s %s\n", HUDText, s_ReloadName[client], b_ReloadIsHeld[client] ? (b_HoldingReload[client] ? "[ACTIVE]" : "[Hold R]") : "[R]");
+						if (b_UsingResources[client] && f_ReloadCost[client] > 0.0)
+						{
+							if (b_ResourceIsUlt[client])
+							{
+								Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult.]", HUDText, (f_ReloadCost[client]/f_UltChargeRequired[client]) * 100.0);
+							}
+							else
+							{
+								Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundFloat(f_ReloadCost[client]), f_ReloadCost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+							}
+						}
+						
+						float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_Reload);
+						if (remCD > 0.0)
+						{
+							Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_ReloadName[client], remCD);
+						}
+						else
+						{
+							Format(HUDText, sizeof(HUDText), "%s %s %s\n", HUDText, s_ReloadName[client], b_ReloadIsHeld[client] ? (b_HoldingReload[client] ? "[ACTIVE]" : "[Hold R]") : "[R]");
+						}
 					}
 				}
 				
@@ -261,7 +297,13 @@ public void CFA_PlayerKilled(int attacker, int victim)
 	{
 		CF_GiveSpecialResource(attacker, 1.0, CF_ResourceType_Kill);
 		CF_GiveUltCharge(attacker, 1.0, CF_ResourceType_Kill);
+		
+		//TODO: Specific character kill sounds
+		CF_PlayRandomSound(attacker, "", "sound_kill");
 	}
+	
+	if (attacker == victim)
+		CF_PlayRandomSound(attacker, "", "sound_suicide");
 	
 	bool played = CF_PlayRandomSound(victim, "", "sound_killed");
 	if (played)
@@ -903,18 +945,30 @@ public bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type)
 		{
 			case CF_AbilityType_Ult:
 			{
+				if (b_UltBlocked[client])
+					return false;
+					
 				cost = f_UltChargeRequired[client];
 			}
 			case CF_AbilityType_M2:
 			{
+				if (b_M2Blocked[client])
+					return false;
+					
 				cost = f_M2Cost[client];
 			}
 			case CF_AbilityType_M3:
 			{
+				if (b_M3Blocked[client])
+					return false;
+					
 				cost = f_M3Cost[client];
 			}
 			case CF_AbilityType_Reload:
 			{
+				if (b_ReloadBlocked[client])
+					return false;
+					
 				cost = f_ReloadCost[client];
 			}
 		}
@@ -1775,4 +1829,137 @@ public Native_CF_GetAbilityConfigMapPath(Handle plugin, int numParams)
 	}
 	
 	DeleteCfg(map);
+}
+
+public any Native_CF_IsAbilitySlotBlocked(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	CF_AbilityType type = GetNativeCell(2);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return false;
+		
+	switch(type)
+	{
+		case CF_AbilityType_Ult:
+		{
+			return b_UltBlocked[client];
+		}
+		case CF_AbilityType_M2:
+		{
+			return b_M2Blocked[client];
+		}
+		case CF_AbilityType_M3:
+		{
+			return b_M3Blocked[client];
+		}
+		case CF_AbilityType_Reload:
+		{
+			return b_ReloadBlocked[client];
+		}
+		default:
+		{
+			return false;
+		}
+	}
+}
+
+public Native_CF_BlockAbilitySlot(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	CF_AbilityType type = GetNativeCell(2);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	switch(type)
+	{
+		case CF_AbilityType_Ult:
+		{
+			b_UltBlocked[client] = true;
+		}
+		case CF_AbilityType_M2:
+		{
+			b_M2Blocked[client] = true;
+		}
+		case CF_AbilityType_M3:
+		{
+			b_M3Blocked[client] = true;
+		}
+		case CF_AbilityType_Reload:
+		{
+			b_ReloadBlocked[client] = true;
+		}
+	}
+}
+
+public Native_CF_UnblockAbilitySlot(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	CF_AbilityType type = GetNativeCell(2);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	switch(type)
+	{
+		case CF_AbilityType_Ult:
+		{
+			b_UltBlocked[client] = false;
+		}
+		case CF_AbilityType_M2:
+		{
+			b_M2Blocked[client] = false;
+		}
+		case CF_AbilityType_M3:
+		{
+			b_M3Blocked[client] = false;
+		}
+		case CF_AbilityType_Reload:
+		{
+			b_ReloadBlocked[client] = false;
+		}
+	}
+}
+
+public Native_CF_HealPlayer(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	int healer = GetNativeCell(2);
+	int amt = RoundFloat(GetNativeCell(3));
+	float hpMult = GetNativeCell(4);
+	
+	if (!IsValidMulti(client))
+		return;
+		
+	int maxHP = TF2Util_GetEntityMaxHealth(client);
+	int totalMax = RoundFloat(float(maxHP) * hpMult);
+	int current = GetEntProp(client, Prop_Send, "m_iHealth");
+	
+	int healingDone = amt;
+	
+	if (current < totalMax)
+	{
+		int newHP = current + amt;
+		if (newHP > totalMax)
+		{
+			int diff = newHP - totalMax;
+			newHP -= diff;
+			healingDone -= diff;
+		}
+		
+		SetEntProp(client, Prop_Send, "m_iHealth", newHP);
+	}
+	else
+	{
+		healingDone = 0;
+	}
+	
+	if (healingDone > 0 && IsValidClient(healer) && healer != client)
+	{
+		CF_GiveUltCharge(healer, float(healingDone), CF_ResourceType_Healing);
+		CF_GiveSpecialResource(healer, float(healingDone), CF_ResourceType_Healing);
+		
+		//TODO: Scoreboard credit
+	}
 }
