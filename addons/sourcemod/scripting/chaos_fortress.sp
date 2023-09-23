@@ -10,8 +10,12 @@
 //#define TESTING
 //
 //	- IMMEDIATE PLANS (things I am currently focusing on):
-//		- Get Spookmaster Bones to a state where his abilities function as intended. Tomorrow: add his model and sounds.
-//		- Make a native that launches a generic projectile (rocket) and returns said projectile's index. Will need to add an option to DHook_ExplodePre it to block explosions.
+//		- Spookmaster Bones:
+//			- Figure out why Soul Discard's damage bonus is cursed.
+//			- Figure out why head particles are weird.
+//			- Make ult (CALCIUM CATACLYSM)
+//			- Add model, add sounds, possibly add custom viewmodel for hands.
+//			- skullrocket.mdl's collision box is way too big, fix it.
 //		- Make those collision forwards for the generic projectile.
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
@@ -32,6 +36,8 @@
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible due to interference from TF2's source code, I am not sure.
 //	- SPOOKMASTER BONES: The head particles used to indicate the number of souls you have absorbed get overridden by the hand particles.
+//	- SPOOKMASTER BONES: Soul Discard's damage bonus from Soul Absorption doesn't work at all and it seems to be random. Likely something related to memory?????? I am going to have a fucking anneurysm.
+//	- generic aoe los check magically failing despite no changes to functionality I am going to kill myself
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

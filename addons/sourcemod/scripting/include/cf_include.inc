@@ -50,6 +50,21 @@ enum CF_Emotion
 	CF_Emotion_Happy
 };
 
+//TODO: This will need to be expanded upon to include things like medigun shields
+public bool CF_DefaultTrace(entity, contentsMask)
+{
+	if (entity <= MaxClients)
+		return false;
+	
+	char classname[255];
+	GetEntityClassname(entity, classname, sizeof(classname));
+	
+	if (StrContains(classname, "tf_projectile") != -1)
+		return false;
+		
+	return true;
+}
+
   ////////////////////////////////////////
  ////////////// FORWARDS: ///////////////
 ////////////////////////////////////////
@@ -936,19 +951,6 @@ native CF_HealPlayer(int client, int healer, float amt, float hpMult);
 native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit);
 
 /**
- * Launches a generic rocket, as if the user had fired a rocket launcher.
- *
- * @param client				The client to shoot the rocket.
- * @param dmg					The rocket's base damage.
- * @param velocity				The rocket's base velocity.
- * @param crit					Set to true to make the rocket crit.
- * @param callback				DHook callback to use when the rocket explodes.
- *
- * @return	The entity index of the rocket. 
- */
-native CF_FireGenericRocket_DHook(int client, float dmg, float velocity, bool crit, DHookCallback callback);
-
-/**
  * Inflicts generic area-of-effect damage within a specified radius
  *
  * @param attacker				The player who triggered this damage. This entire process is skipped if this client is not valid.
@@ -960,11 +962,11 @@ native CF_FireGenericRocket_DHook(int client, float dmg, float velocity, bool cr
  * @param groundZero			The origin of the damage.
  * @param falloffStart			The distance from groundZero at which damage falloff begins to take place.
  * @param falloffMax			The maximum damage penalty caused by falloff, as a percentage. Ex: 0.8 would be 80%
- * @param filter				Optional additional trace filter to use for this damage, on top of Chaos Fortress' default trace filter. This is skipped if set to (TODO: CF default filter name here).
- * @param skipDefaultFilter		If set to true, Chaos Fortress' default trace filter is ignored. Useful if you want this damage to ignore shields or go through walls. TODO: Actually write this filter.
+ * @param filter				Optional additional trace filter to use for this damage, on top of Chaos Fortress' default trace filter. This is skipped if set to CF_DefaultTrace.
+ * @param skipDefaultFilter		If set to true, Chaos Fortress' default trace filter (CF_DefaultTrace) is ignored. Useful if you want this damage to ignore shields or go through walls.
  * @param includeUser			If set to true, this can damage the user if they are within the radius.
  * @param ignoreInvuln			If set to true, invulnerable players are added to the array returned by this native as long as they would have still been hit by it otherwise.
  *
  * @return	An array containing the client indices of all players hit by this damage, useful for applying additional effects to players who are hit. This gets returned even if it is empty, you will need to manually close the handle when you are done with it.
  */
-native any CF_GenericAOEDamage(int attacker, int inflictor, int weapon, float dmg, int damageType, float radius, float groundZero[3], float falloffStart, float falloffMax, TraceEntityFilter filter/* = TODO: Default filter*/, bool skipDefaultFilter = false, bool includeUser = true, bool ignoreInvuln = false);
+native any CF_GenericAOEDamage(int attacker, int inflictor, int weapon, float dmg, int damageType, float radius, float groundZero[3], float falloffStart, float falloffMax, TraceEntityFilter filter, bool skipDefaultFilter = false, bool includeUser = true, bool ignoreInvuln = false);

@@ -27,6 +27,15 @@ public void OnMapStart()
 	PrecacheModel(MODEL_DISCARD, true);
 }
 
+DynamicHook g_DHookRocketExplode;
+
+public void OnPluginStart()
+{
+	GameData gamedata = LoadGameConfigFile("chaos_fortress");
+	g_DHookRocketExplode = DHook_CreateVirtual(gamedata, "CTFBaseRocket::Explode");
+	delete gamedata;
+}
+
 public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
 {
 	if (StrContains(abilityName, HARVESTER) != -1)
@@ -35,7 +44,7 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	if (StrEqual(abilityName, ABSORB))
 		Absorb_Activate(client, abilityName);
 		
-	if (StrEqual(abilityName, DISCARD))
+	if (StrContains(abilityName, DISCARD) != -1)
 		Discard_Activate(client, abilityName);
 }
 
@@ -184,10 +193,11 @@ public void Discard_Activate(int client, char abilityName[255])
 {
 	float velocity = CF_GetArgF(client, SPOOKMASTER, abilityName, "velocity");
 	
-	int skull = CF_FireGenericRocket_DHook(client, 0.0, velocity, false, Discard_ExplodePre);
+	int skull = CF_FireGenericRocket(client, 0.0, velocity, false);
 	if (IsValidEntity(skull))
 	{
 		Discard_BaseDMG[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "damage");
+		Discard_BaseDMG[skull] += Discard_Bonus[client];
 		Discard_Radius[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "radius");
 		Discard_FalloffStart[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "falloff_start");
 		Discard_FalloffMax[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "falloff_max");
@@ -199,16 +209,21 @@ public void Discard_Activate(int client, char abilityName[255])
 			Discard_DecayStart[skull] = 0.0;
 		}
 		else
+		{
 			Discard_DecayStart[skull] = GetGameTime();
+		}
 			
 		Discard_DecayAmt[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "decay");
 		Discard_DecayMax[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "decay_max");
 		Discard_BurnTime[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "afterburn");
 		
 		SetEntityModel(skull, MODEL_DISCARD);
+		DispatchKeyValue(skull, "modelscale", "1.33");
 		Discard_Particle[skull] = EntIndexToEntRef(AttachParticleToEntity(skull, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_DISCARD_RED : PARTICLE_DISCARD_BLUE, "bloodpoint"));
 		
 		ForceViewmodelAnimation(client, 18);
+		
+		g_DHookRocketExplode.HookEntity(Hook_Pre, skull, Discard_ExplodePre);
 	}
 }
 
@@ -228,6 +243,7 @@ public MRESReturn Discard_ExplodePre(int skull)
 	TFTeam team = view_as<TFTeam>(GetEntProp(skull, Prop_Send, "m_iTeamNum"));
 	
 	float dmg = Discard_BaseDMG[skull];
+	CPrintToChatAll("Base damage is %i", RoundFloat(dmg));
 	if (Discard_DecayStart[skull] > 0.0)
 	{
 		float TotalDecay = (GetGameTime() - Discard_DecayStart[skull]) * Discard_DecayAmt[skull];
@@ -241,19 +257,22 @@ public MRESReturn Discard_ExplodePre(int skull)
 	GetEntPropVector(skull, Prop_Send, "m_vecOrigin", pos);
 	
 	Handle victims = CF_GenericAOEDamage(owner, skull, -1, dmg, DMG_CLUB|DMG_BLAST|DMG_ALWAYSGIB, Discard_Radius[skull], pos, Discard_FalloffStart[skull],
-										Discard_FalloffMax[skull], TraceEntityFilterPlayer_GAT/*TODO PASS DEFAULT FILTER HERE*/);
-										
+										Discard_FalloffMax[skull], CF_DefaultTrace);
+				
 	for (int i = 0; i < GetArraySize(victims); i++)
 	{
 		int vic = GetArrayCell(victims, i);
 		if (IsValidMulti(vic) && vic != owner)
-			TF2_IgnitePlayer(vic, owner, Discard_BurnTime[skull]);
+			TF2_IgnitePlayer(vic, IsValidClient(owner) ? owner : 0, Discard_BurnTime[skull]);
 	}
+	
 	delete victims;
 	
-	EmitSoundToAll(SOUND_DISCARD_EXPLODE, _, SNDCHAN_STATIC, 110, _, _, GetRandomInt(90, 110), _, pos);
+	EmitSoundToAll(SOUND_DISCARD_EXPLODE, skull, SNDCHAN_STATIC, _, _, _, GetRandomInt(90, 110));
 	SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_DISCARD_EXPLODE_RED : PARTICLE_DISCARD_EXPLODE_BLUE, 3.0);
 	SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_DISCARD_EXPLODE2_RED : PARTICLE_DISCARD_EXPLODE2_BLUE, 3.0);
+	
+	RemoveEntity(skull);
 	
 	return MRES_Supercede;
 }
