@@ -529,7 +529,7 @@ native CF_SetPlayerConfig(int client, char[] confName);
  * 
  * @return Returns a float value equal to the max health of the client's character, 0.0 if the client is invalid or their character has no specified max HP.
  */
-native any CF_GetCharacterMaxHealth(int client);
+native float CF_GetCharacterMaxHealth(int client);
 
 /**
  * Determines whether or not the chosen client is a character.
@@ -596,7 +596,7 @@ native CF_GetWeaponSound(int weapon, char buffer[255], int len);
  *
  * @return True if the weapon is visible, false if it is not or if it is invalid.
  */
-native any CF_GetWeaponVisibility(int weapon);
+native bool CF_GetWeaponVisibility(int weapon);
 
 /**
  * Gets the class of the player's current character.
@@ -605,7 +605,7 @@ native any CF_GetWeaponVisibility(int weapon);
  *
  * @return The class of the player's character, TFClass_Unknown if invalid.
  */
-native any CF_GetCharacterClass(int client);
+native TFClassType CF_GetCharacterClass(int client);
 
 /**
  * Attaches a particle to a client, using Chaos Fortress' system to automatically handle several important things particles need.
@@ -679,7 +679,7 @@ native CF_SetUltCharge(int client, float amt, bool IgnoreCD = false);
  * @return	A float value equal to the client's current ult charge, 0.0 if the client is invalid or not a character.
  *
  */
-native any CF_GetUltCharge(int client);
+native float CF_GetUltCharge(int client);
 
 /**
  * Gives a client some of their special resource, based on the given ResourceType. Does nothing if the client's special resource has is_ult enabled.
@@ -715,7 +715,7 @@ native CF_SetSpecialResource(int client, float amt);
  * @return	A float value equal to the client's current resources, 0.0 if the client is invalid, not a character, not using resources, or has is_ult enabled on their special resource.
  *
  */
-native any CF_GetSpecialResource(int client);
+native float CF_GetSpecialResource(int client);
 
 /**
  * Applies a cooldown to an ability slot, given a set of parameters.
@@ -735,8 +735,10 @@ native void CF_ApplyAbilityCooldown(int client, float duration, CF_AbilityType t
  * @param client		The client to set the cooldown of.
  * @param type			CF_AbilityType pertaining to the given slot. This only works with CF_AbilityType_Ult, M2, M3, and Reload.
  *
+ * @return	A float representing the ability's remaining cooldown.
+ *
  */
-native any CF_GetAbilityCooldown(int client, CF_AbilityType type);
+native float CF_GetAbilityCooldown(int client, CF_AbilityType type);
 
 /**
  * Activates a given ability, if it exists on the character.
@@ -811,7 +813,7 @@ native int CF_GetArgI(int client, char pluginName[255], char abilityName[255], c
  *
  * @return A float equal to the value obtained from the given ability's specified arg, -1.0 if no such value was present.
  */
-native any CF_GetArgF(int client, char pluginName[255], char abilityName[255], char argName[255]);
+native float CF_GetArgF(int client, char pluginName[255], char abilityName[255], char argName[255]);
 
 /**
  * Gets an ability slot from a specified ability.
@@ -822,7 +824,7 @@ native any CF_GetArgF(int client, char pluginName[255], char abilityName[255], c
  *
  * @return A CF_AbilityType pertaining to the chosen ability's slot, CF_AbilityType_None if the ability doesn't exist or the client is invalid/not a character.
  */
-native any CF_GetAbilitySlot(int client, char pluginName[255], char abilityName[255]);
+native CF_AbilityType CF_GetAbilitySlot(int client, char pluginName[255], char abilityName[255]);
 
 /**
  * Gets a string value from a specified ability's arg.
@@ -862,7 +864,7 @@ native CF_GetAbilityConfigMapPath(int client, char pluginName[255], char ability
  *
  * @return A KeyValType corresponding to the chosen sound. KeyValType_Value for sounds without special settings, KeyValType_Section for sounds with special settings, and KeyValType_Null for invalid sounds.
  */
-native any CF_GetRandomSound(char Config[255], char Sound[255], char Output[255], int len);
+native KeyValType CF_GetRandomSound(char Config[255], char Sound[255], char Output[255], int len);
 
 /**
  * Plays a random sound from a client's boss config, as specified by the settings below.
@@ -891,7 +893,7 @@ native CF_SilenceCharacter(int client, float duration);
  *
  * @return	A float value equal to the client's K/D.
  */
-native any CF_GetKD(int client);
+native float CF_GetKD(int client);
 
 /**
  * Retrieves the given client's current "emotion", based on their K/D. Currently this is used only for spawn sounds, further functionality may be implemented in the future.
@@ -900,7 +902,7 @@ native any CF_GetKD(int client);
  *
  * @return	CF_Emotion_Angry if the client's K/D is too low, CF_Emotion_Happy if it is high, CF_Emotion_Neutral for anything in-between.
  */
-native any CF_GetCharacterEmotion(int client);
+native CF_Emotion CF_GetCharacterEmotion(int client);
 
 /**
  * Checks if a client's specified ability slot is blocked. Only works for CF_AbilityType_Ult, M2, M3, and Reload, all others return false.
@@ -910,7 +912,7 @@ native any CF_GetCharacterEmotion(int client);
  *
  * @return	True if the slot is blocked, false if it is not or if the client/type is invalid.
  */
-native any CF_IsAbilitySlotBlocked(int client, CF_AbilityType type);
+native bool CF_IsAbilitySlotBlocked(int client, CF_AbilityType type);
 
 /**
  * Blocks a specified ability slot from being used. Only works for CF_AbilityType_Ult, M2, M3, and Reload.
@@ -969,4 +971,4 @@ native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit);
  *
  * @return	An array containing the client indices of all players hit by this damage, useful for applying additional effects to players who are hit. This gets returned even if it is empty, you will need to manually close the handle when you are done with it.
  */
-native any CF_GenericAOEDamage(int attacker, int inflictor, int weapon, float dmg, int damageType, float radius, float groundZero[3], float falloffStart, float falloffMax, TraceEntityFilter filter, bool skipDefaultFilter = false, bool includeUser = true, bool ignoreInvuln = false);
+native Handle CF_GenericAOEDamage(int attacker, int inflictor, int weapon, float dmg, int damageType, float radius, float groundZero[3], float falloffStart, float falloffMax, TraceEntityFilter filter, bool skipDefaultFilter = false, bool includeUser = true, bool ignoreInvuln = false);
