@@ -922,3 +922,28 @@ native CF_UnblockAbilitySlot(int client, CF_AbilityType type);
  * @param hpMult				The maximum percentage of the client's max HP for this to heal to. For example: 1.5 would allow this instance to heal the client up to a maximum of 150% of their max HP.
  */
 native CF_HealPlayer(int client, int healer, float amt, float hpMult);
+
+/**
+ * Launches a generic rocket, as if the user had fired a rocket launcher.
+ *
+ * @param client				The client to shoot the rocket.
+ * @param dmg					The rocket's base damage.
+ * @param velocity				The rocket's base velocity.
+ * @param crit					Set to true to make the rocket crit.
+ *
+ * @return	The entity index of the rocket. 
+ */
+native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit);
+
+/**
+ * Launches a generic rocket, as if the user had fired a rocket launcher.
+ *
+ * @param client				The client to shoot the rocket.
+ * @param dmg					The rocket's base damage.
+ * @param velocity				The rocket's base velocity.
+ * @param crit					Set to true to make the rocket crit.
+ * @param callback				DHook callback to use when the rocket explodes.
+ *
+ * @return	The entity index of the rocket. 
+ */
+native CF_FireGenericRocket_DHook(int client, float dmg, float velocity, bool crit, DHookCallback callback);

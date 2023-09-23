@@ -91,7 +91,11 @@ public void CFA_MakeNatives()
 	CreateNative("CF_BlockAbilitySlot", Native_CF_BlockAbilitySlot);
 	CreateNative("CF_UnblockAbilitySlot", Native_CF_UnblockAbilitySlot);
 	CreateNative("CF_HealPlayer", Native_CF_HealPlayer);
+	CreateNative("CF_FireGenericRocket", Native_CF_FireGenericRocket);
+	CreateNative("CF_FireGenericRocket_DHook", Native_CF_FireGenericRocket_DHook);
 }
+
+DynamicHook g_DHookRocketExplode;
 
 public void CFA_MakeForwards()
 {
@@ -107,6 +111,11 @@ public void CFA_MakeForwards()
 	g_UltChargeGiven = new GlobalForward("CF_OnUltChargeGiven", ET_Event, Param_Cell, Param_FloatByRef);
 	g_ResourceApplied = new GlobalForward("CF_OnSpecialResourceApplied", ET_Event, Param_Cell, Param_Float, Param_FloatByRef);
 	g_UltChargeApplied = new GlobalForward("CF_OnUltChargeApplied", ET_Event, Param_Cell, Param_Float, Param_FloatByRef);
+	
+	GameData gamedata = LoadGameConfigFile("chaos_fortress");	//TODO: Make a new gamedata file containing this file's text, name it chaos_fortress
+	g_DHookRocketExplode = DHook_CreateVirtual(gamedata, "CTFBaseRocket::Explode");
+		
+	delete gamedata;
 }
 
 Handle HudSync;
@@ -1962,4 +1971,105 @@ public Native_CF_HealPlayer(Handle plugin, int numParams)
 		
 		//TODO: Scoreboard credit
 	}
+}
+
+public Native_CF_FireGenericRocket(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!IsValidClient(client))
+		return -1;
+	
+	float dmg = GetNativeCell(2);
+	float velocity = GetNativeCell(3);
+	bool crit = GetNativeCell(4);
+	
+	int rocket = CreateEntityByName("tf_projectile_rocket");
+	
+	if (IsValidEntity(rocket))
+	{
+		int iTeam = GetClientTeam(client);
+		
+		SetEntPropEnt(rocket, Prop_Send, "m_hOwnerEntity", client);
+		SetEntProp(rocket,    Prop_Send, "m_bCritical", view_as<int>(crit));
+		SetEntProp(rocket,    Prop_Send, "m_iTeamNum",     iTeam, 1);
+		SetEntData(rocket, FindSendPropInfo("CTFProjectile_Rocket", "m_nSkin"), (iTeam-2), 1, true);
+		SetEntDataFloat(rocket, FindSendPropInfo("CTFProjectile_Rocket", "m_iDeflected") + 4, dmg, true);
+		
+		SetVariantInt(iTeam);
+		AcceptEntityInput(rocket, "TeamNum", -1, -1, 0);
+		
+		SetVariantInt(iTeam);
+		AcceptEntityInput(rocket, "SetTeam", -1, -1, 0); 
+		
+		DispatchSpawn(rocket);
+			
+		float spawnLoc[3], angles[3], rocketVel[3], vBuffer[3];
+		GetClientEyePosition(client, spawnLoc);
+		GetClientEyeAngles(client, angles);
+			
+		GetAngleVectors(angles, vBuffer, NULL_VECTOR, NULL_VECTOR);
+		
+		rocketVel[0] = vBuffer[0]*velocity;
+		rocketVel[1] = vBuffer[1]*velocity;
+		rocketVel[2] = vBuffer[2]*velocity;
+			
+		TeleportEntity(rocket, spawnLoc, NULL_VECTOR, rocketVel);
+		
+		return rocket;
+	}
+	
+	return -1;
+}
+
+public Native_CF_FireGenericRocket_DHook(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!IsValidClient(client))
+		return -1;
+	
+	float dmg = GetNativeCell(2);
+	float velocity = GetNativeCell(3);
+	bool crit = GetNativeCell(4);
+	DHookCallback callback = GetNativeCell(5);
+	
+	int rocket = CreateEntityByName("tf_projectile_rocket");
+	
+	if (IsValidEntity(rocket))
+	{
+		int iTeam = GetClientTeam(client);
+		
+		SetEntPropEnt(rocket, Prop_Send, "m_hOwnerEntity", client);
+		SetEntProp(rocket,    Prop_Send, "m_bCritical", view_as<int>(crit));
+		SetEntProp(rocket,    Prop_Send, "m_iTeamNum",     iTeam, 1);
+		SetEntData(rocket, FindSendPropInfo("CTFProjectile_Rocket", "m_nSkin"), (iTeam-2), 1, true);
+		SetEntDataFloat(rocket, FindSendPropInfo("CTFProjectile_Rocket", "m_iDeflected") + 4, dmg, true);
+		
+		SetVariantInt(iTeam);
+		AcceptEntityInput(rocket, "TeamNum", -1, -1, 0);
+		
+		SetVariantInt(iTeam);
+		AcceptEntityInput(rocket, "SetTeam", -1, -1, 0); 
+		
+		DispatchSpawn(rocket);
+			
+		float spawnLoc[3], angles[3], rocketVel[3], vBuffer[3];
+		GetClientEyePosition(client, spawnLoc);
+		GetClientEyeAngles(client, angles);
+			
+		GetAngleVectors(angles, vBuffer, NULL_VECTOR, NULL_VECTOR);
+		
+		rocketVel[0] = vBuffer[0]*velocity;
+		rocketVel[1] = vBuffer[1]*velocity;
+		rocketVel[2] = vBuffer[2]*velocity;
+			
+		TeleportEntity(rocket, spawnLoc, NULL_VECTOR, rocketVel);
+			
+		g_DHookRocketExplode.HookEntity(Hook_Pre, rocket, callback);
+		
+		return rocket;
+	}
+	
+	return -1;
 }

@@ -12,6 +12,7 @@
 #include <tf_econ_data>
 #include <tf_custom_attributes>
 #include <tf2utils>
+#include <dhooks>
 
 #define EF_NODRAW	32
 
@@ -1207,4 +1208,13 @@ stock float GetAttributeValue(int entity, int attribute, float defaultVal)
 		return defaultVal;
 		
 	return TF2Attrib_GetValue(addy);
+}
+
+stock DynamicHook DHook_CreateVirtual(GameData gd, const char[] name)
+{
+	DynamicHook hook = DynamicHook.FromConf(gd, name);
+	if (!hook)
+		LogError("Failed to create virtual: %s", name);
+	
+	return hook;
 }

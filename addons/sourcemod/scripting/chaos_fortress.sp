@@ -19,8 +19,7 @@
 //			- Ult charge set to 0
 //			- Resources set to 0
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
-//	- TODO: Detect healing and give resources/ult charge for it.
-//			- Also write a CF_HealPlayer native.
+//	- TODO: Detect healing from base game sources (mediguns, dispensers, crusader's crossbow bolts, mad milk) and give resources/ult charge for it.
 //	- TODO: Translations(?)
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
