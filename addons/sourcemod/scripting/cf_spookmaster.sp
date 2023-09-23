@@ -243,7 +243,6 @@ public MRESReturn Discard_ExplodePre(int skull)
 	TFTeam team = view_as<TFTeam>(GetEntProp(skull, Prop_Send, "m_iTeamNum"));
 	
 	float dmg = Discard_BaseDMG[skull];
-	CPrintToChatAll("Base damage is %i", RoundFloat(dmg));
 	if (Discard_DecayStart[skull] > 0.0)
 	{
 		float TotalDecay = (GetGameTime() - Discard_DecayStart[skull]) * Discard_DecayAmt[skull];
@@ -257,7 +256,7 @@ public MRESReturn Discard_ExplodePre(int skull)
 	GetEntPropVector(skull, Prop_Send, "m_vecOrigin", pos);
 	
 	Handle victims = CF_GenericAOEDamage(owner, skull, -1, dmg, DMG_CLUB|DMG_BLAST|DMG_ALWAYSGIB, Discard_Radius[skull], pos, Discard_FalloffStart[skull],
-										Discard_FalloffMax[skull], CF_DefaultTrace);
+										Discard_FalloffMax[skull]);
 				
 	for (int i = 0; i < GetArraySize(victims); i++)
 	{

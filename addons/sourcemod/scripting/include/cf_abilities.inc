@@ -2033,10 +2033,9 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 	GetNativeArray(7, groundZero, sizeof(groundZero));
 	float falloffStart = GetNativeCell(8);
 	float falloffMax = GetNativeCell(9);
-	TraceEntityFilter extraFilter = GetNativeCell(10);
-	bool skipDefault = GetNativeCell(11);
-	bool includeUser = GetNativeCell(12);
-	bool ignoreInvuln = GetNativeCell(13);
+	bool skipDefault = GetNativeCell(10);
+	bool includeUser = GetNativeCell(11);
+	bool ignoreInvuln = GetNativeCell(12);
 	
 	for (int i = 1; i <= MaxClients; i++)
 	{
@@ -2054,21 +2053,12 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 				{
 					bool passed = true;
 					
-					Handle trace = null;
-					
-					if (extraFilter != CF_DefaultTrace)
+					if (!skipDefault)
 					{
-						trace = TR_TraceRayFilterEx(groundZero, vicLoc, MASK_PLAYERSOLID_BRUSHONLY, RayType_EndPoint, extraFilter);
+						Handle trace = TR_TraceRayFilterEx(groundZero, vicLoc, MASK_PLAYERSOLID_BRUSHONLY, RayType_EndPoint, CF_DefaultTrace);
 						passed = !TR_DidHit(trace);
+						delete trace;
 					}
-					
-					if (passed & !skipDefault)
-					{
-						trace = TR_TraceRayFilterEx(groundZero, vicLoc, MASK_PLAYERSOLID_BRUSHONLY, RayType_EndPoint, CF_DefaultTrace);
-						passed = !TR_DidHit(trace);
-					}
-					
-					delete trace;
 					
 					if (passed)
 					{

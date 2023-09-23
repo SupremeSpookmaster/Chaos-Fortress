@@ -34,9 +34,8 @@
 //	- MINOR BUG: For some reason, player ragdolls get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? This has no effect on gameplay but it's honestly fucking baffling.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
-//	- The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible due to interference from TF2's source code, I am not sure.
+//	- The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //	- SPOOKMASTER BONES: The head particles used to indicate the number of souls you have absorbed get overridden by the hand particles.
-//	- SPOOKMASTER BONES: Soul Discard's damage bonus from Soul Absorption doesn't work at all and it seems to be random. Likely something related to memory?????? I am going to have a fucking anneurysm.
 //	- generic aoe los check magically failing despite no changes to functionality I am going to kill myself
 
 #define PLUGIN_NAME           		  "Chaos Fortress"

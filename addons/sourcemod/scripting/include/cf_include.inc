@@ -736,7 +736,6 @@ native void CF_ApplyAbilityCooldown(int client, float duration, CF_AbilityType t
  * @param type			CF_AbilityType pertaining to the given slot. This only works with CF_AbilityType_Ult, M2, M3, and Reload.
  *
  * @return	A float representing the ability's remaining cooldown.
- *
  */
 native float CF_GetAbilityCooldown(int client, CF_AbilityType type);
 
@@ -964,11 +963,10 @@ native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit);
  * @param groundZero			The origin of the damage.
  * @param falloffStart			The distance from groundZero at which damage falloff begins to take place.
  * @param falloffMax			The maximum damage penalty caused by falloff, as a percentage. Ex: 0.8 would be 80%
- * @param filter				Optional additional trace filter to use for this damage, on top of Chaos Fortress' default trace filter. This is skipped if set to CF_DefaultTrace.
  * @param skipDefaultFilter		If set to true, Chaos Fortress' default trace filter (CF_DefaultTrace) is ignored. Useful if you want this damage to ignore shields or go through walls.
  * @param includeUser			If set to true, this can damage the user if they are within the radius.
  * @param ignoreInvuln			If set to true, invulnerable players are added to the array returned by this native as long as they would have still been hit by it otherwise.
  *
  * @return	An array containing the client indices of all players hit by this damage, useful for applying additional effects to players who are hit. This gets returned even if it is empty, you will need to manually close the handle when you are done with it.
  */
-native Handle CF_GenericAOEDamage(int attacker, int inflictor, int weapon, float dmg, int damageType, float radius, float groundZero[3], float falloffStart, float falloffMax, TraceEntityFilter filter, bool skipDefaultFilter = false, bool includeUser = true, bool ignoreInvuln = false);
+native Handle CF_GenericAOEDamage(int attacker, int inflictor, int weapon, float dmg, int damageType, float radius, float groundZero[3], float falloffStart, float falloffMax, bool skipDefaultFilter = false, bool includeUser = true, bool ignoreInvuln = false);
