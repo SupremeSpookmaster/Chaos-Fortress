@@ -21,6 +21,7 @@
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
 //	- TODO: Detect healing from base game sources (mediguns, dispensers, crusader's crossbow bolts, mad milk) and give resources/ult charge for it.
 //	- TODO: Translations(?)
+//	- TODO: Make a forward which gets called every time a projectile's team is changed
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- OPTIONAL TODO: Collision forwards.

@@ -947,3 +947,24 @@ native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit);
  * @return	The entity index of the rocket. 
  */
 native CF_FireGenericRocket_DHook(int client, float dmg, float velocity, bool crit, DHookCallback callback);
+
+/**
+ * Inflicts generic area-of-effect damage within a specified radius
+ *
+ * @param attacker				The player who triggered this damage. This entire process is skipped if this client is not valid.
+ * @param inflictor				The inflictor of the damage, such as a rocket.
+ * @param weapon				The weapon used to inflict the damage, such as a rocket launcher.
+ * @param dmg					The base damage dealt.
+ * @param damageType			The type of damage dealt.
+ * @param radius				The radius in which damage should be dealt.
+ * @param groundZero			The origin of the damage.
+ * @param falloffStart			The distance from groundZero at which damage falloff begins to take place.
+ * @param falloffMax			The maximum damage penalty caused by falloff, as a percentage. Ex: 0.8 would be 80%
+ * @param filter				Optional additional trace filter to use for this damage, on top of Chaos Fortress' default trace filter. This is skipped if set to (TODO: CF default filter name here).
+ * @param skipDefaultFilter		If set to true, Chaos Fortress' default trace filter is ignored. Useful if you want this damage to ignore shields or go through walls. TODO: Actually write this filter.
+ * @param includeUser			If set to true, this can damage the user if they are within the radius.
+ * @param ignoreInvuln			If set to true, invulnerable players are added to the array returned by this native as long as they would have still been hit by it otherwise.
+ *
+ * @return	An array containing the client indices of all players hit by this damage, useful for applying additional effects to players who are hit. This gets returned even if it is empty, you will need to manually close the handle when you are done with it.
+ */
+native any CF_GenericAOEDamage(int attacker, int inflictor, int weapon, float dmg, int damageType, float radius, float groundZero[3], float falloffStart, float falloffMax, TraceEntityFilter filter/* = TODO: Default filter*/, bool skipDefaultFilter = false, bool includeUser = true, bool ignoreInvuln = false);

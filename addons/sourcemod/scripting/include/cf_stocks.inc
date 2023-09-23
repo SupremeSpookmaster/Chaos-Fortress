@@ -1218,3 +1218,24 @@ stock DynamicHook DHook_CreateVirtual(GameData gd, const char[] name)
 	
 	return hook;
 }
+
+/**
+ * Checks if a client is invulnerable.
+ *
+ * @param client	The client to check.
+ *
+ * @return		True if the client is invulnerable, false otherwise.
+ */
+stock bool IsInvuln(int client) //Borrowed from Batfoxkid. Checks if the client is invulnerable.
+{
+	if(!IsValidClient(client))
+	return true;
+	
+	return (TF2_IsPlayerInCondition(client, TFCond_Ubercharged) ||
+		TF2_IsPlayerInCondition(client, TFCond_UberchargedCanteen) ||
+		TF2_IsPlayerInCondition(client, TFCond_UberchargedHidden) ||
+		TF2_IsPlayerInCondition(client, TFCond_UberchargedOnTakeDamage) ||
+		TF2_IsPlayerInCondition(client, TFCond_Bonked) ||
+		TF2_IsPlayerInCondition(client, TFCond_HalloweenGhostMode) ||
+		!GetEntProp(client, Prop_Data, "m_takedamage"));
+}

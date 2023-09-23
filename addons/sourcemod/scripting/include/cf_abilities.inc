@@ -93,6 +93,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_HealPlayer", Native_CF_HealPlayer);
 	CreateNative("CF_FireGenericRocket", Native_CF_FireGenericRocket);
 	CreateNative("CF_FireGenericRocket_DHook", Native_CF_FireGenericRocket_DHook);
+	CreateNative("CF_GenericAOEDamage", Native_CF_GenericAOEDamage);
 }
 
 DynamicHook g_DHookRocketExplode;
@@ -2072,4 +2073,62 @@ public Native_CF_FireGenericRocket_DHook(Handle plugin, int numParams)
 	}
 	
 	return -1;
+}
+
+public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
+{
+	Handle ReturnValue = CreateArray(16);
+	
+	int attacker = GetNativeCell(1);
+	
+	if (!IsValidClient(attacker))
+		return ReturnValue;
+		
+	int inflictor = GetNativeCell(2);
+	int weapon = GetNativeCell(3);
+	float dmg = GetNativeCell(4);
+	int damageType = GetNativeCell(5);
+	float radius = GetNativeCell(6);
+	float groundZero[3];
+	GetNativeArray(7, groundZero, sizeof(groundZero));
+	float falloffStart = GetNativeCell(8);
+	float falloffMax = GetNativeCell(9);
+	TraceEntityFilter extraFilter = GetNativeCell(10);
+	bool skipDefault = GetNativeCell(11);
+	bool includeUser = GetNativeCell(12);
+	bool ignoreInvuln = GetNativeCell(13);
+	
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (IsValidMulti(i, true, true, true, grabEnemyTeam(attacker)) || (i == attacker && includeUser))
+		{
+			if (ignoreInvuln || !IsInvuln(i))
+			{
+				float vicLoc[3];
+				GetClientAbsOrigin(i, vicLoc);
+				vicLoc[2] += 40.0;	//Target the middle of the body instead of their feet, so small displacements don't screw with los checks
+				
+				float dist = GetVectorDistance(groundZero, vicLoc);
+				
+				if (dist <= radius)
+				{
+					//TODO: LOS CHECKS NEEDED
+					
+					if (/* LOS CHECK LOS CHECK */true)
+					{
+						float realDMG = dmg;
+						if (dist > falloffStart)
+						{
+							realDMG *= 1.0 - (((dist - falloffStart) / (radius - falloffStart)) * falloffMax);
+						}
+						
+						SDKHooks_TakeDamage(i, inflictor, attacker, realDMG, damageType, weapon);
+						PushArrayCell(ReturnValue, i);
+					}
+				}
+			}
+		}
+	}
+	
+	return ReturnValue;
 }

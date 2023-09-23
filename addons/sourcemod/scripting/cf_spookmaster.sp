@@ -9,9 +9,22 @@
 #define DISCARD			"soul_discard"
 #define CALCIUM			"calcium_cataclysm"
 
+#define PARTICLE_DISCARD_RED		"spell_fireball_small_red"
+#define PARTICLE_DISCARD_BLUE		"spell_fireball_small_blue"
+#define PARTICLE_DISCARD_EXPLODE_RED	"spell_fireball_tendril_parent_red"
+#define PARTICLE_DISCARD_EXPLODE2_RED	"spell_batball_impact_red"
+#define PARTICLE_DISCARD_EXPLODE_BLUE	"spell_fireball_tendril_parent_blue"
+#define PARTICLE_DISCARD_EXPLODE2_BLUE	"spell_batball_impact_blue"
+
+#define SOUND_DISCARD_EXPLODE		"misc/halloween/spell_fireball_impact.wav"
+
+#define MODEL_DISCARD				"models/chaos_fortress/spookmaster/skullrocket.mdl"
+
 public void OnMapStart()
 {
+	PrecacheSound(SOUND_DISCARD_EXPLODE, true);
 	
+	PrecacheModel(MODEL_DISCARD, true);
 }
 
 public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
@@ -21,6 +34,9 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 		
 	if (StrEqual(abilityName, ABSORB))
 		Absorb_Activate(client, abilityName);
+		
+	if (StrEqual(abilityName, DISCARD))
+		Discard_Activate(client, abilityName);
 }
 
 int Harvester_LeftParticle[MAXPLAYERS + 1] = { -1, ... };
@@ -151,4 +167,93 @@ public void CF_OnCharacterCreated(int client)
 {
 	if (CF_HasAbility(client, SPOOKMASTER, ABSORB) && Absorb_Uses[client] > 0)
 		Absorb_SetStats(client, float(Absorb_Uses[client]));
+}
+
+int Discard_Particle[2049] = { -1, ... };
+
+float Discard_BaseDMG[2049] = { 0.0, ... };
+float Discard_Radius[2049] = { 0.0, ... };
+float Discard_FalloffStart[2049] = { 0.0, ... };
+float Discard_FalloffMax[2049] = { 0.0, ... };
+float Discard_DecayStart[2049] = { 0.0, ... };
+float Discard_DecayAmt[2049] = { 0.0, ... };
+float Discard_DecayMax[2049] = { 0.0, ... };
+float Discard_BurnTime[2049] = { 0.0, ... };
+
+public void Discard_Activate(int client, char abilityName[255])
+{
+	float velocity = CF_GetArgF(client, SPOOKMASTER, abilityName, "velocity");
+	
+	int skull = CF_FireGenericRocket_DHook(client, 0.0, velocity, false, Discard_ExplodePre);
+	if (IsValidEntity(skull))
+	{
+		Discard_BaseDMG[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "damage");
+		Discard_Radius[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "radius");
+		Discard_FalloffStart[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "falloff_start");
+		Discard_FalloffMax[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "falloff_max");
+		
+		float time = CF_GetArgF(client, SPOOKMASTER, abilityName, "decay_start");
+		if (time > 0.0)
+		{
+			CreateTimer(time, Discard_StartDecay, EntIndexToEntRef(skull), TIMER_FLAG_NO_MAPCHANGE);
+			Discard_DecayStart[skull] = 0.0;
+		}
+		else
+			Discard_DecayStart[skull] = GetGameTime();
+			
+		Discard_DecayAmt[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "decay");
+		Discard_DecayMax[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "decay_max");
+		Discard_BurnTime[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "afterburn");
+		
+		SetEntityModel(skull, MODEL_DISCARD);
+		Discard_Particle[skull] = EntIndexToEntRef(AttachParticleToEntity(skull, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_DISCARD_RED : PARTICLE_DISCARD_BLUE, "bloodpoint"));
+		
+		ForceViewmodelAnimation(client, 18);
+	}
+}
+
+public Action Discard_StartDecay(Handle decay, int ref)
+{
+	int skull = EntRefToEntIndex(ref);
+	if (!IsValidEntity(skull))
+		return Plugin_Continue;
+		
+	Discard_DecayStart[skull] = GetGameTime();
+	return Plugin_Continue;
+}
+
+public MRESReturn Discard_ExplodePre(int skull)
+{
+	int owner = GetEntPropEnt(skull, Prop_Send, "m_hOwnerEntity");
+	TFTeam team = view_as<TFTeam>(GetEntProp(skull, Prop_Send, "m_iTeamNum"));
+	
+	float dmg = Discard_BaseDMG[skull];
+	if (Discard_DecayStart[skull] > 0.0)
+	{
+		float TotalDecay = (GetGameTime() - Discard_DecayStart[skull]) * Discard_DecayAmt[skull];
+		if (TotalDecay > Discard_DecayMax[skull])
+			TotalDecay = Discard_DecayMax[skull];
+			
+		dmg -= TotalDecay;
+	}
+	
+	float pos[3];
+	GetEntPropVector(skull, Prop_Send, "m_vecOrigin", pos);
+	
+	Handle victims = CF_GenericAOEDamage(owner, skull, -1, dmg, DMG_CLUB|DMG_BLAST|DMG_ALWAYSGIB, Discard_Radius[skull], pos, Discard_FalloffStart[skull],
+										Discard_FalloffMax[skull], TraceEntityFilterPlayer_GAT/*TODO PASS DEFAULT FILTER HERE*/);
+										
+	for (int i = 0; i < GetArraySize(victims); i++)
+	{
+		int vic = GetArrayCell(victims, i);
+		if (IsValidMulti(vic) && vic != owner)
+			TF2_IgnitePlayer(vic, owner, Discard_BurnTime[skull]);
+	}
+	delete victims;
+	
+	EmitSoundToAll(SOUND_DISCARD_EXPLODE, _, SNDCHAN_STATIC, 110, _, _, GetRandomInt(90, 110), _, pos);
+	SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_DISCARD_EXPLODE_RED : PARTICLE_DISCARD_EXPLODE_BLUE, 3.0);
+	SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_DISCARD_EXPLODE2_RED : PARTICLE_DISCARD_EXPLODE2_BLUE, 3.0);
+	
+	return MRES_Supercede;
 }
