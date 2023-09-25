@@ -67,6 +67,7 @@ GlobalForward g_UltChargeGiven;
 GlobalForward g_ResourceApplied;
 GlobalForward g_UltChargeApplied;
 GlobalForward g_ProjectileTeamChanged;
+GlobalForward g_Collision;
 
 int i_GenericProjectileOwner[2049] = { -1, ... };
 
@@ -113,6 +114,7 @@ public void CFA_MakeForwards()
 	g_ResourceApplied = new GlobalForward("CF_OnSpecialResourceApplied", ET_Event, Param_Cell, Param_Float, Param_FloatByRef);
 	g_UltChargeApplied = new GlobalForward("CF_OnUltChargeApplied", ET_Event, Param_Cell, Param_Float, Param_FloatByRef);
 	g_ProjectileTeamChanged = new GlobalForward("CF_OnGenericProjectileTeamChanged", ET_Ignore, Param_Cell, Param_Cell);
+	g_Collision = new GlobalForward("CF_OnCollision", ET_Event, Param_Cell, Param_Cell, Param_CellByRef);
 }
 
 public void CFA_OGF()
@@ -145,6 +147,25 @@ public void CFA_OGF()
 public void CFA_OnEntityDestroyed(int entity)
 {
 	i_GenericProjectileOwner[entity] = -1;
+}
+
+public void CFA_OnEntityCreated(int entity, const char[] classname)
+{
+	if (StrContains(classname, "tf_projectile") != -1)
+	{
+		SDKHook(entity, SDKHook_SpawnPost, GetOwner);
+	}
+}
+
+public Action GetOwner(int ent)
+{
+	if (!IsValidEntity(ent))
+		return Plugin_Continue;
+		
+	int owner = GetEntPropEnt(ent, Prop_Send, "m_hOwnerEntity");
+	i_GenericProjectileOwner[ent] = GetClientUserId(owner);
+	
+	return Plugin_Continue;
 }
 
 Handle HudSync;
@@ -2119,4 +2140,45 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 	}
 	
 	return ReturnValue;
+}
+
+public Action CH_PassFilter(int ent1, int ent2, bool &result)
+{
+	Action ReturnVal = Plugin_Continue;
+	bool CallForward = true;
+	
+	//First test: don't allow TF2 projectiles to collide with their owners or players who are on their owner's team:
+	if (IsValidClient(GetClientOfUserId(i_GenericProjectileOwner[ent1])))
+	{
+		int owner = GetClientOfUserId(i_GenericProjectileOwner[ent1]);
+		if (IsValidMulti(ent2, true, true, true, TF2_GetClientTeam(owner)))
+		{
+			result = false;
+			ReturnVal = Plugin_Changed;
+			CallForward = false;
+		}
+	}
+	else if (IsValidClient(GetClientOfUserId(i_GenericProjectileOwner[ent2])))
+	{
+		int owner = GetClientOfUserId(i_GenericProjectileOwner[ent2]);
+		if (IsValidMulti(ent1, true, true, true, TF2_GetClientTeam(owner)))
+		{
+			result = false;
+			ReturnVal = Plugin_Changed;
+			CallForward = false;
+		}
+	}
+	
+	if (CallForward)
+	{
+		Call_StartForward(g_Collision);
+		
+		Call_PushCell(ent1);
+		Call_PushCell(ent2);
+		Call_PushCellRef(result);
+		
+		Call_Finish(ReturnVal);
+	}
+	
+	return ReturnVal;
 }

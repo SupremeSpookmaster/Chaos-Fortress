@@ -263,3 +263,8 @@ public void OnGameFrame()
 	CFC_OGF();
 	#endif
 }
+
+public void OnEntityCreated(int entity, const char[] classname)
+{
+	CFA_OnEntityCreated(entity, classname);
+}

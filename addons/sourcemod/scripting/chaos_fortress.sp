@@ -14,7 +14,6 @@
 //			- Figure out why head particles are weird.
 //			- Add model, add sounds, possibly add custom viewmodel for hands.
 //			- skullrocket.mdl's collision box is way too tall which causes it to bump on the top of ceilings *all the time*, fix it.
-//		- Make those collision forwards for the generic projectile.
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Everything that happens on client disconnect.
@@ -23,7 +22,6 @@
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
 //	- TODO: Detect healing from base game sources (mediguns, dispensers, crusader's crossbow bolts, mad milk) and give resources/ult charge for it.
 //	- TODO: Translations(?)
-//	- TODO: Make a forward which gets called every time a projectile's team is changed and use it with SB's skull rocket
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- None (currently).

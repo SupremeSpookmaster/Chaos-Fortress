@@ -13,6 +13,7 @@
 #include <tf_custom_attributes>
 #include <tf2utils>
 #include <dhooks>
+#include <collisionhook>
 
 #define EF_NODRAW	32
 

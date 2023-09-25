@@ -421,13 +421,24 @@ forward Action CF_OnUltChargeGiven(int client, float &amt);
 forward Action CF_OnUltChargeApplied(int client, float current, float &amt);
 
 /**
- * Called when a projectile created by CF_FireGenericRocket has its team changed.
+ * Called when a TF2 projectile has its team changed.
  *
  * @param entity		The projectile.
  * @param newTeam		The projectile's new team.
  *
  */
 forward void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam);
+
+/**
+ * Called when two entities collide, after all of Chaos Fortress' own tests. Using this instead of CH_PassFilter guarantees your plugin's collision logic will not conflict with that of Chaos Fortress.
+ *
+ * @param ent1			The first entity.
+ * @param ent2			The second entity.
+ * @param result		Set to false and return Plugin_Changed to prevent collision, ignore otherwise.
+ *
+ * @return Set result to false and return Plugin_Changed to prevent collision, otherwise return Plugin_Continue.
+ */
+forward Action CF_OnCollision(int ent1, int ent2, bool &result);
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
 ///////////////////////////////////////
