@@ -11,11 +11,9 @@
 //
 //	- IMMEDIATE PLANS (things I am currently focusing on):
 //		- Spookmaster Bones:
-//			- Figure out why Soul Discard's damage bonus is cursed.
 //			- Figure out why head particles are weird.
-//			- Make ult (CALCIUM CATACLYSM)
 //			- Add model, add sounds, possibly add custom viewmodel for hands.
-//			- skullrocket.mdl's collision box is way too big, fix it.
+//			- skullrocket.mdl's collision box is way too tall which causes it to bump on the top of ceilings *all the time*, fix it.
 //		- Make those collision forwards for the generic projectile.
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
@@ -25,10 +23,10 @@
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
 //	- TODO: Detect healing from base game sources (mediguns, dispensers, crusader's crossbow bolts, mad milk) and give resources/ult charge for it.
 //	- TODO: Translations(?)
-//	- TODO: Make a forward which gets called every time a projectile's team is changed
+//	- TODO: Make a forward which gets called every time a projectile's team is changed and use it with SB's skull rocket
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
-//	- OPTIONAL TODO: Collision forwards.
+//	- None (currently).
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
 //	- MINOR BUG: For some reason, player ragdolls get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? This has no effect on gameplay but it's honestly fucking baffling.
@@ -36,7 +34,6 @@
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //	- SPOOKMASTER BONES: The head particles used to indicate the number of souls you have absorbed get overridden by the hand particles.
-//	- generic aoe los check magically failing despite no changes to functionality I am going to kill myself
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
@@ -303,4 +300,5 @@ public void OnEntityDestroyed(int entity)
 		
 	CFW_OnEntityDestroyed(entity);
 	CFC_OnEntityDestroyed(entity);
+	CFA_OnEntityDestroyed(entity);
 }

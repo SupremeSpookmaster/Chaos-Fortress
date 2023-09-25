@@ -14,6 +14,7 @@
 #define UNBLOCK				"generic_unblock"
 #define TOGGLE				"generic_toggle"
 #define LIMIT				"generic_limit"
+#define DELAY				"generic_delay"
 
 float Weapon_EndTime[2049] = { 0.0, ... };
 
@@ -208,6 +209,46 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	{
 		Limit_Activate(client, abilityName);
 	}
+	
+	if (StrContains(abilityName, DELAY) != -1)
+	{
+		Delay_Activate(client, abilityName);
+	}
+}
+
+public void Delay_Activate(int client, char abilityName[255])
+{
+	char ab[255], pl[255], snd[255];
+	CF_GetArgS(client, GENERIC, abilityName, "ability", ab, sizeof(ab));
+	CF_GetArgS(client, GENERIC, abilityName, "plugin", pl, sizeof(pl));
+	float delay = CF_GetArgF(client, GENERIC, abilityName, "time");
+	Format(snd, sizeof(snd), "sound_%s", abilityName);
+	
+	DataPack pack = new DataPack();
+	CreateDataTimer(delay, Delay_ActivateAbility, pack, TIMER_FLAG_NO_MAPCHANGE);
+	WritePackCell(pack, GetClientUserId(client));
+	WritePackString(pack, ab);
+	WritePackString(pack, pl);
+	WritePackString(pack, snd);
+}
+
+public Action Delay_ActivateAbility(Handle delayed, DataPack pack)
+{
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	char ab[255], pl[255], snd[255];
+	ReadPackString(pack, ab, sizeof(ab));
+	ReadPackString(pack, pl, sizeof(pl));
+	ReadPackString(pack, snd, sizeof(snd));
+	delete pack;
+	
+	if (!IsValidMulti(client))
+		return Plugin_Continue;
+		
+	CF_DoAbility(client, pl, ab);
+	CF_PlayRandomSound(client, "", snd);
+	
+	return Plugin_Continue;
 }
 
 public void Block_Activate(int client, char abilityName[255])

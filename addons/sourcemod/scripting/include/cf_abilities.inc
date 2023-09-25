@@ -66,6 +66,9 @@ GlobalForward g_ResourceGiven;
 GlobalForward g_UltChargeGiven;
 GlobalForward g_ResourceApplied;
 GlobalForward g_UltChargeApplied;
+GlobalForward g_ProjectileTeamChanged;
+
+int i_GenericProjectileOwner[2049] = { -1, ... };
 
 public void CFA_MakeNatives()
 {
@@ -109,6 +112,39 @@ public void CFA_MakeForwards()
 	g_UltChargeGiven = new GlobalForward("CF_OnUltChargeGiven", ET_Event, Param_Cell, Param_FloatByRef);
 	g_ResourceApplied = new GlobalForward("CF_OnSpecialResourceApplied", ET_Event, Param_Cell, Param_Float, Param_FloatByRef);
 	g_UltChargeApplied = new GlobalForward("CF_OnUltChargeApplied", ET_Event, Param_Cell, Param_Float, Param_FloatByRef);
+	g_ProjectileTeamChanged = new GlobalForward("CF_OnGenericProjectileTeamChanged", ET_Ignore, Param_Cell, Param_Cell);
+}
+
+public void CFA_OGF()
+{
+	int entity = -1;
+	while ((entity = FindEntityByClassname(entity, "tf_projectile_*") != -1))
+	{
+		if (i_GenericProjectileOwner[entity] != -1)
+		{
+			int currentOwner = GetClientOfUserId(i_GenericProjectileOwner[entity]);
+			int newOwner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
+			if (newOwner != currentOwner && IsValidClient(currentOwner) && IsValidClient(newOwner))
+			{
+				if (TF2_GetClientTeam(currentOwner) != TF2_GetClientTeam(newOwner))
+				{
+					Call_StartForward(g_ProjectileTeamChanged);
+					
+					Call_PushCell(entity);
+					Call_PushCell(TF2_GetClientTeam(newOwner));
+					
+					Call_Finish();
+				}
+				
+				i_GenericProjectileOwner[entity] = GetClientUserId(newOwner);
+			}
+		}
+	}
+}
+
+public void CFA_OnEntityDestroyed(int entity)
+{
+	i_GenericProjectileOwner[entity] = -1;
 }
 
 Handle HudSync;
@@ -2008,6 +2044,8 @@ public Native_CF_FireGenericRocket(Handle plugin, int numParams)
 		rocketVel[2] = vBuffer[2]*velocity;
 			
 		TeleportEntity(rocket, spawnLoc, angles, rocketVel);
+		
+		i_GenericProjectileOwner[rocket] = GetClientUserId(client);
 		
 		return rocket;
 	}

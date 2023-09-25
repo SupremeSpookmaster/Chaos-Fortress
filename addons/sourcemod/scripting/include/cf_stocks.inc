@@ -1239,3 +1239,101 @@ stock bool IsInvuln(int client) //Borrowed from Batfoxkid. Checks if the client 
 		TF2_IsPlayerInCondition(client, TFCond_HalloweenGhostMode) ||
 		!GetEntProp(client, Prop_Data, "m_takedamage"));
 }
+
+stock void SpawnParticle_ControlPoints(float StartPos[3], float EndPos[3], char particleType[255], float duration)
+{
+	 int particle  = CreateEntityByName("info_particle_system");
+	 int particle2 = CreateEntityByName("info_particle_system");
+	 int ent = SpawnParticle(StartPos, "");
+	 int controlpoint = SpawnParticle(EndPos, "");
+ 
+	 if (IsValidEdict(particle) && IsValidEdict(particle2) && IsValidEdict(ent) && IsValidEdict(controlpoint))
+	 {
+		  TeleportEntity(particle, StartPos, NULL_VECTOR, NULL_VECTOR); 
+		  TeleportEntity(particle2, EndPos, NULL_VECTOR, NULL_VECTOR);
+		  
+		  char tName[128];
+		  Format(tName, sizeof(tName), "target%i", ent);
+		  DispatchKeyValue(ent, "targetname", tName);
+		  
+		  char cpName[128];
+		  Format(cpName, sizeof(cpName), "Xtarget%i", controlpoint);
+		  
+		  DispatchKeyValue(particle2, "targetname", cpName);
+		  
+		  DispatchKeyValue(particle, "targetname", "tf2particle");
+		  DispatchKeyValue(particle, "parentname", tName);
+		  DispatchKeyValue(particle, "effect_name", particleType);
+		  DispatchKeyValue(particle, "cpoint1", cpName);
+		  
+		  DispatchSpawn(particle);
+		  SetVariantString(tName);
+		  AcceptEntityInput(particle, "SetParent", particle, particle, 0);
+		  
+		  SetVariantString("flag");
+		  AcceptEntityInput(particle, "SetParentAttachment", particle, particle, 0);
+		  
+		  ActivateEntity(particle);
+		  AcceptEntityInput(particle, "start");
+		  
+		  CreateTimer(duration, Timer_RemoveEntity, EntIndexToEntRef(particle), TIMER_FLAG_NO_MAPCHANGE);
+		  CreateTimer(duration, Timer_RemoveEntity, EntIndexToEntRef(particle2), TIMER_FLAG_NO_MAPCHANGE);
+		  CreateTimer(duration, Timer_RemoveEntity, EntIndexToEntRef(controlpoint), TIMER_FLAG_NO_MAPCHANGE);
+		  CreateTimer(duration, Timer_RemoveEntity, EntIndexToEntRef(ent), TIMER_FLAG_NO_MAPCHANGE);
+	 }
+} 
+
+/**
+ * Spawns a TE beam based on vector points.
+ *
+ * @param TO-DO: FILL THIS IN
+ *
+ */
+stock void SpawnBeam_Vectors(float StartLoc[3], float EndLoc[3], float beamTiming, int r, int g, int b, int a, int modelIndex, float width=2.0, float endwidth=2.0, int fadelength=1, float amp=15.0, int target = -1)
+{
+	int color[4];
+	color[0] = r;
+	color[1] = g;
+	color[2] = b;
+	color[3] = a;
+	
+	TE_SetupBeamPoints(StartLoc, EndLoc, modelIndex, 0, 0, 0, beamTiming, width, endwidth, fadelength, amp, color, 0);
+	
+	if (!IsValidClient(target))
+	{
+		TE_SendToAll();
+	}
+	else
+	{
+		TE_SendToClient(target);
+	}
+}
+
+stock void spawnRing_Vector(float center[3], float range, float modif_X, float modif_Y, float modif_Z, int modelIndex, int r, int g, int b, int alpha, int fps, float life, float width, float amp, int speed, float endRange = 0.0, int target = 0) //Spawns a TE beam ring at a client's/entity's location
+{
+	center[0] += modif_X;
+	center[1] += modif_Y;
+	center[2] += modif_Z;
+	
+	int color[4];
+	color[0] = r;
+	color[1] = g;
+	color[2] = b;
+	color[3] = alpha;
+	
+	if (endRange == 0.0)
+	{
+		endRange = range + 0.5;
+	}
+	
+	TE_SetupBeamRingPoint(center, range, endRange, modelIndex, modelIndex, 0, fps, life, width, amp, color, speed, 0);
+	
+	if (IsValidClient(target))
+	{
+		TE_SendToClient(target);
+	}
+	else
+	{
+		TE_SendToAll();
+	}
+}

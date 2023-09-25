@@ -15,16 +15,26 @@
 #define PARTICLE_DISCARD_EXPLODE2_RED	"spell_batball_impact_red"
 #define PARTICLE_DISCARD_EXPLODE_BLUE	"spell_fireball_tendril_parent_blue"
 #define PARTICLE_DISCARD_EXPLODE2_BLUE	"spell_batball_impact_blue"
+#define PARTICLE_CALCIUM_SPARKS_RED			"drg_cow_explosion_sparkles_charged"
+#define PARTICLE_CALCIUM_SPARKS_BLUE		"drg_cow_explosion_sparkles_charged_blue"
+#define PARTICLE_CALCIUM_CHAIN_RED		"dxhr_lightningball_hit_zap_red"
+#define PARTICLE_CALCIUM_CHAIN_BLUE		"dxhr_lightningball_hit_zap_blue"
 
 #define SOUND_DISCARD_EXPLODE		"misc/halloween/spell_fireball_impact.wav"
 
 #define MODEL_DISCARD				"models/chaos_fortress/spookmaster/skullrocket.mdl"
+
+int lgtModel;
+int glowModel;
 
 public void OnMapStart()
 {
 	PrecacheSound(SOUND_DISCARD_EXPLODE, true);
 	
 	PrecacheModel(MODEL_DISCARD, true);
+	
+	lgtModel = PrecacheModel("materials/sprites/lgtning.vmt");
+	glowModel = PrecacheModel("materials/sprites/glow02.vmt");
 }
 
 DynamicHook g_DHookRocketExplode;
@@ -46,6 +56,9 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 		
 	if (StrContains(abilityName, DISCARD) != -1)
 		Discard_Activate(client, abilityName);
+		
+	if (StrContains(abilityName, CALCIUM) != -1)
+		Calcium_Activate(client, abilityName);
 }
 
 int Harvester_LeftParticle[MAXPLAYERS + 1] = { -1, ... };
@@ -224,7 +237,24 @@ public void Discard_Activate(int client, char abilityName[255])
 		ForceViewmodelAnimation(client, 18);
 		
 		g_DHookRocketExplode.HookEntity(Hook_Pre, skull, Discard_ExplodePre);
+		
+		char snd[255], conf[255];
+		CF_GetPlayerConfig(client, conf, sizeof(conf));
+		if (CF_GetRandomSound(conf, "sound_discard_skull", snd, sizeof(snd)) != KeyValType_Null)
+		{
+			EmitSoundToAll(snd, skull, _, 110);
+		}
 	}
+}
+
+public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
+{
+	int oldParticle = EntRefToEntIndex(Discard_Particle[entity]);
+	if (IsValidEntity(oldParticle))
+		RemoveEntity(oldParticle);
+		
+	Discard_Particle[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_DISCARD_RED : PARTICLE_DISCARD_BLUE, "bloodpoint"));
+	SetEntData(entity, FindSendPropInfo("CTFProjectile_Rocket", "m_nSkin"), view_as<int>(newTeam) - 2, 1, true);
 }
 
 public Action Discard_StartDecay(Handle decay, int ref)
@@ -274,4 +304,137 @@ public MRESReturn Discard_ExplodePre(int skull)
 	RemoveEntity(skull);
 	
 	return MRES_Supercede;
+}
+
+float Calcium_Damage[MAXPLAYERS + 1] = { 0.0, ... };
+float Calcium_Radius[MAXPLAYERS + 1] = { 0.0, ... };
+float Calcium_ChainRadius[MAXPLAYERS + 1] = { 0.0, ... };
+float Calcium_Ignite[MAXPLAYERS + 1] = { 0.0, ... };
+float Calcium_EndTime[MAXPLAYERS + 1] = { 0.0, ... };
+float Calcium_SkeleDamage[MAXPLAYERS + 1] = { 0.0, ... };
+
+int Calcium_SkeleHealth[MAXPLAYERS + 1] = { 0, ... };
+
+bool Calcium_HitByPlayer[MAXPLAYERS + 1][MAXPLAYERS + 1];
+
+public void Calcium_Activate(int client, char abilityName[255])
+{
+	Calcium_EndTime[client] = GetGameTime() + CF_GetArgF(client, SPOOKMASTER, abilityName, "duration");
+	Calcium_Damage[client] = CF_GetArgF(client, SPOOKMASTER, abilityName, "damage");
+	Calcium_Radius[client] = CF_GetArgF(client, SPOOKMASTER, abilityName, "radius");
+	Calcium_ChainRadius[client] = CF_GetArgF(client, SPOOKMASTER, abilityName, "chain_radius");
+	Calcium_Ignite[client] = CF_GetArgF(client, SPOOKMASTER, abilityName, "ignite");
+	Calcium_SkeleHealth[client] = CF_GetArgI(client, SPOOKMASTER, abilityName, "skele_health");
+	Calcium_SkeleDamage[client] = CF_GetArgF(client, SPOOKMASTER, abilityName, "skele_damage");
+	
+	Calcium_ClearHitStatus(client);
+}
+
+public Action CF_OnTakeDamageAlive_Pre(int &victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
+{
+	if (!IsValidClient(attacker) || !IsValidClient(victim))
+		return Plugin_Continue;
+		
+	Action ReturnValue = Plugin_Continue;
+		
+	if (GetGameTime() <= Calcium_EndTime[attacker] && weapon == GetPlayerWeaponSlot(attacker, 2))
+	{
+		Calcium_ShockPlayer(attacker, victim, Calcium_Radius[attacker], attacker);
+		Calcium_ClearHitStatus(attacker);
+	}
+	
+	if (IsValidEntity(inflictor) && Calcium_SkeleDamage[attacker] > 0.0)
+	{
+		char classname[255];
+		GetEntityClassname(inflictor, classname, sizeof(classname));
+		
+		if (StrContains(classname, "spellbook_skeleton") != -1 || StrContains(classname, "tf_zombie") != -1)
+		{
+			damage = Calcium_SkeleDamage[attacker];
+			ReturnValue = Plugin_Changed;
+		}
+	}
+	
+	return ReturnValue;
+}
+
+public void Calcium_ShockPlayer(int attacker, int victim, float radius, int previousVictim)
+{
+	TFTeam team = TF2_GetClientTeam(attacker);
+	
+	float pos[3];
+	GetClientAbsOrigin(victim, pos);
+	pos[2] += 40.0;
+	
+	if (IsValidClient(previousVictim))
+	{
+		float prevPos[3];
+		GetClientAbsOrigin(previousVictim, prevPos);
+		prevPos[2] += 40.0;
+		
+		SpawnBeam_Vectors(prevPos, pos, 0.5, team == TFTeam_Red ? 255 : 0, 120, team == TFTeam_Red ? 0 : 255, 255, lgtModel, 4.0, 4.1, 1, 4.0);
+		SpawnBeam_Vectors(prevPos, pos, 0.5, team == TFTeam_Red ? 60 : 0, 255, team == TFTeam_Red ? 0 : 60, 150, lgtModel, 2.0, 2.1, 1, 2.0);
+		SpawnBeam_Vectors(prevPos, pos, 0.5, team == TFTeam_Red ? 255 : 0, 120, team == TFTeam_Red ? 0 : 255, 255, lgtModel, 4.0, 4.1, 1, 12.0);
+		SpawnBeam_Vectors(prevPos, pos, 0.5, team == TFTeam_Red ? 60 : 0, 255, team == TFTeam_Red ? 0 : 60, 150, lgtModel, 2.0, 2.1, 1, 8.0);
+		SpawnBeam_Vectors(prevPos, pos, 0.5, team == TFTeam_Red ? 255 : 0, 120, team == TFTeam_Red ? 0 : 255, 255, glowModel, 4.0, 4.1, 1, 4.0);
+		SpawnBeam_Vectors(prevPos, pos, 0.5, team == TFTeam_Red ? 255 : 0, 120, team == TFTeam_Red ? 0 : 255, 255, glowModel, 4.0, 4.1, 1, 12.0);
+		
+		//TODO: This doesn't work and causes lag, figure out a fix maybe? The beams look good so this might not be needed...
+		//SpawnParticle_ControlPoints(pos, prevPos, team == TFTeam_Red ? PARTICLE_CALCIUM_SPARKS_RED : PARTICLE_CALCIUM_SPARKS_BLUE, 3.0);
+	}
+	
+	SDKHooks_TakeDamage(victim, attacker, attacker, Calcium_Damage[attacker], DMG_CLUB | DMG_BLAST | DMG_ALWAYSGIB);
+	TF2_IgnitePlayer(victim, attacker, Calcium_Ignite[attacker]);
+	SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_CALCIUM_SPARKS_RED : PARTICLE_CALCIUM_SPARKS_BLUE, 3.0);
+	Calcium_HitByPlayer[attacker][victim] = true;
+	
+	Handle victims = CF_GenericAOEDamage(attacker, attacker, attacker, 0.0, DMG_GENERIC, radius, pos, 0.0, 0.0, false, false, true);
+	
+	for (int i = 0; i < GetArraySize(victims); i++)
+	{
+		int vic = GetArrayCell(victims, i);
+		if (!Calcium_HitByPlayer[attacker][vic])
+			Calcium_ShockPlayer(attacker, vic, Calcium_ChainRadius[attacker], victim);
+	}
+	
+	delete victims;
+}
+
+public void Calcium_ClearHitStatus(int client)
+{
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		Calcium_HitByPlayer[client][i] = false;
+	}
+}
+
+public void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int deadRinger)
+{
+	if (GetGameTime() <= Calcium_EndTime[attacker])
+	{
+		float pos[3];
+		GetClientAbsOrigin(victim, pos);
+		
+		int skeleton = CreateEntityByName("tf_zombie");
+		if (IsValidEntity(skeleton))
+		{
+			int iTeam = GetClientTeam(attacker);
+			
+			SetEntPropEnt(skeleton, Prop_Send, "m_hOwnerEntity", attacker);
+			SetEntProp(skeleton,    Prop_Send, "m_iTeamNum", iTeam, 1);
+			SetEntProp(skeleton, Prop_Send, "m_nSkin", iTeam - 2);
+			
+			SetVariantInt(iTeam);
+			AcceptEntityInput(skeleton, "TeamNum", -1, -1, 0);
+			
+			SetVariantInt(iTeam);
+			AcceptEntityInput(skeleton, "SetTeam", -1, -1, 0); 
+			
+			SetVariantInt(Calcium_SkeleHealth[attacker]);
+			AcceptEntityInput(skeleton, "SetHealth");
+			
+			DispatchSpawn(skeleton);
+			TeleportEntity(skeleton, pos);
+		}
+	}
 }

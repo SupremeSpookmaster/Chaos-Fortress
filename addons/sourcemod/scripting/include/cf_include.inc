@@ -182,7 +182,7 @@ forward void CF_OnPlayerCallForMedic(int client);
  *
  * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */
-forward Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+forward Action CF_OnTakeDamageAlive_Pre(int &victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
 	float damageForce[3], float damagePosition[3], int &damagecustom);
 	
 /**
@@ -201,7 +201,7 @@ forward Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflicto
  *
  * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */
-forward Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+forward Action CF_OnTakeDamageAlive_Bonus(int &victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
 	float damageForce[3], float damagePosition[3], int &damagecustom);
 
 /**
@@ -220,7 +220,7 @@ forward Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflic
  *
  * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */
-forward Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+forward Action CF_OnTakeDamageAlive_Resistance(int &victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
 	float damageForce[3], float damagePosition[3], int &damagecustom);
 	
 /**
@@ -239,7 +239,7 @@ forward Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &i
  *
  * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */
-forward Action CF_OnTakeDamageAlive_Post(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+forward Action CF_OnTakeDamageAlive_Post(int &victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
 	float damageForce[3], float damagePosition[3], int &damagecustom);
 	
 /**
@@ -419,6 +419,15 @@ forward Action CF_OnUltChargeGiven(int client, float &amt);
  * @return		Plugin_Continue to set ult charge normally, modify amt and return Plugin_Changed to change the client's ult charge, and Plugin_Handled or Plugin_Stop to prevent the ult charge from being set.
  */
 forward Action CF_OnUltChargeApplied(int client, float current, float &amt);
+
+/**
+ * Called when a projectile created by CF_FireGenericRocket has its team changed.
+ *
+ * @param entity		The projectile.
+ * @param newTeam		The projectile's new team.
+ *
+ */
+forward void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam);
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
 ///////////////////////////////////////
