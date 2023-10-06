@@ -12,8 +12,7 @@
 //	- IMMEDIATE PLANS (things I am currently focusing on):
 //		- Spookmaster Bones:
 //			- Figure out why head particles are weird.
-//			- Add model, add sounds, possibly add custom viewmodel for hands.
-//			- skullrocket.mdl's collision box is way too tall which causes it to bump on the top of ceilings *all the time*, fix it.
+//			- Add model, possibly add custom viewmodel for hands.
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Everything that happens on client disconnect.

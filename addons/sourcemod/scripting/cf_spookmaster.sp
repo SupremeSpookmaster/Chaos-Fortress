@@ -22,7 +22,7 @@
 
 #define SOUND_DISCARD_EXPLODE		"misc/halloween/spell_fireball_impact.wav"
 
-#define MODEL_DISCARD				"models/chaos_fortress/spookmaster/skullrocket.mdl"
+#define MODEL_DISCARD				"models/props_mvm/mvm_human_skull_collide.mdl"//"models/chaos_fortress/spookmaster/skullrocket.mdl"
 
 int lgtModel;
 int glowModel;
@@ -231,8 +231,10 @@ public void Discard_Activate(int client, char abilityName[255])
 		Discard_BurnTime[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "afterburn");
 		
 		SetEntityModel(skull, MODEL_DISCARD);
-		DispatchKeyValue(skull, "modelscale", "1.33");
-		Discard_Particle[skull] = EntIndexToEntRef(AttachParticleToEntity(skull, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_DISCARD_RED : PARTICLE_DISCARD_BLUE, "bloodpoint"));
+		DispatchKeyValue(skull, "modelscale", "1.45");
+		Discard_Particle[skull] = EntIndexToEntRef(AttachParticleToEntity(skull, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_DISCARD_RED : PARTICLE_DISCARD_BLUE, "", _, _, _, 5.0));
+		SetEntityRenderColor(skull, TF2_GetClientTeam(client) == TFTeam_Red ? 255 : 0, 120, TF2_GetClientTeam(client) == TFTeam_Blue ? 255 : 0, 255);
+		SetEntityRenderFx(skull, RENDERFX_GLOWSHELL);
 		
 		ForceViewmodelAnimation(client, 18);
 		
@@ -255,6 +257,7 @@ public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
 		
 	Discard_Particle[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_DISCARD_RED : PARTICLE_DISCARD_BLUE, "bloodpoint"));
 	SetEntData(entity, FindSendPropInfo("CTFProjectile_Rocket", "m_nSkin"), view_as<int>(newTeam) - 2, 1, true);
+	SetEntityRenderColor(entity, newTeam == TFTeam_Red ? 255 : 0, 120, newTeam == TFTeam_Blue ? 255 : 0, 255);
 }
 
 public Action Discard_StartDecay(Handle decay, int ref)

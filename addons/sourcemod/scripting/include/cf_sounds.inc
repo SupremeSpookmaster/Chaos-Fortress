@@ -140,6 +140,8 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 	float volume = 1.0;
 	int channel = ultType != 0 ? 4 : 7;
 	bool global = ultType != 0;
+	int maxPitch = 100;
+	int minPitch = 100;
 	
 	bool CanPlay = true;
 	
@@ -171,6 +173,9 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 				global = GetBoolFromConfigMap(section, "global", false);
 				
 			float chance = GetFloatFromConfigMap(section, "chance", 1.0);
+			
+			minPitch = GetIntFromConfigMap(section, "pitch_min", 100);
+			maxPitch = GetIntFromConfigMap(section, "pitch_max", 100);
 				
 			CanPlay = GetRandomFloat(0.0, 1.0) <= chance;
 		}
@@ -190,11 +195,11 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 		{
 			case 0:	//Everyone
 			{
-				EmitSoundToAll(snd, global ? SOUND_FROM_PLAYER : source, CF_SndChans[channel], level, _, volume);
+				EmitSoundToAll(snd, global ? SOUND_FROM_PLAYER : source, CF_SndChans[channel], level, _, volume, GetRandomInt(minPitch, maxPitch));
 			}
 			case 1:	//Self only
 			{
-				EmitSoundToClient(source, snd, _, CF_SndChans[channel], level, _, volume);
+				EmitSoundToClient(source, snd, _, CF_SndChans[channel], level, _, volume, GetRandomInt(minPitch, maxPitch));
 			}
 			case 2: //Allies only
 			{
@@ -212,7 +217,7 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 			{
 				if (IsValidMulti(i, false, _, true, targTeam) && i != source)
 				{
-					EmitSoundToClient(i, snd, global ? SOUND_FROM_PLAYER : source, CF_SndChans[channel], level, _, volume);
+					EmitSoundToClient(i, snd, global ? SOUND_FROM_PLAYER : source, CF_SndChans[channel], level, _, volume, GetRandomInt(minPitch, maxPitch));
 				}
 			}
 		}

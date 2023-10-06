@@ -120,12 +120,13 @@ public void CFA_MakeForwards()
 public void CFA_OGF()
 {
 	int entity = -1;
-	while ((entity = FindEntityByClassname(entity, "tf_projectile_*") != -1))
+	while ((entity = FindEntityByClassname(entity, "tf_projectile_*")) != -1)
 	{
 		if (i_GenericProjectileOwner[entity] != -1)
 		{
 			int currentOwner = GetClientOfUserId(i_GenericProjectileOwner[entity]);
 			int newOwner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
+			
 			if (newOwner != currentOwner && IsValidClient(currentOwner) && IsValidClient(newOwner))
 			{
 				if (TF2_GetClientTeam(currentOwner) != TF2_GetClientTeam(newOwner))
@@ -2065,8 +2066,6 @@ public Native_CF_FireGenericRocket(Handle plugin, int numParams)
 		rocketVel[2] = vBuffer[2]*velocity;
 			
 		TeleportEntity(rocket, spawnLoc, angles, rocketVel);
-		
-		i_GenericProjectileOwner[rocket] = GetClientUserId(client);
 		
 		return rocket;
 	}
