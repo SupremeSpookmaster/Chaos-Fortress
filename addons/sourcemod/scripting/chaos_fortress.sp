@@ -12,25 +12,36 @@
 //	- IMMEDIATE PLANS (things I am currently focusing on):
 //		- Spookmaster Bones:
 //			- Figure out why head particles are weird.
-//			- Add model, possibly add custom viewmodel for hands.
+//			- Add custom viewmodel for hands.
+//			- Add following sounds:
+//				- Ult activation
+//				- Soul Absorption, Soul Discard, and Soul Surge
+//
+//	- BALANCE CHANGES (things to keep in mind for balancing)
+//		- Mercenary:
+//			- Required ult charge may be a bit low?
+//		- Spookmaster Bones:
+//			- Required ult charge is definitely too low, skeletons spawned by ult kills allow ults to snowball into each other.
+//			- Possibly remove the heal on kill? He has too much sustain in group fights upon reaching max level, though this could just be because random crits.
+//			- Any kill will grant a soul, not just melee. This allows lazy and unskilled players to sit at a distance and fish for souls risk-free with Skull Servants.
+//				- Maybe make players drop soul pickups that the SB player needs to manually pick up to gain the soul?
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
-//	- TODO: Everything that happens on client disconnect.
-//			- Ult charge set to 0
-//			- Resources set to 0
+//	- TODO: Everything that happens on client disconnect (possibly already covered, not sure).
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
+//	- TODO: Finalize the wiki by updating each page with all of the changes.
 //	- TODO: Detect healing from base game sources (mediguns, dispensers, crusader's crossbow bolts, mad milk) and give resources/ult charge for it.
-//	- TODO: Translations(?)
+//	- TODO: Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
-//	- None (currently).
+//	- Translations
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
-//	- MINOR BUG: For some reason, player ragdolls get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? This has no effect on gameplay but it's honestly fucking baffling.
+//	- MINOR BUG: For some reason, players get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? It's invisible while alive but becomes visible on death. This has no effect on gameplay but it's really ugly. Honestly baffling.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
-//	- If you die with a Mannpower powerup, you drop it. This allows players to pick them up. Ruh roh!
+//	- That soundhook lag is back...
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

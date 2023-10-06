@@ -1032,7 +1032,6 @@ public void CF_ResetMadeStatus(int client)
 	bool IsNewCharacter = !StrEqual(conf, s_PreviousCharacter[client]) || b_IsDead[client];
 	if (IsNewCharacter)
 		CF_UnmakeCharacter(client, true);
-	CPrintToChat(client, "New character: %b", IsNewCharacter);
 		
 	CF_SetPlayerConfig(client, conf);
 	SetClientCookie(client, c_DesiredCharacter, conf);
@@ -1102,6 +1101,8 @@ public void CF_ResetMadeStatus(int client)
 		CFC_AttachParticles(client, particles, IsNewCharacter);
 	}
  	
+ 	CPrintToChat(client, "Old: %s | new: %s", s_PreviousCharacter[client], conf);
+ 	
  	if (!StrEqual(conf, s_PreviousCharacter[client]))	//We are respawning as a new character, default to spawn_intro
  	{
  		bool played = CF_PlayRandomSound(client, conf, "sound_spawn_intro");
@@ -1109,6 +1110,7 @@ public void CF_ResetMadeStatus(int client)
  			CF_PlayRandomSound(client, "", "sound_spawn_neutral");
  		
  		CFA_ReduceUltCharge_CharacterSwitch(client);
+ 		CPrintToChat(client, "You became a new character");
  	}
  	else if (b_IsDead[client])
  	{
@@ -1128,6 +1130,8 @@ public void CF_ResetMadeStatus(int client)
  		
  		if (!played)
  			CF_PlayRandomSound(client, "", "sound_spawn_neutral");
+ 			
+ 		CPrintToChat(client, "You respawned as your previous character while dead");
  	}
  	
  	int r = 255;
@@ -1581,7 +1585,7 @@ public void CF_ResetMadeStatus(int client)
  	CF_UnblockAbilitySlot(client, CF_AbilityType_M2);
  	CF_UnblockAbilitySlot(client, CF_AbilityType_M3);
  	CF_UnblockAbilitySlot(client, CF_AbilityType_Reload);
- 	CF_GetPlayerConfig(client, s_PreviousCharacter[client], 255);
+ 	//CF_GetPlayerConfig(client, s_PreviousCharacter[client], 255);
  	CF_SetPlayerConfig(client, "");
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	b_CharacterApplied[client] = false;

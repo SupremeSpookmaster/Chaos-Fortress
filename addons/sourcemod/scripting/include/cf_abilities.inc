@@ -483,8 +483,6 @@ public void CFA_InitializeResources(int client, ConfigMap map, bool NewChar)
 			
 			bool IgnoreResupply = GetBoolFromConfigMap(subsection, "ignore_resupply", true);
 			
-			CPrintToChat(client, "Ignore resupply: %b", IgnoreResupply);
-			
 			if (!IgnoreResupply || NewChar)
 			{
 				if (preserve > start && !NewChar)
@@ -938,7 +936,7 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 				
 				for (int i = 1; i <= MaxClients; i++)
 				{
-					if (IsValidMulti(i, true, true))
+					if (i != client && IsValidMulti(i, true, true))
 					{ 
 						float otherPos[3];
 						GetClientAbsOrigin(i, otherPos);
@@ -2128,10 +2126,6 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 						
 						SDKHooks_TakeDamage(i, inflictor, attacker, realDMG, damageType, weapon);
 						PushArrayCell(ReturnValue, i);
-					}
-					else
-					{
-						CPrintToChatAll("Did not pass los check");
 					}
 				}
 			}
