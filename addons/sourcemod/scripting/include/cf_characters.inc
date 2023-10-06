@@ -1101,8 +1101,6 @@ public void CF_ResetMadeStatus(int client)
 		CFC_AttachParticles(client, particles, IsNewCharacter);
 	}
  	
- 	CPrintToChat(client, "Old: %s | new: %s", s_PreviousCharacter[client], conf);
- 	
  	if (!StrEqual(conf, s_PreviousCharacter[client]))	//We are respawning as a new character, default to spawn_intro
  	{
  		bool played = CF_PlayRandomSound(client, conf, "sound_spawn_intro");
@@ -1110,7 +1108,6 @@ public void CF_ResetMadeStatus(int client)
  			CF_PlayRandomSound(client, "", "sound_spawn_neutral");
  		
  		CFA_ReduceUltCharge_CharacterSwitch(client);
- 		CPrintToChat(client, "You became a new character");
  	}
  	else if (b_IsDead[client])
  	{
@@ -1130,8 +1127,6 @@ public void CF_ResetMadeStatus(int client)
  		
  		if (!played)
  			CF_PlayRandomSound(client, "", "sound_spawn_neutral");
- 			
- 		CPrintToChat(client, "You respawned as your previous character while dead");
  	}
  	
  	int r = 255;

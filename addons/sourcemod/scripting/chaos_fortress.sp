@@ -11,20 +11,16 @@
 //
 //	- IMMEDIATE PLANS (things I am currently focusing on):
 //		- Spookmaster Bones:
-//			- Figure out why head particles are weird.
 //			- Add custom viewmodel for hands.
-//			- Add following sounds:
-//				- Ult activation
-//				- Soul Absorption, Soul Discard, and Soul Surge
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		- Mercenary:
 //			- Required ult charge may be a bit low?
 //		- Spookmaster Bones:
 //			- Required ult charge is definitely too low, skeletons spawned by ult kills allow ults to snowball into each other.
-//			- Possibly remove the heal on kill? He has too much sustain in group fights upon reaching max level, though this could just be because random crits.
-//			- Any kill will grant a soul, not just melee. This allows lazy and unskilled players to sit at a distance and fish for souls risk-free with Skull Servants.
-//				- Maybe make players drop soul pickups that the SB player needs to manually pick up to gain the soul?
+//			- Any kill will grant a soul, not just melee. This encourages sitting at a distance and fishing for souls risk-free with Skull Servants instead of getting in and fighting.
+//				- Make players drop timed soul pickups that the SB player needs to manually pick up to gain the soul. Upon being picked up, these souls begin to heal the user for 75 hp over the span of 3s.
+//					- This is a fairly drastic change. Only do this if people think SB is overpowered.
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Everything that happens on client disconnect (possibly already covered, not sure).
@@ -37,7 +33,8 @@
 //	- Translations
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
-//	- MINOR BUG: For some reason, players get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? It's invisible while alive but becomes visible on death. This has no effect on gameplay but it's really ugly. Honestly baffling.
+//	- For some reason, players get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? It's invisible while alive but becomes visible on death. This has no effect on gameplay but it's really ugly. Honestly baffling.
+//	- When you respawn your character gets applied twice, this is suboptimal and messy but does not cause any lag.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.

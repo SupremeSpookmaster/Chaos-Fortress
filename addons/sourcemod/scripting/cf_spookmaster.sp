@@ -381,9 +381,6 @@ public void Calcium_ShockPlayer(int attacker, int victim, float radius, int prev
 		SpawnBeam_Vectors(prevPos, pos, 0.5, team == TFTeam_Red ? 60 : 0, 255, team == TFTeam_Red ? 0 : 60, 150, lgtModel, 2.0, 2.1, 1, 8.0);
 		SpawnBeam_Vectors(prevPos, pos, 0.5, team == TFTeam_Red ? 255 : 0, 120, team == TFTeam_Red ? 0 : 255, 255, glowModel, 4.0, 4.1, 1, 4.0);
 		SpawnBeam_Vectors(prevPos, pos, 0.5, team == TFTeam_Red ? 255 : 0, 120, team == TFTeam_Red ? 0 : 255, 255, glowModel, 4.0, 4.1, 1, 12.0);
-		
-		//TODO: This doesn't work and causes lag, figure out a fix maybe? The beams look good so this might not be needed...
-		//SpawnParticle_ControlPoints(pos, prevPos, team == TFTeam_Red ? PARTICLE_CALCIUM_SPARKS_RED : PARTICLE_CALCIUM_SPARKS_BLUE, 3.0);
 	}
 	
 	SDKHooks_TakeDamage(victim, attacker, attacker, Calcium_Damage[attacker], DMG_CLUB | DMG_BLAST | DMG_ALWAYSGIB);
