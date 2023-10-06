@@ -30,7 +30,7 @@
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
-//	- SPOOKMASTER BONES: The head particles used to indicate the number of souls you have absorbed get overridden by the hand particles.
+//	- If you die with a Mannpower powerup, you drop it. This allows players to pick them up. Ruh roh!
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
