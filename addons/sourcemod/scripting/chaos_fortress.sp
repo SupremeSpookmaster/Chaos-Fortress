@@ -10,8 +10,12 @@
 //#define TESTING
 //
 //	- IMMEDIATE PLANS (things I am currently focusing on):
-//		- Spookmaster Bones:
-//			- Add custom viewmodel for hands.
+//		- Orbital Sniper:
+//			- Will need a passive abilities pack, something like "orbital_passives" for his sniper rifle's tracer beam and height advantage damage boost
+//			- generic_thruster for his reload
+//			- orbital_taser for capper M2
+//			- orbital_ult for ultimate
+//			- orbital_gravity for M3
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		- Mercenary:
@@ -28,6 +32,7 @@
 //	- TODO: Finalize the wiki by updating each page with all of the changes.
 //	- TODO: Detect healing from base game sources (mediguns, dispensers, crusader's crossbow bolts, mad milk) and give resources/ult charge for it.
 //	- TODO: Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
+//	- TODO: Make natives which share the names of FF2's natives and do the same things, so porting FF2 plugins is as simple as just changing the include file and recompiling.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Translations

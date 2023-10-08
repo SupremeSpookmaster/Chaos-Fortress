@@ -236,6 +236,7 @@ public void CF_OnPluginStart()
  		for (int i = 1; i <= MaxClients; i++)
  		{
  			CF_SetKillstreak(i, 0, 0, false);
+ 			CF_UnmakeCharacter(i, false);
  		}
  	}
  	
