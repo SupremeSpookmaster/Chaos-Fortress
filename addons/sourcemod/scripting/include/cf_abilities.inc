@@ -67,7 +67,8 @@ GlobalForward g_UltChargeGiven;
 GlobalForward g_ResourceApplied;
 GlobalForward g_UltChargeApplied;
 GlobalForward g_ProjectileTeamChanged;
-GlobalForward g_Collision;
+GlobalForward g_PassFilter;
+GlobalForward g_ShouldCollide;
 
 int i_GenericProjectileOwner[2049] = { -1, ... };
 
@@ -114,7 +115,8 @@ public void CFA_MakeForwards()
 	g_ResourceApplied = new GlobalForward("CF_OnSpecialResourceApplied", ET_Event, Param_Cell, Param_Float, Param_FloatByRef);
 	g_UltChargeApplied = new GlobalForward("CF_OnUltChargeApplied", ET_Event, Param_Cell, Param_Float, Param_FloatByRef);
 	g_ProjectileTeamChanged = new GlobalForward("CF_OnGenericProjectileTeamChanged", ET_Ignore, Param_Cell, Param_Cell);
-	g_Collision = new GlobalForward("CF_OnCollision", ET_Event, Param_Cell, Param_Cell, Param_CellByRef);
+	g_PassFilter = new GlobalForward("CF_OnPassFilter", ET_Event, Param_Cell, Param_Cell, Param_CellByRef);
+	g_ShouldCollide = new GlobalForward("CF_OnShouldCollide", ET_Event, Param_Cell, Param_Cell, Param_CellByRef);
 }
 
 public void CFA_OGF()
@@ -2135,6 +2137,25 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 	return ReturnValue;
 }
 
+public Action CH_ShouldCollide(int ent1, int ent2, bool &result)
+{
+	Action ReturnVal = Plugin_Continue;
+	bool CallForward = true;
+	
+	if (CallForward)
+	{
+		Call_StartForward(g_ShouldCollide);
+		
+		Call_PushCell(ent1);
+		Call_PushCell(ent2);
+		Call_PushCellRef(result);
+		
+		Call_Finish(ReturnVal);
+	}
+	
+	return ReturnVal;
+}
+
 public Action CH_PassFilter(int ent1, int ent2, bool &result)
 {
 	Action ReturnVal = Plugin_Continue;
@@ -2164,7 +2185,7 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 	
 	if (CallForward)
 	{
-		Call_StartForward(g_Collision);
+		Call_StartForward(g_PassFilter);
 		
 		Call_PushCell(ent1);
 		Call_PushCell(ent2);

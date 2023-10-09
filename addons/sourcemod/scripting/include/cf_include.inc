@@ -430,7 +430,7 @@ forward Action CF_OnUltChargeApplied(int client, float current, float &amt);
 forward void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam);
 
 /**
- * Called when two entities collide, after all of Chaos Fortress' own tests. Using this instead of CH_PassFilter guarantees your plugin's collision logic will not conflict with that of Chaos Fortress.
+ * Called when CollisionHook's CH_PassFilter gets called, after all of Chaos Fortress' own tests. Using this instead of CH_PassFilter guarantees your plugin's collision logic will not conflict with that of Chaos Fortress.
  *
  * @param ent1			The first entity.
  * @param ent2			The second entity.
@@ -438,7 +438,18 @@ forward void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam);
  *
  * @return Set result to false and return Plugin_Changed to prevent collision, otherwise return Plugin_Continue.
  */
-forward Action CF_OnCollision(int ent1, int ent2, bool &result);
+forward Action CF_OnPassFilter(int ent1, int ent2, bool &result);
+
+/**
+ * Called when CollisionHook's CH_ShouldCollide gets called, after all of Chaos Fortress' own tests. Using this instead of CH_ShouldCollide guarantees your plugin's collision logic will not conflict with that of Chaos Fortress.
+ *
+ * @param ent1			The first entity.
+ * @param ent2			The second entity.
+ * @param result		Set to false and return Plugin_Changed to prevent collision, ignore otherwise.
+ *
+ * @return Set result to false and return Plugin_Changed to prevent collision, otherwise return Plugin_Continue.
+ */
+forward Action CF_OnShouldCollide(int ent1, int ent2, bool &result);
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
 ///////////////////////////////////////

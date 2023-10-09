@@ -22,7 +22,10 @@
 //			- Required ult charge is definitely too low, skeletons spawned by ult kills allow ults to snowball into each other.
 //			- Any kill will grant a soul, not just melee. This encourages sitting at a distance and fishing for souls risk-free with Skull Servants instead of getting in and fighting.
 //				- Make players drop timed soul pickups that the SB player needs to manually pick up to gain the soul. Upon being picked up, these souls begin to heal the user for 75 hp over the span of 3s.
-//					- This is a fairly drastic change. Only do this if people think SB is overpowered.
+//					- This is a fairly drastic change. Only do this if people think SB is overpowered (which is entirely possible).
+//		- Orbital Sniper:
+//			- Headshots deal WAY too much damage, I don't want Orbital to be able to one-shot tanks.
+//				- May need to write a plugin to reduce headshot damage.
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Everything that happens on client disconnect (possibly already covered, not sure).
@@ -31,18 +34,19 @@
 //	- TODO: Detect healing from base game sources (mediguns, dispensers, crusader's crossbow bolts, mad milk) and give resources/ult charge for it.
 //	- TODO: Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
 //	- TODO: Make natives which share the names of FF2's natives and do the same things, so porting FF2 plugins is as simple as just changing the include file and recompiling.
+//	- TODO: Add a "chat_messages" section to game_rules.cfg which allows server owners to send messages every X seconds.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Translations
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
 //	- For some reason, players get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? It's invisible while alive but becomes visible on death. This has no effect on gameplay but it's really ugly. Honestly baffling.
-//	- When you respawn your character gets applied twice, this is suboptimal and messy but does not cause any lag.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //	- That soundhook lag is back...
 //	- Starting resources are broken. Switching from one character who uses the resource system to another fixes it, so does dying and respawning.
+//	- ORBITAL SNIPER: Rifle cannot pick up ammo...
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
@@ -146,7 +150,7 @@ public void PlayerReset(Event gEvent, const char[] sEvName, bool bDontBroadcast)
 		//Do it twice in a row because otherwise your viewmodels get screwed the first time you spawn.
 		//I have no clue why. Yes, I tried delaying the class change by a frame. No, it did not work.
 		//Yes, I am aware this is EXTREMELY suboptimal, no I am not happy I had to do it, but I'm sick of trying to make this thing work seamlessly so I just tossed in a hack and called it a day.
-		//CF_MakeCharacter(client, false);
+		CF_MakeCharacter(client, false);
 		CF_MakeCharacter(client);
 	}
 	
