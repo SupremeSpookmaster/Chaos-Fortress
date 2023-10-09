@@ -182,7 +182,7 @@ forward void CF_OnPlayerCallForMedic(int client);
  *
  * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */
-forward Action CF_OnTakeDamageAlive_Pre(int &victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+forward Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
 	float damageForce[3], float damagePosition[3], int &damagecustom);
 	
 /**
@@ -201,7 +201,7 @@ forward Action CF_OnTakeDamageAlive_Pre(int &victim, int &attacker, int &inflict
  *
  * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */
-forward Action CF_OnTakeDamageAlive_Bonus(int &victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+forward Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
 	float damageForce[3], float damagePosition[3], int &damagecustom);
 
 /**
@@ -220,7 +220,7 @@ forward Action CF_OnTakeDamageAlive_Bonus(int &victim, int &attacker, int &infli
  *
  * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */
-forward Action CF_OnTakeDamageAlive_Resistance(int &victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+forward Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
 	float damageForce[3], float damagePosition[3], int &damagecustom);
 	
 /**
@@ -239,7 +239,7 @@ forward Action CF_OnTakeDamageAlive_Resistance(int &victim, int &attacker, int &
  *
  * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */
-forward Action CF_OnTakeDamageAlive_Post(int &victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+forward Action CF_OnTakeDamageAlive_Post(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
 	float damageForce[3], float damagePosition[3], int &damagecustom);
 	
 /**

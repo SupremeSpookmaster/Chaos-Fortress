@@ -5,13 +5,13 @@ GlobalForward g_PostDamageForward;
 
 public void CFDMG_MakeForwards()
 {
-	g_PreDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Pre", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_FloatByRef,
+	g_PreDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Pre", ET_Event, Param_Cell, Param_CellByRef, Param_CellByRef, Param_FloatByRef,
 											Param_CellByRef, Param_CellByRef, Param_Array, Param_Array, Param_CellByRef);
-	g_BonusDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Bonus", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_FloatByRef,
+	g_BonusDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Bonus", ET_Event, Param_Cell, Param_CellByRef, Param_CellByRef, Param_FloatByRef,
 											Param_CellByRef, Param_CellByRef, Param_Array, Param_Array, Param_CellByRef);
-	g_ResistanceDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Resistance", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_FloatByRef,
+	g_ResistanceDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Resistance", ET_Event, Param_Cell, Param_CellByRef, Param_CellByRef, Param_FloatByRef,
 											Param_CellByRef, Param_CellByRef, Param_Array, Param_Array, Param_CellByRef);
-	g_PostDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Post", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_FloatByRef,
+	g_PostDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Post", ET_Event, Param_Cell, Param_CellByRef, Param_CellByRef, Param_FloatByRef,
 											Param_CellByRef, Param_CellByRef, Param_Array, Param_Array, Param_CellByRef);
 }
 
@@ -65,12 +65,12 @@ public Action CFDMG_OnTakeDamageAlive(victim, &attacker, &inflictor, &Float:dama
 	return ReturnValue;
 }
 
-public Action CFDMG_CallDamageForward(GlobalForward forwardToCall, &victim, &attacker, &inflictor, &Float:damage, &damagetype, &weapon,
+public Action CFDMG_CallDamageForward(GlobalForward forwardToCall, victim, &attacker, &inflictor, &Float:damage, &damagetype, &weapon,
 	Float:damageForce[3], Float:damagePosition[3], &damagecustom)
 {
 	Call_StartForward(forwardToCall);
 	
-	Call_PushCellRef(victim);
+	Call_PushCell(victim);
 	Call_PushCellRef(attacker);
 	Call_PushCellRef(inflictor);
 	Call_PushFloatRef(damage);

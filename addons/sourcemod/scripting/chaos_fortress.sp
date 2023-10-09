@@ -11,11 +11,9 @@
 //
 //	- IMMEDIATE PLANS (things I am currently focusing on):
 //		- Orbital Sniper:
-//			- Will need a passive abilities pack, something like "orbital_passives" for his sniper rifle's tracer beam and height advantage damage boost
-//			- generic_thruster for his reload
 //			- orbital_taser for capper M2
 //			- orbital_ult for ultimate
-//			- orbital_gravity for M3
+//			- Use the voicefx plugin's DSP things for his voice to reduce downloads
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		- Mercenary:
@@ -44,6 +42,7 @@
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //	- That soundhook lag is back...
+//	- Starting resources are broken. Switching from one character who uses the resource system to another fixes it, so does dying and respawning.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
@@ -147,7 +146,7 @@ public void PlayerReset(Event gEvent, const char[] sEvName, bool bDontBroadcast)
 		//Do it twice in a row because otherwise your viewmodels get screwed the first time you spawn.
 		//I have no clue why. Yes, I tried delaying the class change by a frame. No, it did not work.
 		//Yes, I am aware this is EXTREMELY suboptimal, no I am not happy I had to do it, but I'm sick of trying to make this thing work seamlessly so I just tossed in a hack and called it a day.
-		CF_MakeCharacter(client, false);
+		//CF_MakeCharacter(client, false);
 		CF_MakeCharacter(client);
 	}
 	
@@ -193,6 +192,7 @@ public Action CF_ReloadCharacters(int client, int args)
 public void OnClientDisconnect(int client)
 {
 	CF_UnmakeCharacter(client, false);
+	CFC_Disconnect(client);
 }
 
 #if defined DEBUG_ONTAKEDAMAGE

@@ -89,6 +89,7 @@ bool b_ReadingLore[MAXPLAYERS + 1] = { false, ... };
 bool b_IsDead[MAXPLAYERS + 1] = { false, ... };
 bool b_CharacterParticlePreserved[2049] = { false, ... };
 bool b_WearableIsPreserved[2049] = { false, ... };
+bool b_FirstSpawn[MAXPLAYERS + 1] = { true, ... };
 
 char s_CharacterConfig[MAXPLAYERS+1][255];	//The config currently used for this player's character. If empty: that player is not a character.
 char s_CharacterConfigInMenu[MAXPLAYERS+1][255];	//The config currently used this player's info menu.
@@ -101,6 +102,11 @@ Handle c_DesiredCharacter;
 //Queue CF_CharacterParticles[MAXPLAYERS + 1];
 
 float f_Speed[MAXPLAYERS + 1];
+
+public void CFC_Disconnect(int client)
+{
+	b_FirstSpawn[client] = true;
+}
 
 public void CFC_MakeNatives()
 {
@@ -1002,7 +1008,7 @@ public void CF_ResetMadeStatus(int client)
  *
  * @param client			The client to convert.
  */
- void CF_MakeCharacter(int client, bool callForward = true)
+ void CF_MakeCharacter(int client, bool callForward = true, bool ForceNewCharStatus = false)
  {
  	if (!IsValidClient(client))
  		return;
@@ -1015,7 +1021,7 @@ public void CF_ResetMadeStatus(int client)
 	GetClientCookie(client, c_DesiredCharacter, conf, sizeof(conf));
 	if (!CF_CharacterExists(conf) || IsFakeClient(client))
 	{
-		if (!CF_CharacterExists(s_DefaultCharacter))
+		if (!CF_CharacterExists(s_DefaultCharacter) || IsFakeClient(client))	//Choose a random character if the default character does not exist, or the client is a bot
 		{
 			GetArrayString(CF_Characters_Configs, GetRandomInt(0, GetArraySize(CF_Characters_Configs) - 1), conf, sizeof(conf));
 		}
@@ -1029,7 +1035,7 @@ public void CF_ResetMadeStatus(int client)
 	if (map == null)
 		return;
 		
-	bool IsNewCharacter = !StrEqual(conf, s_PreviousCharacter[client]) || b_IsDead[client];
+	bool IsNewCharacter = !StrEqual(conf, s_PreviousCharacter[client]) || b_IsDead[client] || b_FirstSpawn[client] || ForceNewCharStatus;
 	if (IsNewCharacter)
 		CF_UnmakeCharacter(client, true);
 		
@@ -1154,6 +1160,8 @@ public void CF_ResetMadeStatus(int client)
  	
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
+ 	
+ 	b_FirstSpawn[client] = false;
  	
  	if (callForward)
  	{
