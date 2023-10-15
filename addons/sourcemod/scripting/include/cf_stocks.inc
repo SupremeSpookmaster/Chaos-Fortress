@@ -638,6 +638,49 @@ stock int SpawnParticle(float origin[3], char particle[255], float duration = 0.
 	return -1;
 }
 
+/**
+ * Spawns a shaker at a given location.
+ *
+ * @param spawnLoc		The shaker's origin.
+ * @param amp			The shaker's amplitude.
+ * @param radius		The shaker's radius.
+ * @param duration		The shaker's duration.
+ * @param frequency		The shaker's frequency.
+ * @param spawnflags	The shaker's spawn flags.
+ *
+ * @error Invalid client index.
+ */
+stock void SpawnShaker(float spawnLoc[3], int amp, int radius, int duration, int frequency, int spawnflags)
+{
+	int shaker = CreateEntityByName("env_shake");
+	if(shaker != -1)
+	{
+		char StrConversion[16] = "";
+		
+		Format(StrConversion, sizeof(StrConversion), "%i", amp);
+		DispatchKeyValue(shaker, "amplitude", StrConversion);
+		
+		Format(StrConversion, sizeof(StrConversion), "%i", radius);
+		DispatchKeyValue(shaker, "radius", StrConversion);
+		
+		Format(StrConversion, sizeof(StrConversion), "%i", duration);
+		DispatchKeyValue(shaker, "duration", StrConversion);
+		
+		Format(StrConversion, sizeof(StrConversion), "%i", frequency);
+		DispatchKeyValue(shaker, "frequency", StrConversion);
+		
+		Format(StrConversion, sizeof(StrConversion), "%i", spawnflags);
+		DispatchKeyValue(shaker, "spawnflags", StrConversion);
+		
+		DispatchKeyValueVector(shaker, "origin", spawnLoc);
+		
+		DispatchSpawn(shaker);
+		AcceptEntityInput(shaker, "StartShake");
+		
+		CreateTimer(float(duration), Timer_RemoveEntity, EntIndexToEntRef(shaker), TIMER_FLAG_NO_MAPCHANGE);
+	}
+}
+
 stock int GetIntFromConfigMap(ConfigMap map, char[] path, int defaultValue)
 {
 	char value[255];

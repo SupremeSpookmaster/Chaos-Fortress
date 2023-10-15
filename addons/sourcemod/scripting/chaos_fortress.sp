@@ -11,7 +11,6 @@
 //
 //	- IMMEDIATE PLANS (things I am currently focusing on):
 //		- Orbital Sniper:
-//			- orbital_taser for capper M2
 //			- orbital_ult for ultimate
 //			- Use the voicefx plugin's DSP things for his voice to reduce downloads
 //
@@ -24,8 +23,8 @@
 //				- Make players drop timed soul pickups that the SB player needs to manually pick up to gain the soul. Upon being picked up, these souls begin to heal the user for 75 hp over the span of 3s.
 //					- This is a fairly drastic change. Only do this if people think SB is overpowered (which is entirely possible).
 //		- Orbital Sniper:
-//			- Headshots deal WAY too much damage, I don't want Orbital to be able to one-shot tanks.
-//				- May need to write a plugin to reduce headshot damage.
+//			- There's not a lot of viable counterplay against an Orbital hugging the skybox. 
+//				- This will be solved with future characters who also have decent ranged choices.
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Everything that happens on client disconnect (possibly already covered, not sure).
@@ -44,9 +43,8 @@
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
-//	- That soundhook lag is back...
-//	- Starting resources are broken. Switching from one character who uses the resource system to another fixes it, so does dying and respawning.
-//	- ORBITAL SNIPER: Rifle cannot pick up ammo...
+//	- ORBITAL SNIPER: Rifle inexplicably cannot pick up ammo...
+//	- ORBITAL SNIPER: Rifle tracer gets blocked by trigger brushes (spawn doors, control points, etc).
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

@@ -9,21 +9,32 @@
 #define THRUSTER	"orbital_thruster"
 #define GRAVITY		"orbital_gravity"
 #define TASER		"orbital_taser"
+#define STRIKE		"orbital_strike"
+#define SHOOT_VFX	"orbital_vfx"
 
 int lgtModel;
 int glowModel;
 int laserModel;
 
-#define PARTICLE_GRAVITY_RED		"teleporter_red_charged_level3"
-#define PARTICLE_GRAVITY_BLUE		"teleporter_blue_charged_level3"
+#define PARTICLE_GRAVITY_RED			"teleporter_red_charged_level3"
+#define PARTICLE_GRAVITY_BLUE			"teleporter_blue_charged_level3"
 #define PARTICLE_THRUSTER_ATTACHMENT	"explosion_trailFire"
 #define PARTICLE_THRUSTER_BLASTOFF		"heavy_ring_of_fire"
 #define PARTICLE_TASER_RED				"drg_cow_rockettrail_normal"
 #define PARTICLE_TASER_BLUE				"drg_cow_rockettrail_normal_blue"
-#define PARTICLE_TASER_BLAST_RED				"drg_cow_explosion_sparkles_charged"
-#define PARTICLE_TASER_BLAST_BLUE				"drg_cow_explosion_sparkles_charged_blue"
-#define SOUND_TASER_BLAST		"misc/halloween/spell_lightning_ball_impact.wav"
-#define MODEL_TASER		"models/weapons/w_models/w_drg_ball.mdl"
+#define PARTICLE_TASER_BLAST_RED		"drg_cow_explosion_sparkles_charged"
+#define PARTICLE_TASER_BLAST_BLUE		"drg_cow_explosion_sparkles_charged_blue"
+#define PARTICLE_TRACER_RED				"raygun_projectile_red"
+#define PARTICLE_TRACER_BLUE			"raygun_projectile_blue"
+#define PARTICLE_TRACER_RED_FULL		"raygun_projectile_red_crit"
+#define PARTICLE_TRACER_BLUE_FULL		"raygun_projectile_blue_crit"
+#define PARTICLE_SHOOT_BLUE				"drg_cow_explosioncore_charged_blue"
+#define PARTICLE_SHOOT_RED				"drg_cow_explosioncore_charged"
+
+#define SOUND_TASER_BLAST				"misc/halloween/spell_lightning_ball_impact.wav"
+#define SOUND_GRAVITY_LOOP				"player/taunt_bumper_car_go_loop.wav"
+
+#define MODEL_TASER						"models/weapons/w_models/w_drg_ball.mdl"
 
 public void OnMapStart()
 {
@@ -33,9 +44,11 @@ public void OnMapStart()
 	PrecacheModel(MODEL_TASER);
 	
 	PrecacheSound(SOUND_TASER_BLAST);
+	PrecacheSound(SOUND_GRAVITY_LOOP);
 }
 
 DynamicHook g_DHookRocketExplode;
+
 public void OnPluginStart()
 {
 	GameData gamedata = LoadGameConfigFile("chaos_fortress");
@@ -53,6 +66,9 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 		
 	if (StrContains(abilityName, TASER) != -1)
 		Taser_Activate(client, abilityName);
+		
+	if (StrContains(abilityName, SHOOT_VFX) != -1)
+		VFX_Activate(client, abilityName);
 }
 
 public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
@@ -85,16 +101,45 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 	return ReturnValue;
 }
 
+bool Tracer_FullyCharged[MAXPLAYERS + 1] = { false, ... };
+
 public void TF2_OnConditionAdded(int client, TFCond condition)
 {
 	if (condition == TFCond_Zoomed && CF_HasAbility(client, ORBITAL, TRACER))
-		SDKHook(client, SDKHook_PreThink, Tracer_PreThink);
+		Tracer_Activate(client);
 }
 
 public void TF2_OnConditionRemoved(int client, TFCond condition)
 {
 	if (condition == TFCond_Zoomed && CF_HasAbility(client, ORBITAL, TRACER))
-		SDKUnhook(client, SDKHook_PreThink, Tracer_PreThink);
+		Tracer_Disable(client);
+}
+
+public void Tracer_Activate(int client)
+{
+	Tracer_FullyCharged[client] = false;
+	SDKHook(client, SDKHook_PreThink, Tracer_PreThink);
+	
+	char snd[255], conf[255];
+	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	if (CF_GetRandomSound(conf, "sound_tracer_scope", snd, sizeof(snd)) != KeyValType_Null)
+	{
+		PrecacheSound(snd);
+		EmitSoundToClient(client, snd);
+	}
+}
+
+public void Tracer_Disable(int client)
+{
+	SDKUnhook(client, SDKHook_PreThink, Tracer_PreThink);
+	
+	char snd[255], conf[255];
+	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	if (CF_GetRandomSound(conf, "sound_tracer_unscope", snd, sizeof(snd)) != KeyValType_Null)
+	{
+		PrecacheSound(snd);
+		EmitSoundToClient(client, snd);
+	}
 }
 
 float Tracer_NextBeam[MAXPLAYERS + 1] = { 0.0, ... };
@@ -102,23 +147,40 @@ float Tracer_NextBeam[MAXPLAYERS + 1] = { 0.0, ... };
 public Action Tracer_PreThink(int client)
 {
 	int weapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-	if (!IsValidEntity(weapon) || GetGameTime() < Tracer_NextBeam[client])
+	if (!IsValidEntity(weapon))
+	{
+		Tracer_Disable(client);
 		return Plugin_Stop;
+	}
 		
 	float charge = GetChargePercent(weapon);
 	bool FullCharge = HasFullCharge(client);
 		
 	float startPos[3], endPos[3];
+	
 	GetClientEyePosition(client, startPos);
 	startPos[2] -= 5.0;
 	
-	Handle trace = getAimTrace(client, FullCharge ? false : true);
+	if (FullCharge && !Tracer_FullyCharged[client])
+	{
+		Tracer_FullyCharged[client] = true;
+		
+		char snd[255], conf[255];
+		CF_GetPlayerConfig(client, conf, sizeof(conf));
+		if (CF_GetRandomSound(conf, "sound_tracer_fully_charged", snd, sizeof(snd)) != KeyValType_Null)
+		{
+			PrecacheSound(snd);
+			EmitSoundToClient(client, snd);
+		}
+	}
+	
+	Handle trace = getAimTrace(client);
 	TR_GetEndPosition(endPos, trace);
 	delete trace;
 	
 	int r = 255;
 	int b = 0;
-	int a = RoundFloat(255.0 * charge);
+	int a = RoundFloat(160.0 * charge);
 	if (TF2_GetClientTeam(client) == TFTeam_Blue)
 	{
 		r = 0;
@@ -131,7 +193,7 @@ public Action Tracer_PreThink(int client)
 		{
 			int alpha = a;
 			if (i == client)
-				alpha = RoundFloat(a / 2.0);	//Don't make the beam super solid/bright if it's the user, otherwise it covers like half of your screen and is super annoying when actually trying to snipe
+				alpha = RoundFloat(a / 4.0);	//Don't make the beam super solid/bright if it's the user, otherwise it covers like half of your screen and is super annoying when actually trying to snipe
 				
 			SpawnBeam_Vectors(startPos, endPos, 0.11, r, 120, b, alpha, glowModel, 4.0, 4.0, 1, 0.1, i);
 			if (FullCharge)
@@ -203,12 +265,19 @@ public void Gravity_Toggle(int client, char abilityName[255])
 		Gravity_Wearable[client] = EntIndexToEntRef(CF_AttachWearable(client, view_as<int>(CF_ClassToken_Sniper), false, 0, 0, false, atts));
 		Gravity_Particle[client] = EntIndexToEntRef(CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_GRAVITY_RED : PARTICLE_GRAVITY_BLUE, "root"));
 		
-		CF_PlayRandomSound(client, "", "sound_gravity_enabled");
+		char snd[255], conf[255];
+		CF_GetPlayerConfig(client, conf, sizeof(conf));
+		if (CF_GetRandomSound(conf, "sound_gravity_on", snd, sizeof(snd)) != KeyValType_Null)
+		{
+			PrecacheSound(snd);
+			EmitSoundToClient(client, snd);
+		}
 		
 		SDKHook(client, SDKHook_PreThink, Gravity_PreThink);
 		Gravity_Active[client] = true;
 		
 		SetEntityGravity(client, CF_GetArgF(client, ORBITAL, abilityName, "gravity"));
+		EmitSoundToClient(client, SOUND_GRAVITY_LOOP, _, _, 80);
 	}
 	else
 	{
@@ -231,12 +300,21 @@ public void Gravity_Disable(int client, bool playSound)
 	}
 	
 	SDKUnhook(client, SDKHook_PreThink, Gravity_PreThink);
+	StopSound(client, 0, SOUND_GRAVITY_LOOP);
 	
 	Gravity_Active[client] = false;
 	SetEntityGravity(client, 1.0);
 	
 	if (playSound)
-		CF_PlayRandomSound(client, "", "sound_gravity_disabled");
+	{
+		char snd[255], conf[255];
+		CF_GetPlayerConfig(client, conf, sizeof(conf));
+		if (CF_GetRandomSound(conf, "sound_gravity_off", snd, sizeof(snd)) != KeyValType_Null)
+		{
+			PrecacheSound(snd);
+			EmitSoundToClient(client, snd);
+		}
+	}
 }
 
 public Action Gravity_PreThink(int client)
@@ -270,8 +348,8 @@ public void Gravity_SetVelocity(int client)
 	float currentVel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", currentVel);
 	
-	if (currentVel[2] < 0.0)
-		currentVel[2] = 0.0;
+	if (currentVel[2] < 1.0)
+		currentVel[2] = 1.0;
 		
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, currentVel);
 }
@@ -333,10 +411,9 @@ public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
 {
 	int particle = EntRefToEntIndex(Taser_Particle[entity]);
 	if (IsValidEntity(particle))
-	{
 		RemoveEntity(particle);
-		Taser_Particle[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_TASER_RED : PARTICLE_TASER_BLUE, "", 10.0));
-	}
+		
+	Taser_Particle[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_TASER_RED : PARTICLE_TASER_BLUE, "", 10.0));
 }
 
 public Action CF_OnPassFilter(int ent1, int ent2, bool &result)
@@ -390,9 +467,49 @@ public void Taser_Collide(int taser, int ent)
 		CF_AttachWearable(ent, view_as<int>(CF_ClassToken_Sniper), false, 0, 0, false, atts, Taser_Duration[taser]);
 		TF2_AddCondition(ent, TFCond_SpeedBuffAlly, 0.001);
 		CreateTimer(Taser_Duration[taser] + 0.1, Taser_Unslow, GetClientUserId(ent), TIMER_FLAG_NO_MAPCHANGE);
+		
+		DataPack pack = new DataPack();
+		CreateDataTimer(0.2, Taser_VFX, pack, TIMER_FLAG_NO_MAPCHANGE);
+		WritePackCell(pack, GetClientUserId(ent));
+		WritePackFloat(pack, Taser_Duration[taser]);
 	}
 	
 	RemoveEntity(taser);
+}
+
+public Action Taser_VFX(Handle tased, DataPack pack)
+{
+	ResetPack(pack);
+	
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	float time = ReadPackFloat(pack);
+	
+	//delete pack;
+	
+	if (!IsValidMulti(client))
+		return Plugin_Continue;
+		
+	for (int i = 0; i < 2; i++)
+	{
+		float pos[3];
+		GetClientAbsOrigin(client, pos);
+		pos[0] += GetRandomFloat(-15.0, 15.0);
+		pos[1] += GetRandomFloat(-15.0, 15.0);
+		pos[2] += GetRandomFloat(0.0, 90.0);
+		
+		SpawnParticle(pos, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_TASER_BLAST_BLUE : PARTICLE_TASER_BLAST_RED, 1.0);
+	}
+	
+	time -= 0.2;
+	if (time > 0.0)
+	{
+		DataPack pack2 = new DataPack();
+		CreateDataTimer(0.2, Taser_VFX, pack2, TIMER_FLAG_NO_MAPCHANGE);
+		WritePackCell(pack2, GetClientUserId(client));
+		WritePackFloat(pack2, time);
+	}
+	
+	return Plugin_Continue;
 }
 
 public Action Taser_Unslow(Handle unslow, int id)
@@ -410,4 +527,43 @@ public void OnEntityDestroyed(int entity)
 {
 	if (entity >= 0 && entity < 2049)
 		Taser_Active[entity] = false;
+}
+
+public void VFX_Activate(int client, char abilityName[255])
+{
+	if (HasFullCharge(client))
+	{
+		float startPos[3], endPos[3];
+		GetClientEyePosition(client, startPos);
+		startPos[2] -= 5.0;
+		
+		Handle trace = getAimTrace(client);
+		TR_GetEndPosition(endPos, trace);
+		delete trace;
+		
+		TFTeam team = TF2_GetClientTeam(client);
+		
+		int r = 255;
+		int b = 0;
+		if (team == TFTeam_Blue)
+		{
+			b = 255;
+			r = 0;
+		}
+		
+		SpawnBeam_Vectors(startPos, endPos, 0.66, r, 120, b, 255, glowModel, 12.0, 12.0, 5, 0.1);
+		SpawnBeam_Vectors(startPos, endPos, 0.66, r, 120, b, 255, lgtModel, 8.0, 8.0, 5, 5.0);
+		SpawnBeam_Vectors(startPos, endPos, 0.66, r, 120, b, 255, laserModel, 8.0, 8.0, 5, 0.33);
+		
+		SpawnParticle(endPos, team == TFTeam_Red ? PARTICLE_SHOOT_RED : PARTICLE_SHOOT_BLUE, 2.0);
+		
+		char snd[255], conf[255];
+		CF_GetPlayerConfig(client, conf, sizeof(conf));
+		if (CF_GetRandomSound(conf, "sound_orbital_shoot_full", snd, sizeof(snd)) != KeyValType_Null)
+		{
+			PrecacheSound(snd);
+			EmitSoundToClient(client, snd, _, _, 120, _, _, GetRandomInt(80, 90));
+		}
+		SpawnShaker(startPos, 12, 120, 3, 4, 4);
+	}
 }
