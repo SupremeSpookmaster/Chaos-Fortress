@@ -40,6 +40,7 @@
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
 //	- For some reason, players get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? It's invisible while alive but becomes visible on death. This has no effect on gameplay but it's really ugly. Honestly baffling.
+//	- CF_PlayRandomSound and CF_GetRandomSound sometimes spit errors at the console and I have no clue why. It's not super frequent and it doesn't cause any lag, but I'm not sure I feel comfortable publishing CF with this.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.

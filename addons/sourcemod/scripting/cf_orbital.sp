@@ -69,6 +69,9 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 		
 	if (StrContains(abilityName, SHOOT_VFX) != -1)
 		VFX_Activate(client, abilityName);
+		
+	if (StrContains(abilityName, STRIKE) != -1)
+		Strike_Activate(client, abilityName);
 }
 
 public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
@@ -566,4 +569,9 @@ public void VFX_Activate(int client, char abilityName[255])
 		}
 		SpawnShaker(startPos, 12, 120, 3, 4, 4);
 	}
+}
+
+public void Strike_Activate(int client, char abilityName[255])
+{
+	
 }
