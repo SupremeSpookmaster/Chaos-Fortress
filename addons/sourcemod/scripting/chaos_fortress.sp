@@ -46,6 +46,19 @@
 //	- The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //	- ORBITAL SNIPER: Rifle inexplicably cannot pick up ammo...
 //	- ORBITAL SNIPER: Rifle tracer gets blocked by trigger brushes (spawn doors, control points, etc).
+//
+/*
+L 10/19/2023 - 15:36:13: [SM] Exception reported: invalid handle 0 (error: 4)
+L 10/19/2023 - 15:36:13: [SM] Blaming: chaos_fortress.smx
+L 10/19/2023 - 15:36:13: [SM] Call stack trace:
+L 10/19/2023 - 15:36:13: [SM]   [0] SMCParser.GetErrorString
+L 10/19/2023 - 15:36:13: [SM]   [1] Line 122, C:\Users\micha\OneDrive\Desktop\Chaos Fortress\addons\sourcemod\scripting\include\cfgmap.inc::ConfigMap.ConfigMap
+L 10/19/2023 - 15:36:13: [SM]   [2] Line 34, cf_sounds::GetRand
+L 10/19/2023 - 15:36:13: [SM]   [3] Line 358, cf_sounds::Native_CF_GetRandomSound
+L 10/19/2023 - 15:36:13: [SM]   [5] CF_GetRandomSound
+L 10/19/2023 - 15:36:13: [SM]   [6] Line 156, C:\Users\micha\OneDrive\Desktop\Chaos Fortress\addons\sourcemod\scripting\cf_orbital.sp::Tracer_Disable
+L 10/19/2023 - 15:36:13: [SM]   [7] Line 170, C:\Users\micha\OneDrive\Desktop\Chaos Fortress\addons\sourcemod\scripting\cf_orbital.sp::Tracer_PreThink
+*/
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

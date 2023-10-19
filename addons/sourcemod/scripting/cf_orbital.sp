@@ -44,7 +44,7 @@ int laserModel;
 #define SOUND_GRAVITY_LOOP				"player/taunt_bumper_car_go_loop.wav"
 #define SOUND_STRIKE_BLAST				"weapons/cow_mangler_explode.wav"
 #define SOUND_STRIKE_BLAST_2			"weapons/cow_mangler_explosion_charge_01.wav"
-#define SOUND_STRIKE_WARNING			"mvm/mvm_mothership_loop.wav"
+#define SOUND_STRIKE_WARNING			"ambient_mp3/alarms/doomsday_lift_alarm.mp3"
 
 #define MODEL_TASER						"models/weapons/w_models/w_drg_ball.mdl"
 
@@ -192,36 +192,39 @@ public Action Tracer_PreThink(int client)
 		}
 	}
 	
-	Handle trace = getAimTrace(client);
-	TR_GetEndPosition(endPos, trace);
-	delete trace;
-	
-	int r = 255;
-	int b = 0;
-	int a = RoundFloat(160.0 * charge);
-	if (TF2_GetClientTeam(client) == TFTeam_Blue)
+	if (GetGameTime() >= Tracer_NextBeam[client])
 	{
-		r = 0;
-		b = 255;
-	}
-	
-	for (int i = 1; i <= MaxClients; i++)
-	{
-		if (IsValidClient(i))
+		Handle trace = getAimTrace(client);
+		TR_GetEndPosition(endPos, trace);
+		delete trace;
+		
+		int r = 255;
+		int b = 0;
+		int a = RoundFloat(160.0 * charge);
+		if (TF2_GetClientTeam(client) == TFTeam_Blue)
 		{
-			int alpha = a;
-			if (i == client)
-				alpha = RoundFloat(a / 4.0);	//Don't make the beam super solid/bright if it's the user, otherwise it covers like half of your screen and is super annoying when actually trying to snipe
-				
-			SpawnBeam_Vectors(startPos, endPos, 0.11, r, 120, b, alpha, glowModel, 4.0, 4.0, 1, 0.1, i);
-			if (FullCharge)
-				SpawnBeam_Vectors(startPos, endPos, 0.11, r, 120, b, alpha, lgtModel, 2.0, 2.0, 1, 0.25, i);
-			else
-				SpawnBeam_Vectors(startPos, endPos, 0.11, r, 120, b, alpha, laserModel, 4.0, 4.0, 1, 0.1, i);
+			r = 0;
+			b = 255;
 		}
+		
+		for (int i = 1; i <= MaxClients; i++)
+		{
+			if (IsValidClient(i))
+			{
+				int alpha = a;
+				if (i == client)
+					alpha = RoundFloat(a / 4.0);	//Don't make the beam super solid/bright if it's the user, otherwise it covers like half of your screen and is super annoying when actually trying to snipe
+					
+				SpawnBeam_Vectors(startPos, endPos, 0.11, r, 120, b, alpha, glowModel, 4.0, 4.0, 1, 0.1, i);
+				if (FullCharge)
+					SpawnBeam_Vectors(startPos, endPos, 0.11, r, 120, b, alpha, lgtModel, 2.0, 2.0, 1, 0.25, i);
+				else
+					SpawnBeam_Vectors(startPos, endPos, 0.11, r, 120, b, alpha, laserModel, 4.0, 4.0, 1, 0.1, i);
+			}
+		}
+		
+		Tracer_NextBeam[client] = GetGameTime() + 0.08;
 	}
-	
-	Tracer_NextBeam[client] = GetGameTime() + 0.04;
 	
 	return Plugin_Continue;
 }
@@ -586,27 +589,6 @@ public void VFX_Activate(int client, char abilityName[255])
 	}
 }
 
-/*
-
-"ability_X"
-{
-	"ability_name"		"orbital_strike"
-
-	"slot"				"1"
-
-	"delay"				""		//The time (in seconds) before the orbital bombardment begins.
-	"duration"			""		//The time (in seconds) for the orbital bombardment to be active once it begins.
-	"interval"			""		//The time (in seconds)	between orbital strikes while the bombardment is active.
-	"damage"			""		//Damage dealt by orbital strikes.
-	"radius"			""		//The radius in which orbital strikes deal damage.
-	"falloff_start"		""		//The distance at which damage falloff begins.
-	"falloff_max"		""		//Maximum damage falloff (0.0 - 1.0, where 1.0 = 100%).
-
-	"plugin_name"		"cf_orbital"
-}
-
-*/
-
 public void Strike_Activate(int client, char abilityName[255])
 {
 	float delay = CF_GetArgF(client, ORBITAL, abilityName, "delay");
@@ -623,6 +605,7 @@ public void Strike_Activate(int client, char abilityName[255])
 	delete trace;
 
 	DataPack pack = new DataPack();
+	CreateDataTimer(delay - 0.1, Strike_DealDamage, pack, TIMER_FLAG_NO_MAPCHANGE);
 	WritePackCell(pack, GetClientUserId(client));
 	WritePackFloat(pack, duration);
 	WritePackFloat(pack, interval);
@@ -636,16 +619,7 @@ public void Strike_Activate(int client, char abilityName[255])
 		WritePackFloat(pack, groundZero[i]);
 	}
 
-	if (delay > 0.0)
-	{
-		WritePackFloat(pack, GetGameTime() + delay);
-		CreateDataTimer(delay - 0.1, Strike_DelayedStart, pack, TIMER_FLAG_NO_MAPCHANGE);
-	}
-	else
-	{
-		WritePackFloat(pack, GetGameTime());
-		CreateDataTimer(0.1, Strike_DealDamage, pack, TIMER_FLAG_NO_MAPCHANGE);
-	}
+	WritePackFloat(pack, GetGameTime() + delay);
 
 	float endTime = GetGameTime() + delay + duration;
 	DataPack vfxPack = new DataPack();
@@ -660,9 +634,9 @@ public void Strike_Activate(int client, char abilityName[255])
 	WritePackFloat(vfxPack, 0.0);
 	WritePackFloat(vfxPack, GetGameTime());
 
-	EmitSoundToAll(SOUND_STRIKE_WARNING, _, SNDCHAN_STATIC, _, _, _, _, _, groundZero);
+	EmitSoundToAll(SOUND_STRIKE_WARNING, _, SNDCHAN_STATIC, 120, _, _, _, _, groundZero);
 }
-//TODO: Beacon sound loop, end when strike ends
+
 public Action Strike_VFX(Handle vfx, DataPack pack)
 {
 	ResetPack(pack);
@@ -696,7 +670,13 @@ public Action Strike_VFX(Handle vfx, DataPack pack)
 		float difference = startTime - gameTime;
 		float delayTime = startTime - CalledAt;
 		float mult = difference/delayTime;
-		a -= RoundFloat(255.0 * (1.0 - mult))
+		
+		if (mult > 1.0)
+			mult = 1.0;
+		if (mult < 0.0)
+			mult = 0.0;
+			
+		a = RoundFloat(255.0 * (1.0 - mult))
 	}
 	
 	for (int i = 0; i < 8; i++)
@@ -745,12 +725,6 @@ public Action Strike_VFX(Handle vfx, DataPack pack)
 		}
 	}
 
-	return Plugin_Continue;
-}
-
-public Action Strike_DelayedStart(Handle delayed, DataPack pack)
-{
-	CreateDataTimer(0.1, Strike_DealDamage, pack, TIMER_FLAG_NO_MAPCHANGE);
 	return Plugin_Continue;
 }
 
@@ -804,17 +778,31 @@ public Action Strike_DealDamage(Handle smackthoserats, DataPack pack)
 		yLoc[1] = xLoc[1];
 		yLoc[2] = 9999.0;
 
-		SpawnBeam_Vectors(yLoc, xLoc, 0.66, r, 120, b, 255, lgtModel, 16.0, 15.0, 1, 7.5);
-		SpawnBeam_Vectors(yLoc, xLoc, 0.66, r, 120, b, 255, laserModel, 16.0, 15.0, 1, 2.0);
-		SpawnBeam_Vectors(yLoc, xLoc, 0.66, r, 120, b, 175, glowModel, 16.0, 15.0, 1, 7.5);
-		SpawnBeam_Vectors(yLoc, xLoc, 0.66, r, 120, b, 125, glowModel, 16.0, 15.0, 1, 2.0);
+		SpawnBeam_Vectors(yLoc, xLoc, 0.66, r, 120, b, 255, lgtModel, 16.0, 15.0, 1, 2.5);
+		SpawnBeam_Vectors(yLoc, xLoc, 0.66, r, 120, b, 255, laserModel, 16.0, 15.0, 1, 0.5);
+		SpawnBeam_Vectors(yLoc, xLoc, 0.66, r, 120, b, 175, glowModel, 16.0, 15.0, 1, 2.5);
+		SpawnBeam_Vectors(yLoc, xLoc, 0.66, r, 120, b, 125, glowModel, 16.0, 15.0, 1, 0.5);
 
 		int particle = SpawnParticle(xLoc, team == TFTeam_Red ? PARTICLE_STRIKE_BLAST_RED : PARTICLE_STRIKE_BLAST_BLUE, 2.0);
 
-		EmitSoundToAll(GetRandomInt(1, 2) == 1 ? SOUND_STRIKE_BLAST : SOUND_STRIKE_BLAST_2, particle, SNDCHAN_STATIC, 80, _, _, GetRandomInt(80, 110));
+		EmitSoundToAll(GetRandomInt(1, 2) == 1 ? SOUND_STRIKE_BLAST : SOUND_STRIKE_BLAST_2, particle, SNDCHAN_STATIC, 90, _, _, GetRandomInt(80, 110));
 	}
 
-	CreateDataTimer(interval, Strike_DealDamage, pack, TIMER_FLAG_NO_MAPCHANGE);
-
+	DataPack pack2 = new DataPack();
+	CreateDataTimer(interval, Strike_DealDamage, pack2, TIMER_FLAG_NO_MAPCHANGE);
+	WritePackCell(pack2, GetClientUserId(client));
+	WritePackFloat(pack2, duration);
+	WritePackFloat(pack2, interval);
+	WritePackFloat(pack2, damage);
+	WritePackFloat(pack2, radius);
+	WritePackFloat(pack2, falloffStart);
+	WritePackFloat(pack2, falloffMax);
+	WritePackCell(pack2, team);
+	for (int i = 0; i < 3; i++)
+	{
+		WritePackFloat(pack2, groundZero[i]);
+	}
+	WritePackFloat(pack2, startTime);
+	
 	return Plugin_Continue;
 }
