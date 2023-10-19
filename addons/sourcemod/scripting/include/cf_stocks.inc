@@ -1381,3 +1381,18 @@ stock void spawnRing_Vector(float center[3], float range, float modif_X, float m
 		TE_SendToAll();
 	}
 }
+
+stock float GetDistanceToGround(float location[3])
+{
+	float angles[3], otherLoc[3];
+	angles[0] = 90.0;
+	angles[1] = 0.0;
+	angles[2] = 0.0;
+	
+	Handle trace = TR_TraceRayFilterEx(location, angles, MASK_SHOT, RayType_Infinite, TraceEntityFilterPlayer_GAT);
+	TR_GetEndPosition(otherLoc, trace);
+	//CloseHandle(trace);
+	delete trace;
+	
+	return GetVectorDistance(location, otherLoc);
+}

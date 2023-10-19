@@ -33,9 +33,14 @@ int laserModel;
 #define PARTICLE_TRACER_BLUE_FULL		"raygun_projectile_blue_crit"
 #define PARTICLE_SHOOT_BLUE				"drg_cow_explosioncore_charged_blue"
 #define PARTICLE_SHOOT_RED				"drg_cow_explosioncore_charged"
+#define PARTICLE_STRIKE_BLAST_BLUE				"drg_cow_explosioncore_charged_blue"
+#define PARTICLE_STRIKE_BLAST_RED				"drg_cow_explosioncore_charged"
 
 #define SOUND_TASER_BLAST				"misc/halloween/spell_lightning_ball_impact.wav"
 #define SOUND_GRAVITY_LOOP				"player/taunt_bumper_car_go_loop.wav"
+#define SOUND_STRIKE_BLAST				"weapons/cow_mangler_explode.wav"
+#define SOUND_STRIKE_BLAST_2			"weapons/cow_mangler_explosion_charge_01.wav"
+#define SOUND_STRIKE_WARNING			"mvm/mvm_mothership_loop.wav"
 
 #define MODEL_TASER						"models/weapons/w_models/w_drg_ball.mdl"
 
@@ -48,6 +53,9 @@ public void OnMapStart()
 	
 	PrecacheSound(SOUND_TASER_BLAST);
 	PrecacheSound(SOUND_GRAVITY_LOOP);
+	PrecacheSound(SOUND_STRIKE_BLAST);
+	PrecacheSound(SOUND_STRIKE_BLAST_2);
+	PrecacheSound(SOUND_STRIKE_WARNING);
 }
 
 DynamicHook g_DHookRocketExplode;
@@ -635,7 +643,105 @@ public void Strike_Activate(int client, char abilityName[255])
 		CreateDataTimer(0.1, Strike_DealDamage, pack, TIMER_FLAG_NO_MAPCHANGE);
 	}
 
-	//TODO: Visuals, sound
+	float endTime = GetGameTime() + delay + duration;
+	DataPack vfxPack = new DataPack();
+	CreateDataTimer(0.1, Strike_VFX, vfxPack, TIMER_FLAG_NO_MAPCHANGE);
+	WritePackFloat(vfxPack, GetGameTime() + delay);
+	WritePackFloat(vfxPack, endTime);
+	WritePackFloat(vfxPack, groundZero[0]);
+	WritePackFloat(vfxPack, groundZero[1]);
+	WritePackFloat(vfxPack, groundZero[2]);
+	WritePackFloat(vfxPack, radius);
+	WritePackCell(vfxPack, TF2_GetClientTeam(client));
+	WritePackFloat(vfxPack, 0.0);
+	WritePackFloat(vfxPack, GetGameTime());
+
+	EmitSoundToAll(SOUND_STRIKE_WARNING, _, SNDCHAN_STATIC, _, _, _, _, _, groundZero);
+}
+//TODO: Beacon sound loop, end when strike ends
+public Action Strike_VFX(Handle vfx, DataPack pack)
+{
+	ResetPack(pack);
+
+	float startTime = ReadPackFloat(pack);
+	float endTime = ReadPackFloat(pack);
+	float groundZero[3];
+	for (int i = 0; i < 3; i++)
+	{
+		groundZero[i] = ReadPackFloat(pack);
+	}
+
+	float radius = ReadPackFloat(pack);
+	TFTeam team = ReadPackCell(pack);
+	float rotation = ReadPackFloat(pack);
+	float CalledAt = ReadPackFloat(pack);
+
+	float gameTime = GetGameTime();
+
+	int r = 255;
+	int b = 0;
+	int a = 255;
+	if (team == TFTeam_Blue)
+	{
+		r = 0;
+		b = 255;
+	}
+
+	if (gameTime < startTime)
+	{
+		float difference = startTime - gameTime;
+		float delayTime = startTime - CalledAt;
+		float mult = difference/delayTime;
+		a -= RoundFloat(255.0 * (1.0 - mult))
+	}
+	
+	for (int i = 0; i < 8; i++)
+	{
+		float angle = (float(i) * 45.0) + rotation;
+
+		float tempAngles[3], endLoc[3], Direction[3], skyLoc[3];
+		tempAngles[0] = 0.0;
+		tempAngles[1] = angle;
+		tempAngles[2] = 0.0;
+			
+		GetAngleVectors(tempAngles, Direction, NULL_VECTOR, NULL_VECTOR);
+		ScaleVector(Direction, radius);
+		AddVectors(groundZero, Direction, endLoc);
+
+		skyLoc[0] = endLoc[0];
+		skyLoc[1] = endLoc[1];
+		skyLoc[2] = 9999.0;
+
+		SpawnBeam_Vectors(skyLoc, endLoc, 0.1, r, 120, b, a, laserModel, 5.0, 5.0, 1, 0.1);
+		SpawnBeam_Vectors(skyLoc, endLoc, 0.1, r, 120, b, a / 4, laserModel, 10.0, 10.0, 1, 0.1);
+		SpawnBeam_Vectors(skyLoc, endLoc, 0.1, r, 120, b, a / 4, glowModel, 15.0, 15.0, 1, 0.1);
+	}
+
+	spawnRing_Vector(groundZero, radius * 2.0, 0.0, 0.0, 0.0, laserModel, r, 120, b, a, 1, 0.1, 16.0, 0.0, 1);
+
+	if (gameTime < endTime)
+	{
+		DataPack vfxPack2 = new DataPack();
+		CreateDataTimer(0.1, Strike_VFX, vfxPack2, TIMER_FLAG_NO_MAPCHANGE);
+		WritePackFloat(vfxPack2, startTime);
+		WritePackFloat(vfxPack2, endTime);
+		WritePackFloat(vfxPack2, groundZero[0]);
+		WritePackFloat(vfxPack2, groundZero[1]);
+		WritePackFloat(vfxPack2, groundZero[2]);
+		WritePackFloat(vfxPack2, radius);
+		WritePackCell(vfxPack2, team);
+		WritePackFloat(vfxPack2, rotation + 5.0);
+		WritePackFloat(vfxPack2, CalledAt);
+	}
+	else
+	{
+		for (int i = 1; i <= MaxClients; i++)
+		{
+			StopSound(i, SNDCHAN_STATIC, SOUND_STRIKE_WARNING);
+		}
+	}
+
+	return Plugin_Continue;
 }
 
 public Action Strike_DelayedStart(Handle delayed, DataPack pack)
@@ -671,7 +777,38 @@ public Action Strike_DealDamage(Handle smackthoserats, DataPack pack)
 
 	CF_GenericAOEDamage(client, client, client, damage, DMG_CLUB|DMG_BLAST|DMG_ALWAYSGIB, radius, groundZero, falloffStart, falloffMax, true, false);
 
-	//TODO: Visuals, sound
+	int r = 255;
+	int b = 0;
+	if (team == TFTeam_Blue)
+	{
+		b = 255;
+		r = 0;
+	}
+
+	for (int i = 0; i < 8; i++)
+	{
+		float xLoc[3], yLoc[3];
+		xLoc[0] = groundZero[0] + GetRandomFloat(-radius, radius);
+		xLoc[1] = groundZero[1] + GetRandomFloat(-radius, radius);
+		xLoc[2] = groundZero[2];
+
+		float groundDist = GetDistanceToGround(xLoc);
+		if (groundDist > 0.0 && groundDist < 9999.0)
+			xLoc[2] -= groundDist;
+
+		yLoc[0] = xLoc[0];
+		yLoc[1] = xLoc[1];
+		yLoc[2] = 9999.0;
+
+		SpawnBeam_Vectors(yLoc, xLoc, 0.66, r, 120, b, 255, lgtModel, 16.0, 15.0, 1, 7.5);
+		SpawnBeam_Vectors(yLoc, xLoc, 0.66, r, 120, b, 255, laserModel, 16.0, 15.0, 1, 2.0);
+		SpawnBeam_Vectors(yLoc, xLoc, 0.66, r, 120, b, 175, glowModel, 16.0, 15.0, 1, 7.5);
+		SpawnBeam_Vectors(yLoc, xLoc, 0.66, r, 120, b, 125, glowModel, 16.0, 15.0, 1, 2.0);
+
+		int particle = SpawnParticle(xLoc, team == TFTeam_Red ? PARTICLE_STRIKE_BLAST_RED : PARTICLE_STRIKE_BLAST_BLUE, 2.0);
+
+		EmitSoundToAll(GetRandomInt(1, 2) == 1 ? SOUND_STRIKE_BLAST : SOUND_STRIKE_BLAST_2, particle, SNDCHAN_STATIC, 80, _, _, GetRandomInt(80, 110));
+	}
 
 	CreateDataTimer(interval, Strike_DealDamage, pack, TIMER_FLAG_NO_MAPCHANGE);
 
