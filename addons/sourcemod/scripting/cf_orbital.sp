@@ -35,6 +35,10 @@ int laserModel;
 #define PARTICLE_SHOOT_RED				"drg_cow_explosioncore_charged"
 #define PARTICLE_STRIKE_BLAST_BLUE				"drg_cow_explosioncore_charged_blue"
 #define PARTICLE_STRIKE_BLAST_RED				"drg_cow_explosioncore_charged"
+#define PARTICLE_STRIKE_WARNING_AURA_RED		"utaunt_tarotcard_red_vortex"
+#define PARTICLE_STRIKE_WARNING_RED				"sparks_powerline_red"
+#define PARTICLE_STRIKE_WARNING_AURA_BLUE		"utaunt_tarotcard_blue_vortex"
+#define PARTICLE_STRIKE_WARNING_BLUE			"sparks_powerline_blue"
 
 #define SOUND_TASER_BLAST				"misc/halloween/spell_lightning_ball_impact.wav"
 #define SOUND_GRAVITY_LOOP				"player/taunt_bumper_car_go_loop.wav"
