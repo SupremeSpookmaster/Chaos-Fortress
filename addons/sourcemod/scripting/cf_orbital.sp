@@ -3,6 +3,9 @@
 #include <tf2_stocks>
 #include <cf_stocks>
 
+//TODO: Replace all of the GetRandomSounds with PlayRandomSound, then change the sound source in the config so it only plays to the user.
+//		- Reasoning: Adds greater customization.
+
 #define ORBITAL		"cf_orbital"
 #define HEIGHT		"orbital_height_advantage"
 #define TRACER		"orbital_tracer"
@@ -571,7 +574,106 @@ public void VFX_Activate(int client, char abilityName[255])
 	}
 }
 
+/*
+
+"ability_X"
+{
+	"ability_name"		"orbital_strike"
+
+	"slot"				"1"
+
+	"delay"				""		//The time (in seconds) before the orbital bombardment begins.
+	"duration"			""		//The time (in seconds) for the orbital bombardment to be active once it begins.
+	"interval"			""		//The time (in seconds)	between orbital strikes while the bombardment is active.
+	"damage"			""		//Damage dealt by orbital strikes.
+	"radius"			""		//The radius in which orbital strikes deal damage.
+	"falloff_start"		""		//The distance at which damage falloff begins.
+	"falloff_max"		""		//Maximum damage falloff (0.0 - 1.0, where 1.0 = 100%).
+
+	"plugin_name"		"cf_orbital"
+}
+
+*/
+
 public void Strike_Activate(int client, char abilityName[255])
 {
-	
+	float delay = CF_GetArgF(client, ORBITAL, abilityName, "delay");
+	float duration = CF_GetArgF(client, ORBITAL, abilityName, "duration");
+	float interval = CF_GetArgF(client, ORBITAL, abilityName, "interval");
+	float damage = CF_GetArgF(client, ORBITAL, abilityName, "damage");
+	float radius = CF_GetArgF(client, ORBITAL, abilityName, "radius");
+	float falloffStart = CF_GetArgF(client, ORBITAL, abilityName, "falloff_start");
+	float falloffMax = CF_GetArgF(client, ORBITAL, abilityName, "falloff_max");
+
+	float groundZero[3];
+	Handle trace = getAimTrace(client);
+	TR_GetEndPosition(groundZero, trace);
+	delete trace;
+
+	DataPack pack = new DataPack();
+	WritePackCell(pack, GetClientUserId(client));
+	WritePackFloat(pack, duration);
+	WritePackFloat(pack, interval);
+	WritePackFloat(pack, damage);
+	WritePackFloat(pack, radius);
+	WritePackFloat(pack, falloffStart);
+	WritePackFloat(pack, falloffMax);
+	WritePackCell(pack, TF2_GetClientTeam(client));
+	for (int i = 0; i < 3; i++)
+	{
+		WritePackFloat(pack, groundZero[i]);
+	}
+
+	if (delay > 0.0)
+	{
+		WritePackFloat(pack, GetGameTime() + delay);
+		CreateDataTimer(delay - 0.1, Strike_DelayedStart, pack, TIMER_FLAG_NO_MAPCHANGE);
+	}
+	else
+	{
+		WritePackFloat(pack, GetGameTime());
+		CreateDataTimer(0.1, Strike_DealDamage, pack, TIMER_FLAG_NO_MAPCHANGE);
+	}
+
+	//TODO: Visuals, sound
+}
+
+public Action Strike_DelayedStart(Handle delayed, DataPack pack)
+{
+	CreateDataTimer(0.1, Strike_DealDamage, pack, TIMER_FLAG_NO_MAPCHANGE);
+	return Plugin_Continue;
+}
+
+public Action Strike_DealDamage(Handle smackthoserats, DataPack pack)
+{
+	ResetPack(pack);
+
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	float duration = ReadPackFloat(pack);
+	float interval = ReadPackFloat(pack);
+	float damage = ReadPackFloat(pack);
+	float radius = ReadPackFloat(pack);
+	float falloffStart = ReadPackFloat(pack);
+	float falloffMax = ReadPackFloat(pack);
+	TFTeam team = ReadPackCell(pack);
+
+	float groundZero[3];
+	for (int i = 0; i < 3; i++)
+	{
+		groundZero[i] = ReadPackFloat(pack);
+	}
+
+	float startTime = ReadPackFloat(pack);
+	float endTime = startTime + duration;
+
+	if (GetGameTime() > endTime || !IsValidClient(client))
+		return Plugin_Continue;
+
+	CF_GenericAOEDamage(client, client, client, damage, DMG_CLUB|DMG_BLAST|DMG_ALWAYSGIB, radius, groundZero, falloffStart, falloffMax, true, false);
+
+	//TODO: Visuals, sound
+
+	CreateDataTimer(interval, Strike_DealDamage, pack, TIMER_FLAG_NO_MAPCHANGE);
+
+	return Plugin_Continue;
 }
