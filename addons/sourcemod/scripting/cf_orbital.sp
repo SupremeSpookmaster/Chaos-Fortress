@@ -194,7 +194,7 @@ public Action Tracer_PreThink(int client)
 	
 	if (GetGameTime() >= Tracer_NextBeam[client])
 	{
-		Handle trace = getAimTrace(client);
+		Handle trace = getAimTrace(client, false, true);
 		TR_GetEndPosition(endPos, trace);
 		delete trace;
 		

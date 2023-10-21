@@ -285,7 +285,7 @@ public Action Timer_RemoveEntity(Handle removeEnt, int entityId)
 }
 
 //int GAT_User = -1;
-stock Handle getAimTrace(int client, bool obstructions = false)
+stock Handle getAimTrace(int client, bool obstructions = false, bool completelyIgnoreEverything = false)
 {
 	if (!IsValidClient(client))
 	{
@@ -300,9 +300,17 @@ stock Handle getAimTrace(int client, bool obstructions = false)
 	Handle trace;
 	
 	//GAT_User = client;
-	trace = TR_TraceRayFilterEx(eyePos, eyeAng, MASK_SHOT, RayType_Infinite, TraceEntityFilterPlayer_GAT);
+	if (completelyIgnoreEverything)
+		trace = TR_TraceRayFilterEx(eyePos, eyeAng, MASK_SHOT, RayType_Infinite, Trace_OnlyHitWorld);
+	else
+		trace = TR_TraceRayFilterEx(eyePos, eyeAng, MASK_SHOT, RayType_Infinite, TraceEntityFilterPlayer_GAT);
 	
 	return trace;
+}
+
+public bool Trace_OnlyHitWorld(entity, contentsMask)
+{
+	return entity == 0;
 }
 
 public bool TraceEntityFilterPlayer_GAT(entity, contentsMask)
