@@ -3,9 +3,6 @@
 #include <tf2_stocks>
 #include <cf_stocks>
 
-//TODO: Replace all of the GetRandomSounds with PlayRandomSound, then change the sound source in the config so it only plays to the user.
-//		- Reasoning: Adds greater customization.
-
 #define ORBITAL		"cf_orbital"
 #define HEIGHT		"orbital_height_advantage"
 #define TRACER		"orbital_tracer"
@@ -137,27 +134,15 @@ public void Tracer_Activate(int client)
 {
 	Tracer_FullyCharged[client] = false;
 	SDKHook(client, SDKHook_PreThink, Tracer_PreThink);
-	
-	char snd[255], conf[255];
-	CF_GetPlayerConfig(client, conf, sizeof(conf));
-	if (CF_GetRandomSound(conf, "sound_tracer_scope", snd, sizeof(snd)) != KeyValType_Null)
-	{
-		PrecacheSound(snd);
-		EmitSoundToClient(client, snd);
-	}
+
+	CF_PlayRandomSound(client, "", "sound_tracer_scope");
 }
 
 public void Tracer_Disable(int client)
 {
 	SDKUnhook(client, SDKHook_PreThink, Tracer_PreThink);
 	
-	char snd[255], conf[255];
-	CF_GetPlayerConfig(client, conf, sizeof(conf));
-	if (CF_GetRandomSound(conf, "sound_tracer_unscope", snd, sizeof(snd)) != KeyValType_Null)
-	{
-		PrecacheSound(snd);
-		EmitSoundToClient(client, snd);
-	}
+	CF_PlayRandomSound(client, "", "sound_tracer_unscope");
 }
 
 float Tracer_NextBeam[MAXPLAYERS + 1] = { 0.0, ... };
@@ -182,14 +167,8 @@ public Action Tracer_PreThink(int client)
 	if (FullCharge && !Tracer_FullyCharged[client])
 	{
 		Tracer_FullyCharged[client] = true;
-		
-		char snd[255], conf[255];
-		CF_GetPlayerConfig(client, conf, sizeof(conf));
-		if (CF_GetRandomSound(conf, "sound_tracer_fully_charged", snd, sizeof(snd)) != KeyValType_Null)
-		{
-			PrecacheSound(snd);
-			EmitSoundToClient(client, snd);
-		}
+
+		CF_PlayRandomSound(client, "", "sound_tracer_fully_charged");
 	}
 	
 	if (GetGameTime() >= Tracer_NextBeam[client])
@@ -285,14 +264,8 @@ public void Gravity_Toggle(int client, char abilityName[255])
 		Format(atts, sizeof(atts), "610 ; %.4f", CF_GetArgF(client, ORBITAL, abilityName, "control"));
 		Gravity_Wearable[client] = EntIndexToEntRef(CF_AttachWearable(client, view_as<int>(CF_ClassToken_Sniper), false, 0, 0, false, atts));
 		Gravity_Particle[client] = EntIndexToEntRef(CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_GRAVITY_RED : PARTICLE_GRAVITY_BLUE, "root"));
-		
-		char snd[255], conf[255];
-		CF_GetPlayerConfig(client, conf, sizeof(conf));
-		if (CF_GetRandomSound(conf, "sound_gravity_on", snd, sizeof(snd)) != KeyValType_Null)
-		{
-			PrecacheSound(snd);
-			EmitSoundToClient(client, snd);
-		}
+
+		CF_PlayRandomSound(client, "", "sound_gravity_on");
 		
 		SDKHook(client, SDKHook_PreThink, Gravity_PreThink);
 		Gravity_Active[client] = true;
@@ -328,13 +301,7 @@ public void Gravity_Disable(int client, bool playSound)
 	
 	if (playSound)
 	{
-		char snd[255], conf[255];
-		CF_GetPlayerConfig(client, conf, sizeof(conf));
-		if (CF_GetRandomSound(conf, "sound_gravity_off", snd, sizeof(snd)) != KeyValType_Null)
-		{
-			PrecacheSound(snd);
-			EmitSoundToClient(client, snd);
-		}
+		CF_PlayRandomSound(client, "", "sound_gravity_off");
 	}
 }
 
@@ -577,14 +544,8 @@ public void VFX_Activate(int client, char abilityName[255])
 		SpawnBeam_Vectors(startPos, endPos, 0.66, r, 120, b, 255, laserModel, 8.0, 8.0, 5, 0.33);
 		
 		SpawnParticle(endPos, team == TFTeam_Red ? PARTICLE_SHOOT_RED : PARTICLE_SHOOT_BLUE, 2.0);
-		
-		char snd[255], conf[255];
-		CF_GetPlayerConfig(client, conf, sizeof(conf));
-		if (CF_GetRandomSound(conf, "sound_orbital_shoot_full", snd, sizeof(snd)) != KeyValType_Null)
-		{
-			PrecacheSound(snd);
-			EmitSoundToClient(client, snd, _, _, 120, _, _, GetRandomInt(80, 90));
-		}
+
+		CF_PlayRandomSound(client, "", "sound_orbital_shoot_full");
 		SpawnShaker(startPos, 12, 120, 3, 4, 4);
 	}
 }

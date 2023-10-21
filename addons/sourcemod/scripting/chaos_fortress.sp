@@ -30,11 +30,11 @@
 //	- TODO: Everything that happens on client disconnect (possibly already covered, not sure).
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
 //	- TODO: Finalize the wiki by updating each page with all of the changes.
-//	- TODO: Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
 //	- TODO: Make natives which share the names of FF2's natives and do the same things, so porting FF2 plugins is as simple as just changing the include file and recompiling.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Translations
+//	- Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
 //	- For some reason, players get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? It's invisible while alive but becomes visible on death. This has no effect on gameplay but it's really ugly. Honestly baffling.
