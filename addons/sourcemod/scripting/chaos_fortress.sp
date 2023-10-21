@@ -11,52 +11,42 @@
 //
 //	- IMMEDIATE PLANS (things I am currently focusing on):
 //		- Orbital Sniper:
-//			- orbital_ult for ultimate
 //			- Use the voicefx plugin's DSP things for his voice to reduce downloads
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
+//		////////////////////////////////////////////
 //		- Mercenary:
 //			- Required ult charge may be a bit low?
+//		////////////////////////////////////////////
 //		- Spookmaster Bones:
 //			- Required ult charge is definitely too low, skeletons spawned by ult kills allow ults to snowball into each other.
 //			- Any kill will grant a soul, not just melee. This encourages sitting at a distance and fishing for souls risk-free with Skull Servants instead of getting in and fighting.
 //				- Make players drop timed soul pickups that the SB player needs to manually pick up to gain the soul. Upon being picked up, these souls begin to heal the user for 75 hp over the span of 3s.
 //					- This is a fairly drastic change. Only do this if people think SB is overpowered (which is entirely possible).
+//		////////////////////////////////////////////
 //		- Orbital Sniper:
-//			- There's not a lot of viable counterplay against an Orbital hugging the skybox. 
+//			- There's not a lot of viable counterplay against an Orbital hugging the skybox, besides having another Orbital counter-snipe them.
 //				- This will be solved with future characters who also have decent ranged choices.
+//		////////////////////////////////////////////
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Everything that happens on client disconnect (possibly already covered, not sure).
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
 //	- TODO: Finalize the wiki by updating each page with all of the changes.
-//	- TODO: Make natives which share the names of FF2's natives and do the same things, so porting FF2 plugins is as simple as just changing the include file and recompiling.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Translations
 //	- Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
+//	- Make natives which share the names of FF2's natives and do the same things, so porting FF2 plugins is as simple as just changing the include file and recompiling.
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
 //	- For some reason, players get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? It's invisible while alive but becomes visible on death. This has no effect on gameplay but it's really ugly. Honestly baffling.
-//	- CF_PlayRandomSound and CF_GetRandomSound sometimes spit errors at the console and I have no clue why. It's not super frequent and it doesn't cause any lag, but I'm not sure I feel comfortable publishing CF with this.
-//		- Most likely linked to the error pasted below.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //	- ORBITAL SNIPER: Rifle inexplicably cannot pick up ammo...
+//	- SPOOKMASTER BONES: Dialogue is too loud and can be heard from nearly anywhere on the map, make a cf_soundpack ability to make all of them quieter.
 //
-/*
-L 10/19/2023 - 15:36:13: [SM] Exception reported: invalid handle 0 (error: 4)
-L 10/19/2023 - 15:36:13: [SM] Blaming: chaos_fortress.smx
-L 10/19/2023 - 15:36:13: [SM] Call stack trace:
-L 10/19/2023 - 15:36:13: [SM]   [0] SMCParser.GetErrorString
-L 10/19/2023 - 15:36:13: [SM]   [1] Line 122, C:\Users\micha\OneDrive\Desktop\Chaos Fortress\addons\sourcemod\scripting\include\cfgmap.inc::ConfigMap.ConfigMap
-L 10/19/2023 - 15:36:13: [SM]   [2] Line 34, cf_sounds::GetRand
-L 10/19/2023 - 15:36:13: [SM]   [3] Line 358, cf_sounds::Native_CF_GetRandomSound
-L 10/19/2023 - 15:36:13: [SM]   [5] CF_GetRandomSound
-L 10/19/2023 - 15:36:13: [SM]   [6] Line 156, C:\Users\micha\OneDrive\Desktop\Chaos Fortress\addons\sourcemod\scripting\cf_orbital.sp::Tracer_Disable
-L 10/19/2023 - 15:36:13: [SM]   [7] Line 170, C:\Users\micha\OneDrive\Desktop\Chaos Fortress\addons\sourcemod\scripting\cf_orbital.sp::Tracer_PreThink
-*/
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
