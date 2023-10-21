@@ -59,25 +59,32 @@ public void CF_OnPluginStart()
 	
 	g_WeaponDropLifespan = FindConVar("tf_dropped_weapon_lifetime");
 	g_WeaponDropLifespan.IntValue = 0;
+	
+	g_ChatMessages = CreateArray(255);
+	g_ChatIntervals = CreateArray(255);
+	g_ChatTimes = CreateArray(255);
 
 	CreateTimer(1.0, Timer_ChatMessages, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public Action Timer_ChatMessages(Handle messages)
 {
-	if (g_ChatMessages != null)
+	if (g_ChatMessages == null)
+		return Plugin_Continue;
+		
+	if (GetArraySize(g_ChatMessages) < 1)
+		return Plugin_Continue;
+		
+	for (int i = 0; i < GetArraySize(g_ChatIntervals); i++)
 	{
-		for (int i = 0; i < GetArraySize(g_ChatIntervals); i++)
+		if (GetGameTime() >= GetArrayCell(g_ChatTimes, i))
 		{
-			if (GetGameTime() >= GetArrayCell(g_ChatTimes, i))
-			{
-				float interval = GetArrayCell(g_ChatIntervals, i);
-				SetArrayCell(g_ChatTimes, i, GetGameTime() + interval);
+			float interval = GetArrayCell(g_ChatIntervals, i);
+			SetArrayCell(g_ChatTimes, i, GetGameTime() + interval);
 
-				char message[255];
-				GetArrayString(g_ChatMessages, i, message, sizeof(message));
-				CPrintToChatAll(message);
-			}
+			char message[255];
+			GetArrayString(g_ChatMessages, i, message, sizeof(message));
+			CPrintToChatAll(message);
 		}
 	}
 
@@ -185,6 +192,7 @@ public Action Timer_ChatMessages(Handle messages)
 	{
 		g_ChatMessages = CreateArray(255);
 		g_ChatIntervals = CreateArray(255);
+		g_ChatTimes = CreateArray(255);
 
 		ConfigMap messageSection = subsection.GetSection("message_1");
 		int currentMessage = 1;

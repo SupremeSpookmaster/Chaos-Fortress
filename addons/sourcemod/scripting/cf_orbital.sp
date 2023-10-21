@@ -525,7 +525,7 @@ public void VFX_Activate(int client, char abilityName[255])
 		GetClientEyePosition(client, startPos);
 		startPos[2] -= 5.0;
 		
-		Handle trace = getAimTrace(client);
+		Handle trace = getAimTrace(client, false, true);
 		TR_GetEndPosition(endPos, trace);
 		delete trace;
 		
