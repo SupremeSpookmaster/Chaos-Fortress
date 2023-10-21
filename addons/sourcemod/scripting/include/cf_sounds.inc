@@ -31,6 +31,9 @@ public void CFS_MakeNatives()
 
 public KeyValType GetRand(char Config[255], char Sound[255], char Output[255])
 {
+	if (StrEqual(Config, ""))	//This check should not be necessary, but line 37 throws errors if it's not here.
+		return KeyValType_Null;
+
 	ConfigMap cfgMap = new ConfigMap(Config);
 	
 	if (cfgMap == null)
