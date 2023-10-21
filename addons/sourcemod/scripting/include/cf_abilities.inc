@@ -2001,7 +2001,9 @@ public Native_CF_HealPlayer(Handle plugin, int numParams)
 	{
 		CFA_GiveChargesForHealing(healer, float(healingDone));
 		
-		//TODO: Scoreboard credit
+		int points = GetEntProp(healer, Prop_Send, "m_iHealPoints");
+		points += healingDone;
+		SetEntProp(healer, Prop_Send, "m_iHealPoints", points);
 	}
 }
 
