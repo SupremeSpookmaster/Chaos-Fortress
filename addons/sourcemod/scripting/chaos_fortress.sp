@@ -33,7 +33,6 @@
 //	- TODO: Detect healing from base game sources (mediguns, dispensers, crusader's crossbow bolts, mad milk) and give resources/ult charge for it.
 //	- TODO: Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
 //	- TODO: Make natives which share the names of FF2's natives and do the same things, so porting FF2 plugins is as simple as just changing the include file and recompiling.
-//	- TODO: Add a "chat_messages" section to game_rules.cfg which allows server owners to send messages every X seconds.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Translations
@@ -41,6 +40,7 @@
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
 //	- For some reason, players get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? It's invisible while alive but becomes visible on death. This has no effect on gameplay but it's really ugly. Honestly baffling.
 //	- CF_PlayRandomSound and CF_GetRandomSound sometimes spit errors at the console and I have no clue why. It's not super frequent and it doesn't cause any lag, but I'm not sure I feel comfortable publishing CF with this.
+//		- Most likely linked to the error pasted below.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.

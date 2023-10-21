@@ -22,6 +22,10 @@ public ConfigMap GameRules;
 
 ConVar g_WeaponDropLifespan;
 
+Handle g_ChatMessages;
+Handle g_ChatIntervals;
+Handle g_ChatTimes;
+
 /**
  * Creates all of Chaos Fortress' natives.
  */
@@ -55,6 +59,29 @@ public void CF_OnPluginStart()
 	
 	g_WeaponDropLifespan = FindConVar("tf_dropped_weapon_lifetime");
 	g_WeaponDropLifespan.IntValue = 0;
+
+	CreateTimer(1.0, Timer_ChatMessages, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+}
+
+public Action Timer_ChatMessages(Handle messages)
+{
+	if (g_ChatMessages != null)
+	{
+		for (int i = 0; i < GetArraySize(g_ChatIntervals); i++)
+		{
+			if (GetGameTime() >= GetArrayCell(g_ChatTimes, i))
+			{
+				float interval = GetArrayCell(g_ChatIntervals, i);
+				SetArrayCell(g_ChatTimes, i, GetGameTime() + interval);
+
+				char message[255];
+				GetArrayString(g_ChatMessages, i, message, sizeof(message));
+				CPrintToChatAll(message);
+			}
+		}
+	}
+
+	return Plugin_Continue;
 }
 
 /**
@@ -107,9 +134,6 @@ public void CF_OnPluginStart()
 	    
 	    CFKS_ApplyKDARules(KillValue, DeathValue, KDA_Angry, KDA_Happy);
 	    
-	    float interval = GetFloatFromConfigMap(subsection, "chat_interval", 180.0);
-	    CFA_ApplyChatInterval(interval);
-	    
 	    if (IsValidClient(admin))
 	    {
 	    	PrintToConsole(admin, "\nNew game rules under general_rules:");
@@ -151,7 +175,54 @@ public void CF_OnPluginStart()
 	    PrintToServer("Killstreaks Are Godlike At: %i Kill(s)", godlike);
 	    #endif
 	}
-	
+		
+	delete g_ChatMessages;
+	delete g_ChatIntervals;
+	delete g_ChatTimes;
+
+	subsection = GameRules.GetSection("game_rules.chat_messages");
+	if (subsection != null)
+	{
+		g_ChatMessages = CreateArray(255);
+		g_ChatIntervals = CreateArray(255);
+
+		ConfigMap messageSection = subsection.GetSection("message_1");
+		int currentMessage = 1;
+		while (messageSection != null)
+		{
+			char messageText[255];
+			messageSection.Get("message", messageText, 255);
+			float interval = GetFloatFromConfigMap(messageSection, "interval", 300.0);
+			int holiday = GetIntFromConfigMap(messageSection, "holiday", 0);
+
+			bool permissible = true;
+
+			//mild YandereDev-tier code, whoopsies!
+			if (holiday == 1 && !TF2_IsHolidayActive(TFHoliday_Invalid))
+				permissible = false;
+			if (holiday == 2 && !TF2_IsHolidayActive(TFHoliday_HalloweenOrFullMoon))
+				permissible = false;
+			if (holiday == 3 && !TF2_IsHolidayActive(TFHoliday_AprilFools))
+				permissible = false;
+			if (holiday == 4 && !TF2_IsHolidayActive(TFHoliday_Birthday))
+				permissible = false;
+			if (holiday == 5 && !TF2_IsHolidayActive(TFHoliday_Christmas))
+				permissible = false;
+			
+			if (permissible)
+			{
+				PushArrayString(g_ChatMessages, messageText);
+				PushArrayCell(g_ChatIntervals, interval);
+				PushArrayCell(g_ChatTimes, GetGameTime() + interval);
+			}
+
+			currentMessage++;
+			char name[255];
+			Format(name, sizeof(name), "message_%i", currentMessage);
+			messageSection = subsection.GetSection(name);
+		}
+	}
+
 	DeleteCfg(GameRules);
 	
 	#if defined DEBUG_GAMERULES
