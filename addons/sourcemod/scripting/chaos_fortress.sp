@@ -45,7 +45,6 @@
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //	- ORBITAL SNIPER: Rifle inexplicably cannot pick up ammo...
-//	- ORBITAL SNIPER: Rifle tracer gets blocked by trigger brushes (spawn doors, control points, etc).
 //
 /*
 L 10/19/2023 - 15:36:13: [SM] Exception reported: invalid handle 0 (error: 4)
