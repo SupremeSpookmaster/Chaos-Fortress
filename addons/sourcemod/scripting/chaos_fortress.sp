@@ -30,7 +30,6 @@
 //	- TODO: Everything that happens on client disconnect (possibly already covered, not sure).
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
 //	- TODO: Finalize the wiki by updating each page with all of the changes.
-//	- TODO: Detect healing from base game sources (mediguns, dispensers, crusader's crossbow bolts, mad milk) and give resources/ult charge for it.
 //	- TODO: Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
 //	- TODO: Make natives which share the names of FF2's natives and do the same things, so porting FF2 plugins is as simple as just changing the include file and recompiling.
 //
@@ -96,6 +95,7 @@ public void OnPluginStart()
 	HookEvent("teamplay_round_win", RoundEnd);
 	HookEvent("teamplay_round_stalemate", RoundEnd);
 	HookEvent("player_changeclass", ClassChange);
+	HookEvent("player_healed", PlayerHealed);
 	
 	RegAdminCmd("cf_reloadrules", CF_ReloadRules, ADMFLAG_KICK, "Chaos Fortress: Reloads the settings in game_rules.cfg.");
 	RegAdminCmd("cf_reloadcharacters", CF_ReloadCharacters, ADMFLAG_KICK, "Chaos Fortress: Reloads the character packs, as defined in characters.cfg.");
@@ -128,6 +128,20 @@ public Action PlayerKilled(Event hEvent, const char[] sEvName, bool bDontBroadca
 		CF_PlayerKilled(victim, inflictor, attacker, ringer);
 	}
 	
+	return Plugin_Continue;
+}
+
+public Action PlayerHealed(Event hEvent, const char[] sEvName, bool bDontBroadcast)
+{
+	int patient = GetClientOfUserId(hEvent.GetInt("patient"));
+	int healer = hEvent.GetInt("healer");
+	int amount = GetClientOfUserId(hEvent.GetInt("amount"));
+
+	if (IsValidClient(healer) && healer != patient)
+	{
+		CFA_GiveChargesForHealing(healer, float(amount));
+	}
+
 	return Plugin_Continue;
 }
 

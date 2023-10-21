@@ -1999,11 +1999,16 @@ public Native_CF_HealPlayer(Handle plugin, int numParams)
 	
 	if (healingDone > 0 && IsValidClient(healer) && healer != client)
 	{
-		CF_GiveUltCharge(healer, float(healingDone), CF_ResourceType_Healing);
-		CF_GiveSpecialResource(healer, float(healingDone), CF_ResourceType_Healing);
+		CFA_GiveChargesForHealing(healer, float(healingDone));
 		
 		//TODO: Scoreboard credit
 	}
+}
+
+public void CFA_GiveChargesForHealing(int healer, float healingDone)
+{
+	CF_GiveUltCharge(healer, healingDone, CF_ResourceType_Healing);
+	CF_GiveSpecialResource(healer, healingDone, CF_ResourceType_Healing);
 }
 
 public Native_CF_FireGenericRocket(Handle plugin, int numParams)
