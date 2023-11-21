@@ -4,14 +4,15 @@
 #define _cf_included_
 
 #include <cf_stocks>
-#include <cf_killstreak>
-#include <cf_damage>
-#include <cf_buttons>
 #include <cf_include>
-#include <cf_characters>
-#include <cf_sounds>
-#include <cf_weapons>
-#include <cf_abilities>
+
+#include "chaos_fortress/cf_killstreak.sp"
+#include "chaos_fortress/cf_damage.sp"
+#include "chaos_fortress/cf_buttons.sp"
+#include "chaos_fortress/cf_characters.sp"
+#include "chaos_fortress/cf_sounds.sp"
+#include "chaos_fortress/cf_weapons.sp"
+#include "chaos_fortress/cf_abilities.sp"
 
 int i_CFRoundState = 0;						//The current round state.
 

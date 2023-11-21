@@ -62,6 +62,13 @@ public const float f_ClassBaseSpeed[] =
 	320.0
 };
 
+enum struct CFCharacter
+{
+	int penisman;
+}
+
+CFCharacter g_Characters[MAXPLAYERS + 1];
+
 //Store configs and names in two separate arrays so we aren't reading every single character's config every single time someone opens the !characters menu:
 Handle CF_Characters_Configs;
 Handle CF_Characters_Names;

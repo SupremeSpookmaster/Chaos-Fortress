@@ -1,4 +1,4 @@
-#include <cf_viewchange>
+#include "chaos_fortress/cf_viewchange.sp"
 
 char s_WeaponFireAbility[2049][255];
 char s_WeaponFirePlugin[2049][255];

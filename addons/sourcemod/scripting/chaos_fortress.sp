@@ -33,6 +33,8 @@
 //	- TODO: Everything that happens on client disconnect (possibly already covered, not sure).
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
 //	- TODO: Finalize the wiki by updating each page with all of the changes.
+//	- TODO: Convert a bunch of shit regarding character data to an enum struct (or better yet, methodmap) containing all important data regarding the player's active character.
+//			- This will MASSIVELY improve performance by letting us massively simplify a ton of natives, will make future natives braindead easy to write, and will also help with code cleanliness.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Translations
@@ -66,7 +68,7 @@ public Plugin myinfo =
 	url = PLUGIN_URL
 };
 
-#include <cf_core>
+#include "chaos_fortress/cf_core.sp"
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
