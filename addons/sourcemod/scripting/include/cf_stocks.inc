@@ -165,7 +165,7 @@ stock KeyValues GetKeyValuesAtSection(char path[255], char section[255], bool th
 /**
  * Checks if a file exists.
  *
- * @param client			The file to check.
+ * @param path			The file to check.
  *
  * @return					True if it exists, false otherwise.
  */
