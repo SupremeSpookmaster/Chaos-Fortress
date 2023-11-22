@@ -563,6 +563,37 @@ native CF_SetPlayerConfig(int client, char[] confName);
 native float CF_GetCharacterMaxHealth(int client);
 
 /**
+ * Retrieves the max speed, in hammer units per second, of the given client's current character.
+ *
+ * @param client				The client whose max speed to retrieve.
+ *
+ * @return	The character's max speed, or 0.0 of the client is not a character.
+ */
+native float CF_GetCharacterSpeed(int client);
+
+/**
+ * Retrieves the name of the given client's current character.
+ *
+ * @param client				The client whose character's name to retrieve.
+ * @param output				Output buffer.
+ * @param size					Size of the output buffer.
+ *
+ * @return	The name of the client's current character, stored in the output buffer, or an empty string if the client is not a character.
+ */
+native CF_GetCharacterName(int client);
+
+/**
+ * Retrieves the model path of the given client's current character.
+ *
+ * @param client				The client whose character's model path to retrieve.
+ * @param output				Output buffer.
+ * @param size					Size of the output buffer.
+ *
+ * @return	The model path of the client's current character, stored in the output buffer, or an empty string if the client is not a character.
+ */
+native CF_GetCharacterModel(int client);
+
+/**
  * Determines whether or not the chosen client is a character.
  *
  * @param client		The client to check.

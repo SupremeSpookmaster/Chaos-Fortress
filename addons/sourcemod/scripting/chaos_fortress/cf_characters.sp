@@ -62,9 +62,38 @@ public const float f_ClassBaseSpeed[] =
 	320.0
 };
 
+//TODO: Populate this with every other value a character's config can have.
+//Possible values include:
+//		- All variables associated with the character's Ultimate Ability.
+//		- All variables associated with the character's special resource.
+//		- A pre-generated ConfigMap leading to the client's current character, to be used instead of generating a new ConfigMap all the time for menial tasks.
 enum struct CFCharacter
 {
-	int penisman;
+	float Speed;
+	float MaxHP;
+	
+	char Model[255];
+	char Name[255];
+	
+	TFClassType Class;
+	
+	bool Exists;
+	
+	void Create(float newSpeed, float newMaxHP, TFClassType newClass, char newModel[255], char newName[255])
+	{
+		this.Speed = newSpeed;
+		this.MaxHP = newMaxHP;
+		this.Class = newClass;
+		this.Model = newModel;
+		this.Name = newName;
+		
+		this.Exists = true;
+	}
+	
+	void Destroy()
+	{
+		this.Exists = false;
+	}
 }
 
 CFCharacter g_Characters[MAXPLAYERS + 1];
@@ -108,8 +137,6 @@ Handle c_DesiredCharacter;
 
 //Queue CF_CharacterParticles[MAXPLAYERS + 1];
 
-float f_Speed[MAXPLAYERS + 1];
-
 public void CFC_Disconnect(int client)
 {
 	b_FirstSpawn[client] = true;
@@ -123,6 +150,9 @@ public void CFC_MakeNatives()
 	CreateNative("CF_IsPlayerCharacter", Native_CF_IsPlayerCharacter);
 	CreateNative("CF_GetCharacterClass", Native_CF_GetCharacterClass);
 	CreateNative("CF_GetCharacterMaxHealth", Native_CF_GetCharacterMaxHealth);
+	CreateNative("CF_GetCharacterName", Native_CF_GetCharacterName);
+	CreateNative("CF_GetCharacterModel", Native_CF_GetCharacterModel);
+	CreateNative("CF_GetCharacterSpeed", Native_CF_GetCharacterSpeed);
 	CreateNative("CF_AttachParticle", Native_CF_AttachParticle);
 	CreateNative("CF_AttachWearable", Native_CF_AttachWearable);
 }
@@ -1049,6 +1079,15 @@ public void CF_ResetMadeStatus(int client)
 	CF_SetPlayerConfig(client, conf);
 	SetClientCookie(client, c_DesiredCharacter, conf);
 		
+	char model[255], name[255];
+	map.Get("character.model", model, sizeof(model));
+	map.Get("character.name", name, sizeof(name));
+	float speed = GetFloatFromConfigMap(map, "character.speed", 300.0);
+	float health = GetFloatFromConfigMap(map, "character.health", 250.0);
+	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
+	
+	g_Characters[client].Create(speed, health, Classes[class], model, name);
+		
 	ConfigMap GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 	
 	int entity;
@@ -1070,10 +1109,6 @@ public void CF_ResetMadeStatus(int client)
 		}
 	}
 	
-	char model[255], name[255];
-	map.Get("character.model", model, sizeof(model));
-	map.Get("character.name", name, sizeof(name));
-	f_Speed[client] = GetFloatFromConfigMap(map, "character.speed", 300.0);
 	if (CheckFile(model))
 	{
 		SetVariantString(model);
@@ -1102,10 +1137,8 @@ public void CF_ResetMadeStatus(int client)
 		CFC_GiveWeapons(client, weapons);
 	}
 	
-	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
-	
-	TF2_SetPlayerClass(client, Classes[class]);
-	CF_UpdateCharacterHP(client, Classes[class], true);
+	TF2_SetPlayerClass(client, g_Characters[client].Class);
+	CF_UpdateCharacterHP(client, g_Characters[client].Class, true);
 	CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
 	
 	ConfigMap particles = map.GetSection("character.particles");
@@ -1535,7 +1568,7 @@ public void CF_ResetMadeStatus(int client)
  		return;
  	
  	//for some bizarre reason, it freaks out and sets the HP to something in the billions if I don't separate these:
- 	float targSpd = f_Speed[client];
+ 	float targSpd = g_Characters[client].Speed;
  	float baseSpd = f_ClassBaseSpeed[num];
  	float speed = targSpd / baseSpd;
  	
@@ -1569,12 +1602,7 @@ public void CF_ResetMadeStatus(int client)
  	if (!CF_IsPlayerCharacter(client))
  		return 0.0;
  		
- 	char conf[255];
- 	CF_GetPlayerConfig(client, conf, sizeof(conf));
- 	ConfigMap map = new ConfigMap(conf);
- 	float returnVal = GetFloatFromConfigMap(map, "character.health", 0.0);
- 	DeleteCfg(map);
- 	return returnVal;
+ 	return g_Characters[client].MaxHP;
  }
  
 /**
@@ -1599,6 +1627,7 @@ public void CF_ResetMadeStatus(int client)
  	CF_SetPlayerConfig(client, "");
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	b_CharacterApplied[client] = false;
+ 	g_Characters[client].Destroy();
  	
  	CFC_DeleteParticles(client, true);
  }
@@ -1655,14 +1684,7 @@ public Native_CF_IsPlayerCharacter(Handle plugin, int numParams)
 	
 	if (IsValidClient(client))
 	{
-		char buffer[255] = "";
-		CF_GetPlayerConfig(client, buffer, 255);
-		
-		ReturnValue = !StrEqual(buffer, "");
-		
-		#if defined DEBUG_CHARACTER_CREATION
-		CPrintToChatAll("%N's PlayerConfig was returned to CF_IsPlayerCharacter() as %s. Returning %i.", client, buffer, view_as<int>(ReturnValue));
-		#endif
+		ReturnValue = g_Characters[client].Exists;
 	}
 	
 	return ReturnValue;
@@ -1675,21 +1697,7 @@ public any Native_CF_GetCharacterClass(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return TFClass_Unknown;
 		
-	char conf[255];
-	CF_GetPlayerConfig(client, conf, 255);
-	ConfigMap map = new ConfigMap(conf);
-	int num = GetIntFromConfigMap(map, "character.class", 0);
-	DeleteCfg(map);
-	
-	if (num == 0)
-	{
-		return TFClass_Unknown;
-	}
-	else
-	{
-		TFClassType class = Classes[num - 1];
-		return class;
-	}
+	return g_Characters[client].Class;
 }
 
 public Native_CF_AttachParticle(Handle plugin, int numParams)
@@ -1753,4 +1761,64 @@ public Native_CF_AttachWearable(Handle plugin, int numParams)
 	}
 	
 	return -1;
+}
+
+public Native_CF_GetCharacterName(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	int size = GetNativeCell(3);
+	
+	if (CF_IsPlayerCharacter(client))
+	{
+		SetNativeString(2, g_Characters[client].Name, size, false);
+		
+		#if defined DEBUG_CHARACTER_CREATION
+		char debugStrGet[255];
+		GetNativeString(2, debugStrGet, 255);
+		
+		CPrintToChatAll("%N's character's name is currently %s.", client, debugStrGet);
+		#endif
+	}
+	else
+	{
+		SetNativeString(2, "", size + 1, false);
+	}
+	
+	return;
+}
+
+public Native_CF_GetCharacterModel(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	int size = GetNativeCell(3);
+	
+	if (CF_IsPlayerCharacter(client))
+	{
+		SetNativeString(2, g_Characters[client].Model, size, false);
+		
+		#if defined DEBUG_CHARACTER_CREATION
+		char debugStrGet[255];
+		GetNativeString(2, debugStrGet, 255);
+		
+		CPrintToChatAll("%N's character's model is currently %s.", client, debugStrGet);
+		#endif
+	}
+	else
+	{
+		SetNativeString(2, "", size + 1, false);
+	}
+	
+	return;
+}
+
+public any Native_CF_GetCharacterSpeed(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+
+	if (CF_IsPlayerCharacter(client))
+	{
+		return g_Characters[client].Speed;
+	}
+	
+	return 0.0;
 }
