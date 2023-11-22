@@ -202,7 +202,7 @@ public Action CFA_HUDTimer(Handle timer)
 						CF_GiveUltCharge(client, f_UltChargeOnRegen[client]/10.0, CF_ResourceType_Percentage);
 					}
 					
-					if (b_UltBlocked[client])
+					if (b_UltBlocked[client] || CF_GetRoundState() != 1)
 					{
 						Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE [BLOCKED]\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0));
 					}
@@ -529,6 +529,12 @@ public void CF_OnPlayerCallForMedic(int client)
 		
 	if (!b_CharacterHasUlt[client])
 		return;
+		
+	if (CF_GetRoundState() != 1)
+	{
+		Nope(client);
+		return;
+	}
 	
 	CF_AttemptAbilitySlot(client, CF_AbilityType_Ult);
 }
