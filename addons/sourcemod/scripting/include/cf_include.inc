@@ -563,6 +563,14 @@ native CF_SetPlayerConfig(int client, char[] confName);
 native float CF_GetCharacterMaxHealth(int client);
 
 /**
+ * Returns the max HP of the given client's character.
+ *
+ * @param client		The client whose max HP to set.
+ * @param NewHP			The max HP to set.
+ */
+native CF_SetCharacterMaxHealth(int client, float NewHP);
+
+/**
  * Retrieves the max speed, in hammer units per second, of the given client's current character.
  *
  * @param client				The client whose max speed to retrieve.
@@ -570,6 +578,14 @@ native float CF_GetCharacterMaxHealth(int client);
  * @return	The character's max speed, or 0.0 of the client is not a character.
  */
 native float CF_GetCharacterSpeed(int client);
+
+/**
+ * Sets the client's max speed, provided they are a character.
+ *
+ * @param client				The client whose max speed to set.
+ * @param NewSpeed				The new max speed to set.
+ */
+native CF_SetCharacterSpeed(int client, float NewSpeed);
 
 /**
  * Retrieves the name of the given client's current character.
@@ -580,7 +596,15 @@ native float CF_GetCharacterSpeed(int client);
  *
  * @return	The name of the client's current character, stored in the output buffer, or an empty string if the client is not a character.
  */
-native CF_GetCharacterName(int client);
+native CF_GetCharacterName(int client, char output[255], int size);
+
+/**
+ * Changes the client's character name, provided they are a character.
+ *
+ * @param client				The client whose character model to set.
+ * @param NewName				The new name to set.
+ */
+native CF_SetCharacterName(int client, char NewName[255]);
 
 /**
  * Retrieves the model path of the given client's current character.
@@ -591,7 +615,15 @@ native CF_GetCharacterName(int client);
  *
  * @return	The model path of the client's current character, stored in the output buffer, or an empty string if the client is not a character.
  */
-native CF_GetCharacterModel(int client);
+native CF_GetCharacterModel(int client, char output[255], int size);
+
+/**
+ * Changes the client's character model, provided they are a character and the given model exists.
+ *
+ * @param client				The client whose character model to set.
+ * @param NewModel				The new character model.
+ */
+native CF_SetCharacterModel(int client, char NewModel[255]);
 
 /**
  * Determines whether or not the chosen client is a character.
@@ -668,6 +700,14 @@ native bool CF_GetWeaponVisibility(int weapon);
  * @return The class of the player's character, TFClass_Unknown if invalid.
  */
 native TFClassType CF_GetCharacterClass(int client);
+
+/**
+ * Sets the class of the player's current character.
+ *
+ * @param client		The client to check.
+ * @param NewClass		The new class to set.
+ */
+native CF_SetCharacterClass(int client, TFClassType NewClass);
 
 /**
  * Attaches a particle to a client, using Chaos Fortress' system to automatically handle several important things particles need.

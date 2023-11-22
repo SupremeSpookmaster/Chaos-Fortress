@@ -145,14 +145,27 @@ public void CFC_Disconnect(int client)
 public void CFC_MakeNatives()
 {
 	CreateNative("CF_GetRoundState", Native_CF_GetRoundState);
+	
 	CreateNative("CF_GetPlayerConfig", Native_CF_GetPlayerConfig);
 	CreateNative("CF_SetPlayerConfig", Native_CF_SetPlayerConfig);
+	
 	CreateNative("CF_IsPlayerCharacter", Native_CF_IsPlayerCharacter);
+	
 	CreateNative("CF_GetCharacterClass", Native_CF_GetCharacterClass);
+	CreateNative("CF_SetCharacterClass", Native_CF_SetCharacterClass);
+	
 	CreateNative("CF_GetCharacterMaxHealth", Native_CF_GetCharacterMaxHealth);
+	CreateNative("CF_SetCharacterMaxHealth", Native_CF_SetCharacterMaxHealth);
+	
 	CreateNative("CF_GetCharacterName", Native_CF_GetCharacterName);
+	CreateNative("CF_SetCharacterName", Native_CF_SetCharacterName);
+	
 	CreateNative("CF_GetCharacterModel", Native_CF_GetCharacterModel);
+	CreateNative("CF_SetCharacterModel", Native_CF_SetCharacterModel);
+	
 	CreateNative("CF_GetCharacterSpeed", Native_CF_GetCharacterSpeed);
+	CreateNative("CF_SetCharacterSpeed", Native_CF_SetCharacterSpeed);
+	
 	CreateNative("CF_AttachParticle", Native_CF_AttachParticle);
 	CreateNative("CF_AttachWearable", Native_CF_AttachWearable);
 }
@@ -1605,6 +1618,18 @@ public void CF_ResetMadeStatus(int client)
  	return g_Characters[client].MaxHP;
  }
  
+ public Native_CF_SetCharacterMaxHealth(Handle plugin, int numParams)
+ {
+ 	int client = GetNativeCell(1);
+ 	float NewMax = GetNativeCell(2);
+
+ 	if (CF_IsPlayerCharacter(client))
+ 	{
+ 		g_Characters[client].MaxHP = NewMax;
+ 		CF_UpdateCharacterHP(client, g_Characters[client].Class, false);
+ 	}
+ }
+ 
 /**
  * Disables the player's active Chaos Fortress character.
  *
@@ -1700,6 +1725,21 @@ public any Native_CF_GetCharacterClass(Handle plugin, int numParams)
 	return g_Characters[client].Class;
 }
 
+public Native_CF_SetCharacterClass(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	TFClassType NewClass = GetNativeCell(2);
+	
+	if (CF_IsPlayerCharacter(client))
+	{
+		g_Characters[client].Class = NewClass;
+		
+		TF2_SetPlayerClass(client, g_Characters[client].Class);
+		CF_UpdateCharacterHP(client, g_Characters[client].Class, false);
+		CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
+	}
+}
+
 public Native_CF_AttachParticle(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
@@ -1787,6 +1827,18 @@ public Native_CF_GetCharacterName(Handle plugin, int numParams)
 	return;
 }
 
+public Native_CF_SetCharacterName(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	char NewName[255];
+	GetNativeString(2, NewName, sizeof(NewName));
+	
+	if (CF_IsPlayerCharacter(client))
+	{
+		g_Characters[client].Name = NewName;
+	}
+}
+
 public Native_CF_GetCharacterModel(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
@@ -1811,6 +1863,22 @@ public Native_CF_GetCharacterModel(Handle plugin, int numParams)
 	return;
 }
 
+public Native_CF_SetCharacterModel(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	char NewModel[255];
+	GetNativeString(2, NewModel, sizeof(NewModel));
+	
+	if (CF_IsPlayerCharacter(client) && CheckFile(NewModel))
+	{
+		g_Characters[client].Model = NewModel;
+		PrecacheModel(NewModel);
+		
+		SetVariantString(NewModel);
+		AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
+	}
+}
+
 public any Native_CF_GetCharacterSpeed(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
@@ -1818,6 +1886,20 @@ public any Native_CF_GetCharacterSpeed(Handle plugin, int numParams)
 	if (CF_IsPlayerCharacter(client))
 	{
 		return g_Characters[client].Speed;
+	}
+	
+	return 0.0;
+}
+
+public any Native_CF_SetCharacterSpeed(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	float NewSpeed = GetNativeCell(2);
+
+	if (CF_IsPlayerCharacter(client))
+	{
+		g_Characters[client].Speed = NewSpeed;
+		CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
 	}
 	
 	return 0.0;
