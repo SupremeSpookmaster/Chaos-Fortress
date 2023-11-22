@@ -11,7 +11,9 @@
 //
 //	- IMMEDIATE PLANS (things I am currently focusing on):
 //		- Orbital Sniper:
-//			- Use the voicefx plugin's DSP things for his voice to reduce downloads
+//			- Make custom sounds and implement them.
+//		- Count Heavnich:
+//			- Write concept and create character.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////
@@ -27,14 +29,14 @@
 //		- Orbital Sniper:
 //			- There's not a lot of viable counterplay against an Orbital hugging the skybox, besides having another Orbital counter-snipe them.
 //				- This will be solved with future characters who also have decent ranged choices.
+//			- The rifle on its own deals enough damage that you don't really need to use the height advantage gimmick most of the time.
+//				- Make base damage lower and increase the strength of the height advantage gimmick.
 //		////////////////////////////////////////////
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Everything that happens on client disconnect (possibly already covered, not sure).
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
 //	- TODO: Finalize the wiki by updating each page with all of the changes.
-//	- TODO: Convert a bunch of shit regarding character data to an enum struct (or better yet, methodmap) containing all important data regarding the player's active character.
-//			- This will MASSIVELY improve performance by letting us massively simplify a ton of natives, will make future natives braindead easy to write, and will also help with code cleanliness.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Translations
@@ -48,7 +50,7 @@
 //	- The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //	- ORBITAL SNIPER: Rifle inexplicably cannot pick up ammo...
 //	- SPOOKMASTER BONES: Dialogue is too loud and can be heard from nearly anywhere on the map, make a cf_soundpack ability to make all of them quieter.
-//
+//	- ALL: The default trace gets blocked by invisible clips like spawn doors and such.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
