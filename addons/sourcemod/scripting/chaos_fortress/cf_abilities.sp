@@ -909,9 +909,9 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 					played = played2;
 			}
 			
-			char conf[255];
-			CF_GetPlayerConfig(client, conf, sizeof(conf));
-			ConfigMap map = new ConfigMap(conf);
+			//char conf[255];
+			//CF_GetPlayerConfig(client, conf, sizeof(conf));
+			ConfigMap map = g_Characters[client].Map;
 			if (map != null)
 			{
 				float distance = GetFloatFromConfigMap(map, "character.ultimate_stats.radius", 800.0);
@@ -944,7 +944,7 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 					}
 				}
 				
-				DeleteCfg(map);
+				//DeleteCfg(map);
 			}
 			
 			if (played)
@@ -1406,19 +1406,15 @@ public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
 		
 	int slot = GetNativeCell(2);
 	
-	char conf[255], pluginName[255], abName[255];
-	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	char pluginName[255], abName[255];
 	
-	ConfigMap map = new ConfigMap(conf);
+	ConfigMap map = g_Characters[client].Map;
 	if (map == null)
 		return;
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
-	{
-		DeleteCfg(map);
 		return;
-	}
 		
 	int i = 1;
 	char secName[255];
@@ -1440,7 +1436,7 @@ public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
 		subsection = abilities.GetSection(secName);
 	}
 	
-	DeleteCfg(map);
+	//DeleteCfg(map);
 }
 
 public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
@@ -1453,19 +1449,15 @@ public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
 	int slot = GetNativeCell(2);
 	bool resupply = GetNativeCell(3);
 	
-	char conf[255], pluginName[255], abName[255];
-	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	char pluginName[255], abName[255];
 	
-	ConfigMap map = new ConfigMap(conf);
+	ConfigMap map = g_Characters[client].Map;
 	if (map == null)
 		return;
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
-	{
-		DeleteCfg(map);
 		return;
-	}
 		
 	int i = 1;
 	char secName[255];
@@ -1510,7 +1502,7 @@ public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
 		}
 	}
 	
-	DeleteCfg(map);
+	//DeleteCfg(map);
 }
 
 public Native_CF_EndHeldAbility(Handle plugin, int numParams)
@@ -1547,10 +1539,9 @@ public Native_CF_HasAbility(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return false;
 		
-	char conf[255], targetPlugin[255], targetAbility[255], pluginName[255], abName[255];
-	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	char targetPlugin[255], targetAbility[255], pluginName[255], abName[255];
 	
-	ConfigMap map = new ConfigMap(conf);
+	ConfigMap map = g_Characters[client].Map;
 	if (map == null)
 		return false;
 		
@@ -1559,10 +1550,7 @@ public Native_CF_HasAbility(Handle plugin, int numParams)
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
-	{
-		DeleteCfg(map);
 		return false;
-	}
 		
 	bool ReturnValue = false;
 		
@@ -1587,7 +1575,7 @@ public Native_CF_HasAbility(Handle plugin, int numParams)
 		subsection = abilities.GetSection(secName);
 	}
 	
-	DeleteCfg(map);
+	//DeleteCfg(map);
 	
 	return ReturnValue;
 }
@@ -1599,10 +1587,9 @@ public Native_CF_GetArgI(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return -1;
 		
-	char conf[255], targetPlugin[255], targetAbility[255], argName[255], pluginName[255], abName[255];
-	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	char targetPlugin[255], targetAbility[255], argName[255], pluginName[255], abName[255];
 	
-	ConfigMap map = new ConfigMap(conf);
+	ConfigMap map = g_Characters[client].Map;
 	if (map == null)
 		return -1;
 		
@@ -1612,10 +1599,7 @@ public Native_CF_GetArgI(Handle plugin, int numParams)
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
-	{
-		DeleteCfg(map);
 		return -1;
-	}
 		
 	int ReturnValue = -1;
 		
@@ -1640,7 +1624,7 @@ public Native_CF_GetArgI(Handle plugin, int numParams)
 		subsection = abilities.GetSection(secName);
 	}
 	
-	DeleteCfg(map);
+	//DeleteCfg(map);
 	
 	return ReturnValue;
 }
@@ -1652,10 +1636,9 @@ public any Native_CF_GetArgF(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return -1.0;
 		
-	char conf[255], targetPlugin[255], targetAbility[255], argName[255], pluginName[255], abName[255];
-	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	char targetPlugin[255], targetAbility[255], argName[255], pluginName[255], abName[255];
 	
-	ConfigMap map = new ConfigMap(conf);
+	ConfigMap map = g_Characters[client].Map;
 	if (map == null)
 		return -1.0;
 		
@@ -1665,10 +1648,7 @@ public any Native_CF_GetArgF(Handle plugin, int numParams)
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
-	{
-		DeleteCfg(map);
 		return -1.0;
-	}
 		
 	float ReturnValue = -1.0;
 		
@@ -1693,7 +1673,7 @@ public any Native_CF_GetArgF(Handle plugin, int numParams)
 		subsection = abilities.GetSection(secName);
 	}
 	
-	DeleteCfg(map);
+	//DeleteCfg(map);
 	
 	return ReturnValue;
 }
@@ -1705,10 +1685,9 @@ public any Native_CF_GetAbilitySlot(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return CF_AbilityType_None;
 		
-	char conf[255], targetPlugin[255], targetAbility[255], pluginName[255], abName[255];
-	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	char targetPlugin[255], targetAbility[255], pluginName[255], abName[255];
 	
-	ConfigMap map = new ConfigMap(conf);
+	ConfigMap map = g_Characters[client].Map;
 	if (map == null)
 		return CF_AbilityType_None;
 		
@@ -1717,10 +1696,7 @@ public any Native_CF_GetAbilitySlot(Handle plugin, int numParams)
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
-	{
-		DeleteCfg(map);
 		return CF_AbilityType_None;
-	}
 		
 	CF_AbilityType ReturnValue = CF_AbilityType_None;
 		
@@ -1750,7 +1726,7 @@ public any Native_CF_GetAbilitySlot(Handle plugin, int numParams)
 		subsection = abilities.GetSection(secName);
 	}
 	
-	DeleteCfg(map);
+	//DeleteCfg(map);
 	
 	return ReturnValue;
 }
@@ -1766,15 +1742,11 @@ public Native_CF_GetArgS(Handle plugin, int numParams)
 		return;
 	}
 		
-	char conf[255], targetPlugin[255], targetAbility[255], argName[255], pluginName[255], abName[255];
-	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	char targetPlugin[255], targetAbility[255], argName[255], pluginName[255], abName[255];
 	
-	ConfigMap map = new ConfigMap(conf);
+	ConfigMap map = g_Characters[client].Map;
 	if (map == null)
-	{
-		SetNativeString(5, "", size, false);
 		return;
-	}
 		
 	GetNativeString(2, targetPlugin, sizeof(targetPlugin));
 	GetNativeString(3, targetAbility, sizeof(targetAbility));
@@ -1783,7 +1755,6 @@ public Native_CF_GetArgS(Handle plugin, int numParams)
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
 	{
-		DeleteCfg(map);
 		SetNativeString(5, "", size, false);
 		return;
 	}
@@ -1811,7 +1782,7 @@ public Native_CF_GetArgS(Handle plugin, int numParams)
 		subsection = abilities.GetSection(secName);
 	}
 	
-	DeleteCfg(map);
+	//DeleteCfg(map);
 }
 
 public Native_CF_GetAbilityConfigMapPath(Handle plugin, int numParams)
@@ -1825,10 +1796,9 @@ public Native_CF_GetAbilityConfigMapPath(Handle plugin, int numParams)
 		return;
 	}
 		
-	char conf[255], targetPlugin[255], targetAbility[255], section[255], pluginName[255], abName[255];
-	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	char targetPlugin[255], targetAbility[255], section[255], pluginName[255], abName[255];
 	
-	ConfigMap map = new ConfigMap(conf);
+	ConfigMap map = g_Characters[client].Map;
 	if (map == null)
 	{
 		SetNativeString(5, "", length);
@@ -1842,7 +1812,6 @@ public Native_CF_GetAbilityConfigMapPath(Handle plugin, int numParams)
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
 	{
-		DeleteCfg(map);
 		SetNativeString(5, "", length);
 		return;
 	}
@@ -1870,7 +1839,7 @@ public Native_CF_GetAbilityConfigMapPath(Handle plugin, int numParams)
 		subsection = abilities.GetSection(secName);
 	}
 	
-	DeleteCfg(map);
+	//DeleteCfg(map);
 }
 
 public any Native_CF_IsAbilitySlotBlocked(Handle plugin, int numParams)

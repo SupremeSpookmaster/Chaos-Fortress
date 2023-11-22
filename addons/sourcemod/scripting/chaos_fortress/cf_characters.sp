@@ -62,11 +62,10 @@ public const float f_ClassBaseSpeed[] =
 	320.0
 };
 
-//TODO: Populate this with every other value a character's config can have.
+//TODO: Populate this with every other value a character's config can have (done if we ignore optional bits).
 //Possible values include:
-//		- All variables associated with the character's Ultimate Ability.
-//		- All variables associated with the character's special resource.
-//		- A pre-generated ConfigMap leading to the client's current character, to be used instead of generating a new ConfigMap all the time for menial tasks.
+//		- All variables associated with the character's Ultimate Ability (optional, the plugin works as intended without this but it would be a nice QOL change).
+//		- All variables associated with the character's special resource (optional, the plugin works as intended without this but it would be a nice QOL change).
 enum struct CFCharacter
 {
 	float Speed;
@@ -79,7 +78,9 @@ enum struct CFCharacter
 	
 	bool Exists;
 	
-	void Create(float newSpeed, float newMaxHP, TFClassType newClass, char newModel[255], char newName[255])
+	ConfigMap Map;
+	
+	void Create(float newSpeed, float newMaxHP, TFClassType newClass, char newModel[255], char newName[255], ConfigMap newMap)
 	{
 		this.Speed = newSpeed;
 		this.MaxHP = newMaxHP;
@@ -87,12 +88,19 @@ enum struct CFCharacter
 		this.Model = newModel;
 		this.Name = newName;
 		
+		if (this.Map != null)
+			DeleteCfg(this.Map);
+			
+		this.Map = newMap;
+		
 		this.Exists = true;
 	}
 	
 	void Destroy()
 	{
 		this.Exists = false;
+		if (this.Map != null)
+			DeleteCfg(this.Map);
 	}
 }
 
@@ -1099,7 +1107,7 @@ public void CF_ResetMadeStatus(int client)
 	float health = GetFloatFromConfigMap(map, "character.health", 250.0);
 	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
 	
-	g_Characters[client].Create(speed, health, Classes[class], model, name);
+	g_Characters[client].Create(speed, health, Classes[class], model, name, map);
 		
 	ConfigMap GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 	
@@ -1208,7 +1216,6 @@ public void CF_ResetMadeStatus(int client)
  	b_IsDead[client] = false;
  	s_PreviousCharacter[client] = conf;
  	
- 	DeleteCfg(map);
  	DeleteCfg(GameRules);
  	
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
