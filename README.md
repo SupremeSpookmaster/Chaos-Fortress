@@ -24,9 +24,9 @@
 
 ## *Making Custom Characters*
 ***Chaos Fortress*** comes with a number of pre-made custom characters, but what if that's not enough? What if you want *more*? Don't worry, because Chaos Fortress has you covered: ***if you know how to make a Freak Fortress boss, you'll know how to make a Chaos Fortress character!*** And even if you don't, don't worry; it's not very difficult to figure out if you're experienced with SourceMod development. Most of my experience as a SourceMod developer comes from making Freak Fortress bosses, and I knew most of the developers who might take an interest in this game mode would be similar, so I was very careful to keep the development process for ***Chaos Fortress*** characters as close to that of ***Freak Fortress*** characters as possible.
-  - Look at **[example_character.cfg](addons/sourcemod/configs/chaos_fortress/example_character.cfg)** to see an example of a ***Chaos Fortress*** character CFG.
+  - Look at **[mercenary.cfg](https://github.com/SupremeSpookmaster/Chaos-Fortress/blob/main/addons/sourcemod/configs/chaos_fortress/mercenary.cfg)** to see an example of a ***Chaos Fortress*** character CFG.
     - *This file doubles as a character CFG template. Feel free to use it to speed up the development of your characters!*
-  - Look at **[FILE PENDING]** to see an example of a ***Chaos Fortress*** character plugin.
+  - Look at **[cf_mercenary.sp](https://github.com/SupremeSpookmaster/Chaos-Fortress/blob/main/addons/sourcemod/scripting/cf_mercenary.sp)** to see an example of a basic ***Chaos Fortress*** character plugin.
   - Look at **[FILE PENDING]** for a ***Chaos Fortress*** character plugin template to speed up the development of your characters!
   - Character plugins do not require a special file extension or directory. Just drop the compiled SMX in your server's plugins folder and it will work.
     - *For the sake of organization, you are recommended to put your character plugins in a sub-folder, such as plugins/chaos_fortress. Again, this is just a recommendation, and is not mandatory.*
