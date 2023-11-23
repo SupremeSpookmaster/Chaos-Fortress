@@ -63,7 +63,7 @@ No matter how good you are at programming, you're not going to get very far in g
 
 ### Mercenary
  - **[DannyBoi151](https://gamebanana.com/members/1382615)** and **[stiffy360](https://gamebanana.com/members/707880)** (ported the **[Fruit Shop Fiend](https://gamebanana.com/mods/197791)** to TF2, which I used for Mercenary's assault rifle)
- - **[Stachekip](https://www.youtube.com/user/Stachekip)** (Voice actor for the Mercenary from **[Open Fortress](https://openfortress.fun/)**, whom Mercenary was originally intended to be before he was converted to a sniper OC to cut down on downloads)
+ - **[Stachekip](https://www.youtube.com/user/Stachekip)** (Voice actor for the Mercenary from **[Open Fortress](https://openfortress.fun/)**, whom CF's Mercenary gets his voice from)
 ### Spookmaster Bones
  - **[Vargskelethor, AKA Vinesauce Joel](https://www.twitch.tv/vargskelethor)** (Voice)
  - **[The 14th Doctor](https://gamebanana.com/members/1448519)** (Creator of the **[Vinesauce Joel Over Soldier Voice Pack](https://gamebanana.com/sounds/46534)** mod which I took specific sound clips from for dialogue)
