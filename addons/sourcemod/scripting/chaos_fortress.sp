@@ -30,7 +30,7 @@
 //			- There's not a lot of viable counterplay against an Orbital hugging the skybox, besides having another Orbital counter-snipe them.
 //				- This will be solved with future characters who also have decent ranged choices.
 //			- The rifle on its own deals enough damage that you don't really need to use the height advantage gimmick most of the time.
-//				- Make base damage lower and increase the strength of the height advantage gimmick.
+//				- Make base damage lower and increase the strength of the height advantage gimmick. This might make his damage feel "random" but it's better than free 550 damage headshots without engaging with the character's main gimmick at all.
 //		////////////////////////////////////////////
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
@@ -42,6 +42,25 @@
 //	- Translations
 //	- Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
 //	- Make natives which share the names of FF2's natives and do the same things, so porting FF2 plugins is as simple as just changing the include file and recompiling.
+//	- Add a "trophy" system that hands out praises as awards for various actions at the end of the round.
+//		- Should function like chat messages, by having a keyvalues tree associated with it:
+//			- "trophies"	//Trophy system. Delete this block to disable the trophy system.
+/*			  {
+					"1"
+					{
+							"name"				"My Trophy"		//Name of the trophy.
+							"trophy_plugin"		"my_trophy"		//Name of the trophy, as used in the CFT_OnAwardTrophy forward.
+							"message"			"Awarded to %N for being super cool."	//Optional message to print when this trophy is given out.
+					}
+			  }
+*/
+//		- A !trophies command should exist for players to check how many times they've obtained each trophy.
+//		- Superior Saint - Most healing done.
+//		- King of Carnage - Most damage dealt.
+//		- Top Brass - Most kills.
+//		- Top Trash - Most deaths.
+//		- Mondo Massacre - Highest killstreak.
+//		- Master Mitigator - Most damage taken, relative to your number of deaths.
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
 //	- For some reason, players get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? It's invisible while alive but becomes visible on death. This has no effect on gameplay but it's really ugly. Honestly baffling.
