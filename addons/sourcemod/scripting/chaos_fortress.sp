@@ -13,7 +13,10 @@
 //		- Orbital Sniper:
 //			- Make custom sounds and implement them.
 //		- Count Heavnich:
-//			- Write concept and create character.
+//			- Write Sandvich abilities.
+//			- Add echo support to the sound system.
+//			- His hat does not show up on bots. I do not know why.
+//			- Add built-in support to automatically block ability slots if the user would get stuck at a certain scale. This makes it easy to make abilities involving model resizing, since we can just say "you can't do that" if the player would get stuck.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////

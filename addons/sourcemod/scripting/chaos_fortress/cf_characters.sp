@@ -63,13 +63,14 @@ public const float f_ClassBaseSpeed[] =
 };
 
 //TODO: Populate this with every other value a character's config can have (done if we ignore optional bits).
-//Possible values include:
+//Possible future values include:
 //		- All variables associated with the character's Ultimate Ability (optional, the plugin works as intended without this but it would be a nice QOL change).
 //		- All variables associated with the character's special resource (optional, the plugin works as intended without this but it would be a nice QOL change).
 enum struct CFCharacter
 {
 	float Speed;
 	float MaxHP;
+	float Scale;
 	
 	char Model[255];
 	char Name[255];
@@ -80,13 +81,14 @@ enum struct CFCharacter
 	
 	ConfigMap Map;
 	
-	void Create(float newSpeed, float newMaxHP, TFClassType newClass, char newModel[255], char newName[255], ConfigMap newMap)
+	void Create(float newSpeed, float newMaxHP, TFClassType newClass, char newModel[255], char newName[255], ConfigMap newMap, float newScale)
 	{
 		this.Speed = newSpeed;
 		this.MaxHP = newMaxHP;
 		this.Class = newClass;
 		this.Model = newModel;
 		this.Name = newName;
+		this.Scale = newScale;
 		
 		if (this.Map != null)
 			DeleteCfg(this.Map);
@@ -173,6 +175,9 @@ public void CFC_MakeNatives()
 	
 	CreateNative("CF_GetCharacterSpeed", Native_CF_GetCharacterSpeed);
 	CreateNative("CF_SetCharacterSpeed", Native_CF_SetCharacterSpeed);
+	
+	CreateNative("CF_GetCharacterScale", Native_CF_GetCharacterScale);
+	CreateNative("CF_SetCharacterScale", Native_CF_SetCharacterScale);
 	
 	CreateNative("CF_AttachParticle", Native_CF_AttachParticle);
 	CreateNative("CF_AttachWearable", Native_CF_AttachWearable);
@@ -1106,8 +1111,9 @@ public void CF_ResetMadeStatus(int client)
 	float speed = GetFloatFromConfigMap(map, "character.speed", 300.0);
 	float health = GetFloatFromConfigMap(map, "character.health", 250.0);
 	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
+	float scale = GetFloatFromConfigMap(map, "character.scale", 1.0);
 	
-	g_Characters[client].Create(speed, health, Classes[class], model, name, map);
+	g_Characters[client].Create(speed, health, Classes[class], model, name, map, scale);
 		
 	ConfigMap GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 	
@@ -1135,6 +1141,8 @@ public void CF_ResetMadeStatus(int client)
 		SetVariantString(model);
 		AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
 	}
+	
+	CF_SetCharacterScale(client, scale);
 	
 	ConfigMap wearables = map.GetSection("character.wearables");
 	if (wearables == null)
@@ -1907,6 +1915,35 @@ public any Native_CF_SetCharacterSpeed(Handle plugin, int numParams)
 	{
 		g_Characters[client].Speed = NewSpeed;
 		CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
+		TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.0001);
+	}
+	
+	return 0.0;
+}
+
+public any Native_CF_GetCharacterScale(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+
+	if (CF_IsPlayerCharacter(client))
+	{
+		return g_Characters[client].Scale;
+	}
+	
+	return 0.0;
+}
+
+public any Native_CF_SetCharacterScale(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	float NewScale = GetNativeCell(2);
+
+	if (CF_IsPlayerCharacter(client))
+	{
+		g_Characters[client].Scale = NewScale;
+		
+		SetEntPropFloat(client, Prop_Send, "m_flModelScale", NewScale);
+		SetEntPropFloat(client, Prop_Send, "m_flStepSize", 18.0 * NewScale);
 	}
 	
 	return 0.0;

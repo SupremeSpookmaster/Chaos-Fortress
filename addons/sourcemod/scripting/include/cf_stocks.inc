@@ -128,6 +128,22 @@ stock KeyValues GetKeyValuesFromPath(char path[255], bool throwError, char error
  	return kv;
 }
 
+stock TF2_GetNameOfClass(TFClassType class, char name[255], int maxlen)
+{
+	switch (class)
+	{
+		case TFClass_Scout: Format(name, maxlen, "scout");
+		case TFClass_Soldier: Format(name, maxlen, "soldier");
+		case TFClass_Pyro: Format(name, maxlen, "pyro");
+		case TFClass_DemoMan: Format(name, maxlen, "demoman");
+		case TFClass_Heavy: Format(name, maxlen, "heavy");
+		case TFClass_Engineer: Format(name, maxlen, "engineer");
+		case TFClass_Medic: Format(name, maxlen, "medic");
+		case TFClass_Sniper: Format(name, maxlen, "sniper");
+		case TFClass_Spy: Format(name, maxlen, "spy");
+	}
+}
+
 /**
  * Returns a KeyValues object from a given file path, at a given section.
  *

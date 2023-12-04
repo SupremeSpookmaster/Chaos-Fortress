@@ -15,17 +15,16 @@ public void OnMapStart()
 	
 }
 
-public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]) //TODO: Allow devs to return an action to block this...
+public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
 {
+	if (!StrEqual(pluginName, MERC))
+		return;
+		
 	if (StrContains(abilityName, SPRINT) != -1)
-	{
 		Sprint_Begin(client, abilityName);
-	}
 	
 	if (StrContains(abilityName, FRAG) != -1)
-	{
 		Frag_Throw(client, abilityName);
-	}
 }
 
 public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255], char abilityName[255])

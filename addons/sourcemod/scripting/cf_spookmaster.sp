@@ -48,6 +48,9 @@ public void OnPluginStart()
 
 public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
 {
+	if (!StrEqual(pluginName, SPOOKMASTER))
+		return;
+		
 	if (StrContains(abilityName, HARVESTER) != -1)
 		Harvester_Activate(client, abilityName);
 		

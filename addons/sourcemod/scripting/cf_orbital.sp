@@ -70,6 +70,9 @@ public void OnPluginStart()
 
 public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
 {
+	if (!StrEqual(pluginName, ORBITAL))
+		return;
+		
 	if (StrContains(abilityName, THRUSTER) != -1)
 		Thruster_Activate(client, abilityName);
 		

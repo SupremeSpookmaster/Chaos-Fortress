@@ -271,7 +271,7 @@ public Action NormalSoundHook(int clients[64],int &numClients,char strSound[PLAT
 {
 	Call_StartForward(g_SoundHook);
 	
-	Call_PushString(strSound);
+	Call_PushStringEx(strSound, sizeof(strSound), SM_PARAM_STRING_UTF8|SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
 	Call_PushCellRef(entity);
 	Call_PushCellRef(channel);
 	Call_PushFloatRef(volume);

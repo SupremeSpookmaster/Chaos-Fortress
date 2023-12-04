@@ -15,6 +15,10 @@
 #define TOGGLE				"generic_toggle"
 #define LIMIT				"generic_limit"
 #define DELAY				"generic_delay"
+#define MODEL				"generic_model"
+#define SPEED				"generic_speed"
+#define HEALTH				"generic_health"
+#define SCALE				"generic_scale_ability"
 
 float Weapon_EndTime[2049] = { 0.0, ... };
 
@@ -122,6 +126,25 @@ enum struct OldWeapon
 OldWeapon ClientOldWeapons[MAXPLAYERS + 1][5];
 
 int Limit_NumUses[MAXPLAYERS + 1][4];
+int i_HPToSet[MAXPLAYERS + 1] = { 0, ... };
+
+char s_OldModel[MAXPLAYERS + 1][255];
+
+float f_ModelEndTime[MAXPLAYERS + 1] = { 0.0, ... };
+float f_OldSpeed[MAXPLAYERS + 1] = { 0.0, ... };
+float f_SpeedEndTime[MAXPLAYERS + 1] = { 0.0, ... };
+float f_HealthEndTime[MAXPLAYERS + 1] = { 0.0, ... };
+float f_OldMaxHP[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ScaleEndTime[MAXPLAYERS + 1] = { 0.0, ... };
+float f_OldScale[MAXPLAYERS + 1] = { 0.0, ... };
+
+bool b_WearablesHidden[MAXPLAYERS + 1] = { false, ... };
+
+Handle g_ModelTimer[MAXPLAYERS + 1] = { INVALID_HANDLE, ... };
+Handle g_SpeedTimer[MAXPLAYERS + 1] = { INVALID_HANDLE, ... };
+Handle g_HealthTimer[MAXPLAYERS + 1] = { INVALID_HANDLE, ... };
+Handle g_ScaleTimer[MAXPLAYERS + 1] = { INVALID_HANDLE, ... };
+Handle g_BlockTimers[MAXPLAYERS+1][4];
 
 public void CF_OnCharacterRemoved(int client)
 {
@@ -129,7 +152,36 @@ public void CF_OnCharacterRemoved(int client)
 	for (int i = 0; i < 4; i++)
 	{
 		Limit_NumUses[client][i] = 0;
+		if (g_BlockTimers[client][i] != null)
+			delete g_BlockTimers[client][i];
 	}
+	
+	b_WearablesHidden[client] = false;
+	
+	if (g_ModelTimer[client] != null)
+		delete g_ModelTimer[client];
+		
+	if (g_SpeedTimer[client] != null)
+		delete g_SpeedTimer[client];
+		
+	if (g_HealthTimer[client] != null)
+		delete g_HealthTimer[client];
+		
+	if (g_ScaleTimer[client] != null)
+		delete g_ScaleTimer[client];
+}
+
+public void CF_OnCharacterCreated(int client)
+{
+	for (int i = 0; i < 4; i++)
+	{
+		delete g_BlockTimers[client][i];
+	}
+	
+	delete g_ModelTimer[client];
+	delete g_SpeedTimer[client];
+	delete g_HealthTimer[client];
+	delete g_ScaleTimer[client];
 }
 
 public void Weapon_ClearAllOldWeapons(int client)
@@ -165,6 +217,9 @@ public void OnEntityDestroyed(int entity)
 
 public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
 {
+	if (!StrEqual(pluginName, GENERIC))
+		return;
+		
 	if (StrContains(abilityName, WEAPON) != -1)
 	{
 		Weapon_Activate(client, abilityName);
@@ -214,6 +269,184 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	{
 		Delay_Activate(client, abilityName);
 	}
+	
+	if (StrContains(abilityName, MODEL) != -1)
+	{
+		Model_Activate(client, abilityName);
+	}
+	
+	if (StrContains(abilityName, SPEED) != -1)
+	{
+		Speed_Activate(client, abilityName);
+	}
+	
+	if (StrContains(abilityName, HEALTH) != -1)
+	{
+		Health_Activate(client, abilityName);
+	}
+	
+	if (StrContains(abilityName, SCALE) != -1)
+	{
+		Scale_Activate(client, abilityName);
+	}
+}
+
+public void Scale_Activate(int client, char abilityName[255])
+{
+	float scale = CF_GetArgF(client, GENERIC, abilityName, "scale");
+	f_OldScale[client] = CF_GetCharacterScale(client);
+	CF_SetCharacterScale(client, scale);
+	
+	float duration = CF_GetArgF(client, GENERIC, abilityName, "duration");
+	if (duration > 0.0)
+	{
+		f_ScaleEndTime[client] = GetGameTime() + duration - 0.1;
+		g_ScaleTimer[client] = CreateTimer(duration, Scale_Revert, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+	}
+}
+
+public Action Scale_Revert(Handle revert, int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client))
+		return Plugin_Continue;
+		
+	if (GetGameTime() < f_ScaleEndTime[client])
+		return Plugin_Continue;
+		
+	CF_SetCharacterScale(client, f_OldScale[client]);
+	
+	return Plugin_Continue;
+}
+
+public void Health_Activate(int client, char abilityName[255])
+{
+	float maxHP = CF_GetArgF(client, GENERIC, abilityName, "max_health");
+	f_OldMaxHP[client] = CF_GetCharacterMaxHealth(client);
+	CF_SetCharacterMaxHealth(client, maxHP);
+	
+	int current = RoundFloat(CF_GetArgF(client, GENERIC, abilityName, "active_health"));
+	if (current > 0)
+	{
+		SetEntProp(client, Prop_Send, "m_iHealth", current);
+	}
+	
+	i_HPToSet[client] = RoundFloat(CF_GetArgF(client, GENERIC, abilityName, "health_end"));
+	
+	float duration = CF_GetArgF(client, GENERIC, abilityName, "duration");
+	if (duration > 0.0)
+	{
+		f_HealthEndTime[client] = GetGameTime() + duration - 0.1;
+		g_HealthTimer[client] = CreateTimer(duration, Health_Revert, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+	}
+}
+
+public Action Health_Revert(Handle revert, int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client))
+		return Plugin_Continue;
+		
+	if (GetGameTime() < f_HealthEndTime[client])
+		return Plugin_Continue;
+		
+	CF_SetCharacterMaxHealth(client, f_OldMaxHP[client]);
+	if (i_HPToSet[client] > 0)
+	{
+		SetEntProp(client, Prop_Send, "m_iHealth", i_HPToSet[client]);
+		i_HPToSet[client] = 0;
+	}
+	
+	return Plugin_Continue;
+}
+
+public void Speed_Activate(int client, char abilityName[255])
+{
+	float speed = CF_GetArgF(client, GENERIC, abilityName, "speed");
+	f_OldSpeed[client] = CF_GetCharacterSpeed(client);
+	CF_SetCharacterSpeed(client, speed);
+	
+	float duration = CF_GetArgF(client, GENERIC, abilityName, "duration");
+	if (duration > 0.0)
+	{
+		f_SpeedEndTime[client] = GetGameTime() + duration - 0.1;
+		g_SpeedTimer[client] = CreateTimer(duration, Speed_Revert, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+	}
+}
+
+public Action Speed_Revert(Handle revert, int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client))
+		return Plugin_Continue;
+		
+	if (GetGameTime() < f_SpeedEndTime[client])
+		return Plugin_Continue;
+		
+	CF_SetCharacterSpeed(client, f_OldSpeed[client]);
+	
+	return Plugin_Continue;
+}
+
+public void Model_Activate(int client, char abilityName[255])
+{
+	char model[255];
+	CF_GetArgS(client, GENERIC, abilityName, "model", model, sizeof(model));
+	Format(model, sizeof(model), "models/%s", model)
+	if (!FileExists(model) && !FileExists(model, true))
+		return;
+		
+	PrecacheModel(model);
+	
+	CF_GetCharacterModel(client, s_OldModel[client], 255);
+	CF_SetCharacterModel(client, model);
+	
+	float duration = CF_GetArgF(client, GENERIC, abilityName, "duration");
+	if (duration > 0.0)
+	{
+		f_ModelEndTime[client] = GetGameTime() + duration - 0.1;
+		g_ModelTimer[client] = CreateTimer(duration, Model_Revert, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+	}
+	
+	if (!b_WearablesHidden[client])
+		b_WearablesHidden[client] = CF_GetArgI(client, GENERIC, abilityName, "hide_wearables") > 0;
+	if (b_WearablesHidden[client])
+	{
+		Wearables_SetHidden(client, true);
+	}
+}
+
+public Action Model_Revert(Handle revert, int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client))
+		return Plugin_Continue;
+		
+	if (GetGameTime() < f_ModelEndTime[client])
+		return Plugin_Continue;
+		
+	CF_SetCharacterModel(client, s_OldModel[client]);
+	if (b_WearablesHidden[client])
+	{
+		b_WearablesHidden[client] = false;
+		Wearables_SetHidden(client, false);
+	}
+	
+	return Plugin_Continue;
+}
+
+public void Wearables_SetHidden(int client, bool hidden)
+{
+	int entity;
+	while((entity = FindEntityByClassname(entity, "tf_wearable")) != -1)
+	{
+		int owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
+		if (owner == client)
+		{
+			SetEntityRenderMode(entity, hidden ? RENDER_NONE : RENDER_NORMAL);
+			DispatchKeyValue(entity, "modelscale", hidden ? "0.00001" : "1.0");
+		}
+	}
 }
 
 public void Delay_Activate(int client, char abilityName[255])
@@ -255,6 +488,29 @@ public void Block_Activate(int client, char abilityName[255])
 {
 	CF_AbilityType type = view_as<CF_AbilityType>(CF_GetArgI(client, GENERIC, abilityName, "target_slot") - 1);
 	CF_BlockAbilitySlot(client, type);
+	
+	float duration = CF_GetArgF(client, GENERIC, abilityName, "duration");
+	if (duration > 0.0)
+	{
+		int slot = view_as<int>(type);
+		
+		DataPack pack = new DataPack();
+		g_BlockTimers[client][slot] = CreateDataTimer(duration, Block_Unblock, pack, TIMER_FLAG_NO_MAPCHANGE);
+		WritePackCell(pack, GetClientUserId(client));
+		WritePackCell(pack, type);
+	}
+}
+
+public Action Block_Unblock(Handle unblock, DataPack pack)
+{
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	CF_AbilityType type = ReadPackCell(pack);
+	
+	if (IsValidMulti(client))
+		CF_UnblockAbilitySlot(client, type);
+		
+	return Plugin_Continue;
 }
 
 public void Unblock_Activate(int client, char abilityName[255])

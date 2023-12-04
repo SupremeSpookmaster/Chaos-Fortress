@@ -588,6 +588,23 @@ native float CF_GetCharacterSpeed(int client);
 native CF_SetCharacterSpeed(int client, float NewSpeed);
 
 /**
+ * Retrieves the model scale of the given client's current character.
+ *
+ * @param client				The client whose model scale to retrieve.
+ *
+ * @return	The character's model scale, or 0.0 of the client is not a character.
+ */
+native float CF_GetCharacterScale(int client);
+
+/**
+ * Sets the client's model scale, provided they are a character.
+ *
+ * @param client				The client whose model scale to set.
+ * @param NewScale				The new model scale to set.
+ */
+native CF_SetCharacterScale(int client, float NewScale);
+
+/**
  * Retrieves the name of the given client's current character.
  *
  * @param client				The client whose character's name to retrieve.
