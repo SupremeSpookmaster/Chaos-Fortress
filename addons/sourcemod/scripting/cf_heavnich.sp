@@ -76,9 +76,60 @@ public void Share_Activate(int client, char abilityName[255])
 	
 }
 
+float f_Eating[MAXPLAYERS + 1] = { 0.0, ... };
+
 public void Chow_Activate(int client, char abilityName[255])
 {
+	CF_DoAbility(client, "cf_generic_abilities", "generic_weapon_sandvich");
+	f_Eating[client] = GetGameTime() + 4.2;
+	
+	float target = CF_GetArgF(client, HEAVNICH, abilityName, "target_hp");
+	float amount_per = target / 4.0;
+	
+	DataPack pack = new DataPack();
+	CreateDataTimer(1.0, Chow_Heal, pack, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+	WritePackCell(pack, GetClientUserId(client));
+	WritePackFloat(pack, target);
+	WritePackFloat(pack, amount_per);
+}
 
+public Action Chow_Heal(Handle healem, DataPack pack)
+{
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	float target = ReadPackFloat(pack);
+	float amount = ReadPackFloat(pack);
+	
+	if (!IsValidMulti(client))
+		return Plugin_Stop;
+		
+	if (GetGameTime() > f_Eating[client])
+		return Plugin_Stop;
+		
+	CF_HealPlayer(client, client, amount, (target / CF_GetCharacterMaxHealth(client)));
+	
+	return Plugin_Continue;
+}
+
+public Action CF_OnPlayerRunCmd(int client, int &buttons, int &impulse, int &weapon)
+{
+	if (GetGameTime() < f_Eating[client])
+	{
+		int wep = TF2_GetActiveWeapon(client);
+		if (IsValidEntity(wep))
+		{
+			char classname[255];
+			GetEntityClassname(wep, classname, sizeof(classname));
+			
+			if (StrEqual(classname, "tf_weapon_lunchbox"))
+			{
+				buttons |= IN_ATTACK;
+				return Plugin_Changed;
+			}
+		}
+	}
+	
+	return Plugin_Continue;
 }
 
 float f_MegaEndTime[MAXPLAYERS + 1] = { 0.0, ... };
