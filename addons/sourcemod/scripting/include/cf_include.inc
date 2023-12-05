@@ -50,6 +50,15 @@ enum CF_Emotion
 	CF_Emotion_Happy
 };
 
+enum CF_StuckMethod
+{
+	CF_StuckMethod_None = 0,
+	CF_StuckMethod_BlockResize,
+	CF_StuckMethod_DelayResize,
+	CF_StuckMethod_Kill,
+	CF_StuckMethod_Respawn
+};
+
 //TODO: This will need to be expanded upon to include things like medigun shields
 public bool CF_DefaultTrace(entity, contentsMask)
 {
@@ -601,8 +610,16 @@ native float CF_GetCharacterScale(int client);
  *
  * @param client				The client whose model scale to set.
  * @param NewScale				The new model scale to set.
+ * @param StuckMethod			The method to use for handling situations in which resizing the player to this scale would get them stuck.
+ *									- CF_StuckMethod_None: Do nothing and let the player be resized anyways.
+ *									- CF_StuckMethod_BlockResize: Prevent the resize from occurring.
+ *									- CF_StuckMethod_DelayResize: Delay the resize until the player is in a location where it would not get them stuck.
+ *									- CF_StuckMethod_Kill: Forces the player to killbind.
+ *									- CF_StuckMethod_Respawn: Respawns the player and sends them back to spawn.
+ * @param failure				Optional message to print to the client's chat if they cannot be resized.
+ * @param success				Optional message to print to the chient's chat when they are successfully resized.
  */
-native CF_SetCharacterScale(int client, float NewScale);
+native CF_SetCharacterScale(int client, float NewScale, CF_StuckMethod StuckMethod, char failure[255] = "", char success[255] = "");
 
 /**
  * Retrieves the name of the given client's current character.

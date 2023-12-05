@@ -1420,3 +1420,33 @@ stock float GetDistanceToGround(float location[3])
 	
 	return GetVectorDistance(location, otherLoc);
 }
+
+int i_StuckCheckUser = -1;
+
+stock bool CheckPlayerWouldGetStuck(int client, float scale)
+{
+	float mins[3] = { -24.5, -24.5, 0.0 }, maxs[3] = { 24.5,  24.5, 83.0}, pos[3];
+	
+	ScaleVector(mins, scale);
+	ScaleVector(maxs, scale);
+	
+	GetClientAbsOrigin(client, pos);
+    
+	i_StuckCheckUser = client;
+	TR_TraceHullFilter(pos, pos, mins, maxs, MASK_PLAYERSOLID, Trace_StuckCheck);
+	return TR_GetEntityIndex() != -1;
+}
+
+public bool Trace_StuckCheck(entity, mask) 
+{
+	if (entity <= MaxClients)
+		return !IsValidMulti(entity, true, _, true, TF2_GetClientTeam(i_StuckCheckUser));
+		
+	char classname[255];
+	GetEntityClassname(entity, classname, sizeof(classname));
+	
+	if (StrContains(classname, "tf_projectile") != -1)
+		return false;
+		
+	return true;
+} 

@@ -24,6 +24,10 @@ float f_ResourcesOnHurt[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ResourcesOnHeal[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ResourcesOnKill[MAXPLAYERS + 1] = { 0.0, ... };
 float f_NextResourceRegen[MAXPLAYERS + 1] = { 0.0, ... };
+float f_UltScale[MAXPLAYERS + 1] = { 0.0, ... };
+float f_M2Scale[MAXPLAYERS + 1] = { 0.0, ... };
+float f_M3Scale[MAXPLAYERS + 1] = { 0.0, ... };
+float f_RScale[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ChargeRetain = 0.0;
 
 char s_UltName[MAXPLAYERS + 1][255];
@@ -197,14 +201,25 @@ public Action CFA_HUDTimer(Handle timer)
 				
 				if (b_CharacterHasUlt[client])
 				{
-					if (CF_GetAbilityCooldown(client, CF_AbilityType_Ult) < 0.1 && rState == 1)
+					float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_Ult);
+					if (remCD < 0.1 && rState == 1)
 					{
 						CF_GiveUltCharge(client, f_UltChargeOnRegen[client]/10.0, CF_ResourceType_Percentage);
+					}
+					
+					bool wouldBeStuck = false;
+					if (!b_UltBlocked[client] && f_UltScale[client] > 0.0 && remCD <= 0.0)
+					{
+						wouldBeStuck = CheckPlayerWouldGetStuck(client, f_UltScale[client]);
 					}
 					
 					if (b_UltBlocked[client] || CF_GetRoundState() != 1)
 					{
 						Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE [BLOCKED]\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0));
+					}
+					else if (wouldBeStuck)
+					{
+						Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE [BLOCKED; YOU WOULD GET STUCK]\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0));
 					}
 					else
 					{
@@ -231,9 +246,20 @@ public Action CFA_HUDTimer(Handle timer)
 				
 				if (b_HasM2[client])
 				{
+					bool wouldBeStuck = false;
+					float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M2);
+					if (!b_M2Blocked[client] && f_M2Scale[client] > 0.0 && remCD <= 0.0)
+					{
+						wouldBeStuck = CheckPlayerWouldGetStuck(client, f_M2Scale[client]);
+					}
+					
 					if (b_M2Blocked[client])
 					{
 						Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M2Name[client]);
+					}
+					else if (wouldBeStuck)
+					{
+						Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED; YOU WOULD GET STUCK]\n", HUDText, s_M2Name[client]);
 					}
 					else
 					{
@@ -249,7 +275,6 @@ public Action CFA_HUDTimer(Handle timer)
 							}
 						}
 						
-						float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M2);
 						if (remCD > 0.0)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_M2Name[client], remCD);
@@ -263,9 +288,20 @@ public Action CFA_HUDTimer(Handle timer)
 				
 				if (b_HasM3[client])
 				{
+					bool wouldBeStuck = false;
+					float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M3);
+					if (!b_M3Blocked[client] && f_M3Scale[client] > 0.0 && remCD <= 0.0)
+					{
+						wouldBeStuck = CheckPlayerWouldGetStuck(client, f_M3Scale[client]);
+					}
+					
 					if (b_M3Blocked[client])
 					{
 						Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M3Name[client]);
+					}
+					else if (wouldBeStuck)
+					{
+						Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED; YOU WOULD GET STUCK]\n", HUDText, s_M3Name[client]);
 					}
 					else
 					{
@@ -281,7 +317,6 @@ public Action CFA_HUDTimer(Handle timer)
 							}
 						}
 						
-						float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M3);
 						if (remCD > 0.0)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_M3Name[client], remCD);
@@ -295,9 +330,20 @@ public Action CFA_HUDTimer(Handle timer)
 				
 				if (b_HasReload[client])
 				{
+					bool wouldBeStuck = false;
+					float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_Reload);
+					if (!b_ReloadBlocked[client] && f_RScale[client] > 0.0 && remCD <= 0.0)
+					{
+						wouldBeStuck = CheckPlayerWouldGetStuck(client, f_RScale[client]);
+					}
+					
 					if (b_ReloadBlocked[client])
 					{
 						Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_ReloadName[client]);
+					}
+					else if (wouldBeStuck)
+					{
+						Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED; YOU WOULD GET STUCK]\n", HUDText, s_ReloadName[client]);
 					}
 					else
 					{
@@ -313,7 +359,6 @@ public Action CFA_HUDTimer(Handle timer)
 							}
 						}
 						
-						float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_Reload);
 						if (remCD > 0.0)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_ReloadName[client], remCD);
@@ -367,6 +412,7 @@ public bool CFA_InitializeUltimate(int client, ConfigMap map)
 		f_UltChargeOnHeal[client] = GetFloatFromConfigMap(subsection, "on_heal", 0.0);
 		f_UltChargeOnKill[client] = GetFloatFromConfigMap(subsection, "on_kill", 0.0);
 		f_UltCD[client] = GetFloatFromConfigMap(subsection, "cooldown", 0.0);
+		f_UltScale[client] = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
 		
 		b_CharacterHasUlt[client] = true;
 	}
@@ -396,6 +442,8 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 			f_M2Cost[client] = GetFloatFromConfigMap(subsection, "cost", 0.0);
 		}
 		
+		f_M2Scale[client] = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
+		
 		b_HasM2[client] = true;
 		AtLeastOne = true;
 	}
@@ -416,6 +464,8 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 			f_M3Cost[client] = GetFloatFromConfigMap(subsection, "cost", 0.0);
 		}
 		
+		f_M3Scale[client] = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
+		
 		b_HasM3[client] = true;
 		AtLeastOne = true;
 	}
@@ -435,6 +485,9 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		{
 			f_ReloadCost[client] = GetFloatFromConfigMap(subsection, "cost", 0.0);
 		}
+		
+		f_RScale[client] = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
+		
 		b_HasReload[client] = true;
 		
 		AtLeastOne = true;
@@ -536,6 +589,12 @@ public void CF_OnPlayerCallForMedic(int client)
 		return;
 	}
 	
+	if (f_UltScale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_UltScale[client]))
+	{
+		Nope(client);
+		return;
+	}
+	
 	CF_AttemptAbilitySlot(client, CF_AbilityType_Ult);
 }
 
@@ -546,6 +605,12 @@ public Action CF_OnPlayerM2(int client, int &buttons, int &impulse, int &weapon)
 		
 	if (!b_HasM2[client])
 		return Plugin_Continue;
+		
+	if (f_M2Scale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_M2Scale[client]))
+	{
+		Nope(client);
+		return Plugin_Continue;
+	}
 		
 	if (b_M2IsHeld[client])
 	{
@@ -567,6 +632,12 @@ public Action CF_OnPlayerM3(int client, int &buttons, int &impulse, int &weapon)
 	if (!b_HasM3[client])
 		return Plugin_Continue;
 		
+	if (f_M3Scale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_M3Scale[client]))
+	{
+		Nope(client);
+		return Plugin_Continue;
+	}
+		
 	if (b_M3IsHeld[client])
 	{
 		CF_AttemptHeldAbility(client, CF_AbilityType_M3, IN_ATTACK3);
@@ -586,6 +657,12 @@ public Action CF_OnPlayerReload(int client, int &buttons, int &impulse, int &wea
 		
 	if (!b_HasReload[client])
 		return Plugin_Continue;
+	
+	if (f_RScale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_RScale[client]))
+	{
+		Nope(client);
+		return Plugin_Continue;
+	}
 	
 	if (b_ReloadIsHeld[client])
 	{

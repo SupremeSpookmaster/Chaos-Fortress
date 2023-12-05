@@ -146,28 +146,32 @@ Handle g_HealthTimer[MAXPLAYERS + 1] = { INVALID_HANDLE, ... };
 Handle g_ScaleTimer[MAXPLAYERS + 1] = { INVALID_HANDLE, ... };
 Handle g_BlockTimers[MAXPLAYERS+1][4];
 
+CF_StuckMethod g_StuckMethod[MAXPLAYERS + 1] = { CF_StuckMethod_None, ... };
+char s_OnResizeFailure[MAXPLAYERS + 1][255];
+char s_OnResizeSuccess[MAXPLAYERS + 1][255];
+
 public void CF_OnCharacterRemoved(int client)
 {
 	Weapon_ClearAllOldWeapons(client);
 	for (int i = 0; i < 4; i++)
 	{
 		Limit_NumUses[client][i] = 0;
-		if (g_BlockTimers[client][i] != null)
+		if (g_BlockTimers[client][i] != INVALID_HANDLE)
 			delete g_BlockTimers[client][i];
 	}
 	
 	b_WearablesHidden[client] = false;
 	
-	if (g_ModelTimer[client] != null)
+	if (g_ModelTimer[client] != INVALID_HANDLE)
 		delete g_ModelTimer[client];
 		
-	if (g_SpeedTimer[client] != null)
+	if (g_SpeedTimer[client] != INVALID_HANDLE)
 		delete g_SpeedTimer[client];
 		
-	if (g_HealthTimer[client] != null)
+	if (g_HealthTimer[client] != INVALID_HANDLE)
 		delete g_HealthTimer[client];
 		
-	if (g_ScaleTimer[client] != null)
+	if (g_ScaleTimer[client] != INVALID_HANDLE)
 		delete g_ScaleTimer[client];
 }
 
@@ -295,7 +299,25 @@ public void Scale_Activate(int client, char abilityName[255])
 {
 	float scale = CF_GetArgF(client, GENERIC, abilityName, "scale");
 	f_OldScale[client] = CF_GetCharacterScale(client);
-	CF_SetCharacterScale(client, scale);
+	
+	char fail[255], success[255];
+	CF_GetArgS(client, GENERIC, abilityName, "on_failure", fail, 255);
+	CF_GetArgS(client, GENERIC, abilityName, "on_success", success, 255);
+	
+	int method = CF_GetArgI(client, GENERIC, abilityName, "stuck_method");
+	if (method < 0 || method > 4)
+		method = 0;
+	
+	CF_SetCharacterScale(client, scale, view_as<CF_StuckMethod>(method), fail, success);
+	
+	int method_end = CF_GetArgI(client, GENERIC, abilityName, "stuck_method_end");
+	if (method_end < 0 || method > 4)
+		method_end = 0;
+	
+	g_StuckMethod[client] = view_as<CF_StuckMethod>(method_end);
+	
+	CF_GetArgS(client, GENERIC, abilityName, "on_failure_end", s_OnResizeFailure[client], 255);
+	CF_GetArgS(client, GENERIC, abilityName, "on_success_end", s_OnResizeSuccess[client], 255);
 	
 	float duration = CF_GetArgF(client, GENERIC, abilityName, "duration");
 	if (duration > 0.0)
@@ -314,7 +336,7 @@ public Action Scale_Revert(Handle revert, int id)
 	if (GetGameTime() < f_ScaleEndTime[client])
 		return Plugin_Continue;
 		
-	CF_SetCharacterScale(client, f_OldScale[client]);
+	CF_SetCharacterScale(client, f_OldScale[client], g_StuckMethod[client], s_OnResizeFailure[client], s_OnResizeSuccess[client]);
 	
 	return Plugin_Continue;
 }

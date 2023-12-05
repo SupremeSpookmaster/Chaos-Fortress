@@ -1142,7 +1142,7 @@ public void CF_ResetMadeStatus(int client)
 		AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
 	}
 	
-	CF_SetCharacterScale(client, scale);
+	CF_SetCharacterScale(client, scale, CF_StuckMethod_DelayResize, "");
 	
 	ConfigMap wearables = map.GetSection("character.wearables");
 	if (wearables == null)
@@ -1937,14 +1937,84 @@ public any Native_CF_SetCharacterScale(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
 	float NewScale = GetNativeCell(2);
+	CF_StuckMethod StuckMethod = GetNativeCell(3);
+	char message_failure[255], message_success[255];
+	GetNativeString(4, message_failure, sizeof(message_failure));
+	GetNativeString(5, message_success, sizeof(message_success));
 
 	if (CF_IsPlayerCharacter(client))
 	{
-		g_Characters[client].Scale = NewScale;
-		
-		SetEntPropFloat(client, Prop_Send, "m_flModelScale", NewScale);
-		SetEntPropFloat(client, Prop_Send, "m_flStepSize", 18.0 * NewScale);
+		bool success = StuckMethod == CF_StuckMethod_None || !CheckPlayerWouldGetStuck(client, NewScale);
+		if (!success)
+		{
+			switch(StuckMethod)
+			{
+				case CF_StuckMethod_Kill:
+				{
+					FakeClientCommand(client, "explode");
+				}
+				case CF_StuckMethod_Respawn:
+				{
+					TF2_RespawnPlayer(client);
+				}
+				case CF_StuckMethod_DelayResize:
+				{
+					DataPack pack = new DataPack();
+					WritePackCell(pack, GetClientUserId(client));
+					WritePackFloat(pack, NewScale);
+					WritePackString(pack, message_success);
+					
+					RequestFrame(SetScale_DelayResize, pack);
+				}
+			}
+			
+			if (!StrEqual(message_failure, ""))
+				CPrintToChat(client, message_failure);
+		}
+		else
+		{
+			g_Characters[client].Scale = NewScale;
+			
+			SetEntPropFloat(client, Prop_Send, "m_flModelScale", NewScale);
+			SetEntPropFloat(client, Prop_Send, "m_flStepSize", 18.0 * NewScale);
+			if (!StrEqual(message_success, ""))
+				CPrintToChat(client, message_success);
+		}
 	}
 	
 	return 0.0;
+}
+
+public void SetScale_DelayResize(DataPack pack)
+{
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	float NewScale = ReadPackFloat(pack);
+	char message_success[255];
+	ReadPackString(pack, message_success, 255);
+	
+	delete pack;
+	
+	if (!IsValidMulti(client))
+		return;
+		
+	if (!CheckPlayerWouldGetStuck(client, NewScale))
+	{
+		g_Characters[client].Scale = NewScale;
+			
+		SetEntPropFloat(client, Prop_Send, "m_flModelScale", NewScale);
+		SetEntPropFloat(client, Prop_Send, "m_flStepSize", 18.0 * NewScale);
+		
+		if (!StrEqual(message_success, ""))
+			CPrintToChat(client, message_success);
+		
+		return;
+	}
+	
+	DataPack pack2 = new DataPack();
+	WritePackCell(pack2, GetClientUserId(client));
+	WritePackFloat(pack2, NewScale);
+	WritePackString(pack2, message_success);
+					
+	RequestFrame(SetScale_DelayResize, pack2);
 }

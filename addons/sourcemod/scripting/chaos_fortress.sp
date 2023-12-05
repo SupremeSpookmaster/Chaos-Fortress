@@ -15,8 +15,7 @@
 //		- Count Heavnich:
 //			- Write Sandvich abilities.
 //			- Add echo support to the sound system.
-//			- His hat does not show up on bots. I do not know why.
-//			- Add built-in support to automatically block ability slots if the user would get stuck at a certain scale. This makes it easy to make abilities involving model resizing, since we can just say "you can't do that" if the player would get stuck.
+//			- His hat sometimes does not show up on bots. I do not know why. It is SPECIFICALLY the Noble Amassment of Hats, I have not seen this happen with any other wearable.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////
@@ -35,6 +34,9 @@
 //			- The rifle on its own deals enough damage that you don't really need to use the height advantage gimmick most of the time.
 //				- Make base damage lower and increase the strength of the height advantage gimmick. This might make his damage feel "random" but it's better than free 550 damage headshots without engaging with the character's main gimmick at all.
 //		////////////////////////////////////////////
+//		- Count Heavnich:
+//			- Minigun damage might be a little too big? +10% bullets per shot and +15% rate of fire aren't big numbers, but they add up when put on an already pretty beefy weapon.
+//			- Still have yet to properly test ult charge to see if it's too fast or too slow.
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Everything that happens on client disconnect (possibly already covered, not sure).
