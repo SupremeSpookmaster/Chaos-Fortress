@@ -9,13 +9,18 @@
 
 //#define TESTING
 //
-//	- IMMEDIATE PLANS (things I am currently focusing on):
+//	- IMMEDIATE PLANS:
 //		- Orbital Sniper:
-//			- Make custom sounds and implement them.
+//			- Make custom sounds and implement them. Remove the DSP effect attribute once this is done.
 //		- Count Heavnich:
-//			- Write Sandvich abilities.
-//			- Add echo support to the sound system.
-//			- His hat sometimes does not show up on bots. I do not know why. It is SPECIFICALLY the Noble Amassment of Hats, I have not seen this happen with any other wearable.
+//			- Write "Share Sandviches" ability.
+//			- Add echo support to the sound system and use it for his ult activation.
+//			- Make use of "CF_OnResourcesChanged" to play a sound to the user when their Sandvich is charged.
+//			- Optional: properly implement mega deflector weapon sounds.
+//		- Demopan:
+//			- Make starter CFG.
+//			- Make generic shield wall ability.
+//			- Make Demopan-specific abilities.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////
@@ -42,39 +47,22 @@
 //	- TODO: Everything that happens on client disconnect (possibly already covered, not sure).
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
 //	- TODO: Finalize the wiki by updating each page with all of the changes.
+//	- TODO: Add support for translations. This will be a huge pain in the ass, but does not need to be done until public release.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
-//	- Translations
 //	- Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
 //	- Make natives which share the names of FF2's natives and do the same things, so porting FF2 plugins is as simple as just changing the include file and recompiling.
-//	- Add a "trophy" system that hands out praises as awards for various actions at the end of the round.
-//		- Should function like chat messages, by having a keyvalues tree associated with it:
-//			- "trophies"	//Trophy system. Delete this block to disable the trophy system.
-/*			  {
-					"1"
-					{
-							"name"				"My Trophy"		//Name of the trophy.
-							"trophy_plugin"		"my_trophy"		//Name of the trophy, as used in the CFT_OnAwardTrophy forward.
-							"message"			"Awarded to %N for being super cool."	//Optional message to print when this trophy is given out.
-					}
-			  }
-*/
-//		- A !trophies command should exist for players to check how many times they've obtained each trophy.
-//		- Superior Saint - Most healing done.
-//		- King of Carnage - Most damage dealt.
-//		- Top Brass - Most kills.
-//		- Top Trash - Most deaths.
-//		- Mondo Massacre - Highest killstreak.
-//		- Master Mitigator - Most damage taken, relative to your number of deaths.
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
 //	- For some reason, players get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? It's invisible while alive but becomes visible on death. This has no effect on gameplay but it's really ugly. Honestly baffling.
+//	- Certain hats, when equipped via the wearable system, usually do not visually appear on bots (but they do work *sometimes*). Count Heavnich's "Noble Amassment of Hats" is an example of such a hat. 
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
-//	- The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
-//	- ORBITAL SNIPER: Rifle inexplicably cannot pick up ammo...
+//	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
+//			- Scrap this feature entirely and remove all mentions of it from the code. This will be a giant pain in the ass but does not need to be done until public release.
 //	- SPOOKMASTER BONES: Dialogue is too loud and can be heard from nearly anywhere on the map, make a cf_soundpack ability to make all of them quieter.
 //	- ALL: The default trace gets blocked by invisible clips like spawn doors and such.
+//	- ALL: Clipless weapons (sniper rifle, minigun, flamethrower) can pick up ammo boxes, but do not actually replenish ammo upon doing so. This will make characters like Heavnich useless, so it MUST be fixed before the open beta.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
