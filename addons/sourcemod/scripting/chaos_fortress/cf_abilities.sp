@@ -1326,7 +1326,7 @@ public Native_CF_SetSpecialResource(Handle plugin, int numParams)
 		
 		if (amt != oldResources)
 		{
-			if (amt > oldResources)
+			if (amt > oldResources && f_ResourcesToTriggerSound[client] > 0.0)
 			{
 				float diff = amt - oldResources;
 				f_ResourcesSinceLastGain[client] += diff;

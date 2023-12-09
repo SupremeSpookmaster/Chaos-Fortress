@@ -15,7 +15,6 @@
 //		- Count Heavnich:
 //			- Write "Share Sandviches" ability.
 //			- Add echo support to the sound system and use it for his ult activation.
-//			- Make use of "CF_OnResourcesChanged" to play a sound to the user when their Sandvich is charged.
 //			- Optional: properly implement mega deflector weapon sounds.
 //		- Demopan:
 //			- Make starter CFG.
