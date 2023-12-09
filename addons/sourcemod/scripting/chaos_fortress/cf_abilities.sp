@@ -24,6 +24,8 @@ float f_ResourcesOnHurt[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ResourcesOnHeal[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ResourcesOnKill[MAXPLAYERS + 1] = { 0.0, ... };
 float f_NextResourceRegen[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ResourcesSinceLastGain[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ResourcesToTriggerSound[MAXPLAYERS + 1] = { 0.0, ... };
 float f_UltScale[MAXPLAYERS + 1] = { 0.0, ... };
 float f_M2Scale[MAXPLAYERS + 1] = { 0.0, ... };
 float f_M3Scale[MAXPLAYERS + 1] = { 0.0, ... };
@@ -541,6 +543,9 @@ public void CFA_InitializeResources(int client, ConfigMap map, bool NewChar)
 			f_ResourcesOnHurt[client] = GetFloatFromConfigMap(subsection, "on_hurt", 0.0);
 			f_ResourcesOnHeal[client] = GetFloatFromConfigMap(subsection, "on_heal", 0.0);
 			f_ResourcesOnKill[client] = GetFloatFromConfigMap(subsection, "on_kill", 0.0);
+			
+			f_ResourcesToTriggerSound[client] = GetFloatFromConfigMap(subsection, "sound_amt", 0.0);
+			f_ResourcesSinceLastGain[client] = 0.0;
 		}
 		
 		b_UsingResources[client] = true;
@@ -1321,6 +1326,18 @@ public Native_CF_SetSpecialResource(Handle plugin, int numParams)
 		
 		if (amt != oldResources)
 		{
+			if (amt > oldResources)
+			{
+				float diff = amt - oldResources;
+				f_ResourcesSinceLastGain[client] += diff;
+				if (f_ResourcesSinceLastGain[client] >= f_ResourcesToTriggerSound[client])
+				{
+					f_ResourcesSinceLastGain[client] -= f_ResourcesToTriggerSound[client];
+					
+					CF_PlayRandomSound(client, "", "sound_resource_gained");
+				}
+			}
+			
 			CF_ActivateAbilitySlot(client, 7);
 			
 			if (amt > oldResources)
