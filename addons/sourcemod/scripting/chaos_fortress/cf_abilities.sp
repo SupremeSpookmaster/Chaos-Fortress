@@ -2310,7 +2310,6 @@ public Native_CF_CreateHealthPickup(Handle plugin, int numParams)
 	GetNativeString(16, physModel, sizeof(physModel));
 	GetNativeString(17, redPart, sizeof(redPart));
 	GetNativeString(18, bluePart, sizeof(bluePart));
-	bool AllowPickupAtMax = GetNativeCell(19);
 	
 	int phys = CreateEntityByName("prop_physics_override");
 	int prop = CreateEntityByName("prop_dynamic_override");
@@ -2382,7 +2381,6 @@ public Native_CF_CreateHealthPickup(Handle plugin, int numParams)
 		WritePackString(pack, pluginName);
 		WritePackString(pack, redPart);
 		WritePackString(pack, bluePart);
-		WritePackCell(pack, AllowPickupAtMax);
 		
 		RequestFrame(FakeHealthKit_Think, pack);
 		
@@ -2408,8 +2406,7 @@ public void FakeHealthKit_Think(DataPack pack)
 	ReadPackString(pack, plugin, sizeof(plugin));
 	ReadPackString(pack, redPart, sizeof(redPart));
 	ReadPackString(pack, bluePart, sizeof(bluePart));
-	bool AllowPickupAtMax = ReadPackCell(pack);
-	
+
 	if (!IsValidEntity(kit))
 	{
 		delete pack;
@@ -2446,7 +2443,7 @@ public void FakeHealthKit_Think(DataPack pack)
 			}
 			
 			int maxHPCheck = RoundFloat(float(TF2Util_GetEntityMaxHealth(i)) * hpMult);
-			if (GetEntProp(i, Prop_Send, "m_iHealth") >= maxHPCheck && !AllowPickupAtMax)
+			if (GetEntProp(i, Prop_Send, "m_iHealth") >= maxHPCheck)
 				result = false;
 			
 			if (GetVectorDistance(pos, pos2) <= radius && result)

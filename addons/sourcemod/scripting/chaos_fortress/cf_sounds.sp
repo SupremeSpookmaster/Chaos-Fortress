@@ -159,6 +159,7 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 			
 		ConfigMap cfgMap = new ConfigMap(ourConf);
 		ConfigMap section = cfgMap.GetSection(path);
+		ConfigMap echoSection = section.GetSection("echo");
 			
 		if (section != null)
 		{			
@@ -181,6 +182,30 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 			maxPitch = GetIntFromConfigMap(section, "pitch_max", 100);
 				
 			CanPlay = GetRandomFloat(0.0, 1.0) <= chance;
+			
+			if (echoSection != null && CanPlay)
+			{
+				int numEchoes = GetIntFromConfigMap(echoSection, "times", 100);
+				float echoDelay = GetFloatFromConfigMap(echoSection, "delay", 0.33);
+				int levelReduction = GetIntFromConfigMap(echoSection, "level_reduction", 30);
+				float volumeReduction = GetFloatFromConfigMap(echoSection, "volume_reduction", 0.33);
+				
+				DataPack pack = new DataPack();
+				CreateDataTimer(echoDelay, Sound_Echo, pack, TIMER_FLAG_NO_MAPCHANGE);
+				WritePackCell(pack, playMode);
+				WritePackCell(pack, source);
+				WritePackCell(pack, level);
+				WritePackFloat(pack, volume);
+				WritePackCell(pack, channel);
+				WritePackCell(pack, global);
+				WritePackCell(pack, numEchoes);
+				WritePackFloat(pack, echoDelay);
+				WritePackCell(pack, levelReduction);
+				WritePackFloat(pack, volumeReduction);
+				WritePackCell(pack, minPitch);
+				WritePackCell(pack, maxPitch);
+				WritePackString(pack, snd);
+			}
 		}
 		else
 		{
@@ -227,6 +252,93 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 	}
 	
 	return CanPlay;
+}
+
+public Action Sound_Echo(Handle echo, DataPack pack)
+{
+	ResetPack(pack);
+	
+	int playMode = ReadPackCell(pack);
+	int source = ReadPackCell(pack);
+	int level = ReadPackCell(pack);
+	float volume = ReadPackFloat(pack);
+	int channel = ReadPackCell(pack);
+	bool global = ReadPackCell(pack);
+	int numEchoes = ReadPackCell(pack);
+	float echoDelay = ReadPackFloat(pack);
+	int levelReduction = ReadPackCell(pack);
+	float volumeReduction = ReadPackFloat(pack);
+	int minPitch = ReadPackCell(pack);
+	int maxPitch = ReadPackCell(pack);
+	char snd[255];
+	ReadPackString(pack, snd, sizeof(snd));
+	
+	volume -= volumeReduction;
+	level -= levelReduction;
+	numEchoes--;
+	
+	TFTeam targTeam = TFTeam_Unassigned;
+		
+	switch(playMode)
+	{
+		case 0:	//Everyone
+		{
+			EmitSoundToAll(snd, global || !IsValidEntity(source) ? SOUND_FROM_PLAYER : source, CF_SndChans[channel], level, _, volume, GetRandomInt(minPitch, maxPitch));
+		}
+		case 1:	//Self only
+		{
+			if (IsValidClient(source))
+			{
+				EmitSoundToClient(source, snd, _, CF_SndChans[channel], level, _, volume, GetRandomInt(minPitch, maxPitch));
+			}
+		}
+		case 2: //Allies only
+		{
+			if (IsValidClient(source))
+			{
+				targTeam = TF2_GetClientTeam(source);
+			}
+		}
+		case 3:	//Enemies only
+		{
+			if (IsValidClient(source))
+			{
+				targTeam = grabEnemyTeam(source);
+			}
+		}
+	}
+		
+	if (targTeam != TFTeam_Unassigned)
+	{
+		for (int i = 1; i <= MaxClients; i++)
+		{
+			if (IsValidMulti(i, false, _, true, targTeam) && i != source)
+			{
+				EmitSoundToClient(i, snd, global || !IsValidEntity(source) ? SOUND_FROM_PLAYER : source, CF_SndChans[channel], level, _, volume, GetRandomInt(minPitch, maxPitch));
+			}
+		}
+	}
+	
+	if (numEchoes > 0)
+	{
+		DataPack pack2 = new DataPack();
+		CreateDataTimer(echoDelay, Sound_Echo, pack2, TIMER_FLAG_NO_MAPCHANGE);
+		WritePackCell(pack2, playMode);
+		WritePackCell(pack2, source);
+		WritePackCell(pack2, level);
+		WritePackFloat(pack2, volume);
+		WritePackCell(pack2, channel);
+		WritePackCell(pack2, global);
+		WritePackCell(pack2, numEchoes);
+		WritePackFloat(pack2, echoDelay);
+		WritePackCell(pack2, levelReduction);
+		WritePackFloat(pack2, volumeReduction);
+		WritePackCell(pack2, minPitch);
+		WritePackCell(pack2, maxPitch);
+		WritePackString(pack2, snd);
+	}
+	
+	return Plugin_Continue;
 }
 
 public bool PlaySpecificReplacement(int client, char sound[PLATFORM_MAX_PATH])

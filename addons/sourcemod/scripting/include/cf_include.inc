@@ -1108,11 +1108,10 @@ native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit);
  * @param physModel				Optional invisible model to be used for the health kit's physics. 
  * @param redParticle			Optional particle effect to spawn when this health kit is picked up by a red player.
  * @param blueParticle			Optional particle effect to spawn when this health kit is picked up by a blue player.
- * @param AllowPickupAtMax		Optional parameter. If enabled: the health kit can be picked up anyways by players who won't heal from it at all due to having more health than the max this kit can heal to. EX: if we create a large health kit and turn this on, a scout with full health can still pick it up despite being full on HP.
  *
  * @return	The entity index of the health kit, or -1 if it fails to spawn.
  */
-native int CF_CreateHealthPickup(int owner, float amt, float radius, int mode, float lifespan, char plugin[255], Function filter, float pos[3], char model[255] = "models/items/medkit_medium.mdl", char sequence[255] = "idle", float rate = 1.0, float scale = 1.0, int skin = 0, char sound[255] = "items/smallmedkit1.wav", float hpMult = 1.0, char physModel[255] = "models/items/medkit_medium.mdl", char redParticle[255] = "healthgained_red_large", char blueParticle[255] = "healthgained_blu_large", bool AllowPickupAtMax = false);
+native int CF_CreateHealthPickup(int owner, float amt, float radius, int mode, float lifespan, char plugin[255], Function filter, float pos[3], char model[255] = "models/items/medkit_medium.mdl", char sequence[255] = "idle", float rate = 1.0, float scale = 1.0, int skin = 0, char sound[255] = "items/smallmedkit1.wav", float hpMult = 1.0, char physModel[255] = "models/items/medkit_medium.mdl", char redParticle[255] = "healthgained_red_large", char blueParticle[255] = "healthgained_blu_large");
 
 /**
  * Inflicts generic area-of-effect damage within a specified radius

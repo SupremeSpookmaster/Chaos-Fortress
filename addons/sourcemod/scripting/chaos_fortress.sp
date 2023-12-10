@@ -13,7 +13,6 @@
 //		- Orbital Sniper:
 //			- Make custom sounds and implement them. Remove the DSP effect attribute once this is done.
 //		- Count Heavnich:
-//			- Add echo support to the sound system and use it for his ult activation.
 //			- Optional: properly implement mega deflector weapon sounds.
 //		- Demopan:
 //			- Make starter CFG.
