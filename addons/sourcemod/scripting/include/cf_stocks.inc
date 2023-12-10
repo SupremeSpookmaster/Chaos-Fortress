@@ -1450,3 +1450,33 @@ public bool Trace_StuckCheck(entity, mask)
 		
 	return true;
 } 
+
+stock Handle GetPluginHandle(char plugin[255])
+{
+	char buffer[PLATFORM_MAX_PATH];
+	Handle iter = GetPluginIterator();
+	while (MorePlugins(iter))
+	{
+		Handle plug = ReadPlugin(iter);
+		GetPluginFilename(plug, buffer, sizeof(buffer));
+		
+		int highest = -1;
+		for(int i = strlen(buffer)-1; i > 0; i--)
+		{
+			if(buffer[i] == '/' || buffer[i] == '\\')
+			{
+				highest = i;
+				break;
+			}
+		}
+		
+		if(StrEqual(buffer[highest+1], plugin))
+		{
+			delete iter;
+			return plug;
+		}
+	}
+	
+	delete iter;
+	return INVALID_HANDLE;
+}

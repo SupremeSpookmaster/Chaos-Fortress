@@ -140,10 +140,10 @@ float f_OldScale[MAXPLAYERS + 1] = { 0.0, ... };
 
 bool b_WearablesHidden[MAXPLAYERS + 1] = { false, ... };
 
-Handle g_ModelTimer[MAXPLAYERS + 1] = { INVALID_HANDLE, ... };
-Handle g_SpeedTimer[MAXPLAYERS + 1] = { INVALID_HANDLE, ... };
-Handle g_HealthTimer[MAXPLAYERS + 1] = { INVALID_HANDLE, ... };
-Handle g_ScaleTimer[MAXPLAYERS + 1] = { INVALID_HANDLE, ... };
+Handle g_ModelTimer[MAXPLAYERS + 1] = { null, ... };
+Handle g_SpeedTimer[MAXPLAYERS + 1] = { null, ... };
+Handle g_HealthTimer[MAXPLAYERS + 1] = { null, ... };
+Handle g_ScaleTimer[MAXPLAYERS + 1] = { null, ... };
 Handle g_BlockTimers[MAXPLAYERS+1][4];
 
 CF_StuckMethod g_StuckMethod[MAXPLAYERS + 1] = { CF_StuckMethod_None, ... };
@@ -156,23 +156,15 @@ public void CF_OnCharacterRemoved(int client)
 	for (int i = 0; i < 4; i++)
 	{
 		Limit_NumUses[client][i] = 0;
-		if (g_BlockTimers[client][i] != INVALID_HANDLE)
-			delete g_BlockTimers[client][i];
+		delete g_BlockTimers[client][i];
 	}
 	
 	b_WearablesHidden[client] = false;
 	
-	if (g_ModelTimer[client] != INVALID_HANDLE)
-		delete g_ModelTimer[client];
-		
-	if (g_SpeedTimer[client] != INVALID_HANDLE)
-		delete g_SpeedTimer[client];
-		
-	if (g_HealthTimer[client] != INVALID_HANDLE)
-		delete g_HealthTimer[client];
-		
-	if (g_ScaleTimer[client] != INVALID_HANDLE)
-		delete g_ScaleTimer[client];
+	delete g_ModelTimer[client];
+	delete g_SpeedTimer[client];
+	delete g_HealthTimer[client];
+	delete g_ScaleTimer[client];
 }
 
 public void CF_OnCharacterCreated(int client)
@@ -298,7 +290,9 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 public void Scale_Activate(int client, char abilityName[255])
 {
 	float scale = CF_GetArgF(client, GENERIC, abilityName, "scale");
-	f_OldScale[client] = CF_GetCharacterScale(client);
+	
+	if (GetGameTime() <= f_ScaleEndTime[client] + 0.1)
+		f_OldScale[client] = CF_GetCharacterScale(client);
 	
 	char fail[255], success[255];
 	CF_GetArgS(client, GENERIC, abilityName, "on_failure", fail, 255);
@@ -344,7 +338,10 @@ public Action Scale_Revert(Handle revert, int id)
 public void Health_Activate(int client, char abilityName[255])
 {
 	float maxHP = CF_GetArgF(client, GENERIC, abilityName, "max_health");
-	f_OldMaxHP[client] = CF_GetCharacterMaxHealth(client);
+	
+	if (GetGameTime() <= f_HealthEndTime[client] + 0.1)
+		f_OldMaxHP[client] = CF_GetCharacterMaxHealth(client);
+		
 	CF_SetCharacterMaxHealth(client, maxHP);
 	
 	int current = RoundFloat(CF_GetArgF(client, GENERIC, abilityName, "active_health"));
@@ -385,7 +382,10 @@ public Action Health_Revert(Handle revert, int id)
 public void Speed_Activate(int client, char abilityName[255])
 {
 	float speed = CF_GetArgF(client, GENERIC, abilityName, "speed");
-	f_OldSpeed[client] = CF_GetCharacterSpeed(client);
+	
+	if (GetGameTime() <= f_SpeedEndTime[client] + 0.1)
+		f_OldSpeed[client] = CF_GetCharacterSpeed(client);
+		
 	CF_SetCharacterSpeed(client, speed);
 	
 	float duration = CF_GetArgF(client, GENERIC, abilityName, "duration");
@@ -420,7 +420,9 @@ public void Model_Activate(int client, char abilityName[255])
 		
 	PrecacheModel(model);
 	
-	CF_GetCharacterModel(client, s_OldModel[client], 255);
+	if (GetGameTime() <= f_ModelEndTime[client] + 0.1)
+		CF_GetCharacterModel(client, s_OldModel[client], 255);
+		
 	CF_SetCharacterModel(client, model);
 	
 	float duration = CF_GetArgF(client, GENERIC, abilityName, "duration");

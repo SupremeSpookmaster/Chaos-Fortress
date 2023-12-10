@@ -104,6 +104,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_HealPlayer", Native_CF_HealPlayer);
 	CreateNative("CF_FireGenericRocket", Native_CF_FireGenericRocket);
 	CreateNative("CF_GenericAOEDamage", Native_CF_GenericAOEDamage);
+	CreateNative("CF_CreateHealthPickup", Native_CF_CreateHealthPickup);
 }
 
 public void CFA_MakeForwards()
@@ -2253,4 +2254,186 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 	}
 	
 	return ReturnVal;
+}
+
+public Native_CF_CreateHealthPickup(Handle plugin, int numParams)
+{
+	int owner = GetNativeCell(1);
+	float amt = GetNativeCell(2);
+	float radius = GetNativeCell(3);
+	int mode = GetNativeCell(4);
+	float lifespan = GetNativeCell(5);
+	char pluginName[255];
+	GetNativeString(6, pluginName, sizeof(pluginName));
+	Function filter = GetNativeFunction(7);
+	float pos[3];
+	GetNativeArray(8, pos, sizeof(pos));
+	char model[255], sequence[255], sound[255];
+	GetNativeString(9, model, sizeof(model));
+	GetNativeString(10, sequence, sizeof(sequence));
+	float rate = GetNativeCell(11);
+	float scale = GetNativeCell(12);
+	int skin = GetNativeCell(13);
+	GetNativeString(14, sound, sizeof(sound));
+	float hpMult = GetNativeCell(15);
+	
+	int phys = CreateEntityByName("prop_physics_override");
+	int prop = CreateEntityByName("prop_dynamic_override");
+	if (IsValidEntity(phys) && IsValidEntity(prop))
+	{
+		DispatchKeyValue(phys, "targetname", "healthparent"); 
+		DispatchKeyValue(phys, "spawnflags", "4"); 
+		DispatchKeyValue(phys, "model", "models/props_c17/canister01a.mdl");
+				
+		DispatchSpawn(phys);
+				
+		ActivateEntity(phys);
+		
+		SetEntProp(phys, Prop_Data, "m_takedamage", 0, 1);
+		
+		if (IsValidClient(owner))
+		{
+			SetEntPropEnt(phys, Prop_Data, "m_hOwnerEntity", owner);
+			SetEntPropEnt(prop, Prop_Data, "m_hOwnerEntity", owner);
+		}
+			
+		SetEntProp(phys, Prop_Send, "m_fEffects", 32);
+		
+		SetEntityModel(prop, model);
+					
+		char scalechar[16];
+		Format(scalechar, sizeof(scalechar), "%f", scale);
+		DispatchKeyValue(prop, "modelscale", scalechar);
+		DispatchKeyValue(prop, "StartDisabled", "false");
+					
+		DispatchSpawn(prop);
+					
+		AcceptEntityInput(prop, "Enable");
+		
+		SetVariantString("!activator");
+		AcceptEntityInput(prop, "SetParent", phys);
+		
+		SetVariantString(sequence);
+		AcceptEntityInput(prop, "SetAnimation");
+		DispatchKeyValueFloat(prop, "playbackrate", rate);
+		char skinchar[16];
+		Format(skinchar, sizeof(skinchar), "%i", skin);
+		DispatchKeyValue(prop, "skin", skinchar);
+		
+		if (lifespan > 0.0)
+		{
+			CreateTimer(lifespan, Timer_RemoveEntity, EntIndexToEntRef(prop), TIMER_FLAG_NO_MAPCHANGE);
+			CreateTimer(lifespan, Timer_RemoveEntity, EntIndexToEntRef(phys), TIMER_FLAG_NO_MAPCHANGE);
+		}
+		
+		//TODO: Figure out how to make health kits move like actual health kits and not phys props.
+		
+		DataPack pack = new DataPack();
+		
+		WritePackCell(pack, IsValidClient(owner) ? GetClientUserId(owner) : -1);
+		WritePackCell(pack, EntIndexToEntRef(phys));
+		WritePackFloat(pack, amt);
+		WritePackFloat(pack, radius);
+		WritePackCell(pack, mode);
+		WritePackFunction(pack, filter);
+		WritePackString(pack, sound);
+		WritePackFloat(pack, hpMult);
+		WritePackString(pack, pluginName);
+		
+		RequestFrame(FakeHealthKit_Think, pack);
+		
+		return phys;
+	}
+	
+	return -1;
+}
+
+public void FakeHealthKit_Think(DataPack pack)
+{
+	ResetPack(pack);
+	
+	int owner = GetClientOfUserId(ReadPackCell(pack));
+	int kit = EntRefToEntIndex(ReadPackCell(pack));
+	float amt = ReadPackFloat(pack);
+	float radius = ReadPackFloat(pack);
+	int mode = ReadPackCell(pack);
+	Function filter = ReadPackFunction(pack);
+	char snd[255], plugin[255];
+	ReadPackString(pack, snd, sizeof(snd));
+	float hpMult = ReadPackFloat(pack);
+	ReadPackString(pack, plugin, sizeof(plugin));
+	
+	if (!IsValidEntity(kit))
+	{
+		delete pack;
+		return;
+	}
+		
+	float pos[3];
+	GetEntPropVector(kit, Prop_Send, "m_vecOrigin", pos);
+	
+	Handle FunctionPlugin = GetPluginHandle(plugin);
+	
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (IsValidMulti(i))
+		{
+			float pos2[3];
+			GetClientAbsOrigin(i, pos2);
+			
+			bool result;
+			
+			if (FunctionPlugin == INVALID_HANDLE)
+			{
+				result = true;
+			}
+			else
+			{
+				Call_StartFunction(FunctionPlugin, filter);
+				
+				Call_PushCell(kit);
+				Call_PushCell(owner);
+				
+				Call_Finish(result);
+			}
+			
+			if (GetVectorDistance(pos, pos2) <= radius && result)
+			{
+				float healing = amt;
+				
+				if (mode == 0)
+				{
+					float maxHP = CF_GetCharacterMaxHealth(i);
+					healing = amt * maxHP;
+				}
+				
+				CF_HealPlayer(i, owner, healing, hpMult);
+				if (CheckFile(snd))
+				{
+					EmitSoundToClient(i, snd, _, _, 120);
+				}
+				
+				delete pack;
+				
+				RemoveEntity(kit);
+				
+				return;
+			}
+		}
+	}
+		
+	RequestFrame(FakeHealthKit_Think, pack);
+		
+	/*DataPack pack = new DataPack();
+		
+	WritePackCell(pack, IsValidClient(owner) ? GetClientUserId(owner) : -1);
+	WritePackCell(pack, EntIndexToEntRef(phys));
+	WritePackFloat(pack, amt);
+	WritePackFloat(pack, radius);
+	WritePackCell(pack, mode);
+	WritePackFunction(pack, filter);
+	WritePackString(pack, sound);
+	WritePackFloat(pack, hpMult);
+		
+	RequestFrame(FakeHealthKit_Think, pack);*/
 }
