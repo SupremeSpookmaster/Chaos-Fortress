@@ -59,6 +59,10 @@ bool b_UltBlocked[MAXPLAYERS + 1] = { false, ... };
 bool b_M2Blocked[MAXPLAYERS + 1] = { false, ... };
 bool b_M3Blocked[MAXPLAYERS + 1] = { false, ... };
 bool b_ReloadBlocked[MAXPLAYERS + 1] = { false, ... };
+bool b_UltIsGrounded[MAXPLAYERS + 1] = { false, ... };
+bool b_M2IsGrounded[MAXPLAYERS + 1] = { false, ... };
+bool b_M3IsGrounded[MAXPLAYERS + 1] = { false, ... };
+bool b_ReloadIsGrounded[MAXPLAYERS + 1] = { false, ... };
 bool b_IsFakeHealthKit[2049] = { false, ... };
 
 GlobalForward g_OnAbility;
@@ -78,6 +82,7 @@ GlobalForward g_PassFilter;
 GlobalForward g_ShouldCollide;
 
 int i_GenericProjectileOwner[2049] = { -1, ... };
+int i_HealingDone[MAXPLAYERS + 1] = { 0, ... };
 
 public void CFA_MakeNatives()
 {
@@ -129,6 +134,11 @@ public void CFA_MakeForwards()
 
 public void CFA_OGF()
 {
+	CFA_ScanProjectiles();
+}
+
+public void CFA_ScanProjectiles()
+{
 	int entity = -1;
 	while ((entity = FindEntityByClassname(entity, "tf_projectile_*")) != -1)
 	{
@@ -155,6 +165,16 @@ public void CFA_OGF()
 	}
 }
 
+public void CFA_AddHealingPoints(int client, int amt)
+{
+	i_HealingDone[client] += amt;
+}
+
+public void CFA_Disconnect(int client)
+{
+	i_HealingDone[client] = 0;
+}
+
 public void CFA_OnEntityDestroyed(int entity)
 {
 	i_GenericProjectileOwner[entity] = -1;
@@ -175,7 +195,8 @@ public Action GetOwner(int ent)
 		return Plugin_Continue;
 		
 	int owner = GetEntPropEnt(ent, Prop_Send, "m_hOwnerEntity");
-	i_GenericProjectileOwner[ent] = GetClientUserId(owner);
+	if (IsValidClient(owner))
+		i_GenericProjectileOwner[ent] = GetClientUserId(owner);
 	
 	return Plugin_Continue;
 }
@@ -195,6 +216,21 @@ public void CFA_MapStart()
 	PrecacheSound(NOPE);
 	PrecacheSound(HEAL_DEFAULT);
 	PrecacheModel(HEAL_DEFAULT_MODEL);
+	
+	int entity = FindEntityByClassname(MaxClients + 1, "tf_player_manager");
+	if(IsValidEntity(entity))
+		SDKHook(entity, SDKHook_ThinkPost, ScoreThink);
+}
+
+public void ScoreThink(int entity)
+{
+	for(int client = 1; client <= MaxClients; client++)
+	{
+		if(IsValidClient(client))
+		{
+			SetEntProp(client, Prop_Send, "m_iHealPoints", i_HealingDone[client]);
+		}
+	}
 }
 
 public Action CFA_HUDTimer(Handle timer)
@@ -204,9 +240,11 @@ public Action CFA_HUDTimer(Handle timer)
 	{
 		if (CF_IsPlayerCharacter(client) && b_UseHUD[client])
 		{
+			bool showHUD = GetClientButtons(client) & IN_SCORE == 0;
 			if (IsPlayerAlive(client))
 			{
 				char HUDText[255];
+				bool onground = GetEntityFlags(client) & FL_ONGROUND != 0;
 				
 				if (b_CharacterHasUlt[client])
 				{
@@ -216,23 +254,26 @@ public Action CFA_HUDTimer(Handle timer)
 						CF_GiveUltCharge(client, f_UltChargeOnRegen[client]/10.0, CF_ResourceType_Percentage);
 					}
 					
-					bool wouldBeStuck = false;
-					if (!b_UltBlocked[client] && f_UltScale[client] > 0.0 && remCD <= 0.0)
+					if (showHUD)
 					{
-						wouldBeStuck = CheckPlayerWouldGetStuck(client, f_UltScale[client]);
-					}
-					
-					if (b_UltBlocked[client] || CF_GetRoundState() != 1)
-					{
-						Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE [BLOCKED]\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0));
-					}
-					else if (wouldBeStuck)
-					{
-						Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE [BLOCKED; YOU WOULD GET STUCK]\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0));
-					}
-					else
-					{
-						Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE %s\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0), f_UltCharge[client] >= f_UltChargeRequired[client] ? "(READY, CALL FOR MEDIC)" : "");
+						bool wouldBeStuck = false;
+						if (!b_UltBlocked[client] && f_UltScale[client] > 0.0 && remCD <= 0.0)
+						{
+							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_UltScale[client]);
+						}
+						
+						if (b_UltBlocked[client] || CF_GetRoundState() != 1 || (!onground && b_UltIsGrounded[client]))
+						{
+							Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE [BLOCKED]\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0));
+						}
+						else if (wouldBeStuck)
+						{
+							Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE [BLOCKED; YOU WOULD GET STUCK]\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0));
+						}
+						else
+						{
+							Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE %s\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0), f_UltCharge[client] >= f_UltChargeRequired[client] ? "(READY, CALL FOR MEDIC)" : "");
+						}
 					}
 				}
 				
@@ -243,145 +284,151 @@ public Action CFA_HUDTimer(Handle timer)
 						CF_GiveSpecialResource(client, 1.0, CF_ResourceType_Regen);
 					}
 					
-					if (f_ResourceMax[client] > 0.0)
+					if (showHUD)
 					{
-						Format(HUDText, sizeof(HUDText), "%s\n%s: %i/%i\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundToFloor(f_Resources[client]), RoundToFloor(f_ResourceMax[client]));
-					}
-					else
-					{
-						Format(HUDText, sizeof(HUDText), "%s\n%s: %i\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundToFloor(f_Resources[client]));
-					}
-				}
-				
-				if (b_HasM2[client])
-				{
-					bool wouldBeStuck = false;
-					float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M2);
-					if (!b_M2Blocked[client] && f_M2Scale[client] > 0.0 && remCD <= 0.0)
-					{
-						wouldBeStuck = CheckPlayerWouldGetStuck(client, f_M2Scale[client]);
-					}
-					
-					if (b_M2Blocked[client])
-					{
-						Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M2Name[client]);
-					}
-					else if (wouldBeStuck)
-					{
-						Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED; YOU WOULD GET STUCK]\n", HUDText, s_M2Name[client]);
-					}
-					else
-					{
-						if (b_UsingResources[client] && f_M2Cost[client] > 0.0)
+						if (f_ResourceMax[client] > 0.0)
 						{
-							if (b_ResourceIsUlt[client])
-							{
-								Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult.]", HUDText, (f_M2Cost[client]/f_UltChargeRequired[client]) * 100.0);
-							}
-							else
-							{
-								Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_M2Cost[client]), f_M2Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
-							}
-						}
-						
-						if (remCD > 0.0)
-						{
-							Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_M2Name[client], remCD);
+							Format(HUDText, sizeof(HUDText), "%s\n%s: %i/%i\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundToFloor(f_Resources[client]), RoundToFloor(f_ResourceMax[client]));
 						}
 						else
 						{
-							Format(HUDText, sizeof(HUDText), "%s %s %s\n", HUDText, s_M2Name[client], b_M2IsHeld[client] ? (b_HoldingM2[client] ? "[ACTIVE]" : "[Hold M2]") : "[M2]");
+							Format(HUDText, sizeof(HUDText), "%s\n%s: %i\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundToFloor(f_Resources[client]));
 						}
 					}
 				}
 				
-				if (b_HasM3[client])
+				if (showHUD)
 				{
-					bool wouldBeStuck = false;
-					float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M3);
-					if (!b_M3Blocked[client] && f_M3Scale[client] > 0.0 && remCD <= 0.0)
+					if (b_HasM2[client])
 					{
-						wouldBeStuck = CheckPlayerWouldGetStuck(client, f_M3Scale[client]);
-					}
-					
-					if (b_M3Blocked[client])
-					{
-						Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M3Name[client]);
-					}
-					else if (wouldBeStuck)
-					{
-						Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED; YOU WOULD GET STUCK]\n", HUDText, s_M3Name[client]);
-					}
-					else
-					{
-						if (b_UsingResources[client] && f_M3Cost[client] > 0.0)
+						bool wouldBeStuck = false;
+						float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M2);
+						if (!b_M2Blocked[client] && f_M2Scale[client] > 0.0 && remCD <= 0.0)
 						{
-							if (b_ResourceIsUlt[client])
-							{
-								Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult.]", HUDText, (f_M3Cost[client]/f_UltChargeRequired[client]) * 100.0);
-							}
-							else
-							{
-								Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_M3Cost[client]), f_M3Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
-							}
+							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_M2Scale[client]);
 						}
 						
-						if (remCD > 0.0)
+						if (b_M2Blocked[client] || (!onground && b_M2IsGrounded[client]))
 						{
-							Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_M3Name[client], remCD);
+							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M2Name[client]);
+						}
+						else if (wouldBeStuck)
+						{
+							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED; YOU WOULD GET STUCK]\n", HUDText, s_M2Name[client]);
 						}
 						else
 						{
-							Format(HUDText, sizeof(HUDText), "%s %s %s\n", HUDText, s_M3Name[client], b_M3IsHeld[client] ? (b_HoldingM3[client] ? "[ACTIVE]" : "[Hold M3]") : "[M3]");
-						}
-					}
-				}
-				
-				if (b_HasReload[client])
-				{
-					bool wouldBeStuck = false;
-					float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_Reload);
-					if (!b_ReloadBlocked[client] && f_RScale[client] > 0.0 && remCD <= 0.0)
-					{
-						wouldBeStuck = CheckPlayerWouldGetStuck(client, f_RScale[client]);
-					}
-					
-					if (b_ReloadBlocked[client])
-					{
-						Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_ReloadName[client]);
-					}
-					else if (wouldBeStuck)
-					{
-						Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED; YOU WOULD GET STUCK]\n", HUDText, s_ReloadName[client]);
-					}
-					else
-					{
-						if (b_UsingResources[client] && f_ReloadCost[client] > 0.0)
-						{
-							if (b_ResourceIsUlt[client])
+							if (b_UsingResources[client] && f_M2Cost[client] > 0.0)
 							{
-								Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult.]", HUDText, (f_ReloadCost[client]/f_UltChargeRequired[client]) * 100.0);
+								if (b_ResourceIsUlt[client])
+								{
+									Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult.]", HUDText, (f_M2Cost[client]/f_UltChargeRequired[client]) * 100.0);
+								}
+								else
+								{
+									Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_M2Cost[client]), f_M2Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+								}
+							}
+							
+							if (remCD > 0.0)
+							{
+								Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_M2Name[client], remCD);
 							}
 							else
 							{
-								Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_ReloadCost[client]), f_ReloadCost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+								Format(HUDText, sizeof(HUDText), "%s %s %s\n", HUDText, s_M2Name[client], b_M2IsHeld[client] ? (b_HoldingM2[client] ? "[ACTIVE]" : "[Hold M2]") : "[M2]");
 							}
 						}
-						
-						if (remCD > 0.0)
+					}
+					
+					if (b_HasM3[client])
+					{
+						bool wouldBeStuck = false;
+						float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M3);
+						if (!b_M3Blocked[client] && f_M3Scale[client] > 0.0 && remCD <= 0.0)
 						{
-							Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_ReloadName[client], remCD);
+							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_M3Scale[client]);
+						}
+						
+						if (b_M3Blocked[client] || (!onground && b_M3IsGrounded[client]))
+						{
+							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M3Name[client]);
+						}
+						else if (wouldBeStuck)
+						{
+							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED; YOU WOULD GET STUCK]\n", HUDText, s_M3Name[client]);
 						}
 						else
 						{
-							Format(HUDText, sizeof(HUDText), "%s %s %s\n", HUDText, s_ReloadName[client], b_ReloadIsHeld[client] ? (b_HoldingReload[client] ? "[ACTIVE]" : "[Hold R]") : "[R]");
+							if (b_UsingResources[client] && f_M3Cost[client] > 0.0)
+							{
+								if (b_ResourceIsUlt[client])
+								{
+									Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult.]", HUDText, (f_M3Cost[client]/f_UltChargeRequired[client]) * 100.0);
+								}
+								else
+								{
+									Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_M3Cost[client]), f_M3Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+								}
+							}
+							
+							if (remCD > 0.0)
+							{
+								Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_M3Name[client], remCD);
+							}
+							else
+							{
+								Format(HUDText, sizeof(HUDText), "%s %s %s\n", HUDText, s_M3Name[client], b_M3IsHeld[client] ? (b_HoldingM3[client] ? "[ACTIVE]" : "[Hold M3]") : "[M3]");
+							}
 						}
 					}
+					
+					if (b_HasReload[client])
+					{
+						bool wouldBeStuck = false;
+						float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_Reload);
+						if (!b_ReloadBlocked[client] && f_RScale[client] > 0.0 && remCD <= 0.0)
+						{
+							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_RScale[client]);
+						}
+						
+						if (b_ReloadBlocked[client] || (!onground && b_ReloadIsGrounded[client]))
+						{
+							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_ReloadName[client]);
+						}
+						else if (wouldBeStuck)
+						{
+							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED; YOU WOULD GET STUCK]\n", HUDText, s_ReloadName[client]);
+						}
+						else
+						{
+							if (b_UsingResources[client] && f_ReloadCost[client] > 0.0)
+							{
+								if (b_ResourceIsUlt[client])
+								{
+									Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult.]", HUDText, (f_ReloadCost[client]/f_UltChargeRequired[client]) * 100.0);
+								}
+								else
+								{
+									Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_ReloadCost[client]), f_ReloadCost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+								}
+							}
+							
+							if (remCD > 0.0)
+							{
+								Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_ReloadName[client], remCD);
+							}
+							else
+							{
+								Format(HUDText, sizeof(HUDText), "%s %s %s\n", HUDText, s_ReloadName[client], b_ReloadIsHeld[client] ? (b_HoldingReload[client] ? "[ACTIVE]" : "[Hold R]") : "[R]");
+							}
+						}
+					}
+					
+					ReplaceString(HUDText, sizeof(HUDText), "PUTAPERCENTAGEHERE", "%%");
+					SetHudTextParams(-1.0, 0.8, 0.1, 255, 255, 255, 255);
+					ShowSyncHudText(client, HudSync, HUDText);
 				}
-				
-				ReplaceString(HUDText, sizeof(HUDText), "PUTAPERCENTAGEHERE", "%%");
-				SetHudTextParams(-1.0, 0.8, 0.1, 255, 255, 255, 255);
-				ShowSyncHudText(client, HudSync, HUDText);
 			}
 		}
 	}
@@ -422,6 +469,7 @@ public bool CFA_InitializeUltimate(int client, ConfigMap map)
 		f_UltChargeOnKill[client] = GetFloatFromConfigMap(subsection, "on_kill", 0.0);
 		f_UltCD[client] = GetFloatFromConfigMap(subsection, "cooldown", 0.0);
 		f_UltScale[client] = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
+		b_UltIsGrounded[client] = GetBoolFromConfigMap(subsection, "grounded", false);
 		
 		b_CharacterHasUlt[client] = true;
 	}
@@ -452,6 +500,7 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		}
 		
 		f_M2Scale[client] = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
+		b_M2IsGrounded[client] = GetBoolFromConfigMap(subsection, "grounded", false);
 		
 		b_HasM2[client] = true;
 		AtLeastOne = true;
@@ -474,6 +523,7 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		}
 		
 		f_M3Scale[client] = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
+		b_M3IsGrounded[client] = GetBoolFromConfigMap(subsection, "grounded", false);
 		
 		b_HasM3[client] = true;
 		AtLeastOne = true;
@@ -496,6 +546,7 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		}
 		
 		f_RScale[client] = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
+		b_ReloadIsGrounded[client] = GetBoolFromConfigMap(subsection, "grounded", false);
 		
 		b_HasReload[client] = true;
 		
@@ -607,6 +658,12 @@ public void CF_OnPlayerCallForMedic(int client)
 		return;
 	}
 	
+	if (b_UltIsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
+	{
+		Nope(client);
+		return;
+	}
+	
 	CF_AttemptAbilitySlot(client, CF_AbilityType_Ult);
 }
 
@@ -619,6 +676,12 @@ public Action CF_OnPlayerM2(int client, int &buttons, int &impulse, int &weapon)
 		return Plugin_Continue;
 		
 	if (f_M2Scale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_M2Scale[client]))
+	{
+		Nope(client);
+		return Plugin_Continue;
+	}
+	
+	if (b_M2IsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
 	{
 		Nope(client);
 		return Plugin_Continue;
@@ -650,6 +713,12 @@ public Action CF_OnPlayerM3(int client, int &buttons, int &impulse, int &weapon)
 		return Plugin_Continue;
 	}
 		
+	if (b_M3IsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
+	{
+		Nope(client);
+		return Plugin_Continue;
+	}
+		
 	if (b_M3IsHeld[client])
 	{
 		CF_AttemptHeldAbility(client, CF_AbilityType_M3, IN_ATTACK3);
@@ -671,6 +740,12 @@ public Action CF_OnPlayerReload(int client, int &buttons, int &impulse, int &wea
 		return Plugin_Continue;
 	
 	if (f_RScale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_RScale[client]))
+	{
+		Nope(client);
+		return Plugin_Continue;
+	}
+	
+	if (b_ReloadIsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
 	{
 		Nope(client);
 		return Plugin_Continue;
@@ -2077,9 +2152,7 @@ public Native_CF_HealPlayer(Handle plugin, int numParams)
 	{
 		CFA_GiveChargesForHealing(healer, float(healingDone));
 		
-		int points = GetEntProp(healer, Prop_Send, "m_iHealPoints");
-		points += healingDone;
-		SetEntProp(healer, Prop_Send, "m_iHealPoints", points);
+		i_HealingDone[healer] += healingDone;
 	}
 }
 

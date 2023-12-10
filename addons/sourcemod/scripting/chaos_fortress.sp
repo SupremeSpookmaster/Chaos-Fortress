@@ -62,6 +62,7 @@
 //	- ALL: The default trace gets blocked by invisible clips like spawn doors and such.
 //	- ALL: Clipless weapons (sniper rifle, minigun, flamethrower) can pick up ammo boxes, but do not actually replenish ammo upon doing so. This will make characters like Heavnich useless, so it MUST be fixed before the open beta.
 //	- ALL: Scoreboard credit for healing does not actually work. We will likely need a PostThink hook for this, and we'll need to track ALL healing done not just custom healing... man..........
+//	- ALL: Held abilities with the "grounded" flag do not end if the user leaves the ground.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
@@ -145,6 +146,7 @@ public Action PlayerHealed(Event hEvent, const char[] sEvName, bool bDontBroadca
 	if (IsValidClient(healer) && healer != patient)
 	{
 		CFA_GiveChargesForHealing(healer, float(amount));
+		CFA_AddHealingPoints(healer, amount);
 	}
 
 	return Plugin_Continue;
@@ -227,6 +229,7 @@ public void OnClientDisconnect(int client)
 {
 	CF_UnmakeCharacter(client, false);
 	CFC_Disconnect(client);
+	CFA_Disconnect(client);
 }
 
 #if defined DEBUG_ONTAKEDAMAGE
