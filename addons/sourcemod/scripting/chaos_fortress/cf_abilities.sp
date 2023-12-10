@@ -244,7 +244,6 @@ public Action CFA_HUDTimer(Handle timer)
 			if (IsPlayerAlive(client))
 			{
 				char HUDText[255];
-				bool onground = GetEntityFlags(client) & FL_ONGROUND != 0;
 				
 				if (b_CharacterHasUlt[client])
 				{
@@ -262,7 +261,7 @@ public Action CFA_HUDTimer(Handle timer)
 							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_UltScale[client]);
 						}
 						
-						if (b_UltBlocked[client] || CF_GetRoundState() != 1 || (!onground && b_UltIsGrounded[client]))
+						if ((!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_Ult) && f_UltCharge[client] >= f_UltChargeRequired[client] && !wouldBeStuck) || CF_GetRoundState() != 1)
 						{
 							Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE [BLOCKED]\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0));
 						}
@@ -308,7 +307,7 @@ public Action CFA_HUDTimer(Handle timer)
 							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_M2Scale[client]);
 						}
 						
-						if (b_M2Blocked[client] || (!onground && b_M2IsGrounded[client]))
+						if (!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M2) && CF_GetSpecialResource(client) >= f_M2Cost[client] && !wouldBeStuck)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M2Name[client]);
 						}
@@ -350,7 +349,7 @@ public Action CFA_HUDTimer(Handle timer)
 							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_M3Scale[client]);
 						}
 						
-						if (b_M3Blocked[client] || (!onground && b_M3IsGrounded[client]))
+						if (!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M3) && CF_GetSpecialResource(client) >= f_M3Cost[client] && !wouldBeStuck)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M3Name[client]);
 						}
@@ -392,7 +391,7 @@ public Action CFA_HUDTimer(Handle timer)
 							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_RScale[client]);
 						}
 						
-						if (b_ReloadBlocked[client] || (!onground && b_ReloadIsGrounded[client]))
+						if (!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_Reload) && CF_GetSpecialResource(client) >= f_ReloadCost[client] && !wouldBeStuck)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_ReloadName[client]);
 						}
@@ -652,18 +651,6 @@ public void CF_OnPlayerCallForMedic(int client)
 		return;
 	}
 	
-	if (f_UltScale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_UltScale[client]))
-	{
-		Nope(client);
-		return;
-	}
-	
-	if (b_UltIsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
-	{
-		Nope(client);
-		return;
-	}
-	
 	CF_AttemptAbilitySlot(client, CF_AbilityType_Ult);
 }
 
@@ -674,18 +661,6 @@ public Action CF_OnPlayerM2(int client, int &buttons, int &impulse, int &weapon)
 		
 	if (!b_HasM2[client])
 		return Plugin_Continue;
-		
-	if (f_M2Scale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_M2Scale[client]))
-	{
-		Nope(client);
-		return Plugin_Continue;
-	}
-	
-	if (b_M2IsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
-	{
-		Nope(client);
-		return Plugin_Continue;
-	}
 		
 	if (b_M2IsHeld[client])
 	{
@@ -707,18 +682,6 @@ public Action CF_OnPlayerM3(int client, int &buttons, int &impulse, int &weapon)
 	if (!b_HasM3[client])
 		return Plugin_Continue;
 		
-	if (f_M3Scale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_M3Scale[client]))
-	{
-		Nope(client);
-		return Plugin_Continue;
-	}
-		
-	if (b_M3IsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
-	{
-		Nope(client);
-		return Plugin_Continue;
-	}
-		
 	if (b_M3IsHeld[client])
 	{
 		CF_AttemptHeldAbility(client, CF_AbilityType_M3, IN_ATTACK3);
@@ -738,18 +701,6 @@ public Action CF_OnPlayerReload(int client, int &buttons, int &impulse, int &wea
 		
 	if (!b_HasReload[client])
 		return Plugin_Continue;
-	
-	if (f_RScale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_RScale[client]))
-	{
-		Nope(client);
-		return Plugin_Continue;
-	}
-	
-	if (b_ReloadIsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
-	{
-		Nope(client);
-		return Plugin_Continue;
-	}
 	
 	if (b_ReloadIsHeld[client])
 	{
@@ -833,7 +784,6 @@ public Action CFA_HeldM2PreThink(int client)
 		EndHeldM2(client, true);
 	}
 	
-	//TODO: If the player respawns or dies for any reason during a held ability, a bunch of shit will break. Make a method to reset all held variables and call it in MakeCharacter and PlayerKilled.
 	return Plugin_Continue;
 }
 
@@ -1148,43 +1098,68 @@ public bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type)
 	{
 		return false;
 	}
-		
-	if (b_UsingResources[client] || type == CF_AbilityType_Ult)
+	
+	float cost; bool onground = GetEntityFlags(client) & FL_ONGROUND != 0;
+	
+	switch(type)
 	{
-		float cost; float available = (b_ResourceIsUlt[client] || type == CF_AbilityType_Ult) ? f_UltCharge[client] : f_Resources[client];
-		
-		switch(type)
+		case CF_AbilityType_Ult:
 		{
-			case CF_AbilityType_Ult:
-			{
-				if (b_UltBlocked[client])
-					return false;
+			if (b_UltBlocked[client])
+				return false;
+				
+			if (b_UltIsGrounded[client] && !onground)
+				return false;
+				
+			if (f_UltScale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_UltScale[client]))
+				return false;
 					
-				cost = f_UltChargeRequired[client];
-			}
-			case CF_AbilityType_M2:
-			{
-				if (b_M2Blocked[client])
-					return false;
-					
-				cost = f_M2Cost[client];
-			}
-			case CF_AbilityType_M3:
-			{
-				if (b_M3Blocked[client])
-					return false;
-					
-				cost = f_M3Cost[client];
-			}
-			case CF_AbilityType_Reload:
-			{
-				if (b_ReloadBlocked[client])
-					return false;
-					
-				cost = f_ReloadCost[client];
-			}
+			cost = f_UltChargeRequired[client];
 		}
-		
+		case CF_AbilityType_M2:
+		{
+			if (b_M2Blocked[client])
+				return false;
+				
+			if (b_M2IsGrounded[client] && !onground)
+				return false;
+				
+			if (f_M2Scale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_M2Scale[client]))
+				return false;
+					
+			cost = f_M2Cost[client];
+		}
+		case CF_AbilityType_M3:
+		{
+			if (b_M3Blocked[client])
+				return false;
+				
+			if (b_M3IsGrounded[client] && !onground)
+				return false;
+					
+			if (f_M3Scale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_M3Scale[client]))
+				return false;
+					
+			cost = f_M3Cost[client];
+		}
+		case CF_AbilityType_Reload:
+		{
+			if (b_ReloadBlocked[client])
+				return false;
+				
+			if (b_ReloadIsGrounded[client] && !onground)
+				return false;
+				
+			if (f_RScale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_RScale[client]))
+				return false;
+					
+			cost = f_ReloadCost[client];
+		}
+	}
+	
+	if(b_UsingResources[client] || type == CF_AbilityType_Ult)
+	{
+		float available = (b_ResourceIsUlt[client] || type == CF_AbilityType_Ult) ? f_UltCharge[client] : f_Resources[client];
 		if (cost > available)
 		{
 			return false;
