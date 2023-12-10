@@ -1073,7 +1073,7 @@ native CF_UnblockAbilitySlot(int client, CF_AbilityType type);
  * @param amt					The amount of healing given.
  * @param hpMult				The maximum percentage of the client's max HP for this to heal to. For example: 1.5 would allow this instance to heal the client up to a maximum of 150% of their max HP.
  */
-native CF_HealPlayer(int client, int healer, float amt, float hpMult);
+native CF_HealPlayer(int client, int healer, int amt, float hpMult);
 
 /**
  * Launches a generic rocket, as if the user had fired a rocket launcher.
@@ -1096,7 +1096,7 @@ native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit);
  * @param mode					Mode in which the health provided by this kit should be given. 0: percentage-based, all other values: flat value.
  * @param lifespan				Duration the health kit should be active. 0.0 or below: infinite.
  * @param plugin				Name of the plugin which is calling this native.
- * @param filter				Function used to determine who should be able to pick up the health kit. The function must return a bool value, with the first parameter being the health kit's entity index and the second parameter as its owner.
+ * @param filter				Function used to determine who should be able to pick up the health kit. The function must return a bool value, with the first parameter being the health kit's entity index, the second parameter as its owner, and the third paremeter as the client attempting to pick up the health kit.
  * @param pos					The position the health kit should be spawned at.
  * @param model					Optional model to be used for the health kit.
  * @param sequence				Optional animation sequence to be used for the health kit.
@@ -1105,10 +1105,14 @@ native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit);
  * @param skin					Optional skin to set for the health kit's model.
  * @param sound					Optional sound to play when somebody picks up the health kit.
  * @param hpMult				Optional max HP multiplier provided by the health kit. IE, if this is 1.5, the health kit can heal the player who grabs it up to a maximum of 50% overheal.
+ * @param physModel				Optional invisible model to be used for the health kit's physics. 
+ * @param redParticle			Optional particle effect to spawn when this health kit is picked up by a red player.
+ * @param blueParticle			Optional particle effect to spawn when this health kit is picked up by a blue player.
+ * @param AllowPickupAtMax		Optional parameter. If enabled: the health kit can be picked up anyways by players who won't heal from it at all due to having more health than the max this kit can heal to. EX: if we create a large health kit and turn this on, a scout with full health can still pick it up despite being full on HP.
  *
  * @return	The entity index of the health kit, or -1 if it fails to spawn.
  */
-native int CF_CreateHealthPickup(int owner, float amt, float radius, int mode, float lifespan, char plugin[255], Function filter, float pos[3], char model[255] = "models/items/medkit_medium.mdl", char sequence[255] = "idle", float rate = 1.0, float scale = 1.0, int skin = 0, char sound[255] = "items/smallmedkit1.wav", float hpMult = 1.0);
+native int CF_CreateHealthPickup(int owner, float amt, float radius, int mode, float lifespan, char plugin[255], Function filter, float pos[3], char model[255] = "models/items/medkit_medium.mdl", char sequence[255] = "idle", float rate = 1.0, float scale = 1.0, int skin = 0, char sound[255] = "items/smallmedkit1.wav", float hpMult = 1.0, char physModel[255] = "models/items/medkit_medium.mdl", char redParticle[255] = "healthgained_red_large", char blueParticle[255] = "healthgained_blu_large", bool AllowPickupAtMax = false);
 
 /**
  * Inflicts generic area-of-effect damage within a specified radius

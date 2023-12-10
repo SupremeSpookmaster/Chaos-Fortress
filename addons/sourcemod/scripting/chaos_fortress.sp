@@ -13,7 +13,6 @@
 //		- Orbital Sniper:
 //			- Make custom sounds and implement them. Remove the DSP effect attribute once this is done.
 //		- Count Heavnich:
-//			- Write "Share Sandviches" ability.
 //			- Add echo support to the sound system and use it for his ult activation.
 //			- Optional: properly implement mega deflector weapon sounds.
 //		- Demopan:
@@ -31,6 +30,7 @@
 //			- Any kill will grant a soul, not just melee. This encourages sitting at a distance and fishing for souls risk-free with Skull Servants instead of getting in and fighting.
 //				- Make players drop timed soul pickups that the SB player needs to manually pick up to gain the soul. Upon being picked up, these souls begin to heal the user for 75 hp over the span of 3s.
 //					- This is a fairly drastic change. Only do this if people think SB is overpowered (which is entirely possible).
+//					- Thanks to all of the work we just put into fake health kits, this should be super easy to implement!
 //		////////////////////////////////////////////
 //		- Orbital Sniper:
 //			- There's not a lot of viable counterplay against an Orbital hugging the skybox, besides having another Orbital counter-snipe them.
@@ -62,6 +62,7 @@
 //	- SPOOKMASTER BONES: Dialogue is too loud and can be heard from nearly anywhere on the map, make a cf_soundpack ability to make all of them quieter.
 //	- ALL: The default trace gets blocked by invisible clips like spawn doors and such.
 //	- ALL: Clipless weapons (sniper rifle, minigun, flamethrower) can pick up ammo boxes, but do not actually replenish ammo upon doing so. This will make characters like Heavnich useless, so it MUST be fixed before the open beta.
+//	- ALL: Scoreboard credit for healing does not actually work. We will likely need a PostThink hook for this, and we'll need to track ALL healing done not just custom healing... man..........
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

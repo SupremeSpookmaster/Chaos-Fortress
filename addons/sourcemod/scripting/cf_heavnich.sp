@@ -8,6 +8,8 @@
 #define CHOW		"heavnich_chow_down"
 #define MEGA		"heavnich_mega_cosmetics"
 
+#define MODEL_SANDVICH					"models/items/plate.mdl"
+
 #define PARTICLE_MEGA_TRANSFORM_RED		"drg_cow_explosioncore_charged"
 #define PARTICLE_MEGA_TRANSFORM_BLUE	"drg_cow_explosioncore_charged_blue"
 #define PARTICLE_MEGA_END				"drg_wrenchmotron_teleport"
@@ -48,6 +50,8 @@ public void OnMapStart()
 	PrecacheSound(SOUND_MEGA_STEP_1, true);
 	PrecacheSound(SOUND_MEGA_STEP_2, true);
 	PrecacheSound(SOUND_MEGA_SHOTGUN, true);
+	
+	PrecacheModel(MODEL_SANDVICH);
 }
 
 public void OnPluginStart()
@@ -70,10 +74,85 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 		Mega_Activate(client, abilityName);
 }
 
-
+bool b_SandvichCanHealSelf[MAXPLAYERS + 1] = { false, ... };
 public void Share_Activate(int client, char abilityName[255])
 {
+	int num = CF_GetArgI(client, HEAVNICH, abilityName, "sandviches");
+	float delay = CF_GetArgF(client, HEAVNICH, abilityName, "delay");
+	float velocity = CF_GetArgF(client, HEAVNICH, abilityName, "velocity");
+	float lifespan = CF_GetArgF(client, HEAVNICH, abilityName, "lifespan");
+	float radius = CF_GetArgF(client, HEAVNICH, abilityName, "radius");
+	b_SandvichCanHealSelf[client] = CF_GetArgI(client, HEAVNICH, abilityName, "self") > 0;
+	float amt = CF_GetArgF(client, HEAVNICH, abilityName, "heal_amt");
+	int type = CF_GetArgI(client, HEAVNICH, abilityName, "heal_type");
+	float mult = CF_GetArgF(client, HEAVNICH, abilityName, "heal_mult");
 	
+	Share_TossSandvich(client, num, delay, velocity, lifespan, radius, amt, type, mult);
+}
+
+public void Share_TossSandvich(int client, int num, float delay, float velocity, float lifespan, float radius, float amt, int type, float mult)
+{
+	if (!IsValidMulti(client))
+		return;
+		
+	float pos[3], ang[3], buffer[3], vel[3];
+	GetClientEyePosition(client, pos);
+	GetClientEyeAngles(client, ang);
+	
+	int sandvich = CF_CreateHealthPickup(client, amt, radius, type, lifespan, HEAVNICH, Share_Filter, pos, MODEL_SANDVICH, _, _, _, _, _, mult, MODEL_SANDVICH);
+	if (IsValidEntity(sandvich))
+	{
+		GetAngleVectors(ang, buffer, NULL_VECTOR, NULL_VECTOR);
+		vel[0] = buffer[0] * velocity;
+		vel[1] = buffer[1] * velocity;
+		vel[2] = buffer[2] * velocity;
+		
+		TeleportEntity(sandvich, pos, NULL_VECTOR, vel);
+	}
+	
+	num--;
+	if (num > 0)
+	{
+		DataPack pack = new DataPack();
+		CreateDataTimer(delay, Share_TossAnotherOne, pack, TIMER_FLAG_NO_MAPCHANGE);
+		WritePackCell(pack, GetClientUserId(client));
+		WritePackCell(pack, num);
+		WritePackFloat(pack, delay);
+		WritePackFloat(pack, velocity);
+		WritePackFloat(pack, lifespan);
+		WritePackFloat(pack, radius);
+		WritePackFloat(pack, amt);
+		WritePackCell(pack, type);
+		WritePackFloat(pack, mult);
+	}
+}
+
+public Action Share_TossAnotherOne(Handle sandviches, DataPack pack)
+{
+	ResetPack(pack);
+	
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	int num = ReadPackCell(pack);
+	float delay = ReadPackFloat(pack);
+	float velocity = ReadPackFloat(pack);
+	float lifespan = ReadPackFloat(pack);
+	float radius = ReadPackFloat(pack);
+	float amt = ReadPackFloat(pack);
+	int type = ReadPackCell(pack);
+	float mult = ReadPackFloat(pack);
+	
+	if (IsValidMulti(client))
+		Share_TossSandvich(client, num, delay, velocity, lifespan, radius, amt, type, mult);
+	
+	return Plugin_Continue;
+}
+
+public bool Share_Filter(int sandvich, int owner, int eater)
+{
+	if (!IsValidClient(owner))
+		return true;
+		
+	return (owner != eater || b_SandvichCanHealSelf[owner]);
 }
 
 float f_Eating[MAXPLAYERS + 1] = { 0.0, ... };
@@ -106,7 +185,7 @@ public Action Chow_Heal(Handle healem, DataPack pack)
 	if (GetGameTime() > f_Eating[client])
 		return Plugin_Stop;
 		
-	CF_HealPlayer(client, client, amount, (target / CF_GetCharacterMaxHealth(client)));
+	CF_HealPlayer(client, client, RoundFloat(amount), (target / CF_GetCharacterMaxHealth(client)));
 	
 	return Plugin_Continue;
 }

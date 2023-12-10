@@ -1470,6 +1470,8 @@ stock Handle GetPluginHandle(char plugin[255])
 			}
 		}
 		
+		ReplaceString(buffer, sizeof(buffer), ".smx", "");
+		
 		if(StrEqual(buffer[highest+1], plugin))
 		{
 			delete iter;

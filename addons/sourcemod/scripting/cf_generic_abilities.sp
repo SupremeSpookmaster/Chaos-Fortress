@@ -291,7 +291,7 @@ public void Scale_Activate(int client, char abilityName[255])
 {
 	float scale = CF_GetArgF(client, GENERIC, abilityName, "scale");
 	
-	if (GetGameTime() <= f_ScaleEndTime[client] + 0.1)
+	if (GetGameTime() >= f_ScaleEndTime[client] + 0.1)
 		f_OldScale[client] = CF_GetCharacterScale(client);
 	
 	char fail[255], success[255];
@@ -339,7 +339,7 @@ public void Health_Activate(int client, char abilityName[255])
 {
 	float maxHP = CF_GetArgF(client, GENERIC, abilityName, "max_health");
 	
-	if (GetGameTime() <= f_HealthEndTime[client] + 0.1)
+	if (GetGameTime() >= f_HealthEndTime[client] + 0.1)
 		f_OldMaxHP[client] = CF_GetCharacterMaxHealth(client);
 		
 	CF_SetCharacterMaxHealth(client, maxHP);
@@ -383,7 +383,7 @@ public void Speed_Activate(int client, char abilityName[255])
 {
 	float speed = CF_GetArgF(client, GENERIC, abilityName, "speed");
 	
-	if (GetGameTime() <= f_SpeedEndTime[client] + 0.1)
+	if (GetGameTime() >= f_SpeedEndTime[client] + 0.1)
 		f_OldSpeed[client] = CF_GetCharacterSpeed(client);
 		
 	CF_SetCharacterSpeed(client, speed);
@@ -420,7 +420,7 @@ public void Model_Activate(int client, char abilityName[255])
 		
 	PrecacheModel(model);
 	
-	if (GetGameTime() <= f_ModelEndTime[client] + 0.1)
+	if (GetGameTime() >= f_ModelEndTime[client] + 0.1)
 		CF_GetCharacterModel(client, s_OldModel[client], 255);
 		
 	CF_SetCharacterModel(client, model);

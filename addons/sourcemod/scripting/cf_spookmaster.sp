@@ -179,7 +179,7 @@ public void Absorb_HealOnDelay(DataPack pack)
 	float amt = ReadPackFloat(pack);
 	delete pack;
 	
-	CF_HealPlayer(client, client, amt, 1.0);
+	CF_HealPlayer(client, client, RoundFloat(amt), 1.0);
 }
 
 public void CF_OnCharacterRemoved(int client)

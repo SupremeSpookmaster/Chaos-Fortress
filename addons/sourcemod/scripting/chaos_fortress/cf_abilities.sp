@@ -59,6 +59,7 @@ bool b_UltBlocked[MAXPLAYERS + 1] = { false, ... };
 bool b_M2Blocked[MAXPLAYERS + 1] = { false, ... };
 bool b_M3Blocked[MAXPLAYERS + 1] = { false, ... };
 bool b_ReloadBlocked[MAXPLAYERS + 1] = { false, ... };
+bool b_IsFakeHealthKit[2049] = { false, ... };
 
 GlobalForward g_OnAbility;
 GlobalForward g_OnUltUsed;
@@ -157,6 +158,7 @@ public void CFA_OGF()
 public void CFA_OnEntityDestroyed(int entity)
 {
 	i_GenericProjectileOwner[entity] = -1;
+	b_IsFakeHealthKit[entity] = false;
 }
 
 public void CFA_OnEntityCreated(int entity, const char[] classname)
@@ -180,7 +182,9 @@ public Action GetOwner(int ent)
 
 Handle HudSync;
 
-#define NOPE		"replay/record_fail.wav"
+#define NOPE				"replay/record_fail.wav"
+#define HEAL_DEFAULT		"items/smallmedkit1.wav"
+#define HEAL_DEFAULT_MODEL	"models/items/medkit_medium.mdl"
 
 public void CFA_MapStart()
 {
@@ -189,6 +193,8 @@ public void CFA_MapStart()
 	CreateTimer(0.1, CFA_HUDTimer, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 	
 	PrecacheSound(NOPE);
+	PrecacheSound(HEAL_DEFAULT);
+	PrecacheModel(HEAL_DEFAULT_MODEL);
 }
 
 public Action CFA_HUDTimer(Handle timer)
@@ -239,11 +245,11 @@ public Action CFA_HUDTimer(Handle timer)
 					
 					if (f_ResourceMax[client] > 0.0)
 					{
-						Format(HUDText, sizeof(HUDText), "%s\n%s: %i/%i\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundFloat(f_Resources[client]), RoundFloat(f_ResourceMax[client]));
+						Format(HUDText, sizeof(HUDText), "%s\n%s: %i/%i\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundToFloor(f_Resources[client]), RoundToFloor(f_ResourceMax[client]));
 					}
 					else
 					{
-						Format(HUDText, sizeof(HUDText), "%s\n%s: %i\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundFloat(f_Resources[client]));
+						Format(HUDText, sizeof(HUDText), "%s\n%s: %i\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundToFloor(f_Resources[client]));
 					}
 				}
 				
@@ -274,7 +280,7 @@ public Action CFA_HUDTimer(Handle timer)
 							}
 							else
 							{
-								Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundFloat(f_M2Cost[client]), f_M2Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+								Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_M2Cost[client]), f_M2Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
 							}
 						}
 						
@@ -316,7 +322,7 @@ public Action CFA_HUDTimer(Handle timer)
 							}
 							else
 							{
-								Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundFloat(f_M3Cost[client]), f_M3Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+								Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_M3Cost[client]), f_M3Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
 							}
 						}
 						
@@ -358,7 +364,7 @@ public Action CFA_HUDTimer(Handle timer)
 							}
 							else
 							{
-								Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundFloat(f_ReloadCost[client]), f_ReloadCost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+								Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_ReloadCost[client]), f_ReloadCost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
 							}
 						}
 						
@@ -2038,7 +2044,7 @@ public Native_CF_HealPlayer(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
 	int healer = GetNativeCell(2);
-	int amt = RoundFloat(GetNativeCell(3));
+	int amt = GetNativeCell(3);
 	float hpMult = GetNativeCell(4);
 	
 	if (!IsValidMulti(client))
@@ -2201,6 +2207,18 @@ public Action CH_ShouldCollide(int ent1, int ent2, bool &result)
 	Action ReturnVal = Plugin_Continue;
 	bool CallForward = true;
 	
+	if (b_IsFakeHealthKit[ent1] || b_IsFakeHealthKit[ent2])
+	{
+		bool block = ent1 != 0 && ent2 != 0;
+		
+		if (block)
+		{
+			result = false;
+			ReturnVal = Plugin_Changed;
+			CallForward = false;
+		}
+	}
+	
 	if (CallForward)
 	{
 		Call_StartForward(g_ShouldCollide);
@@ -2242,6 +2260,19 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 		}
 	}
 	
+	//Second test: don't allow fake health kits to collide with ANYTHING except for world geometry.
+	if (b_IsFakeHealthKit[ent1] || b_IsFakeHealthKit[ent2])
+	{
+		bool block = ent1 != 0 && ent2 != 0;
+		
+		if (block)
+		{
+			result = false;
+			ReturnVal = Plugin_Changed;
+			CallForward = false;
+		}
+	}
+	
 	if (CallForward)
 	{
 		Call_StartForward(g_PassFilter);
@@ -2268,7 +2299,7 @@ public Native_CF_CreateHealthPickup(Handle plugin, int numParams)
 	Function filter = GetNativeFunction(7);
 	float pos[3];
 	GetNativeArray(8, pos, sizeof(pos));
-	char model[255], sequence[255], sound[255];
+	char model[255], sequence[255], sound[255], physModel[255], redPart[255], bluePart[255];
 	GetNativeString(9, model, sizeof(model));
 	GetNativeString(10, sequence, sizeof(sequence));
 	float rate = GetNativeCell(11);
@@ -2276,14 +2307,18 @@ public Native_CF_CreateHealthPickup(Handle plugin, int numParams)
 	int skin = GetNativeCell(13);
 	GetNativeString(14, sound, sizeof(sound));
 	float hpMult = GetNativeCell(15);
+	GetNativeString(16, physModel, sizeof(physModel));
+	GetNativeString(17, redPart, sizeof(redPart));
+	GetNativeString(18, bluePart, sizeof(bluePart));
+	bool AllowPickupAtMax = GetNativeCell(19);
 	
 	int phys = CreateEntityByName("prop_physics_override");
 	int prop = CreateEntityByName("prop_dynamic_override");
 	if (IsValidEntity(phys) && IsValidEntity(prop))
 	{
 		DispatchKeyValue(phys, "targetname", "healthparent"); 
-		DispatchKeyValue(phys, "spawnflags", "4"); 
-		DispatchKeyValue(phys, "model", "models/props_c17/canister01a.mdl");
+		DispatchKeyValue(phys, "spawnflags", "2"); 
+		DispatchKeyValue(phys, "model", physModel);
 				
 		DispatchSpawn(phys);
 				
@@ -2310,6 +2345,10 @@ public Native_CF_CreateHealthPickup(Handle plugin, int numParams)
 					
 		AcceptEntityInput(prop, "Enable");
 		
+		TeleportEntity(phys, pos, NULL_VECTOR, NULL_VECTOR);
+		TeleportEntity(prop, pos, NULL_VECTOR, NULL_VECTOR);
+		
+		DispatchKeyValue(prop, "spawnflags", "1");
 		SetVariantString("!activator");
 		AcceptEntityInput(prop, "SetParent", phys);
 		
@@ -2326,6 +2365,8 @@ public Native_CF_CreateHealthPickup(Handle plugin, int numParams)
 			CreateTimer(lifespan, Timer_RemoveEntity, EntIndexToEntRef(phys), TIMER_FLAG_NO_MAPCHANGE);
 		}
 		
+		b_IsFakeHealthKit[phys] = true;
+		
 		//TODO: Figure out how to make health kits move like actual health kits and not phys props.
 		
 		DataPack pack = new DataPack();
@@ -2339,6 +2380,9 @@ public Native_CF_CreateHealthPickup(Handle plugin, int numParams)
 		WritePackString(pack, sound);
 		WritePackFloat(pack, hpMult);
 		WritePackString(pack, pluginName);
+		WritePackString(pack, redPart);
+		WritePackString(pack, bluePart);
+		WritePackCell(pack, AllowPickupAtMax);
 		
 		RequestFrame(FakeHealthKit_Think, pack);
 		
@@ -2358,10 +2402,13 @@ public void FakeHealthKit_Think(DataPack pack)
 	float radius = ReadPackFloat(pack);
 	int mode = ReadPackCell(pack);
 	Function filter = ReadPackFunction(pack);
-	char snd[255], plugin[255];
+	char snd[255], plugin[255], redPart[255], bluePart[255];
 	ReadPackString(pack, snd, sizeof(snd));
 	float hpMult = ReadPackFloat(pack);
 	ReadPackString(pack, plugin, sizeof(plugin));
+	ReadPackString(pack, redPart, sizeof(redPart));
+	ReadPackString(pack, bluePart, sizeof(bluePart));
+	bool AllowPickupAtMax = ReadPackCell(pack);
 	
 	if (!IsValidEntity(kit))
 	{
@@ -2393,9 +2440,14 @@ public void FakeHealthKit_Think(DataPack pack)
 				
 				Call_PushCell(kit);
 				Call_PushCell(owner);
+				Call_PushCell(i);
 				
 				Call_Finish(result);
 			}
+			
+			int maxHPCheck = RoundFloat(float(TF2Util_GetEntityMaxHealth(i)) * hpMult);
+			if (GetEntProp(i, Prop_Send, "m_iHealth") >= maxHPCheck && !AllowPickupAtMax)
+				result = false;
 			
 			if (GetVectorDistance(pos, pos2) <= radius && result)
 			{
@@ -2403,19 +2455,25 @@ public void FakeHealthKit_Think(DataPack pack)
 				
 				if (mode == 0)
 				{
-					float maxHP = CF_GetCharacterMaxHealth(i);
+					float maxHP = float(TF2Util_GetEntityMaxHealth(i));
 					healing = amt * maxHP;
 				}
 				
-				CF_HealPlayer(i, owner, healing, hpMult);
-				if (CheckFile(snd))
-				{
-					EmitSoundToClient(i, snd, _, _, 120);
-				}
+				CF_HealPlayer(i, owner, RoundFloat(healing), hpMult);
+				EmitSoundToClient(i, snd, _, _, 120);
 				
 				delete pack;
 				
 				RemoveEntity(kit);
+				
+				if (TF2_GetClientTeam(i) == TFTeam_Red)
+				{
+					SpawnParticle(pos, redPart, 2.0);
+				}
+				else
+				{
+					SpawnParticle(pos, bluePart, 2.0);
+				}
 				
 				return;
 			}
@@ -2423,17 +2481,4 @@ public void FakeHealthKit_Think(DataPack pack)
 	}
 		
 	RequestFrame(FakeHealthKit_Think, pack);
-		
-	/*DataPack pack = new DataPack();
-		
-	WritePackCell(pack, IsValidClient(owner) ? GetClientUserId(owner) : -1);
-	WritePackCell(pack, EntIndexToEntRef(phys));
-	WritePackFloat(pack, amt);
-	WritePackFloat(pack, radius);
-	WritePackCell(pack, mode);
-	WritePackFunction(pack, filter);
-	WritePackString(pack, sound);
-	WritePackFloat(pack, hpMult);
-		
-	RequestFrame(FakeHealthKit_Think, pack);*/
 }
