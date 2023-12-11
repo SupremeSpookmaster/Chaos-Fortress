@@ -241,6 +241,7 @@ public Action CFA_HUDTimer(Handle timer)
 		if (CF_IsPlayerCharacter(client) && b_UseHUD[client])
 		{
 			bool showHUD = GetClientButtons(client) & IN_SCORE == 0;
+			bool CanUseUnderNormalCircumstances;
 			if (IsPlayerAlive(client))
 			{
 				char HUDText[255];
@@ -261,11 +262,13 @@ public Action CFA_HUDTimer(Handle timer)
 							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_UltScale[client]);
 						}
 						
-						if ((!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_Ult) && f_UltCharge[client] >= f_UltChargeRequired[client]) || CF_GetRoundState() != 1)
+						CanUseUnderNormalCircumstances = f_UltCharge[client] >= f_UltChargeRequired[client];
+						
+						if ((!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_Ult) && CanUseUnderNormalCircumstances) || CF_GetRoundState() != 1)
 						{
 							Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE [BLOCKED]\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0));
 						}
-						else if (wouldBeStuck)
+						else if (wouldBeStuck && CanUseUnderNormalCircumstances)
 						{
 							Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE [BLOCKED; YOU WOULD GET STUCK]\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0));
 						}
@@ -278,7 +281,7 @@ public Action CFA_HUDTimer(Handle timer)
 				
 				if (b_UsingResources[client] && !b_ResourceIsUlt[client])
 				{
-					if (rState == 1 && GetGameTime() >= f_NextResourceRegen[client])
+					if (/*rState == 1 && */GetGameTime() >= f_NextResourceRegen[client])
 					{
 						CF_GiveSpecialResource(client, 1.0, CF_ResourceType_Regen);
 					}
@@ -307,11 +310,13 @@ public Action CFA_HUDTimer(Handle timer)
 							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_M2Scale[client]);
 						}
 						
-						if (!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M2) && (!b_UsingResources[client] || CF_GetSpecialResource(client) >= f_M2Cost[client]) && remCD <= 0.0)
+						CanUseUnderNormalCircumstances = (!b_UsingResources[client] || CF_GetSpecialResource(client) >= f_M2Cost[client]) && remCD <= 0.0;
+						
+						if (!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M2) && CanUseUnderNormalCircumstances)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M2Name[client]);
 						}
-						else if (wouldBeStuck)
+						else if (wouldBeStuck && CanUseUnderNormalCircumstances)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED; YOU WOULD GET STUCK]\n", HUDText, s_M2Name[client]);
 						}
@@ -349,11 +354,13 @@ public Action CFA_HUDTimer(Handle timer)
 							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_M3Scale[client]);
 						}
 						
-						if (!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M3) && (!b_UsingResources[client] || CF_GetSpecialResource(client) >= f_M3Cost[client]) && remCD <= 0.0)
+						CanUseUnderNormalCircumstances = (!b_UsingResources[client] || CF_GetSpecialResource(client) >= f_M3Cost[client]) && remCD <= 0.0;
+						
+						if (!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M3) && CanUseUnderNormalCircumstances)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M3Name[client]);
 						}
-						else if (wouldBeStuck)
+						else if (wouldBeStuck && CanUseUnderNormalCircumstances)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED; YOU WOULD GET STUCK]\n", HUDText, s_M3Name[client]);
 						}
@@ -391,11 +398,13 @@ public Action CFA_HUDTimer(Handle timer)
 							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_RScale[client]);
 						}
 						
-						if (!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_Reload) && (!b_UsingResources[client] || CF_GetSpecialResource(client) >= f_ReloadCost[client]) && remCD <= 0.0)
+						CanUseUnderNormalCircumstances = (!b_UsingResources[client] || CF_GetSpecialResource(client) >= f_ReloadCost[client]) && remCD <= 0.0;
+						
+						if (!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_Reload) && CanUseUnderNormalCircumstances)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_ReloadName[client]);
 						}
-						else if (wouldBeStuck)
+						else if (wouldBeStuck && CanUseUnderNormalCircumstances)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED; YOU WOULD GET STUCK]\n", HUDText, s_ReloadName[client]);
 						}
@@ -437,10 +446,12 @@ public Action CFA_HUDTimer(Handle timer)
 
 public void CFA_PlayerKilled(int attacker, int victim)
 {
-	if (CF_IsPlayerCharacter(attacker) && attacker != victim && CF_GetRoundState() == 1)
+	if (CF_IsPlayerCharacter(attacker) && attacker != victim)
 	{
 		CF_GiveSpecialResource(attacker, 1.0, CF_ResourceType_Kill);
-		CF_GiveUltCharge(attacker, 1.0, CF_ResourceType_Kill);
+		
+		if (CF_GetRoundState() == 1)
+			CF_GiveUltCharge(attacker, 1.0, CF_ResourceType_Kill);
 		
 		//TODO: Specific character kill sounds
 		CF_PlayRandomSound(attacker, "", "sound_kill");
