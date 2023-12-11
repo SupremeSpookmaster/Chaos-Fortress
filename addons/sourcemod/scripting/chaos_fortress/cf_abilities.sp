@@ -261,7 +261,7 @@ public Action CFA_HUDTimer(Handle timer)
 							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_UltScale[client]);
 						}
 						
-						if ((!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_Ult) && f_UltCharge[client] >= f_UltChargeRequired[client] && !wouldBeStuck) || CF_GetRoundState() != 1)
+						if ((!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_Ult) && f_UltCharge[client] >= f_UltChargeRequired[client]) || CF_GetRoundState() != 1)
 						{
 							Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE [BLOCKED]\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0));
 						}
@@ -307,7 +307,7 @@ public Action CFA_HUDTimer(Handle timer)
 							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_M2Scale[client]);
 						}
 						
-						if (!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M2) && CF_GetSpecialResource(client) >= f_M2Cost[client] && !wouldBeStuck)
+						if (!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M2) && (!b_UsingResources[client] || CF_GetSpecialResource(client) >= f_M2Cost[client]) && remCD <= 0.0)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M2Name[client]);
 						}
@@ -349,7 +349,7 @@ public Action CFA_HUDTimer(Handle timer)
 							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_M3Scale[client]);
 						}
 						
-						if (!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M3) && CF_GetSpecialResource(client) >= f_M3Cost[client] && !wouldBeStuck)
+						if (!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M3) && (!b_UsingResources[client] || CF_GetSpecialResource(client) >= f_M3Cost[client]) && remCD <= 0.0)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M3Name[client]);
 						}
@@ -391,7 +391,7 @@ public Action CFA_HUDTimer(Handle timer)
 							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_RScale[client]);
 						}
 						
-						if (!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_Reload) && CF_GetSpecialResource(client) >= f_ReloadCost[client] && !wouldBeStuck)
+						if (!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_Reload) && (!b_UsingResources[client] || CF_GetSpecialResource(client) >= f_ReloadCost[client]) && remCD <= 0.0)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_ReloadName[client]);
 						}
