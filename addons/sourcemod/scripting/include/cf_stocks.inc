@@ -1482,3 +1482,18 @@ stock Handle GetPluginHandle(char plugin[255])
 	delete iter;
 	return INVALID_HANDLE;
 }
+
+stock float[] ConstrainDistance(float startPos[3], float endPos[3], float distance)
+{	
+	if (GetVectorDistance(startPos, endPos, true) >= Pow(distance, 2.0))
+	{
+		float constraint = distance/GetVectorDistance(startPos, endPos);
+		
+		for (int i = 0; i < 3; i++)
+		{
+			endPos[i] = ((endPos[i] - startPos[i]) * constraint) + startPos[i];
+		}
+	}
+	
+	return endPos;
+}

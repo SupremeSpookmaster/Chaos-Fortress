@@ -1373,7 +1373,7 @@ public Native_CF_GiveSpecialResource(Handle plugin, int numParams)
 	Action result;
 	Call_Finish(result);
 	
-	if (result != Plugin_Handled && result != Plugin_Stop)
+	if (result != Plugin_Handled && result != Plugin_Stop && amt != 0.0)
 		CF_SetSpecialResource(client, f_Resources[client] + amt);
 }
 

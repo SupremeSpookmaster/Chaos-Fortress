@@ -66,6 +66,9 @@
 //	- ALL: The default trace gets blocked by invisible clips like spawn doors and such.
 //	- ALL: Clipless weapons (sniper rifle, minigun, flamethrower) can pick up ammo boxes, but do not actually replenish ammo upon doing so. This will make characters like Heavnich useless, so it MUST be fixed before the open beta.
 //			- Try messing around with the max ammo/clip size attributes.
+//	- DEMOPAN: Something about the Refined Metal prop indicator system causes "No Free Edicts" crashes. The game mode is literally unplayable because of this, you can go maybe 3 minutes before the server dies.
+//	- DEMOPAN: Shields don't give their charge when equipped as wearables, and they crash the server if given as a weapon. There is also no attribute to give them the charge. Am I seriously going to have to custom-code something to make BASIC, VANILLA TF2 FUNCTIONALITY work as intended? God.
+//	- DEVELOPMENT: There's a memory leak somewhere...... again.......................................
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
