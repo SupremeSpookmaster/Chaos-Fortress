@@ -36,6 +36,7 @@
 !cf_viewchange.sp
 !cf_weapons.sp
 !cf_heavnich.sp
+!cf_demopan.sp
 
 #Include Files
 !cf_include.inc
