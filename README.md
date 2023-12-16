@@ -20,6 +20,7 @@
 - **[TF2Attributes 1.7.0+](https://github.com/FlaminSarge/tf2attributes)**
 - **[TF2Items](https://github.com/asherkin/TF2Items)**
 - **[TF2 Econ Data](https://github.com/nosoop/SM-TFEconData)**
+- **[Give Weapon](https://forums.alliedmods.net/showthread.php?p=1337899?p=1337899)**
 - **RECOMMENDED: [TF2 Weaponmodel Override](https://github.com/Zabaniya001/TF2CA-weaponmodel_override)** (The plugin will work without it, but many of the default characters use this)
 
 ## *Making Custom Characters*
