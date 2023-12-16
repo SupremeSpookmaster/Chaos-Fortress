@@ -64,6 +64,9 @@ bool b_M2IsGrounded[MAXPLAYERS + 1] = { false, ... };
 bool b_M3IsGrounded[MAXPLAYERS + 1] = { false, ... };
 bool b_ReloadIsGrounded[MAXPLAYERS + 1] = { false, ... };
 bool b_IsFakeHealthKit[2049] = { false, ... };
+bool b_HeldM2BlocksOthers[MAXPLAYERS + 1] = { false, ... };
+bool b_HeldM3BlocksOthers[MAXPLAYERS + 1] = { false, ... };
+bool b_HeldReloadBlocksOthers[MAXPLAYERS + 1] = { false, ... };
 
 GlobalForward g_OnAbility;
 GlobalForward g_OnUltUsed;
@@ -83,6 +86,8 @@ GlobalForward g_ShouldCollide;
 
 int i_GenericProjectileOwner[2049] = { -1, ... };
 int i_HealingDone[MAXPLAYERS + 1] = { 0, ... };
+
+CF_AbilityType i_HeldBlocked[MAXPLAYERS + 1] = { CF_AbilityType_None, ... };
 
 public void CFA_MakeNatives()
 {
@@ -511,6 +516,7 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		
 		f_M2Scale[client] = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
 		b_M2IsGrounded[client] = GetBoolFromConfigMap(subsection, "grounded", false);
+		b_HeldM2BlocksOthers[client] = GetBoolFromConfigMap(subsection, "held_block", false) && b_M2IsHeld[client];
 		
 		b_HasM2[client] = true;
 		AtLeastOne = true;
@@ -534,6 +540,7 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		
 		f_M3Scale[client] = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
 		b_M3IsGrounded[client] = GetBoolFromConfigMap(subsection, "grounded", false);
+		b_HeldM3BlocksOthers[client] = GetBoolFromConfigMap(subsection, "held_block", false) && b_M3IsHeld[client];
 		
 		b_HasM3[client] = true;
 		AtLeastOne = true;
@@ -557,6 +564,7 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		
 		f_RScale[client] = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
 		b_ReloadIsGrounded[client] = GetBoolFromConfigMap(subsection, "grounded", false);
+		b_HeldReloadBlocksOthers[client] = GetBoolFromConfigMap(subsection, "held_block", false) && b_ReloadIsHeld[client];
 		
 		b_HasReload[client] = true;
 		
@@ -756,6 +764,8 @@ public void CF_AttemptHeldAbility(int client, CF_AbilityType type, int button)
 				SDKHook(client, SDKHook_PreThink, CFA_HeldM2PreThink);
 				b_ForceEndHeldM2[client] = false;
 				b_HoldingM2[client] = true;
+				if (b_HeldM2BlocksOthers[client])
+					i_HeldBlocked[client] = CF_AbilityType_M2;
 			}
 			case CF_AbilityType_M3:
 			{
@@ -765,6 +775,8 @@ public void CF_AttemptHeldAbility(int client, CF_AbilityType type, int button)
 				SDKHook(client, SDKHook_PreThink, CFA_HeldM3PreThink);
 				b_ForceEndHeldM3[client] = false;
 				b_HoldingM3[client] = true;
+				if (b_HeldM3BlocksOthers[client])
+					i_HeldBlocked[client] = CF_AbilityType_M3;
 			}
 			case CF_AbilityType_Reload:
 			{
@@ -774,6 +786,8 @@ public void CF_AttemptHeldAbility(int client, CF_AbilityType type, int button)
 				SDKHook(client, SDKHook_PreThink, CFA_HeldReloadPreThink);
 				b_ForceEndHeldReload[client] = false;
 				b_HoldingReload[client] = true;
+				if (b_HeldReloadBlocksOthers[client])
+					i_HeldBlocked[client] = CF_AbilityType_Reload;
 			}
 		}
 		
@@ -829,6 +843,8 @@ void EndHeldM2(int client, bool TriggerCallback, bool resupply = false)
 			
 		b_ForceEndHeldM2[client] = false;
 		b_HoldingM2[client] = false;
+		if (b_HeldM2BlocksOthers[client])
+			i_HeldBlocked[client] = CF_AbilityType_None;
 			
 		Call_StartForward(g_OnHeldEnd);
 			
@@ -883,6 +899,8 @@ void EndHeldM3(int client, bool TriggerCallback, bool resupply = false)
 			
 		b_ForceEndHeldM3[client] = false;
 		b_HoldingM3[client] = false;
+		if (b_HeldM3BlocksOthers[client])
+			i_HeldBlocked[client] = CF_AbilityType_None;
 			
 		Call_StartForward(g_OnHeldEnd);
 			
@@ -937,6 +955,8 @@ void EndHeldReload(int client, bool TriggerCallback, bool resupply = false)
 			
 		b_ForceEndHeldReload[client] = false;
 		b_HoldingReload[client] = false;
+		if (b_HeldReloadBlocksOthers[client])
+			i_HeldBlocked[client] = CF_AbilityType_None;
 			
 		Call_StartForward(g_OnHeldEnd);
 			
@@ -1106,9 +1126,10 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 public bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type)
 {
 	if (CF_GetAbilityCooldown(client, type) > 0.0)
-	{
 		return false;
-	}
+	
+	if (i_HeldBlocked[client] != CF_AbilityType_None && i_HeldBlocked[client] != type)
+		return false;
 	
 	float cost; bool onground = GetEntityFlags(client) & FL_ONGROUND != 0;
 	

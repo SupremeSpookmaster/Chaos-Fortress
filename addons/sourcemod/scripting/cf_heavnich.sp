@@ -162,6 +162,10 @@ public void Chow_Activate(int client, char abilityName[255])
 	CF_DoAbility(client, "cf_generic_abilities", "generic_weapon_sandvich");
 	f_Eating[client] = GetGameTime() + 4.2;
 	
+	//Prevent knockback so you don't get knocked into the air, thus bugging the ability.
+	//Also looks really nice in-game, and is visually fitting since the ability heals you a ton.
+	TF2_AddCondition(client, TFCond_MegaHeal, 4.5);
+	
 	float target = CF_GetArgF(client, HEAVNICH, abilityName, "target_hp");
 	float amount_per = target / 4.0;
 	
