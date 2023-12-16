@@ -115,6 +115,7 @@ public Action CF_OnSpecialResourceApplied(int client, float current, float &amt)
 		
 	DataPack pack = new DataPack();
 	WritePackCell(pack, GetClientUserId(client));
+	WritePackFloat(pack, amt);
 	WritePackFloat(pack, diff);
 	RequestFrame(Passives_Check, pack);
 		
@@ -124,8 +125,12 @@ public Action CF_OnSpecialResourceApplied(int client, float current, float &amt)
 public void Passives_Check(DataPack pack)
 {
 	ResetPack(pack);
+	
 	int client = GetClientOfUserId(ReadPackCell(pack));
+	float amt = ReadPackFloat(pack);
 	float diff = ReadPackFloat(pack);
+	
+	delete pack;
 	
 	if (!CF_HasAbility(client, DEMOPAN, PASSIVES))
 		return;
@@ -135,7 +140,7 @@ public void Passives_Check(DataPack pack)
 		
 	if (diff <= -1.0)
 	{
-		for (int i = 0; i < diff; i++)
+		for (float i = 0.0; i < -diff; i += 1.0)
 		{
 			if (!g_RefProps[client].Empty)
 			{
@@ -147,7 +152,7 @@ public void Passives_Check(DataPack pack)
 	}
 	else if (diff >= 1.0)
 	{
-		for (float i = 0.0; i < diff; i += 1.0)
+		for (float i = 0.0; i < diff && g_RefProps[client].Length < amt; i += 1.0)
 		{
 			Passives_AddProp(client);
 		}
@@ -277,7 +282,7 @@ public void Passives_HoldProp(int client, int prop)
 		SpawnBeam_Vectors(eyeLoc, currentLoc, 0.1, r, 120, b, 255, lgtModel, _, _, _, 10.0);
 		SpawnBeam_Vectors(eyeLoc, currentLoc, 0.1, r, 120, b, 160, glowModel, 6.0, 6.0, _, 10.0);
 		
-		f_NextBeamEffect[client] = gt + 0.075;
+		f_NextBeamEffect[client] = gt + 0.05;
 	}
 	
 	Passives_MoveProp(prop, pos);

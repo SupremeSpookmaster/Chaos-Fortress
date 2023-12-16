@@ -68,6 +68,7 @@
 //			- Try messing around with the max ammo/clip size attributes.
 //	- DEMOPAN: Something about the Refined Metal prop indicator system causes "No Free Edicts" crashes. The game mode is literally unplayable because of this, you can go maybe 3 minutes before the server dies.
 //	- DEVELOPMENT: There's a memory leak somewhere...... again.......................................
+//			- This is most likely what's causing the Demopan crashes.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

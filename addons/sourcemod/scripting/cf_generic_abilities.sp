@@ -150,23 +150,6 @@ CF_StuckMethod g_StuckMethod[MAXPLAYERS + 1] = { CF_StuckMethod_None, ... };
 char s_OnResizeFailure[MAXPLAYERS + 1][255];
 char s_OnResizeSuccess[MAXPLAYERS + 1][255];
 
-public void CF_OnCharacterRemoved(int client)
-{
-	Weapon_ClearAllOldWeapons(client);
-	for (int i = 0; i < 4; i++)
-	{
-		Limit_NumUses[client][i] = 0;
-		delete g_BlockTimers[client][i];
-	}
-	
-	b_WearablesHidden[client] = false;
-	
-	delete g_ModelTimer[client];
-	delete g_SpeedTimer[client];
-	delete g_HealthTimer[client];
-	delete g_ScaleTimer[client];
-}
-
 public void CF_OnCharacterCreated(int client)
 {
 	for (int i = 0; i < 4; i++)
@@ -716,6 +699,9 @@ void Weapon_SwitchToWeapon(int client, int weapon)
 	TF2Util_SetPlayerActiveWeapon(client, weapon);
 }
 
+float f_CondEndTime[MAXPLAYERS+1][255];
+int i_NumConds[MAXPLAYERS+1] = {0, ...};
+
 public void Conds_Activate(int client, char abilityName[255])
 {
 	char condStr[255];
@@ -724,14 +710,51 @@ public void Conds_Activate(int client, char abilityName[255])
 	char conds[32][32];
 	int num = ExplodeString(condStr, ";", conds, 32, 32);
 	
+	float gt = GetGameTime();
+	
 	for(int i = 0; i < num; i += 2)
 	{
 		TFCond cond = view_as<TFCond>(StringToInt(conds[i]));
 		if(cond)
 		{
-			TF2_AddCondition(client, cond, StringToFloat(conds[i + 1]));
+			float duration = StringToFloat(conds[i + 1]);
+			int condNum = view_as<int>(cond);
+			
+			if (gt > f_CondEndTime[client][condNum])
+			{
+				TF2_AddCondition(client, cond);
+				i_NumConds[client]++;
+				f_CondEndTime[client][condNum] = gt + duration;
+			}
+			else
+			{
+				f_CondEndTime[client][condNum] += duration;
+			}
 		}
 	}
+	
+	SDKUnhook(client, SDKHook_PreThink, Conds_PreThink);
+	SDKHook(client, SDKHook_PreThink, Conds_PreThink);
+}
+
+public Action Conds_PreThink(int client)
+{
+	float gt = GetGameTime();
+	
+	for (int i = 0; i < 131; i++)
+	{
+		if (gt >= f_CondEndTime[client][i] && f_CondEndTime[client][i] > 0.0)
+		{
+			TF2_RemoveCondition(client, view_as<TFCond>(i));
+			i_NumConds[client]--;
+			f_CondEndTime[client][i] = 0.0;
+		}
+	}
+	
+	if (i_NumConds[client] < 1)
+		return Plugin_Stop;
+		
+	return Plugin_Continue;
 }
 
 public void Cooldown_Activate(int client, char abilityName[255])
@@ -805,4 +828,28 @@ public void Wearable_Activate(int client, char abilityName[255])
 	}
 	
 	CF_AttachWearable(client, index, classname, visible, paint, style, preserve, atts, lifespan);
+}
+
+public void CF_OnCharacterRemoved(int client)
+{
+	Weapon_ClearAllOldWeapons(client);
+	for (int i = 0; i < 4; i++)
+	{
+		Limit_NumUses[client][i] = 0;
+		delete g_BlockTimers[client][i];
+	}
+	
+	b_WearablesHidden[client] = false;
+	
+	delete g_ModelTimer[client];
+	delete g_SpeedTimer[client];
+	delete g_HealthTimer[client];
+	delete g_ScaleTimer[client];
+	
+	i_NumConds[client] = 0;
+	
+	for (int j = 0; j < 131; j++)
+	{
+		f_CondEndTime[client][j] = 0.0;
+	}
 }
