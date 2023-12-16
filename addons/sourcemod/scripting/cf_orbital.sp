@@ -265,7 +265,7 @@ public void Gravity_Toggle(int client, char abilityName[255])
 		
 		char atts[255];
 		Format(atts, sizeof(atts), "610 ; %.4f", CF_GetArgF(client, ORBITAL, abilityName, "control"));
-		Gravity_Wearable[client] = EntIndexToEntRef(CF_AttachWearable(client, view_as<int>(CF_ClassToken_Sniper), false, 0, 0, false, atts));
+		Gravity_Wearable[client] = EntIndexToEntRef(CF_AttachWearable(client, view_as<int>(CF_ClassToken_Sniper), "tf_wearable", false, 0, 0, false, atts));
 		Gravity_Particle[client] = EntIndexToEntRef(CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_GRAVITY_RED : PARTICLE_GRAVITY_BLUE, "root"));
 
 		CF_PlayRandomSound(client, "", "sound_gravity_on");
@@ -455,7 +455,7 @@ public void Taser_Collide(int taser, int ent)
 		SDKHooks_TakeDamage(ent, taser, IsValidClient(owner) ? owner : 0, Taser_DMG[taser]);
 		char atts[255];
 		Format(atts, sizeof(atts), "107 ; %.4f", 1.0 - Taser_Slow[taser]);
-		CF_AttachWearable(ent, view_as<int>(CF_ClassToken_Sniper), false, 0, 0, false, atts, Taser_Duration[taser]);
+		CF_AttachWearable(ent, view_as<int>(CF_ClassToken_Sniper), "tf_wearable", false, 0, 0, false, atts, Taser_Duration[taser]);
 		TF2_AddCondition(ent, TFCond_SpeedBuffAlly, 0.001);
 		CreateTimer(Taser_Duration[taser] + 0.1, Taser_Unslow, GetClientUserId(ent), TIMER_FLAG_NO_MAPCHANGE);
 		

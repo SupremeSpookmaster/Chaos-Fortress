@@ -786,6 +786,8 @@ public void Particle_Activate(int client, char abilityName[255])
 
 public void Wearable_Activate(int client, char abilityName[255])
 {
+	char classname[255];
+	CF_GetArgS(client, GENERIC, abilityName, "classname", classname, sizeof(classname));
 	int index = CF_GetArgI(client, GENERIC, abilityName, "index");
 	bool visible = CF_GetArgI(client, GENERIC, abilityName, "visible") != 0;
 	int paint = CF_GetArgI(client, GENERIC, abilityName, "paint");
@@ -797,5 +799,10 @@ public void Wearable_Activate(int client, char abilityName[255])
 	float lifespan = CF_GetArgF(client, GENERIC, abilityName, "duration");
 	bool preserve = CF_GetArgI(client, GENERIC, abilityName, "preserve") != 0;
 	
-	CF_AttachWearable(client, index, visible, paint, style, preserve, atts, lifespan);
+	if (StrEqual(classname, ""))
+	{
+		Format(classname, sizeof(classname), "tf_wearable");
+	}
+	
+	CF_AttachWearable(client, index, classname, visible, paint, style, preserve, atts, lifespan);
 }

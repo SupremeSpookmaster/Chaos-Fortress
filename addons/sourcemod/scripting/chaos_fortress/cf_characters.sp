@@ -1121,16 +1121,17 @@ public void CF_ResetMadeStatus(int client)
 	while((entity = FindEntityByClassname(entity, "tf_wearable")) != -1)
 	{
 		int owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
-		if (owner == client && !b_WearableIsPreserved[entity])
+		if (owner == client)
 		{
 			TF2_RemoveWearable(owner, entity);
 		}
 	}
 	
-	while((entity = FindEntityByClassname(entity, "tf_wearable_vm")) != -1)
+	entity = -1;
+	while((entity = FindEntityByClassname(entity, "tf_wearable_*")) != -1)
 	{
 		int owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
-		if (owner == client && !b_WearableIsPreserved[entity])
+		if (owner == client)
 		{
 			TF2_RemoveWearable(owner, entity);
 		}
@@ -1334,7 +1335,7 @@ public void CF_ResetMadeStatus(int client)
 		int style = GetIntFromConfigMap(subsection, "style", 0);
 		//TODO: Maybe add support for wearable scale?
 		
-		CF_AttachWearable(client, index, visible, paint, style, false, atts, 0.0);
+		CF_AttachWearable(client, index, classname, visible, paint, style, false, atts, 0.0);
 		
 		i++;
 		Format(secName, sizeof(secName), "wearable_%i", i);
@@ -1798,16 +1799,17 @@ public Native_CF_AttachWearable(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return -1;
 		
-	char atts[255];
+	char atts[255], classname[255];
 	int index = GetNativeCell(2);
-	bool visible = GetNativeCell(3);
-	int paint = GetNativeCell(4);
-	int style = GetNativeCell(5);
-	bool preserve = GetNativeCell(6);
-	GetNativeString(7, atts, sizeof(atts));
-	float lifespan = GetNativeCell(8);
+	GetNativeString(3, classname, sizeof(classname));
+	bool visible = GetNativeCell(4);
+	int paint = GetNativeCell(5);
+	int style = GetNativeCell(7);
+	bool preserve = GetNativeCell(8);
+	GetNativeString(8, atts, sizeof(atts));
+	float lifespan = GetNativeCell(9);
 		
-	int wearable = CreateWearable(client, index, atts, paint, style, visible, lifespan);
+	int wearable = CreateWearable(client, index, classname, atts, paint, style, visible, lifespan);
 	if (IsValidEntity(wearable))
 	{
 		SDKCall_EquipWearable(client, wearable);

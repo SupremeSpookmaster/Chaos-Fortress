@@ -152,7 +152,7 @@ public void Sprint_ApplyAttributes(int client)
 	
 	char atts[255];
 	Format(atts, sizeof(atts), "442 ; %.4f", Sprint_Potency[client]);
-	int wearable = CF_AttachWearable(client, view_as<int>(CF_ClassToken_Soldier), false, 0, 0, _, atts);
+	int wearable = CF_AttachWearable(client, view_as<int>(CF_ClassToken_Soldier), "tf_wearable", false, 0, 0, _, atts);
 	if (IsValidEntity(wearable))
 	{
 		Sprint_Wearable[client] = EntIndexToEntRef(wearable);

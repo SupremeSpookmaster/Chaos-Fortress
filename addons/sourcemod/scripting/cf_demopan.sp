@@ -343,9 +343,9 @@ public void Passives_RemoveAllRefProps(int client)
 			if (IsValidEntity(prop))
 				RemoveEntity(prop);
 		}
-		
-		delete g_RefProps[client];
 	}
+	
+	delete g_RefProps[client];
 }
 
 public void Passives_RemoveProp(int client, int prop)

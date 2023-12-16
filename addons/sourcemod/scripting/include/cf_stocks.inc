@@ -844,18 +844,18 @@ stock bool IsPlayerInvis(int client)
  *
  * @param client		The client to give the wearable to.
  * @param itemindex		The wearable's index.
+ * @param classname		The wearable's classname
  * @param atts			The wearable's item attributes.
  * @param paint			The wearable's paint, 1-29.
  * @param style			Optional style override parameter for cosmetic wearables.
  * @param visible		True for the wearable to be visible, false to hide it.
  * @param lifespan		Optional lifespan for the wearable, 0.0 or below for infinite.
- * @param item			Use tf_wearable_item instead.
  *
  * @return			The wearable's item index.
  */
-stock int CreateWearable(int client, int itemindex, char atts[255] = "", int paint = 0, int style = 0, bool visible = true, float lifespan = 0.0, bool item = false)
+stock int CreateWearable(int client, int itemindex, char classname[255] = "tf_wearable", char atts[255] = "", int paint = 0, int style = 0, bool visible = true, float lifespan = 0.0)
 {
-	int hat = CreateEntityByName(item ? "tf_wearable_item" : "tf_wearable");
+	int hat = CreateEntityByName(classname);
 	
 	if (!IsValidEntity(hat))
 	{
