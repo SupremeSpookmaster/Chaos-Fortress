@@ -75,8 +75,8 @@
 //			- Try messing around with the max ammo/clip size attributes.
 //	- DEVELOPMENT: There's a memory leak somewhere...... again.......................................
 //			- This is most likely what's causing the Demopan crashes.
-//			- MOST LIKELY CAUSE: All natives which create subsections through use of g_Characters[client].Map intentionally skip calling DeleteCfg on that map at the end of the native because that would break a lot of things. This causes the subsections to stick around in memory and never leave until the player dies, becomes a new character, or leaves. This explains why the amount of memory being used by CF decreases when more players are dead. It also explains why Demopan triggers the crashes so quickly, because he spams HasAbility every single time the player's special resource is updated.
-//				- IF THIS THEORY IS CORRECT: Add a method to the g_Characters struct that calls DeleteCfg(this.Map) and then makes a new ConfigMap to take its place, and use this method every time a native needs the character's configmap, when you would normally just outright delete it instead.
+//			- The handle being leaked is a Trie, it is being leaked very rapidly. 
+//			- The number of handles seems to go down whenever a player dies or leaves the server.
 //	- DEVELOPMENT: The change to the wearables system which fixed demo shields not having a charge meter also broke cosmetic styles.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"

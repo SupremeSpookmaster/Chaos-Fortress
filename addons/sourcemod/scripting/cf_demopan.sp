@@ -112,7 +112,7 @@ public Action CF_OnShouldCollide(int ent1, int ent2, bool &result)
 public Action CF_OnSpecialResourceApplied(int client, float current, float &amt)
 {
 	if (!CF_HasAbility(client, DEMOPAN, PASSIVES))
-		return;
+		return Plugin_Continue;
 		
 	DataPack pack = new DataPack();
 	
@@ -523,4 +523,5 @@ public void CF_OnCharacterRemoved(int client)
 {
 	Passives_RemoveAllRefProps(client);
 	i_HeldBomb[client] = -1;
+	StopSound(client, SNDCHAN_AUTO, SOUND_BOMB_LOOP);
 }
