@@ -75,7 +75,7 @@ public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255]
 		Bomb_Launch(client, abilityName, resupply);
 }
 
-int i_HeldBomb[2049] = { -1, ... };
+int i_HeldBomb[MAXPLAYERS+1] = { -1, ... };
 
 bool b_IsABomb[2049] = { false, ... };
 
@@ -109,14 +109,11 @@ public Action CF_OnShouldCollide(int ent1, int ent2, bool &result)
 
 public Action CF_OnSpecialResourceApplied(int client, float current, float &amt)
 {
-	float diff = amt - current;
-	if (diff > -1.0 && diff < 1.0)
-		return Plugin_Continue;
-		
 	DataPack pack = new DataPack();
+	
 	WritePackCell(pack, GetClientUserId(client));
-	WritePackFloat(pack, amt);
-	WritePackFloat(pack, diff);
+	WritePackCell(pack, RoundToFloor(amt));
+	
 	RequestFrame(Passives_Check, pack);
 		
 	return Plugin_Continue;
@@ -127,8 +124,7 @@ public void Passives_Check(DataPack pack)
 	ResetPack(pack);
 	
 	int client = GetClientOfUserId(ReadPackCell(pack));
-	float amt = ReadPackFloat(pack);
-	float diff = ReadPackFloat(pack);
+	int amt = ReadPackCell(pack);
 	
 	delete pack;
 	
@@ -136,26 +132,21 @@ public void Passives_Check(DataPack pack)
 		return;
 		
 	if (g_RefProps[client] == null)
+	{
+		delete g_RefProps[client];
 		g_RefProps[client] = new Queue();
-		
-	if (diff <= -1.0)
-	{
-		for (float i = 0.0; i < -diff; i += 1.0)
-		{
-			if (!g_RefProps[client].Empty)
-			{
-				int prop = EntRefToEntIndex(g_RefProps[client].Pop());
-				if (IsValidEntity(prop))
-					RemoveEntity(prop);
-			}
-		}
 	}
-	else if (diff >= 1.0)
+		
+	while (g_RefProps[client].Length > amt && !g_RefProps[client].Empty)
 	{
-		for (float i = 0.0; i < diff && g_RefProps[client].Length < amt; i += 1.0)
-		{
-			Passives_AddProp(client);
-		}
+		int prop = EntRefToEntIndex(g_RefProps[client].Pop());
+		if (IsValidEntity(prop))
+			RemoveEntity(prop);
+	}
+		
+	while (g_RefProps[client].Length < amt)
+	{
+		Passives_AddProp(client);
 	}
 }
 
@@ -391,6 +382,8 @@ public void Bomb_Activate(int client, char abilityName[255])
 	{
 		bomb = EntRefToEntIndex(cloned.Pop());
 	}
+	
+	delete cloned;
 		
 	if (IsValidEntity(bomb))
 	{
@@ -507,10 +500,22 @@ public void OnEntityDestroyed(int entity)
 	{
 		Bomb_Particle[entity] = -1;
 		b_IsABomb[entity] = false;
+		
+		if (b_IsResourceProp[entity])
+		{
+			int owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
+			if (IsValidClient(owner))
+			{
+				Passives_RemoveProp(owner, entity);
+			}
+		}
+		
+		b_IsResourceProp[entity] = false;
 	}
 }
 
 public void CF_OnCharacterRemoved(int client)
 {
 	Passives_RemoveAllRefProps(client);
+	i_HeldBomb[client] = -1;
 }

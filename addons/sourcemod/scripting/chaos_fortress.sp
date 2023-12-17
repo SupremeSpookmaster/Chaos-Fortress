@@ -10,16 +10,19 @@
 //#define TESTING
 //
 //	- IMMEDIATE PLANS:
+//		- Spookmaster Bones:
+//			- Maybe make him get a *little* bit bigger each time he absorbs a Soul?
 //		- Orbital Sniper:
 //			- Make custom sounds and implement them. Remove the DSP effect attribute once this is done.
 //		- Count Heavnich:
 //			- Optional: properly implement mega deflector weapon sounds.
 //		- Demopan:
-//			- Make starter CFG.
-//			- Make generic shield wall ability.
-//			- Make Demopan-specific abilities.
-//		- Count Heavnich & Mercenary:
-//			- Look into the m_afButtonForced property for the Sandvich and Frag Grenade abilities instead of the current OnPlayerRunCmd method being used.
+//			- Find a proper "refined metal" model to use instead of the wad of cash.
+//			- Make Ultimate Ability, "GLOBAL TRADE".
+//			- Write CF_CreateShieldWall native and use it for "Refined Protection" ability.
+//			- Tinker with shield charge attributes.
+//		- Future Development:
+//			- Look into using the m_afButtonForced property.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////
@@ -29,7 +32,7 @@
 //		- Spookmaster Bones:
 //			- Required ult charge is definitely too low, skeletons spawned by ult kills allow ults to snowball into each other.
 //			- Any kill will grant a soul, not just melee. This encourages sitting at a distance and fishing for souls risk-free with Skull Servants instead of getting in and fighting.
-//				- Make players drop timed soul pickups that the SB player needs to manually pick up to gain the soul. Upon being picked up, these souls begin to heal the user for 75 hp over the span of 3s.
+//				- Make players drop timed soul pickups that the SB player needs to manually pick up to gain the soul. Upon being picked up, these souls immediately heal the user for 75 HP.
 //					- This is a fairly drastic change. Only do this if people think SB is overpowered (which is entirely possible).
 //					- Thanks to all of the work we just put into fake health kits, this should be super easy to implement!
 //		////////////////////////////////////////////
