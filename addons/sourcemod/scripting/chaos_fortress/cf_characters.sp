@@ -91,7 +91,10 @@ enum struct CFCharacter
 		this.Scale = newScale;
 		
 		if (this.Map != null)
+		{
 			DeleteCfg(this.Map);
+			delete this.Map;
+		}
 			
 		this.Map = newMap;
 		
@@ -102,7 +105,10 @@ enum struct CFCharacter
 	{
 		this.Exists = false;
 		if (this.Map != null)
+		{
 			DeleteCfg(this.Map);
+			delete this.Map;
+		}
 	}
 }
 

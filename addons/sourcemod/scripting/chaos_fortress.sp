@@ -72,6 +72,9 @@
 //	- DEMOPAN: Something about the Refined Metal prop indicator system causes "No Free Edicts" crashes. The game mode is literally unplayable because of this, you can go maybe 3 minutes before the server dies.
 //	- DEVELOPMENT: There's a memory leak somewhere...... again.......................................
 //			- This is most likely what's causing the Demopan crashes.
+//			- MOST LIKELY CAUSE: All natives which create subsections through use of g_Characters[client].Map intentionally skip calling DeleteCfg on that map because that would break a lot of things. This causes the subsections to stick around in memory and never leave until the player dies, becomes a new character, or leaves. This explains why the amount of memory being used by CF decreases when more players are dead. It also explains why Demopan triggers the crashes so quickly, because he spams HasAbility every single time the player's special resource is updated.
+//				- IF THIS THEORY IS CORRECT: Add a method to the g_Characters struct that calls DeleteCfg(this.Map) and then makes a new ConfigMap to take its place, and use this method every time a native needs the character's configmap, when you would normally just outright delete it instead.
+//	- DEVELOPMENT: The change to the wearables system which fixed demo shields not having a charge meter also broke cosmetic styles.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

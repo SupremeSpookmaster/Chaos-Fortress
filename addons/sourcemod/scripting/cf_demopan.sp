@@ -22,10 +22,12 @@ int glowModel;
 #define MODEL_REFINED					"models/player/items/taunts/cash_wad.mdl"
 
 #define SOUND_BOMB_EXPLODE				"weapons/explode1.wav"
+#define SOUND_BOMB_LOOP					"weapons/physcannon/superphys_hold_loop.wav"
 
 public void OnMapStart()
 {
 	PrecacheSound(SOUND_BOMB_EXPLODE);
+	PrecacheSound(SOUND_BOMB_LOOP);
 	
 	PrecacheModel(MODEL_REFINED);
 	
@@ -390,11 +392,14 @@ public void Bomb_Activate(int client, char abilityName[255])
 		i_HeldBomb[client] = EntIndexToEntRef(bomb);
 		b_IsABomb[bomb] = true;
 		CF_PlayRandomSound(client, "", "sound_refined_bomb_prepare");
+		EmitSoundToClient(client, SOUND_BOMB_LOOP);
 	}
 }
 
 public void Bomb_Launch(int client, char abilityName[255], bool resupply)
 {
+	StopSound(client, SNDCHAN_AUTO, SOUND_BOMB_LOOP);
+	
 	int bomb = EntRefToEntIndex(i_HeldBomb[client]);
 	if (!IsValidEntity(bomb))
 		return;
