@@ -99,6 +99,8 @@ public void CFA_MakeNatives()
 	CreateNative("CF_GiveSpecialResource", Native_CF_GiveSpecialResource);
 	CreateNative("CF_SetSpecialResource", Native_CF_SetSpecialResource);
 	CreateNative("CF_GetSpecialResource", Native_CF_GetSpecialResource);
+	CreateNative("CF_GetMaxSpecialResource", Native_CF_GetMaxSpecialResource);
+	CreateNative("CF_SetMaxSpecialResource", Native_CF_SetMaxSpecialResource);
 	CreateNative("CF_DoAbility", Native_CF_DoAbility);
 	CreateNative("CF_ActivateAbilitySlot", Native_CF_ActivateAbilitySlot);
 	CreateNative("CF_EndHeldAbilitySlot", Native_CF_EndHeldAbilitySlot);
@@ -1450,6 +1452,33 @@ public any Native_CF_GetSpecialResource(Handle plugin, int numParams)
 	return f_Resources[client];
 }
 
+public any Native_CF_GetMaxSpecialResource(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return 0.0;
+		
+	if (b_ResourceIsUlt[client] || !b_UsingResources[client])
+		return 0.0;
+	
+	return f_ResourceMax[client];
+}
+
+public Native_CF_SetMaxSpecialResource(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	float amt = GetNativeCell(2);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	if (b_ResourceIsUlt[client] || !b_UsingResources[client])
+		return;
+	
+	f_ResourceMax[client] = amt;
+}
+
 public Native_CF_ApplyAbilityCooldown(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
@@ -1597,7 +1626,7 @@ public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
 	
 	char pluginName[255], abName[255];
 	
-	ConfigMap map = g_Characters[client].Map;
+	ConfigMap map = new ConfigMap(g_Characters[client].MapPath);
 	if (map == null)
 		return;
 		
@@ -1625,7 +1654,7 @@ public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
 		subsection = abilities.GetSection(secName);
 	}
 	
-	//DeleteCfg(map);
+	DeleteCfg(map);
 }
 
 public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
@@ -1640,7 +1669,7 @@ public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
 	
 	char pluginName[255], abName[255];
 	
-	ConfigMap map = g_Characters[client].Map;
+	ConfigMap map = new ConfigMap(g_Characters[client].MapPath);
 	if (map == null)
 		return;
 		
@@ -1691,7 +1720,7 @@ public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
 		}
 	}
 	
-	//DeleteCfg(map);
+	DeleteCfg(map);
 }
 
 public Native_CF_EndHeldAbility(Handle plugin, int numParams)
@@ -1730,7 +1759,7 @@ public Native_CF_HasAbility(Handle plugin, int numParams)
 		
 	char targetPlugin[255], targetAbility[255], pluginName[255], abName[255];
 	
-	ConfigMap map = g_Characters[client].Map;
+	ConfigMap map = new ConfigMap(g_Characters[client].MapPath);
 	if (map == null)
 		return false;
 		
@@ -1764,7 +1793,7 @@ public Native_CF_HasAbility(Handle plugin, int numParams)
 		subsection = abilities.GetSection(secName);
 	}
 	
-	//DeleteCfg(map);
+	DeleteCfg(map);
 	
 	return ReturnValue;
 }
@@ -1778,7 +1807,7 @@ public Native_CF_GetArgI(Handle plugin, int numParams)
 		
 	char targetPlugin[255], targetAbility[255], argName[255], pluginName[255], abName[255];
 	
-	ConfigMap map = g_Characters[client].Map;
+	ConfigMap map = new ConfigMap(g_Characters[client].MapPath);
 	if (map == null)
 		return -1;
 		
@@ -1813,7 +1842,7 @@ public Native_CF_GetArgI(Handle plugin, int numParams)
 		subsection = abilities.GetSection(secName);
 	}
 	
-	//DeleteCfg(map);
+	DeleteCfg(map);
 	
 	return ReturnValue;
 }
@@ -1827,7 +1856,7 @@ public any Native_CF_GetArgF(Handle plugin, int numParams)
 		
 	char targetPlugin[255], targetAbility[255], argName[255], pluginName[255], abName[255];
 	
-	ConfigMap map = g_Characters[client].Map;
+	ConfigMap map = new ConfigMap(g_Characters[client].MapPath);
 	if (map == null)
 		return -1.0;
 		
@@ -1862,7 +1891,7 @@ public any Native_CF_GetArgF(Handle plugin, int numParams)
 		subsection = abilities.GetSection(secName);
 	}
 	
-	//DeleteCfg(map);
+	DeleteCfg(map);
 	
 	return ReturnValue;
 }
@@ -1876,7 +1905,7 @@ public any Native_CF_GetAbilitySlot(Handle plugin, int numParams)
 		
 	char targetPlugin[255], targetAbility[255], pluginName[255], abName[255];
 	
-	ConfigMap map = g_Characters[client].Map;
+	ConfigMap map = new ConfigMap(g_Characters[client].MapPath);
 	if (map == null)
 		return CF_AbilityType_None;
 		
@@ -1915,7 +1944,7 @@ public any Native_CF_GetAbilitySlot(Handle plugin, int numParams)
 		subsection = abilities.GetSection(secName);
 	}
 	
-	//DeleteCfg(map);
+	DeleteCfg(map);
 	
 	return ReturnValue;
 }
@@ -1933,7 +1962,7 @@ public Native_CF_GetArgS(Handle plugin, int numParams)
 		
 	char targetPlugin[255], targetAbility[255], argName[255], pluginName[255], abName[255];
 	
-	ConfigMap map = g_Characters[client].Map;
+	ConfigMap map = new ConfigMap(g_Characters[client].MapPath);
 	if (map == null)
 		return;
 		
@@ -1971,7 +2000,7 @@ public Native_CF_GetArgS(Handle plugin, int numParams)
 		subsection = abilities.GetSection(secName);
 	}
 	
-	//DeleteCfg(map);
+	DeleteCfg(map);
 }
 
 public Native_CF_GetAbilityConfigMapPath(Handle plugin, int numParams)
@@ -1987,7 +2016,7 @@ public Native_CF_GetAbilityConfigMapPath(Handle plugin, int numParams)
 		
 	char targetPlugin[255], targetAbility[255], section[255], pluginName[255], abName[255];
 	
-	ConfigMap map = g_Characters[client].Map;
+	ConfigMap map = new ConfigMap(g_Characters[client].MapPath);
 	if (map == null)
 	{
 		SetNativeString(5, "", length);
@@ -2028,7 +2057,7 @@ public Native_CF_GetAbilityConfigMapPath(Handle plugin, int numParams)
 		subsection = abilities.GetSection(secName);
 	}
 	
-	//DeleteCfg(map);
+	DeleteCfg(map);
 }
 
 public any Native_CF_IsAbilitySlotBlocked(Handle plugin, int numParams)
@@ -2445,8 +2474,6 @@ public Native_CF_CreateHealthPickup(Handle plugin, int numParams)
 		}
 		
 		b_IsFakeHealthKit[phys] = true;
-		
-		//TODO: Figure out how to make health kits move like actual health kits and not phys props.
 		
 		DataPack pack = new DataPack();
 		

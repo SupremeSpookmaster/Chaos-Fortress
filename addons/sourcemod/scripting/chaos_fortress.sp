@@ -74,9 +74,9 @@
 //	- ALL: Clipless weapons (sniper rifle, minigun, flamethrower) can pick up ammo from dispensers/the payload, but do not actually replenish ammo upon doing so, and cannot pick up ammo packs. This will make characters like Heavnich useless, so it MUST be fixed before the open beta.
 //			- Try messing around with the max ammo/clip size attributes.
 //	- DEVELOPMENT: There's a memory leak somewhere...... again.......................................
-//			- This is most likely what's causing the Demopan crashes.
 //			- The handle being leaked is a Trie, it is being leaked very rapidly. 
 //			- The number of handles seems to go down whenever a player dies or leaves the server.
+//			- MOSTLY FIXED: Apparently there are multiple memory leaks. I have fixed a couple of them, there should be one left.
 //	- DEVELOPMENT: The change to the wearables system which fixed demo shields not having a charge meter also broke cosmetic styles.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"

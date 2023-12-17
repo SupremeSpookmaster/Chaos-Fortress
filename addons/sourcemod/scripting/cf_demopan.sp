@@ -130,6 +130,9 @@ public void Passives_Check(DataPack pack)
 	
 	int client = GetClientOfUserId(ReadPackCell(pack));
 	int amt = ReadPackCell(pack);
+	int maxAmt = RoundFloat(CF_GetMaxSpecialResource(client));
+	if (amt > maxAmt)
+		amt = maxAmt;
 	
 	delete pack;
 		
@@ -293,7 +296,7 @@ public void Passives_AdjustTargetPosition(int client, int prop, float angle)
 	TR_GetEndPosition(pos, trace);
 	delete trace;
 		
-	pos = ConstrainDistance(eyeLoc, pos, 95.0);
+	pos = ConstrainDistance(eyeLoc, pos, 75.0);
 	
 	Passives_MoveProp(prop, pos);
 }
@@ -310,7 +313,7 @@ public void Passives_MoveProp(int prop, float pos[3])
 	}
 
 	SubtractVectors(pos, currentLoc, targVel);
-	ScaleVector(targVel, 5.0);
+	ScaleVector(targVel, 10.0);
 	TeleportEntity(prop, NULL_VECTOR, currentAng, targVel);
 }
 

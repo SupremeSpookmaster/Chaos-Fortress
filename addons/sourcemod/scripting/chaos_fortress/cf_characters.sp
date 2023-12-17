@@ -74,6 +74,7 @@ enum struct CFCharacter
 	
 	char Model[255];
 	char Name[255];
+	char MapPath[255];
 	
 	TFClassType Class;
 	
@@ -81,7 +82,7 @@ enum struct CFCharacter
 	
 	ConfigMap Map;
 	
-	void Create(float newSpeed, float newMaxHP, TFClassType newClass, char newModel[255], char newName[255], ConfigMap newMap, float newScale)
+	void Create(float newSpeed, float newMaxHP, TFClassType newClass, char newModel[255], char newName[255], ConfigMap newMap, float newScale, char newMapPath[255])
 	{
 		this.Speed = newSpeed;
 		this.MaxHP = newMaxHP;
@@ -90,13 +91,11 @@ enum struct CFCharacter
 		this.Name = newName;
 		this.Scale = newScale;
 		
-		if (this.Map != null)
-		{
-			DeleteCfg(this.Map);
-			delete this.Map;
-		}
+		DeleteCfg(this.Map);
+		delete this.Map;
 			
 		this.Map = newMap;
+		this.MapPath = newMapPath;
 		
 		this.Exists = true;
 	}
@@ -104,11 +103,8 @@ enum struct CFCharacter
 	void Destroy()
 	{
 		this.Exists = false;
-		if (this.Map != null)
-		{
-			DeleteCfg(this.Map);
-			delete this.Map;
-		}
+		DeleteCfg(this.Map);
+		delete this.Map;
 	}
 }
 
@@ -1119,7 +1115,7 @@ public void CF_ResetMadeStatus(int client)
 	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
 	float scale = GetFloatFromConfigMap(map, "character.scale", 1.0);
 	
-	g_Characters[client].Create(speed, health, Classes[class], model, name, map, scale);
+	g_Characters[client].Create(speed, health, Classes[class], model, name, map, scale, conf);
 		
 	ConfigMap GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 	

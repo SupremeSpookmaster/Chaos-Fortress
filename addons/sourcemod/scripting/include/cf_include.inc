@@ -855,6 +855,25 @@ native CF_SetSpecialResource(int client, float amt);
 native float CF_GetSpecialResource(int client);
 
 /**
+ * Gets a client's maximum special resource capacity.
+ *
+ * @param client		The client to get the special resource capacity of.
+ * 
+ * @return	A float value equal to the client's max resources, 0.0 if the client is invalid, not a character, not using resources, or has is_ult enabled on their special resource.
+ *
+ */
+native float CF_GetMaxSpecialResource(int client);
+
+/**
+ * Sets a client's maximum special resource capacity.
+ *
+ * @param client		The client to set the special resource capacity of.
+ * @param amt			The new max resource capacity.
+ *
+ */
+native float CF_SetMaxSpecialResource(int client);
+
+/**
  * Applies a cooldown to an ability slot, given a set of parameters.
  *
  * @param client		The client to set the cooldown of.
