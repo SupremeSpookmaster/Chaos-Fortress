@@ -27,7 +27,8 @@
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////
 //		- Mercenary:
-//			- Required ult charge may be a bit low?
+//			- This character in general is *pathetically* weak. Specifically, his gun is nearly useless and he gets chewed up too quickly.
+//			- Buff gun damage slightly, reduce gun falloff by about 33%, increase gun reload speed and clip size.
 //		////////////////////////////////////////////
 //		- Spookmaster Bones:
 //			- Required ult charge is definitely too low, skeletons spawned by ult kills allow ults to snowball into each other.
@@ -45,6 +46,9 @@
 //		- Count Heavnich:
 //			- Minigun damage might be a little too big? +10% bullets per shot and +15% rate of fire aren't big numbers, but they add up when put on an already pretty beefy weapon.
 //			- Still have yet to properly test ult charge to see if it's too fast or too slow.
+//		////////////////////////////////////////////
+//		- Demopan:
+//			- Using Refined Bombs to blast jump *might* give him too much mobility for a tank. At the very least, I don't think it's reasonable for him to have so much mobility and ALSO have 700 max HP.
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Everything that happens on client disconnect (possibly already covered, not sure).
@@ -66,13 +70,12 @@
 //			- Scrap this feature entirely and remove all mentions of it from the code. This will be a giant pain in the ass but does not need to be done until public release.
 //	- SPOOKMASTER BONES: Dialogue is too loud and can be heard from nearly anywhere on the map, make a cf_soundpack ability to make all of them quieter.
 //			- Not really a bug, but still sloppy work that I would like to *not* have present on release.
-//	- ALL: The default trace gets blocked by invisible clips like spawn doors and such.
-//	- ALL: Clipless weapons (sniper rifle, minigun, flamethrower) can pick up ammo boxes, but do not actually replenish ammo upon doing so. This will make characters like Heavnich useless, so it MUST be fixed before the open beta.
+//	- ALL: The default trace gets blocked by invisible clips like spawn doors and such. Filter them out.
+//	- ALL: Clipless weapons (sniper rifle, minigun, flamethrower) can pick up ammo from dispensers/the payload, but do not actually replenish ammo upon doing so, and cannot pick up ammo packs. This will make characters like Heavnich useless, so it MUST be fixed before the open beta.
 //			- Try messing around with the max ammo/clip size attributes.
-//	- DEMOPAN: Something about the Refined Metal prop indicator system causes "No Free Edicts" crashes. The game mode is literally unplayable because of this, you can go maybe 3 minutes before the server dies.
 //	- DEVELOPMENT: There's a memory leak somewhere...... again.......................................
 //			- This is most likely what's causing the Demopan crashes.
-//			- MOST LIKELY CAUSE: All natives which create subsections through use of g_Characters[client].Map intentionally skip calling DeleteCfg on that map because that would break a lot of things. This causes the subsections to stick around in memory and never leave until the player dies, becomes a new character, or leaves. This explains why the amount of memory being used by CF decreases when more players are dead. It also explains why Demopan triggers the crashes so quickly, because he spams HasAbility every single time the player's special resource is updated.
+//			- MOST LIKELY CAUSE: All natives which create subsections through use of g_Characters[client].Map intentionally skip calling DeleteCfg on that map at the end of the native because that would break a lot of things. This causes the subsections to stick around in memory and never leave until the player dies, becomes a new character, or leaves. This explains why the amount of memory being used by CF decreases when more players are dead. It also explains why Demopan triggers the crashes so quickly, because he spams HasAbility every single time the player's special resource is updated.
 //				- IF THIS THEORY IS CORRECT: Add a method to the g_Characters struct that calls DeleteCfg(this.Map) and then makes a new ConfigMap to take its place, and use this method every time a native needs the character's configmap, when you would normally just outright delete it instead.
 //	- DEVELOPMENT: The change to the wearables system which fixed demo shields not having a charge meter also broke cosmetic styles.
 

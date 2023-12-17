@@ -111,6 +111,9 @@ public Action CF_OnShouldCollide(int ent1, int ent2, bool &result)
 
 public Action CF_OnSpecialResourceApplied(int client, float current, float &amt)
 {
+	if (!CF_HasAbility(client, DEMOPAN, PASSIVES))
+		return;
+		
 	DataPack pack = new DataPack();
 	
 	WritePackCell(pack, GetClientUserId(client));
@@ -129,9 +132,6 @@ public void Passives_Check(DataPack pack)
 	int amt = ReadPackCell(pack);
 	
 	delete pack;
-	
-	if (!CF_HasAbility(client, DEMOPAN, PASSIVES))
-		return;
 		
 	if (g_RefProps[client] == null)
 	{
