@@ -440,6 +440,8 @@ public void Bomb_Launch(int client, char abilityName[255], bool resupply)
 	if (resupply)
 	{
 		b_IsABomb[bomb] = false;
+		if (!hasPassives)
+			RemoveEntity(bomb);
 	}
 	else
 	{
@@ -448,6 +450,8 @@ public void Bomb_Launch(int client, char abilityName[255], bool resupply)
 		
 		if (hasPassives)
 			Passives_RemoveProp(client, bomb);
+		else
+			RemoveEntity(bomb);
 		
 		float velocity = CF_GetArgF(client, DEMOPAN, abilityName, "velocity");
 		bomb = CF_FireGenericRocket(client, 0.0, velocity, false);
@@ -461,16 +465,13 @@ public void Bomb_Launch(int client, char abilityName[255], bool resupply)
 			Bomb_FalloffMax[bomb] = CF_GetArgF(client, DEMOPAN, abilityName, "falloff_max");
 			
 			SetEntityModel(bomb, MODEL_REFINED);
-			Bomb_Particle[bomb] = EntIndexToEntRef(AttachParticleToEntity(bomb, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_REFINED_RED : PARTICLE_REFINED_BLUE, "", _, _, _, 5.0));
+			Bomb_Particle[bomb] = EntIndexToEntRef(AttachParticleToEntity(bomb, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_REFINED_TRAIL_RED : PARTICLE_REFINED_TRAIL_BLUE, "", _, _, _, 5.0));
 			g_DHookRocketExplode.HookEntity(Hook_Pre, bomb, Bomb_Explode);
 			
 			RequestFrame(Bomb_Spin, EntIndexToEntRef(bomb));
 			CF_PlayRandomSound(client, "", "sound_refined_bomb_launch");
 		}
 	}
-	
-	if (!hasPassives)
-		RemoveEntity(bomb);
 	
 	i_HeldBomb[client] = -1;
 }
