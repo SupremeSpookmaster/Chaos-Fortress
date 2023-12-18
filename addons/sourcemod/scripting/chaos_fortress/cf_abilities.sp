@@ -32,6 +32,7 @@ float f_M3Scale[MAXPLAYERS + 1] = { 0.0, ... };
 float f_RScale[MAXPLAYERS + 1] = { 0.0, ... };
 float f_NextShieldCollisionForward[2049][2049];
 float f_ChargeRetain = 0.0;
+float f_FakeMediShieldHP[2049] = { 0.0, ... };
 
 char s_UltName[MAXPLAYERS + 1][255];
 char s_M2Name[MAXPLAYERS + 1][255];
@@ -194,6 +195,7 @@ public void CFA_OnEntityDestroyed(int entity)
 	i_GenericProjectileOwner[entity] = -1;
 	b_IsFakeHealthKit[entity] = false;
 	b_IsMedigunShield[entity] = false;
+	f_FakeMediShieldHP[entity] = 0.0;
 }
 
 public void CFA_OnEntityCreated(int entity, const char[] classname)
@@ -2367,21 +2369,6 @@ public Action CH_ShouldCollide(int ent1, int ent2, bool &result)
 			ReturnVal = Plugin_Changed;
 			CallForward = false;
 		}
-		/*else
-		{
-			int owner;
-			if (b_IsMedigunShield[ent1])
-			{
-				owner = GetEntPropEnt(ent1, Prop_Send, "m_hOwnerEntity");
-				MediShield_CollisionForward(ent1, ent2, owner);
-			}
-			
-			if (b_IsMedigunShield[ent2])
-			{
-				owner = GetEntPropEnt(ent2, Prop_Send, "m_hOwnerEntity");
-				MediShield_CollisionForward(ent2, ent1, owner);
-			}
-		}*/
 	}
 	
 	if (CallForward)
@@ -2415,7 +2402,7 @@ public void MediShield_CollisionForward(int ent1, int ent2, int owner)
 	}
 }
 
-public Action MediShield_DamageForward(int shield, int attacker, int inflictor, float &damage, int &damagetype, int owner)
+public void MediShield_DamageForward(int shield, int attacker, int inflictor, float &damage, int &damagetype, int owner)
 {
 	Call_StartForward(g_FakeMediShieldDamaged);
 	
@@ -2428,8 +2415,6 @@ public Action MediShield_DamageForward(int shield, int attacker, int inflictor, 
 	
 	Action returnVal;
 	Call_Finish(returnVal);
-	
-	return returnVal;
 }
 
 public Action CH_PassFilter(int ent1, int ent2, bool &result)
@@ -2483,20 +2468,6 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 			ReturnVal = Plugin_Changed;
 			CallForward = false;
 		}
-		/*else
-		{
-			int owner;
-			if (b_IsMedigunShield[ent1])
-			{
-				owner = GetEntPropEnt(ent1, Prop_Send, "m_hOwnerEntity");
-				MediShield_CollisionForward(ent1, ent2, owner);
-			}
-			if (b_IsMedigunShield[ent2])
-			{
-				owner = GetEntPropEnt(ent2, Prop_Send, "m_hOwnerEntity");
-				MediShield_CollisionForward(ent2, ent1, owner);
-			}
-		}*/
 	}
 	
 	if (CallForward)
@@ -2547,6 +2518,8 @@ public Native_CF_CreateShieldWall(Handle plugin, int numParams)
 		char healthChar[16];
 		Format(healthChar, sizeof(healthChar), "%i", RoundFloat(health));
 		DispatchKeyValue(prop, "Health", healthChar);
+		SetEntityHealth(prop, RoundFloat(health));
+		f_FakeMediShieldHP[prop] = health;
 		
 		char scalechar[16];
 		Format(scalechar, sizeof(scalechar), "%f", scale);
@@ -2591,8 +2564,18 @@ public Action Shield_OnTakeDamage(int prop, int &attacker, int &inflictor, float
 	}
 	else
 	{
-		return MediShield_DamageForward(prop, attacker, inflictor, damage, damagetype, owner);
+		MediShield_DamageForward(prop, attacker, inflictor, damage, damagetype, owner);
 	}
+	
+	f_FakeMediShieldHP[prop] -= damage;
+	if (f_FakeMediShieldHP[prop] < 0.0)
+	{
+		RemoveEntity(prop);
+	}
+	
+	CPrintToChatAll("The shield took %i damage.", RoundFloat(damage));
+	
+	damage = 0.0;
 	
 	return Plugin_Changed;
 }
@@ -2633,8 +2616,11 @@ bool MediShield_Collision(int ent1, int ent2)
 			return true;
 		}
 		
-		if (IsPayloadCart(ent2))
-			return true;
+		//This was originally in place to allow payload carts to go through shields instead of being blocked.
+		//As it turns out, the payload cart deals 1k damage per half-second to phys props, INCLUDING simulated shields.
+		//I thought it would be cool and unique to let players waste a shield to temporarily stall the cart, so I removed this check.
+		//if (IsPayloadCart(ent2))
+		//	return true;
 			
 		return team1 != team2;
 	}
@@ -2652,27 +2638,17 @@ bool MediShield_Collision(int ent1, int ent2)
 			return true;
 		}
 			
-		if (IsPayloadCart(ent1))
-			return true;
+		//This was originally in place to allow payload carts to go through shields instead of being blocked.
+		//As it turns out, the payload cart deals 1k damage per half-second to phys props, INCLUDING simulated shields.
+		//I thought it would be cool and unique to let players waste a shield to temporarily stall the cart, so I removed this check.
+		//if (IsPayloadCart(ent1))
+		//	return true;
 			
 		return team1 != team2;
 	}
 	
 	//All checks returned false, don't do anything.
 	return false;
-}
-
-bool IsPayloadCart(int ent)
-{
-	int observer_of_the_train = FindEntityByClassname(-1, "team_train_watcher");
-	if (!IsValidEntity(observer_of_the_train))
-		return false;
-		
-	char the_train[255], the_ent[255];
-	GetEntPropString(observer_of_the_train, Prop_Data, "m_iszTrain", the_train, sizeof(the_train));
-	GetEntPropString(ent, Prop_Data, "m_iName", the_ent, sizeof(the_ent));
-	
-	return StrEqual(the_train, the_ent);
 }
 
 public Native_CF_CreateHealthPickup(Handle plugin, int numParams)

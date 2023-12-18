@@ -1497,3 +1497,16 @@ stock float[] ConstrainDistance(float startPos[3], float endPos[3], float distan
 	
 	return endPos;
 }
+
+stock bool IsPayloadCart(int ent)
+{
+	int observer_of_the_train = FindEntityByClassname(-1, "team_train_watcher");
+	if (!IsValidEntity(observer_of_the_train))
+		return false;
+		
+	char the_train[255], the_ent[255];
+	GetEntPropString(observer_of_the_train, Prop_Data, "m_iszTrain", the_train, sizeof(the_train));
+	GetEntPropString(ent, Prop_Data, "m_iName", the_ent, sizeof(the_ent));
+	
+	return StrEqual(the_train, the_ent);
+}

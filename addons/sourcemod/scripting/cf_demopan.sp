@@ -98,28 +98,6 @@ bool b_IsResourceProp[2049] = { false, ... };
 
 Queue g_RefProps[MAXPLAYERS + 1] = { null, ... };
 
-public Action CF_OnPassFilter(int ent1, int ent2, bool &result)
-{
-	if (b_IsResourceProp[ent1] || b_IsResourceProp[ent2])
-	{
-		result = false;
-		return Plugin_Changed;
-	}
-	
-	return Plugin_Continue;
-}
-
-public Action CF_OnShouldCollide(int ent1, int ent2, bool &result)
-{
-	if (b_IsResourceProp[ent1] || b_IsResourceProp[ent2])
-	{
-		result = false;
-		return Plugin_Changed;
-	}
-	
-	return Plugin_Continue;
-}
-
 public Action CF_OnSpecialResourceApplied(int client, float current, float &amt)
 {
 	if (!CF_HasAbility(client, DEMOPAN, PASSIVES))
@@ -520,6 +498,7 @@ float f_ShieldHeight[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ShieldDMG[2049] = { 0.0, ... };
 float f_ShieldKB[2049] = { 0.0, ... };
 float f_ShieldHitRate[2049] = { 0.0, ... };
+float f_ShieldBlockCollision[2049] = { 0.0, ... };
 float f_NextShieldHit[2049][MAXPLAYERS + 1];
 
 int Flash_BaseMainColor = 160;
@@ -528,9 +507,9 @@ int Flash_BaseAlpha = 120;
 int Flash_MaxMainColor = 255;
 int Flash_MaxSecondaryColor = 200;
 int Flash_MaxAlpha = 255;
-int Flash_MainDecay = 4;
-int Flash_SecondaryDecay = 2;
-int Flash_AlphaDecay = 3;
+int Flash_MainDecay = 6;
+int Flash_SecondaryDecay = 4;
+int Flash_AlphaDecay = 4;
 
 public void Shield_Activate(int client, char abilityName[255])
 {
@@ -586,6 +565,9 @@ public void Shield_Activate(int client, char abilityName[255])
 		SetEntityRenderMode(shield, RENDER_TRANSALPHA);
 		SetEntityRenderColor(shield, r, g, b, a);
 		RequestFrame(Shield_FlashDecay, EntIndexToEntRef(shield));
+		
+		//Block collision while the user is holding the shield, otherwise you can trap people with them which is very bad.
+		f_ShieldBlockCollision[shield] = 999999.0;
 	}
 }
 
@@ -692,6 +674,11 @@ public void CF_OnFakeMediShieldCollision(int shield, int collider, int owner)
 		f_NextShieldHit[shield][collider] = gt + f_ShieldHitRate[shield];
 		
 		Shield_Flash(shield);
+		
+		if (gt <= f_ShieldBlockCollision[shield])
+		{
+			f_ShieldBlockCollision[shield] = gt + 0.2;
+		}
 	}
 }
 
@@ -770,6 +757,7 @@ public void Shield_End(int client, char abilityName[255], bool resupply)
 		else
 		{
 			CF_PlayRandomSound(client, "", "sound_medigun_shield_end");
+			f_ShieldBlockCollision[shield] = GetGameTime() + 0.2;
 		}
 	}
 	
@@ -841,4 +829,66 @@ public bool Passives_Trace(entity, contentsMask)
 		return false;
 		
 	return true;
+}
+
+public Action CF_OnPassFilter(int ent1, int ent2, bool &result)
+{
+	if (b_IsResourceProp[ent1] || b_IsResourceProp[ent2])
+	{
+		result = false;
+		return Plugin_Changed;
+	}
+	
+	if (b_IsShield[ent1] && GetGameTime() <= f_ShieldBlockCollision[ent1])
+	{
+		TFTeam team = view_as<TFTeam>(GetEntProp(ent1, Prop_Send, "m_iTeamNum"));
+		if (IsValidMulti(ent2, true, _, true, team == TFTeam_Red ? TFTeam_Blue : TFTeam_Red))
+		{
+			result = false;
+			return Plugin_Changed;
+		}
+	}
+	
+	if (b_IsShield[ent2] && GetGameTime() <= f_ShieldBlockCollision[ent2])
+	{
+		TFTeam team = view_as<TFTeam>(GetEntProp(ent2, Prop_Send, "m_iTeamNum"));
+		if (IsValidMulti(ent1, true, _, true, team == TFTeam_Red ? TFTeam_Blue : TFTeam_Red))
+		{
+			result = false;
+			return Plugin_Changed;
+		}
+	}
+	
+	return Plugin_Continue;
+}
+
+public Action CF_OnShouldCollide(int ent1, int ent2, bool &result)
+{
+	if (b_IsResourceProp[ent1] || b_IsResourceProp[ent2])
+	{
+		result = false;
+		return Plugin_Changed;
+	}
+	
+	if (b_IsShield[ent1] && GetGameTime() <= f_ShieldBlockCollision[ent1])
+	{
+		TFTeam team = view_as<TFTeam>(GetEntProp(ent1, Prop_Send, "m_iTeamNum"));
+		if (IsValidMulti(ent2, true, _, true, team == TFTeam_Red ? TFTeam_Blue : TFTeam_Red))
+		{
+			result = false;
+			return Plugin_Changed;
+		}
+	}
+	
+	if (b_IsShield[ent2] && GetGameTime() <= f_ShieldBlockCollision[ent2])
+	{
+		TFTeam team = view_as<TFTeam>(GetEntProp(ent2, Prop_Send, "m_iTeamNum"));
+		if (IsValidMulti(ent1, true, _, true, team == TFTeam_Red ? TFTeam_Blue : TFTeam_Red))
+		{
+			result = false;
+			return Plugin_Changed;
+		}
+	}
+	
+	return Plugin_Continue;
 }
