@@ -9,32 +9,8 @@ void ViewChange_PluginStart()
 	SDKEquipWearable = EndPrepSDKCall();
 	if(!SDKEquipWearable)
 		LogError("[Gamedata] Could not find RemoveWearable");
+	delete gamedata;
 }
-
-/*void HidePlayerWeaponModel(int client, int entity)
-{
-	SetEntityRenderMode(entity, RENDER_TRANSALPHA);
-	SetEntityRenderColor(entity, 0, 0, 0, 0);
-	SetEntProp(entity, Prop_Send, "m_fEffects", GetEntProp(entity, Prop_Send, "m_fEffects") | EF_NODRAW);
-	SetEntPropFloat(entity, Prop_Send, "m_fadeMinDist", 0.0);
-	SetEntPropFloat(entity, Prop_Send, "m_fadeMaxDist", 0.00001);
-}
-
-void UnHidePlayerWeaponModel(int client, int entity = -1)
-{
-	if (!IsValidEntity(entity))
-	{
-		entity = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-	}
-	
-	if (entity > MaxClients)
-	{
-		SetEntityRenderColor(entity);
-		SetEntProp(entity, Prop_Send, "m_fEffects", GetEntProp(entity, Prop_Send, "m_fEffects") & ~EF_NODRAW);
-		SetEntPropFloat(entity, Prop_Send, "m_fadeMinDist", 100000.0);
-		SetEntPropFloat(entity, Prop_Send, "m_fadeMaxDist", 100000.01);
-	}
-}*/
 
 stock TFClassType TF2_GetWeaponClass(int index, TFClassType defaul=TFClass_Unknown, int checkSlot=-1)
 {

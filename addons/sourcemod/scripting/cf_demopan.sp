@@ -12,17 +12,21 @@
 int lgtModel;
 int glowModel;
 
-#define PARTICLE_REFINED_RED			"critical_rocket_red"
-#define PARTICLE_REFINED_BLUE			"critical_rocket_blue"
+#define PARTICLE_REFINED_RED			"mvm_cash_embers_red"
+#define PARTICLE_REFINED_BLUE			"mvm_cash_embers"
+#define PARTICLE_REFINED_TRAIL_RED		"flaregun_trail_red"
+#define PARTICLE_REFINED_TRAIL_BLUE		"flaregun_trail_blue"
 #define PARTICLE_REFINED_LAUNCH_RED		"spell_lightningball_hit_red"
 #define PARTICLE_REFINED_LAUNCH_BLUE	"spell_lightningball_hit_blue"
+#define PARTICLE_REFINED_SPAWN			"merasmus_spawn_flash2"
+#define PARTICLE_REFINED_DESPAWN		"mvm_loot_smoke"
 
-#define PARTICLE_REFINED_EXPLODE		"rd_robot_explosion"
+#define PARTICLE_REFINED_EXPLODE		"mvm_cash_explosion"
 
 #define MODEL_REFINED					"models/player/items/taunts/cash_wad.mdl"
 
 #define SOUND_BOMB_EXPLODE				"weapons/explode1.wav"
-#define SOUND_BOMB_LOOP					"weapons/physcannon/superphys_hold_loop.wav"
+#define SOUND_BOMB_LOOP					"weapons/cow_mangler_idle.wav"
 
 public void OnMapStart()
 {
@@ -151,11 +155,12 @@ public void Passives_Check(DataPack pack)
 		
 	while (g_RefProps[client].Length < amt)
 	{
-		Passives_AddProp(client);
+		int prop = Passives_SpawnProp(client);
+		g_RefProps[client].Push(EntIndexToEntRef(prop));
 	}
 }
 
-public void Passives_AddProp(int client)
+public int Passives_SpawnProp(int client)
 {
 	int phys = CreateEntityByName("prop_physics_override");
 	int prop = CreateEntityByName("prop_dynamic_override");
@@ -204,14 +209,18 @@ public void Passives_AddProp(int client)
 		
 		TeleportEntity(phys, pos, NULL_VECTOR, NULL_VECTOR);
 		TeleportEntity(prop, pos, NULL_VECTOR, NULL_VECTOR);
+		SpawnParticle(pos, PARTICLE_REFINED_SPAWN, 2.0);
 		
 		DispatchKeyValue(prop, "spawnflags", "1");
 		SetVariantString("!activator");
 		AcceptEntityInput(prop, "SetParent", phys);
 	
 		b_IsResourceProp[phys] = true;
-		g_RefProps[client].Push(EntIndexToEntRef(phys));
+	
+		return phys;
 	}
+	
+	return -1;
 }
 
 public Action Passives_PreThink(int client)
@@ -377,18 +386,25 @@ float Bomb_FalloffMax[2049] = { 0.0, ... };
 
 public void Bomb_Activate(int client, char abilityName[255])
 {
-	if (g_RefProps[client] == null)
-		return;
-		
-	Queue cloned = g_RefProps[client].Clone();
-	
 	int bomb = -1;
-	while (!IsValidEntity(bomb) && !cloned.Empty)
+
+	if (CF_HasAbility(client, DEMOPAN, PASSIVES) && g_RefProps[client] != null)
 	{
-		bomb = EntRefToEntIndex(cloned.Pop());
+		Queue cloned = g_RefProps[client].Clone();
+		
+		while (!IsValidEntity(bomb) && !cloned.Empty)
+		{
+			bomb = EntRefToEntIndex(cloned.Pop());
+		}
+		
+		delete cloned;
 	}
-	
-	delete cloned;
+	else
+	{
+		bomb = Passives_SpawnProp(client);
+		SDKUnhook(client, SDKHook_PreThink, Bomb_PreThink);
+		SDKHook(client, SDKHook_PreThink, Bomb_PreThink);
+	}
 		
 	if (IsValidEntity(bomb))
 	{
@@ -396,7 +412,19 @@ public void Bomb_Activate(int client, char abilityName[255])
 		b_IsABomb[bomb] = true;
 		CF_PlayRandomSound(client, "", "sound_refined_bomb_prepare");
 		EmitSoundToClient(client, SOUND_BOMB_LOOP);
+		AttachParticleToEntity(bomb, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_REFINED_RED : PARTICLE_REFINED_BLUE, "", 6.0);
 	}
+}
+
+public Action Bomb_PreThink(int client)
+{
+	int bomb = EntRefToEntIndex(i_HeldBomb[client]);
+	if (!IsValidEntity(bomb))
+		return Plugin_Stop;
+		
+	Passives_HoldProp(client, bomb);
+	
+	return Plugin_Continue;
 }
 
 public void Bomb_Launch(int client, char abilityName[255], bool resupply)
@@ -407,6 +435,8 @@ public void Bomb_Launch(int client, char abilityName[255], bool resupply)
 	if (!IsValidEntity(bomb))
 		return;
 		
+	bool hasPassives = CF_HasAbility(client, DEMOPAN, PASSIVES);
+		
 	if (resupply)
 	{
 		b_IsABomb[bomb] = false;
@@ -416,7 +446,8 @@ public void Bomb_Launch(int client, char abilityName[255], bool resupply)
 		float pos[3];
 		GetEntPropVector(bomb, Prop_Send, "m_vecOrigin", pos);
 		
-		Passives_RemoveProp(client, bomb);
+		if (hasPassives)
+			Passives_RemoveProp(client, bomb);
 		
 		float velocity = CF_GetArgF(client, DEMOPAN, abilityName, "velocity");
 		bomb = CF_FireGenericRocket(client, 0.0, velocity, false);
@@ -438,6 +469,9 @@ public void Bomb_Launch(int client, char abilityName[255], bool resupply)
 		}
 	}
 	
+	if (!hasPassives)
+		RemoveEntity(bomb);
+	
 	i_HeldBomb[client] = -1;
 }
 
@@ -449,7 +483,7 @@ public void Bomb_Spin(int ref)
 		float currentAng[3];
 		GetEntPropVector(ent, Prop_Send, "m_angRotation", currentAng);
 
-		for (int i = 0; i < 3; i++)
+		for (int i = 0; i < 2; i++)
 		{
 			currentAng[i] += 2.0;
 		}
@@ -498,7 +532,7 @@ public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
 	if (IsValidEntity(oldParticle))
 		RemoveEntity(oldParticle);
 		
-	Bomb_Particle[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_REFINED_RED : PARTICLE_REFINED_BLUE, ""));
+	Bomb_Particle[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_REFINED_TRAIL_RED : PARTICLE_REFINED_TRAIL_BLUE, ""));
 	SetEntityRenderColor(entity, newTeam == TFTeam_Red ? 255 : 120, 120, newTeam == TFTeam_Blue ? 255 : 120, 255);
 }
 
@@ -511,8 +545,12 @@ public void OnEntityDestroyed(int entity)
 		
 		if (b_IsResourceProp[entity])
 		{
+			float pos[3];
+			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+			SpawnParticle(pos, PARTICLE_REFINED_DESPAWN, 2.0);
+			
 			int owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
-			if (IsValidClient(owner))
+			if (IsValidClient(owner) && CF_HasAbility(owner, DEMOPAN, PASSIVES))
 			{
 				Passives_RemoveProp(owner, entity);
 			}

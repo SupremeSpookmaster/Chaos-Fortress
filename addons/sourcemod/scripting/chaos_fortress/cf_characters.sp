@@ -80,9 +80,9 @@ enum struct CFCharacter
 	
 	bool Exists;
 	
-	ConfigMap Map;
+	//ConfigMap Map;
 	
-	void Create(float newSpeed, float newMaxHP, TFClassType newClass, char newModel[255], char newName[255], ConfigMap newMap, float newScale, char newMapPath[255])
+	void Create(float newSpeed, float newMaxHP, TFClassType newClass, char newModel[255], char newName[255], float newScale, char newMapPath[255])
 	{
 		this.Speed = newSpeed;
 		this.MaxHP = newMaxHP;
@@ -91,10 +91,10 @@ enum struct CFCharacter
 		this.Name = newName;
 		this.Scale = newScale;
 		
-		DeleteCfg(this.Map);
-		delete this.Map;
+		//DeleteCfg(this.Map);
+		//delete this.Map;
 			
-		this.Map = newMap;
+		//this.Map = new ConfigMap(newMapPath);
 		this.MapPath = newMapPath;
 		
 		this.Exists = true;
@@ -103,8 +103,8 @@ enum struct CFCharacter
 	void Destroy()
 	{
 		this.Exists = false;
-		DeleteCfg(this.Map);
-		delete this.Map;
+		//DeleteCfg(this.Map);
+		//delete this.Map;
 	}
 }
 
@@ -359,7 +359,7 @@ public void CFC_OnEntityDestroyed(int entity)
  	}
  
  	CF_ManageCharacterFiles(Character);
- 	DeleteCfg(Character);	//MARKED FOR POTENTIAL ERROR
+ 	DeleteCfg(Character);
  }
  
  public void CF_BuildCharactersMenu()
@@ -1115,7 +1115,7 @@ public void CF_ResetMadeStatus(int client)
 	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
 	float scale = GetFloatFromConfigMap(map, "character.scale", 1.0);
 	
-	g_Characters[client].Create(speed, health, Classes[class], model, name, map, scale, conf);
+	g_Characters[client].Create(speed, health, Classes[class], model, name, scale, conf);
 		
 	ConfigMap GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 	
@@ -1228,6 +1228,7 @@ public void CF_ResetMadeStatus(int client)
  	s_PreviousCharacter[client] = conf;
  	
  	DeleteCfg(GameRules);
+ 	DeleteCfg(map);
  	
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
@@ -1532,10 +1533,6 @@ public void CF_ResetMadeStatus(int client)
  	if (victim > 0 && victim <= MaxClients && !deadRinger)
  	{
  		b_IsDead[victim] = true;
- 		/*if (CF_IsPlayerCharacter(victim))
- 		{
- 			TF2_SetPlayerClass(victim, CF_GetCharacterClass(victim));
- 		}*/
  	}
  }
  
@@ -1578,12 +1575,6 @@ public void CF_ResetMadeStatus(int client)
 	}
  }
  
- /*public void GiveMaxHP_V2(int client)
- {
- 	SetEntProp(client, Prop_Data, "m_iMaxHealth", RoundFloat(CF_GetCharacterMaxHealth(client)));
- 	SetEntProp(client, Prop_Send, "m_iHealth", RoundFloat(CF_GetCharacterMaxHealth(client)));
- }*/
- 
  public void CF_UpdateCharacterSpeed(int client, TFClassType class)
  {
  	if (!IsValidClient(client))
@@ -1597,8 +1588,7 @@ public void CF_ResetMadeStatus(int client)
  	
  	if (num > 8)
  		return;
- 	
- 	//for some bizarre reason, it freaks out and sets the HP to something in the billions if I don't separate these:
+ 		
  	float targSpd = g_Characters[client].Speed;
  	float baseSpd = f_ClassBaseSpeed[num];
  	float speed = targSpd / baseSpd;

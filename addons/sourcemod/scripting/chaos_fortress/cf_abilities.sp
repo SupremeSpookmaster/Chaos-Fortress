@@ -245,9 +245,9 @@ public Action CFA_HUDTimer(Handle timer)
 	int rState = CF_GetRoundState();
 	for (int client = 1; client <= MaxClients; client++)
 	{
-		if (CF_IsPlayerCharacter(client) && b_UseHUD[client])
+		if (CF_IsPlayerCharacter(client))
 		{
-			bool showHUD = GetClientButtons(client) & IN_SCORE == 0;
+			bool showHUD = GetClientButtons(client) & IN_SCORE == 0 && b_UseHUD[client];
 			bool CanUseUnderNormalCircumstances;
 			if (IsPlayerAlive(client))
 			{
@@ -460,7 +460,6 @@ public void CFA_PlayerKilled(int attacker, int victim)
 		if (CF_GetRoundState() == 1)
 			CF_GiveUltCharge(attacker, 1.0, CF_ResourceType_Kill);
 		
-		//TODO: Specific character kill sounds
 		CF_PlayRandomSound(attacker, "", "sound_kill");
 	}
 	
@@ -1064,7 +1063,7 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 			
 			//char conf[255];
 			//CF_GetPlayerConfig(client, conf, sizeof(conf));
-			ConfigMap map = g_Characters[client].Map;
+			ConfigMap map = new ConfigMap(g_Characters[client].MapPath);
 			if (map != null)
 			{
 				float distance = GetFloatFromConfigMap(map, "character.ultimate_stats.radius", 800.0);
@@ -1097,7 +1096,7 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 					}
 				}
 				
-				//DeleteCfg(map);
+				DeleteCfg(map);
 			}
 			
 			if (played)
@@ -1632,7 +1631,10 @@ public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
+	{
+		DeleteCfg(map);
 		return;
+	}
 		
 	int i = 1;
 	char secName[255];
@@ -1675,7 +1677,10 @@ public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
+	{
+		DeleteCfg(map);
 		return;
+	}
 		
 	int i = 1;
 	char secName[255];
@@ -1768,7 +1773,10 @@ public Native_CF_HasAbility(Handle plugin, int numParams)
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
+	{
+		DeleteCfg(map);
 		return false;
+	}
 		
 	bool ReturnValue = false;
 		
@@ -1817,7 +1825,10 @@ public Native_CF_GetArgI(Handle plugin, int numParams)
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
+	{
+		DeleteCfg(map);
 		return -1;
+	}
 		
 	int ReturnValue = -1;
 		
@@ -1866,7 +1877,10 @@ public any Native_CF_GetArgF(Handle plugin, int numParams)
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
+	{
+		DeleteCfg(map);
 		return -1.0;
+	}
 		
 	float ReturnValue = -1.0;
 		
@@ -1914,7 +1928,10 @@ public any Native_CF_GetAbilitySlot(Handle plugin, int numParams)
 		
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
+	{
+		DeleteCfg(map);
 		return CF_AbilityType_None;
+	}
 		
 	CF_AbilityType ReturnValue = CF_AbilityType_None;
 		
@@ -1973,6 +1990,7 @@ public Native_CF_GetArgS(Handle plugin, int numParams)
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
 	{
+		DeleteCfg(map);
 		SetNativeString(5, "", size, false);
 		return;
 	}
@@ -2030,6 +2048,7 @@ public Native_CF_GetAbilityConfigMapPath(Handle plugin, int numParams)
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities == null)
 	{
+		DeleteCfg(map);
 		SetNativeString(5, "", length);
 		return;
 	}

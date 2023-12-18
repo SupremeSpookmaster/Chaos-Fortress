@@ -159,7 +159,7 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 			
 		ConfigMap cfgMap = new ConfigMap(ourConf);
 		ConfigMap section = cfgMap.GetSection(path);
-		ConfigMap echoSection = section.GetSection("echo");
+		//ConfigMap echoSection = section.GetSection("echo");
 			
 		if (section != null)
 		{			
@@ -183,7 +183,7 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 				
 			CanPlay = GetRandomFloat(0.0, 1.0) <= chance;
 			
-			if (echoSection != null && CanPlay)
+			/*if (echoSection != null && CanPlay)
 			{
 				int numEchoes = GetIntFromConfigMap(echoSection, "times", 100);
 				float echoDelay = GetFloatFromConfigMap(echoSection, "delay", 0.33);
@@ -205,7 +205,7 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 				WritePackCell(pack, minPitch);
 				WritePackCell(pack, maxPitch);
 				WritePackString(pack, snd);
-			}
+			}*/
 		}
 		else
 		{
@@ -422,7 +422,7 @@ public Action NormalSoundHook(int clients[64],int &numClients,char strSound[PLAT
 					"1"		"myothersound.mp3"
 				}
 					
-				//Replaces ALL class dialogue, not including any sound which contains "scout_cheers".
+				//Replaces ALL class dialogue, not including scout_cheers03 or any other sound which contains "scout_cheers".
 				"sound_replace_all"
 				{
 					"1"		"mythirdsound.mp3"
