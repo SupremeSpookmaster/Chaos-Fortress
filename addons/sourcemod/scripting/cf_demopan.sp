@@ -79,6 +79,9 @@ public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255]
 		
 	if (StrContains(abilityName, BOMB) != -1)
 		Bomb_Launch(client, abilityName, resupply);
+		
+	if (StrContains(abilityName, SHIELD) != -1)
+		Shield_End(client, abilityName, resupply);
 }
 
 int i_HeldBomb[MAXPLAYERS+1] = { -1, ... };
@@ -310,37 +313,23 @@ public void Passives_AdjustTargetPosition(int client, int prop, float angle)
 	Passives_MoveProp(prop, pos);
 }
 
-public void Passives_MoveProp(int prop, float pos[3])
+void Passives_MoveProp(int prop, float pos[3], bool spin = true)
 {
 	float currentLoc[3], targVel[3], currentAng[3];
 	GetEntPropVector(prop, Prop_Send, "m_vecOrigin", currentLoc);
 	GetEntPropVector(prop, Prop_Send, "m_angRotation", currentAng);
 
-	for (int i = 0; i < 3; i++)
+	if (spin)
 	{
-		currentAng[i] += 2.0;
+		for (int i = 0; i < 3; i++)
+		{
+			currentAng[i] += 2.0;
+		}
 	}
 
 	SubtractVectors(pos, currentLoc, targVel);
 	ScaleVector(targVel, 10.0);
 	TeleportEntity(prop, NULL_VECTOR, currentAng, targVel);
-}
-
-public bool Passives_Trace(entity, contentsMask)
-{
-	if (entity <= MaxClients)
-		return false;
-		
-	if (b_IsResourceProp[entity])
-		return false;
-	
-	char classname[255];
-	GetEntityClassname(entity, classname, sizeof(classname));
-	
-	if (StrContains(classname, "tf_projectile") != -1)
-		return false;
-		
-	return true;
 }
 
 public void Passives_RemoveAllRefProps(int client)
@@ -495,7 +484,6 @@ public void Bomb_Spin(int ref)
 	}
 }
 
-
 public MRESReturn Bomb_Explode(int bomb)
 {
 	int owner = GetEntPropEnt(bomb, Prop_Send, "m_hOwnerEntity");
@@ -517,9 +505,106 @@ public MRESReturn Bomb_Explode(int bomb)
 	return MRES_Supercede;
 }
 
+int i_Shield[MAXPLAYERS + 1] = { -1, ... };
+
+bool b_HoldingShield[MAXPLAYERS + 1] = { false, ... };
+bool b_IsShield[2049] = { false, ... };
+
+float f_ShieldBaseSpeed[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ShieldDistance[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ShieldHeight[MAXPLAYERS + 1] = { 0.0, ... };
+
 public void Shield_Activate(int client, char abilityName[255])
 {
+	float hp = CF_GetArgF(client, DEMOPAN, abilityName, "health");
+	float damage = CF_GetArgF(client, DEMOPAN, abilityName, "damage");
+	float kb = CF_GetArgF(client, DEMOPAN, abilityName, "knockback");
+	float lifespan = CF_GetArgF(client, DEMOPAN, abilityName, "lifespan");
+	float scale = CF_GetArgF(client, DEMOPAN, abilityName, "scale");
+	f_ShieldDistance[client] = CF_GetArgF(client, DEMOPAN, abilityName, "distance");
+	f_ShieldHeight[client] = CF_GetArgF(client, DEMOPAN, abilityName, "height");
+	char model[255];
+	CF_GetArgS(client, DEMOPAN, abilityName, "model", model, sizeof(model));
 	
+	float pos[3], eyeLoc[3], ang[3], buffer[3];
+	GetClientEyePosition(client, eyeLoc);
+	GetClientEyeAngles(client, ang);
+		
+	Handle trace = TR_TraceRayFilterEx(eyeLoc, ang, MASK_SOLID, RayType_Infinite, Passives_Trace);
+	TR_GetEndPosition(pos, trace);
+	delete trace;
+		
+	pos = ConstrainDistance(eyeLoc, pos, f_ShieldDistance[client]);
+	GetAngleVectors(ang, NULL_VECTOR, NULL_VECTOR, buffer);
+	pos[0] -= f_ShieldHeight[client] * buffer[0];
+	pos[1] -= f_ShieldHeight[client] * buffer[1];
+	pos[2] -= f_ShieldHeight[client] * buffer[2];
+	
+	int shield = CF_CreateShieldWall(client, model, TF2_GetClientTeam(client) == TFTeam_Red ? "0" : "1", scale, hp, damage, kb, pos, ang, lifespan);
+	
+	if (IsValidEntity(shield))
+	{
+		i_Shield[client] = EntIndexToEntRef(shield);
+		b_HoldingShield[client] = true;
+		b_IsShield[shield] = true;
+		SetEntityMoveType(shield, MOVETYPE_NONE);
+		SDKUnhook(client, SDKHook_PreThink, Shield_PreThink);
+		SDKHook(client, SDKHook_PreThink, Shield_PreThink);
+		f_ShieldBaseSpeed[client] = CF_GetCharacterSpeed(client);
+		CF_SetCharacterSpeed(client, CF_GetArgF(client, DEMOPAN, abilityName, "speed"));
+		CF_PlayRandomSound(client, "", "sound_medigun_shield_start");
+	}
+}
+
+public Action Shield_PreThink(int client)
+{
+	int shield = EntRefToEntIndex(i_Shield[client]);
+	
+	if (!IsValidEntity(shield) || !b_HoldingShield[client])
+		return Plugin_Stop;
+		
+	float pos[3], eyeLoc[3], eyeAng[3], buffer[3];
+	GetClientEyePosition(client, eyeLoc);
+	GetClientEyeAngles(client, eyeAng);
+		
+	Handle trace = TR_TraceRayFilterEx(eyeLoc, eyeAng, MASK_SOLID, RayType_Infinite, Passives_Trace);
+	TR_GetEndPosition(pos, trace);
+	delete trace;
+		
+	pos = ConstrainDistance(eyeLoc, pos, f_ShieldDistance[client]);
+	
+	GetAngleVectors(eyeAng, NULL_VECTOR, NULL_VECTOR, buffer);
+	pos[0] -= f_ShieldHeight[client] * buffer[0];
+	pos[1] -= f_ShieldHeight[client] * buffer[1];
+	pos[2] -= f_ShieldHeight[client] * buffer[2];
+	
+	int frame = GetEntProp(shield, Prop_Send, "m_ubInterpolationFrame");
+	
+	TeleportEntity(shield, pos, eyeAng, NULL_VECTOR);
+	
+	SetEntProp(shield, Prop_Send, "m_ubInterpolationFrame", frame);
+	
+	return Plugin_Continue;
+}
+
+public void Shield_End(int client, char abilityName[255], bool resupply)
+{
+	int shield = EntRefToEntIndex(i_Shield[client]);
+	if (IsValidEntity(shield))
+	{
+		if (resupply)
+		{
+			RemoveEntity(shield);
+		}
+		else
+		{
+			//Release the shield and leave it in place.
+			CF_PlayRandomSound(client, "", "sound_medigun_shield_end");
+		}
+	}
+	
+	CF_SetCharacterSpeed(client, f_ShieldBaseSpeed[client]);
+	b_HoldingShield[client] = false;
 }
 
 public void Trade_Activate(int client, char abilityName[255])
@@ -543,6 +628,7 @@ public void OnEntityDestroyed(int entity)
 	{
 		Bomb_Particle[entity] = -1;
 		b_IsABomb[entity] = false;
+		b_IsShield[entity] = false;
 		
 		if (b_IsResourceProp[entity])
 		{
@@ -565,5 +651,23 @@ public void CF_OnCharacterRemoved(int client)
 {
 	Passives_RemoveAllRefProps(client);
 	i_HeldBomb[client] = -1;
+	b_HoldingShield[client] = false;
 	StopSound(client, SNDCHAN_AUTO, SOUND_BOMB_LOOP);
+}
+
+public bool Passives_Trace(entity, contentsMask)
+{
+	if (entity <= MaxClients)
+		return false;
+		
+	if (b_IsResourceProp[entity] || b_IsShield[entity])
+		return false;
+	
+	char classname[255];
+	GetEntityClassname(entity, classname, sizeof(classname));
+	
+	if (StrContains(classname, "tf_projectile") != -1)
+		return false;
+		
+	return true;
 }

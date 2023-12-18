@@ -67,6 +67,7 @@ bool b_IsFakeHealthKit[2049] = { false, ... };
 bool b_HeldM2BlocksOthers[MAXPLAYERS + 1] = { false, ... };
 bool b_HeldM3BlocksOthers[MAXPLAYERS + 1] = { false, ... };
 bool b_HeldReloadBlocksOthers[MAXPLAYERS + 1] = { false, ... };
+bool b_IsMedigunShield[2049] = { false, ... };
 
 GlobalForward g_OnAbility;
 GlobalForward g_OnUltUsed;
@@ -118,6 +119,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_FireGenericRocket", Native_CF_FireGenericRocket);
 	CreateNative("CF_GenericAOEDamage", Native_CF_GenericAOEDamage);
 	CreateNative("CF_CreateHealthPickup", Native_CF_CreateHealthPickup);
+	CreateNative("CF_CreateShieldWall", Native_CF_CreateShieldWall);
 }
 
 public void CFA_MakeForwards()
@@ -186,6 +188,7 @@ public void CFA_OnEntityDestroyed(int entity)
 {
 	i_GenericProjectileOwner[entity] = -1;
 	b_IsFakeHealthKit[entity] = false;
+	b_IsMedigunShield[entity] = false;
 }
 
 public void CFA_OnEntityCreated(int entity, const char[] classname)
@@ -2335,9 +2338,23 @@ public Action CH_ShouldCollide(int ent1, int ent2, bool &result)
 	Action ReturnVal = Plugin_Continue;
 	bool CallForward = true;
 	
+	//First test: only allow simulated health kits to collide with the world.
 	if (b_IsFakeHealthKit[ent1] || b_IsFakeHealthKit[ent2])
 	{
 		bool block = ent1 != 0 && ent2 != 0;
+		
+		if (block)
+		{
+			result = false;
+			ReturnVal = Plugin_Changed;
+			CallForward = false;
+		}
+	}
+	
+	//Second test: only allow simulated medigun shields to collide with entities on the opposite team.
+	if (b_IsMedigunShield[ent1] || b_IsMedigunShield[ent2])
+	{
+		bool block = MediShield_Collision(ent1, ent2);
 		
 		if (block)
 		{
@@ -2401,6 +2418,19 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 		}
 	}
 	
+	//Third test: only allow simulated medigun shields to collide with entities on the opposite team.
+	if (b_IsMedigunShield[ent1] || b_IsMedigunShield[ent2])
+	{
+		bool block = MediShield_Collision(ent1, ent2);
+		
+		if (block)
+		{
+			result = false;
+			ReturnVal = Plugin_Changed;
+			CallForward = false;
+		}
+	}
+	
 	if (CallForward)
 	{
 		Call_StartForward(g_PassFilter);
@@ -2413,6 +2443,160 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 	}
 	
 	return ReturnVal;
+}
+
+public Native_CF_CreateShieldWall(Handle plugin, int numParams)
+{
+	int owner = GetNativeCell(1);
+	char model[255], skin[16];
+	GetNativeString(2, model, sizeof(model));
+	GetNativeString(3, skin, sizeof(skin));
+	float scale = GetNativeCell(4);
+	float health = GetNativeCell(5);
+	float damage = GetNativeCell(6);
+	float knockback = GetNativeCell(7);
+	float pos[3], ang[3];
+	GetNativeArray(8, pos, sizeof(pos));
+	GetNativeArray(9, ang, sizeof(ang));
+	float lifespan = GetNativeCell(10);
+	
+	int prop = CreateEntityByName("prop_physics_override");
+	if (IsValidEntity(prop))
+	{
+		DispatchKeyValue(prop, "targetname", "shield"); 
+		PrecacheModel(model);
+		DispatchKeyValue(prop, "model", model);
+		
+		DispatchSpawn(prop);
+		
+		ActivateEntity(prop);
+		
+		if (IsValidClient(owner))
+		{
+			SetEntPropEnt(prop, Prop_Data, "m_hOwnerEntity", owner);
+		}
+		
+		DispatchKeyValue(prop, "skin", skin);
+		char healthChar[16];
+		Format(healthChar, sizeof(healthChar), "%i", RoundFloat(health));
+		DispatchKeyValue(prop, "Health", healthChar);
+		
+		char scalechar[16];
+		Format(scalechar, sizeof(scalechar), "%f", scale);
+		DispatchKeyValue(prop, "modelscale", scalechar);
+		
+		b_IsMedigunShield[prop] = true;
+		SetEntityGravity(prop, 0.0);
+		
+		SDKHook(prop, SDKHook_OnTakeDamage, Shield_OnTakeDamage);
+		
+		if (lifespan > 0.0)
+		{
+			CreateTimer(lifespan, Timer_RemoveEntity, EntIndexToEntRef(prop), TIMER_FLAG_NO_MAPCHANGE);
+		}
+		
+		TeleportEntity(prop, pos, ang, NULL_VECTOR);
+	}
+	
+	return prop;
+}
+
+public Action Shield_OnTakeDamage(int prop, int &attacker, int &inflictor, float &damage, int &damagetype) 
+{
+	int owner = GetEntPropEnt(prop, Prop_Data, "m_hOwnerEntity");
+	
+	if (IsValidClient(owner) && IsValidMulti(attacker, false, _, true, TF2_GetClientTeam(owner)))
+	{
+		damage = 0.0;
+	}
+	else
+	{
+		//TODO: Trigger shield flash effect
+	}
+	
+	return Plugin_Changed;
+}
+
+bool MediShield_Collision(int ent1, int ent2)
+{
+	//Neither entity is a medigun shield, don't modify collision.
+	if (!b_IsMedigunShield[ent1] && !b_IsMedigunShield[ent2])
+		return false;
+		
+	int ent1Owner = -1; int ent2Owner = -1;
+	if (b_IsMedigunShield[ent1])
+		ent1Owner = GetEntPropEnt(ent1, Prop_Data, "m_hOwnerEntity");
+	if (b_IsMedigunShield[ent2])
+		ent2Owner = GetEntPropEnt(ent2, Prop_Data, "m_hOwnerEntity");
+		
+	int team1 = GetEntProp(ent1, Prop_Send, "m_iTeamNum");
+	int team2 = GetEntProp(ent2, Prop_Send, "m_iTeamNum");
+		
+	//Block collision if a medigun shield is colliding with the world.
+	if (b_IsMedigunShield[ent1] && ent2 == 0 || b_IsMedigunShield[ent2] && ent1 == 0)
+		return true;
+		
+	//Both entities are medigun shields, prevent collision if they belong to the same team.
+	if (b_IsMedigunShield[ent1] && b_IsMedigunShield[ent2])
+		return IsValidMulti(ent1Owner, false, _, true, TF2_GetClientTeam(ent2Owner)) && IsValidMulti(ent1Owner, false, _, true, TF2_GetClientTeam(ent1Owner));
+		
+	//Entity 1 is a medigun shield, block collision if entity 2 is on the opposite team.
+	if (b_IsMedigunShield[ent1])
+	{
+		if (IsValidClient(ent2))
+		{
+			if (TF2_GetClientTeam(ent2) != TF2_GetClientTeam(ent1Owner))
+			{
+				//TODO: Damage and knockback.
+				//MediShield_DealDamage(ent1, ent1Owner, ent2);
+				return false;
+			}
+			
+			return true;
+		}
+		
+		if (IsPayloadCart(ent2))
+			return true;
+			
+		return team1 != team2;
+	}
+	
+	//Entity 2 is a medigun shield, block collision if entity 1 is on the opposite team.
+	if (b_IsMedigunShield[ent2])
+	{
+		if (IsValidClient(ent1))
+		{
+			if (TF2_GetClientTeam(ent1) != TF2_GetClientTeam(ent2Owner))
+			{
+				//TODO: Damage and knockback.
+				//MediShield_DealDamage(ent2, ent2Owner, ent1);
+				return false;
+			}
+			
+			return true;
+		}
+			
+		if (IsPayloadCart(ent1))
+			return true;
+			
+		return team1 != team2;
+	}
+	
+	//All checks returned false, don't do anything.
+	return false;
+}
+
+bool IsPayloadCart(int ent)
+{
+	int observer_of_the_train = FindEntityByClassname(-1, "team_train_watcher");
+	if (!IsValidEntity(observer_of_the_train))
+		return false;
+		
+	char the_train[255], the_ent[255];
+	GetEntPropString(observer_of_the_train, Prop_Data, "m_iszTrain", the_train, sizeof(the_train));
+	GetEntPropString(ent, Prop_Data, "m_iName", the_ent, sizeof(the_ent));
+	
+	return StrEqual(the_train, the_ent);
 }
 
 public Native_CF_CreateHealthPickup(Handle plugin, int numParams)

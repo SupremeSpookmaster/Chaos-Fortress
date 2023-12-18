@@ -1134,6 +1134,24 @@ native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit);
 native int CF_CreateHealthPickup(int owner, float amt, float radius, int mode, float lifespan, char plugin[255], Function filter, float pos[3], char model[255] = "models/items/medkit_medium.mdl", char sequence[255] = "idle", float rate = 1.0, float scale = 1.0, int skin = 0, char sound[255] = "items/smallmedkit1.wav", float hpMult = 1.0, char physModel[255] = "models/items/medkit_medium.mdl", char redParticle[255] = "healthgained_red_large", char blueParticle[255] = "healthgained_blu_large");
 
 /**
+ * Creates a simulated medigun shield
+ *
+ * @param owner					The client who owns the medigun shield.
+ * @param model					The model to be used for the medigun shield. THIS MODEL MUST HAVE WORKING PHYSICS!
+ * @param skin					Model skin to be used.
+ * @param scale					Model scale.
+ * @param health				How much health does the medigun shield have?
+ * @param damage				Damage dealt to enemies who touch the medigun shield.
+ * @param knockback				Knockback force applied to enemies who touch the medigun shield.
+ * @param pos					Position to spawn the medigun shield at.
+ * @param ang					Angles to spawn the medigun shield with.
+ * @param lifespan				How long should the medigun shield be active? (0.0 or below: infinite)
+ *
+ * @return	The entity index of the medigun shield, or -1 if it fails to spawn.
+ */
+native int CF_CreateShieldWall(int owner, char model[255], char skin[16], float scale, float health, float damage = 0.0, float knockback = 0.0, float pos[3], float ang[3], float lifespan = 0.0);
+
+/**
  * Inflicts generic area-of-effect damage within a specified radius
  *
  * @param attacker				The player who triggered this damage. This entire process is skipped if this client is not valid.
