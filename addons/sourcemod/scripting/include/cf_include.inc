@@ -263,7 +263,7 @@ forward Action CF_OnTakeDamageAlive_Post(int victim, int &attacker, int &inflict
  *
  * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */	
-forward Action CF_OnFakeMediShieldDamaged(int shield, int attacker, int inflictor, float &damage, int &damagetype, int weapon, int owner);
+forward Action CF_OnFakeMediShieldDamaged(int shield, int attacker, int inflictor, float &damage, int &damagetype, int owner);
 
 /**
  * Called when a simulated medigun shield created by CF_CreateShieldWall collides with another entity.

@@ -2540,6 +2540,7 @@ public Native_CF_CreateShieldWall(Handle plugin, int numParams)
 		if (IsValidClient(owner))
 		{
 			SetEntPropEnt(prop, Prop_Data, "m_hOwnerEntity", owner);
+			SetEntProp(prop, Prop_Send, "m_iTeamNum", GetClientTeam(owner));
 		}
 		
 		DispatchKeyValue(prop, "skin", skin);

@@ -78,6 +78,7 @@
 //			- Try messing around with the max ammo/clip size attributes.
 //	- DEVELOPMENT: The change to the wearables system which fixed demo shields not having a charge meter also broke cosmetic styles.
 //	- DEVELOPMENT: Using the "precache" section of the character config for model precaches will cause that character to not load, and will break the !characters menu.
+//	- DEMOPAN: You can get enemies stuck in the medigun shield by releasing it when it is inside of them.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

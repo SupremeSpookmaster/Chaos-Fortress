@@ -522,6 +522,16 @@ float f_ShieldKB[2049] = { 0.0, ... };
 float f_ShieldHitRate[2049] = { 0.0, ... };
 float f_NextShieldHit[2049][MAXPLAYERS + 1];
 
+int Flash_BaseMainColor = 160;
+int Flash_BaseSecondaryColor = 60;
+int Flash_BaseAlpha = 120;
+int Flash_MaxMainColor = 255;
+int Flash_MaxSecondaryColor = 200;
+int Flash_MaxAlpha = 255;
+int Flash_MainDecay = 4;
+int Flash_SecondaryDecay = 2;
+int Flash_AlphaDecay = 3;
+
 public void Shield_Activate(int client, char abilityName[255])
 {
 	float hp = CF_GetArgF(client, DEMOPAN, abilityName, "health");
@@ -546,7 +556,9 @@ public void Shield_Activate(int client, char abilityName[255])
 	pos[1] -= f_ShieldHeight[client] * buffer[1];
 	pos[2] -= f_ShieldHeight[client] * buffer[2];
 	
-	int shield = CF_CreateShieldWall(client, model, TF2_GetClientTeam(client) == TFTeam_Red ? "0" : "1", scale, hp, pos, ang, lifespan);
+	TFTeam team = TF2_GetClientTeam(client);
+	
+	int shield = CF_CreateShieldWall(client, model, team == TFTeam_Red ? "0" : "1", scale, hp, pos, ang, lifespan);
 	
 	if (IsValidEntity(shield))
 	{
@@ -565,7 +577,60 @@ public void Shield_Activate(int client, char abilityName[255])
 		f_ShieldHitRate[shield] = CF_GetArgF(client, DEMOPAN, abilityName, "hit_rate");
 		
 		Shield_ClearHits(shield);
+		
+		int r = team == TFTeam_Red ? Flash_BaseMainColor : Flash_BaseSecondaryColor;
+		int g = Flash_BaseSecondaryColor;
+		int b = team == TFTeam_Red ? Flash_BaseSecondaryColor : Flash_BaseMainColor;
+		int a = Flash_BaseAlpha;
+		
+		SetEntityRenderMode(shield, RENDER_TRANSALPHA);
+		SetEntityRenderColor(shield, r, g, b, a);
+		RequestFrame(Shield_FlashDecay, EntIndexToEntRef(shield));
 	}
+}
+
+public void Shield_FlashDecay(int ref)
+{
+	int shield = EntRefToEntIndex(ref);
+	if (!IsValidEntity(shield))
+		return;
+		
+	TFTeam team = view_as<TFTeam>(GetEntProp(shield, Prop_Send, "m_iTeamNum"));
+	
+	int r, g, b, a;
+	GetEntityRenderColor(shield, r, g, b, a);
+	
+	if (r > (team == TFTeam_Red ? Flash_BaseMainColor : Flash_BaseSecondaryColor))
+	{
+		r -= (team == TFTeam_Red ? Flash_MainDecay : Flash_SecondaryDecay);
+		if (r < (team == TFTeam_Red ? Flash_BaseMainColor : Flash_BaseSecondaryColor))
+			r = (team == TFTeam_Red ? Flash_BaseMainColor : Flash_BaseSecondaryColor);
+	}
+	
+	if (g > Flash_BaseSecondaryColor)
+	{
+		g -= Flash_SecondaryDecay;
+		if (g < Flash_BaseSecondaryColor)
+			g = Flash_BaseSecondaryColor;
+	}
+	
+	if (b > (team == TFTeam_Blue ? Flash_BaseMainColor : Flash_BaseSecondaryColor))
+	{
+		b -= (team == TFTeam_Blue ? Flash_MainDecay : Flash_SecondaryDecay);
+		if (b < (team == TFTeam_Blue ? Flash_BaseMainColor : Flash_BaseSecondaryColor))
+			b = (team == TFTeam_Blue ? Flash_BaseMainColor : Flash_BaseSecondaryColor);
+	}
+	
+	if (a > Flash_BaseAlpha)
+	{
+		a -= Flash_AlphaDecay;
+		if (a < Flash_BaseAlpha)
+			a = Flash_BaseAlpha;
+	}
+	
+	SetEntityRenderColor(shield, r, g, b, a);
+	
+	RequestFrame(Shield_FlashDecay, EntIndexToEntRef(shield));
 }
 
 public void Shield_ClearHits(int shield)
@@ -578,7 +643,7 @@ public void Shield_ClearHits(int shield)
 
 public void CF_OnFakeMediShieldCollision(int shield, int collider, int owner)
 {
-	if (!IsValidClient(owner))
+	if (!IsValidClient(owner) || !b_IsShield[shield])
 		return;
 		
 	if (!IsValidMulti(collider, true, _, true, grabEnemyTeam(owner)))
@@ -626,8 +691,16 @@ public void CF_OnFakeMediShieldCollision(int shield, int collider, int owner)
 		EmitSoundToClient(owner, SOUND_SHIELD_HIT);
 		f_NextShieldHit[shield][collider] = gt + f_ShieldHitRate[shield];
 		
-		Shield_Flash(shield, owner);
+		Shield_Flash(shield);
 	}
+}
+
+public Action CF_OnFakeMediShieldDamaged(int shield, int attacker, int inflictor, float &damage, int &damagetype, int owner)
+{
+	if (b_IsShield[shield])
+		Shield_Flash(shield);
+		
+	return Plugin_Continue;
 }
 
 public void Shield_DealDamage(DataPack pack)
@@ -642,12 +715,16 @@ public void Shield_DealDamage(DataPack pack)
 		SDKHooks_TakeDamage(collider, owner, owner, dmg);
 }
 
-public void Shield_Flash(int shield, int owner)
+public void Shield_Flash(int shield)
 {
-	if (!IsValidClient(owner))
-		return;
-		
-	//TODO: MAKE IT FLASH
+	TFTeam team = view_as<TFTeam>(GetEntProp(shield, Prop_Send, "m_iTeamNum"));
+	
+	int r = (team == TFTeam_Red ? Flash_MaxMainColor : Flash_MaxSecondaryColor);
+	int g = Flash_MaxSecondaryColor;
+	int b = (team == TFTeam_Blue ? Flash_MaxMainColor : Flash_MaxSecondaryColor);
+	int a = Flash_MaxAlpha;
+	
+	SetEntityRenderColor(shield, r, g, b, a);
 }
 
 public Action Shield_PreThink(int client)
