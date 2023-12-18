@@ -30,6 +30,7 @@ float f_UltScale[MAXPLAYERS + 1] = { 0.0, ... };
 float f_M2Scale[MAXPLAYERS + 1] = { 0.0, ... };
 float f_M3Scale[MAXPLAYERS + 1] = { 0.0, ... };
 float f_RScale[MAXPLAYERS + 1] = { 0.0, ... };
+float f_NextShieldCollisionForward[2049][2049];
 float f_ChargeRetain = 0.0;
 
 char s_UltName[MAXPLAYERS + 1][255];
@@ -84,6 +85,8 @@ GlobalForward g_UltChargeApplied;
 GlobalForward g_ProjectileTeamChanged;
 GlobalForward g_PassFilter;
 GlobalForward g_ShouldCollide;
+GlobalForward g_FakeMediShieldCollision;
+GlobalForward g_FakeMediShieldDamaged;
 
 int i_GenericProjectileOwner[2049] = { -1, ... };
 int i_HealingDone[MAXPLAYERS + 1] = { 0, ... };
@@ -139,6 +142,8 @@ public void CFA_MakeForwards()
 	g_ProjectileTeamChanged = new GlobalForward("CF_OnGenericProjectileTeamChanged", ET_Ignore, Param_Cell, Param_Cell);
 	g_PassFilter = new GlobalForward("CF_OnPassFilter", ET_Event, Param_Cell, Param_Cell, Param_CellByRef);
 	g_ShouldCollide = new GlobalForward("CF_OnShouldCollide", ET_Event, Param_Cell, Param_Cell, Param_CellByRef);
+	g_FakeMediShieldCollision = new GlobalForward("CF_OnFakeMediShieldCollision", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
+	g_FakeMediShieldDamaged = new GlobalForward("CF_OnFakeMediShieldDamaged", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_FloatByRef, Param_CellByRef, Param_Cell);
 }
 
 public void CFA_OGF()
@@ -2362,6 +2367,21 @@ public Action CH_ShouldCollide(int ent1, int ent2, bool &result)
 			ReturnVal = Plugin_Changed;
 			CallForward = false;
 		}
+		/*else
+		{
+			int owner;
+			if (b_IsMedigunShield[ent1])
+			{
+				owner = GetEntPropEnt(ent1, Prop_Send, "m_hOwnerEntity");
+				MediShield_CollisionForward(ent1, ent2, owner);
+			}
+			
+			if (b_IsMedigunShield[ent2])
+			{
+				owner = GetEntPropEnt(ent2, Prop_Send, "m_hOwnerEntity");
+				MediShield_CollisionForward(ent2, ent1, owner);
+			}
+		}*/
 	}
 	
 	if (CallForward)
@@ -2376,6 +2396,40 @@ public Action CH_ShouldCollide(int ent1, int ent2, bool &result)
 	}
 	
 	return ReturnVal;
+}
+
+public void MediShield_CollisionForward(int ent1, int ent2, int owner)
+{
+	float gt = GetGameTime();
+	if (gt > f_NextShieldCollisionForward[ent1][ent2])
+	{
+		Call_StartForward(g_FakeMediShieldCollision);
+		
+		Call_PushCell(ent1);
+		Call_PushCell(ent2);
+		Call_PushCell(owner);
+		
+		Call_Finish();
+		
+		f_NextShieldCollisionForward[ent1][ent2] = gt + 0.2;
+	}
+}
+
+public Action MediShield_DamageForward(int shield, int attacker, int inflictor, float &damage, int &damagetype, int owner)
+{
+	Call_StartForward(g_FakeMediShieldDamaged);
+	
+	Call_PushCell(shield);
+	Call_PushCell(attacker);
+	Call_PushCell(inflictor);
+	Call_PushFloatRef(damage);
+	Call_PushCellRef(damagetype);
+	Call_PushCell(owner);
+	
+	Action returnVal;
+	Call_Finish(returnVal);
+	
+	return returnVal;
 }
 
 public Action CH_PassFilter(int ent1, int ent2, bool &result)
@@ -2429,6 +2483,20 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 			ReturnVal = Plugin_Changed;
 			CallForward = false;
 		}
+		/*else
+		{
+			int owner;
+			if (b_IsMedigunShield[ent1])
+			{
+				owner = GetEntPropEnt(ent1, Prop_Send, "m_hOwnerEntity");
+				MediShield_CollisionForward(ent1, ent2, owner);
+			}
+			if (b_IsMedigunShield[ent2])
+			{
+				owner = GetEntPropEnt(ent2, Prop_Send, "m_hOwnerEntity");
+				MediShield_CollisionForward(ent2, ent1, owner);
+			}
+		}*/
 	}
 	
 	if (CallForward)
@@ -2453,12 +2521,10 @@ public Native_CF_CreateShieldWall(Handle plugin, int numParams)
 	GetNativeString(3, skin, sizeof(skin));
 	float scale = GetNativeCell(4);
 	float health = GetNativeCell(5);
-	float damage = GetNativeCell(6);
-	float knockback = GetNativeCell(7);
 	float pos[3], ang[3];
-	GetNativeArray(8, pos, sizeof(pos));
-	GetNativeArray(9, ang, sizeof(ang));
-	float lifespan = GetNativeCell(10);
+	GetNativeArray(6, pos, sizeof(pos));
+	GetNativeArray(7, ang, sizeof(ang));
+	float lifespan = GetNativeCell(8);
 	
 	int prop = CreateEntityByName("prop_physics_override");
 	if (IsValidEntity(prop))
@@ -2489,6 +2555,7 @@ public Native_CF_CreateShieldWall(Handle plugin, int numParams)
 		SetEntityGravity(prop, 0.0);
 		
 		SDKHook(prop, SDKHook_OnTakeDamage, Shield_OnTakeDamage);
+		SDKHook(prop, SDKHook_Touch, Shield_OnTouch);
 		
 		if (lifespan > 0.0)
 		{
@@ -2496,9 +2563,21 @@ public Native_CF_CreateShieldWall(Handle plugin, int numParams)
 		}
 		
 		TeleportEntity(prop, pos, ang, NULL_VECTOR);
+		
+		for (int i = 0; i <= 2048; i++)
+		{
+			f_NextShieldCollisionForward[prop][i] = 0.0;
+		}
 	}
 	
 	return prop;
+}
+
+public Action Shield_OnTouch(int shield, int collider)
+{
+	int owner = GetEntPropEnt(shield, Prop_Data, "m_hOwnerEntity");
+	MediShield_CollisionForward(shield, collider, owner);
+	return Plugin_Continue;
 }
 
 public Action Shield_OnTakeDamage(int prop, int &attacker, int &inflictor, float &damage, int &damagetype) 
@@ -2511,7 +2590,7 @@ public Action Shield_OnTakeDamage(int prop, int &attacker, int &inflictor, float
 	}
 	else
 	{
-		//TODO: Trigger shield flash effect
+		return MediShield_DamageForward(prop, attacker, inflictor, damage, damagetype, owner);
 	}
 	
 	return Plugin_Changed;
@@ -2547,8 +2626,6 @@ bool MediShield_Collision(int ent1, int ent2)
 		{
 			if (TF2_GetClientTeam(ent2) != TF2_GetClientTeam(ent1Owner))
 			{
-				//TODO: Damage and knockback.
-				//MediShield_DealDamage(ent1, ent1Owner, ent2);
 				return false;
 			}
 			
@@ -2568,8 +2645,6 @@ bool MediShield_Collision(int ent1, int ent2)
 		{
 			if (TF2_GetClientTeam(ent1) != TF2_GetClientTeam(ent2Owner))
 			{
-				//TODO: Damage and knockback.
-				//MediShield_DealDamage(ent2, ent2Owner, ent1);
 				return false;
 			}
 			

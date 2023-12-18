@@ -252,6 +252,29 @@ forward Action CF_OnTakeDamageAlive_Post(int victim, int &attacker, int &inflict
 	float damageForce[3], float damagePosition[3], int &damagecustom);
 	
 /**
+ * Called when a simulated medigun shield created by CF_CreateShieldWall is damaged.
+ *
+ * @param victim					The shield which took damage.
+ * @param attacker					The player who dealt the damage.
+ * @param inflictor					The entity which inflicted the damage (EX: Engineer's sentry gun in vanilla TF2)
+ * @param damage					The damage dealt.
+ * @param damagetype				The type of damage dealt.
+ * @param owner						The owner of the shield.
+ *
+ * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
+ */	
+forward Action CF_OnFakeMediShieldDamaged(int shield, int attacker, int inflictor, float &damage, int &damagetype, int weapon, int owner);
+
+/**
+ * Called when a simulated medigun shield created by CF_CreateShieldWall collides with another entity.
+ *
+ * @param victim					The shield which collided.
+ * @param attacker					The entity the shield collided with.
+ * @param owner						The shield's owner.
+ */	
+forward void CF_OnFakeMediShieldCollision(int shield, int collider, int owner);
+	
+/**
  * Called when a player's Chaos Fortress killstreak is changed.
  *
  * @param client			The client whose killstreak was changed.
@@ -1141,15 +1164,13 @@ native int CF_CreateHealthPickup(int owner, float amt, float radius, int mode, f
  * @param skin					Model skin to be used.
  * @param scale					Model scale.
  * @param health				How much health does the medigun shield have?
- * @param damage				Damage dealt to enemies who touch the medigun shield.
- * @param knockback				Knockback force applied to enemies who touch the medigun shield.
  * @param pos					Position to spawn the medigun shield at.
  * @param ang					Angles to spawn the medigun shield with.
  * @param lifespan				How long should the medigun shield be active? (0.0 or below: infinite)
  *
  * @return	The entity index of the medigun shield, or -1 if it fails to spawn.
  */
-native int CF_CreateShieldWall(int owner, char model[255], char skin[16], float scale, float health, float damage = 0.0, float knockback = 0.0, float pos[3], float ang[3], float lifespan = 0.0);
+native int CF_CreateShieldWall(int owner, char model[255], char skin[16], float scale, float health, float pos[3], float ang[3], float lifespan = 0.0);
 
 /**
  * Inflicts generic area-of-effect damage within a specified radius

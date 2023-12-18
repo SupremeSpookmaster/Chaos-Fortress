@@ -20,6 +20,8 @@ int glowModel;
 #define PARTICLE_REFINED_LAUNCH_BLUE	"spell_lightningball_hit_blue"
 #define PARTICLE_REFINED_SPAWN			"merasmus_spawn_flash2"
 #define PARTICLE_REFINED_DESPAWN		"mvm_loot_smoke"
+#define PARTICLE_SHIELD_RED				"drg_cow_explosioncore_charged"
+#define PARTICLE_SHIELD_BLUE			"drg_cow_explosioncore_charged_blue"
 
 #define PARTICLE_REFINED_EXPLODE		"mvm_cash_explosion"
 
@@ -27,11 +29,13 @@ int glowModel;
 
 #define SOUND_BOMB_EXPLODE				"weapons/explode1.wav"
 #define SOUND_BOMB_LOOP					"weapons/cow_mangler_idle.wav"
+#define SOUND_SHIELD_HIT				"misc/halloween/spell_lightning_ball_impact.wav"
 
 public void OnMapStart()
 {
 	PrecacheSound(SOUND_BOMB_EXPLODE);
 	PrecacheSound(SOUND_BOMB_LOOP);
+	PrecacheSound(SOUND_SHIELD_HIT);
 	
 	PrecacheModel(MODEL_REFINED);
 	
@@ -513,12 +517,14 @@ bool b_IsShield[2049] = { false, ... };
 float f_ShieldBaseSpeed[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ShieldDistance[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ShieldHeight[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ShieldDMG[2049] = { 0.0, ... };
+float f_ShieldKB[2049] = { 0.0, ... };
+float f_ShieldHitRate[2049] = { 0.0, ... };
+float f_NextShieldHit[2049][MAXPLAYERS + 1];
 
 public void Shield_Activate(int client, char abilityName[255])
 {
 	float hp = CF_GetArgF(client, DEMOPAN, abilityName, "health");
-	float damage = CF_GetArgF(client, DEMOPAN, abilityName, "damage");
-	float kb = CF_GetArgF(client, DEMOPAN, abilityName, "knockback");
 	float lifespan = CF_GetArgF(client, DEMOPAN, abilityName, "lifespan");
 	float scale = CF_GetArgF(client, DEMOPAN, abilityName, "scale");
 	f_ShieldDistance[client] = CF_GetArgF(client, DEMOPAN, abilityName, "distance");
@@ -540,7 +546,7 @@ public void Shield_Activate(int client, char abilityName[255])
 	pos[1] -= f_ShieldHeight[client] * buffer[1];
 	pos[2] -= f_ShieldHeight[client] * buffer[2];
 	
-	int shield = CF_CreateShieldWall(client, model, TF2_GetClientTeam(client) == TFTeam_Red ? "0" : "1", scale, hp, damage, kb, pos, ang, lifespan);
+	int shield = CF_CreateShieldWall(client, model, TF2_GetClientTeam(client) == TFTeam_Red ? "0" : "1", scale, hp, pos, ang, lifespan);
 	
 	if (IsValidEntity(shield))
 	{
@@ -553,7 +559,95 @@ public void Shield_Activate(int client, char abilityName[255])
 		f_ShieldBaseSpeed[client] = CF_GetCharacterSpeed(client);
 		CF_SetCharacterSpeed(client, CF_GetArgF(client, DEMOPAN, abilityName, "speed"));
 		CF_PlayRandomSound(client, "", "sound_medigun_shield_start");
+		
+		f_ShieldDMG[shield] = CF_GetArgF(client, DEMOPAN, abilityName, "damage");
+		f_ShieldKB[shield] = CF_GetArgF(client, DEMOPAN, abilityName, "knockback");
+		f_ShieldHitRate[shield] = CF_GetArgF(client, DEMOPAN, abilityName, "hit_rate");
+		
+		Shield_ClearHits(shield);
 	}
+}
+
+public void Shield_ClearHits(int shield)
+{
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		f_NextShieldHit[shield][i] = 0.0;
+	}
+}
+
+public void CF_OnFakeMediShieldCollision(int shield, int collider, int owner)
+{
+	if (!IsValidClient(owner))
+		return;
+		
+	if (!IsValidMulti(collider, true, _, true, grabEnemyTeam(owner)))
+		return;
+		
+	float gt = GetGameTime();
+	if (f_NextShieldHit[shield][collider] > gt)
+		return;
+		
+	bool AtLeastOne = false;
+	if (f_ShieldDMG[shield] > 0.0)
+	{
+		DataPack pack = new DataPack();
+		WritePackCell(pack, GetClientUserId(owner));
+		WritePackCell(pack, GetClientUserId(collider));
+		WritePackFloat(pack, f_ShieldDMG[shield]);
+		RequestFrame(Shield_DealDamage, pack);
+		
+		AtLeastOne = true;
+	}
+	
+	float pos[3];
+	GetClientAbsOrigin(collider, pos);
+	pos[2] += 40.0;
+	
+	if (f_ShieldKB[shield] > 0.0)
+	{
+		float dummy[3], ang[3], vel[3];
+		GetAngleToPoint(shield, pos, dummy, ang, _, _, f_ShieldHeight[owner]);
+		
+		GetAngleVectors(ang, dummy, NULL_VECTOR, NULL_VECTOR);
+		vel[0] = dummy[0] * f_ShieldKB[shield];
+		vel[1] = dummy[1] * f_ShieldKB[shield];
+		vel[2] = dummy[2] * f_ShieldKB[shield] + 100.0;
+		
+		TeleportEntity(collider, NULL_VECTOR, NULL_VECTOR, vel);
+		
+		AtLeastOne = true;
+	}
+	
+	if (AtLeastOne)
+	{
+		SpawnParticle(pos, TF2_GetClientTeam(owner) == TFTeam_Red ? PARTICLE_SHIELD_RED : PARTICLE_SHIELD_BLUE, 3.0);
+		EmitSoundToClient(collider, SOUND_SHIELD_HIT);
+		EmitSoundToClient(owner, SOUND_SHIELD_HIT);
+		f_NextShieldHit[shield][collider] = gt + f_ShieldHitRate[shield];
+		
+		Shield_Flash(shield, owner);
+	}
+}
+
+public void Shield_DealDamage(DataPack pack)
+{
+	ResetPack(pack);
+	int owner = GetClientOfUserId(ReadPackCell(pack));
+	int collider = GetClientOfUserId(ReadPackCell(pack));
+	float dmg = ReadPackFloat(pack);
+	delete pack;
+	
+	if (IsValidClient(owner) && IsValidMulti(collider))
+		SDKHooks_TakeDamage(collider, owner, owner, dmg);
+}
+
+public void Shield_Flash(int shield, int owner)
+{
+	if (!IsValidClient(owner))
+		return;
+		
+	//TODO: MAKE IT FLASH
 }
 
 public Action Shield_PreThink(int client)
@@ -598,7 +692,6 @@ public void Shield_End(int client, char abilityName[255], bool resupply)
 		}
 		else
 		{
-			//Release the shield and leave it in place.
 			CF_PlayRandomSound(client, "", "sound_medigun_shield_end");
 		}
 	}
@@ -629,6 +722,7 @@ public void OnEntityDestroyed(int entity)
 		Bomb_Particle[entity] = -1;
 		b_IsABomb[entity] = false;
 		b_IsShield[entity] = false;
+		Shield_ClearHits(entity);
 		
 		if (b_IsResourceProp[entity])
 		{

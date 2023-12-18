@@ -17,9 +17,12 @@
 //		- Count Heavnich:
 //			- Optional: properly implement mega deflector weapon sounds.
 //		- Demopan:
-//			- Find a proper "refined metal" model to use instead of the wad of cash.
 //			- Make Ultimate Ability, "GLOBAL TRADE".
-//			- Write CF_CreateShieldWall native and use it for "Refined Protection" ability.
+//			- Make various improvements to CF_CreateShieldWall:
+//				- Add flash effect when it repels enemies or takes damage.
+//				- Figure out how to let allies shoot bullets through it, currently it blocks ALL hitscan not just enemies.
+//				- Figure out a way to let custom damage sources deal damage to shields.
+//				- Include shields in the generic AOE native.
 //			- Tinker with shield charge attributes.
 //		- Future Development:
 //			- Look into using the m_afButtonForced property.
@@ -74,7 +77,7 @@
 //	- ALL: Clipless weapons (sniper rifle, minigun, flamethrower) can pick up ammo from dispensers/the payload, but do not actually replenish ammo upon doing so, and cannot pick up ammo packs. This will make characters like Heavnich useless, so it MUST be fixed before the open beta.
 //			- Try messing around with the max ammo/clip size attributes.
 //	- DEVELOPMENT: The change to the wearables system which fixed demo shields not having a charge meter also broke cosmetic styles.
-//	- DEVELOPMENT: Using the "precache" section of the character config will cause that character to not load, and will break the !characters menu.
+//	- DEVELOPMENT: Using the "precache" section of the character config for model precaches will cause that character to not load, and will break the !characters menu.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
