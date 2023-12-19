@@ -11,7 +11,7 @@
 //
 //	- IMMEDIATE PLANS:
 //		- Spookmaster Bones:
-//			- Maybe make him get a *little* bit bigger each time he absorbs a Soul?
+//			- Make him quieter.
 //		- Orbital Sniper:
 //			- Make custom sounds and implement them. Remove the DSP effect attribute once this is done.
 //		- Count Heavnich:
@@ -19,10 +19,10 @@
 //		- Demopan:
 //			- Make Ultimate Ability, "GLOBAL TRADE".
 //			- Make various improvements to CF_CreateShieldWall:
-//				- Add flash effect when it repels enemies or takes damage.
 //				- Figure out how to let allies shoot bullets through it, currently it blocks ALL hitscan not just enemies.
 //				- Figure out a way to let custom damage sources deal damage to shields.
 //				- Include shields in the generic AOE native.
+//				- Include shields in the default trace.
 //			- Tinker with shield charge attributes.
 //		- Future Development:
 //			- Look into using the m_afButtonForced property.
@@ -30,28 +30,24 @@
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////
 //		- Mercenary:
-//			- This character in general is *pathetically* weak. Specifically, his gun is nearly useless and he gets chewed up too quickly.
-//			- Buff gun damage slightly, reduce gun falloff by about 33%, increase gun reload speed and clip size.
+//			- None! (Pending public opinion during beta)
 //		////////////////////////////////////////////
 //		- Spookmaster Bones:
 //			- Required ult charge is definitely too low, skeletons spawned by ult kills allow ults to snowball into each other.
 //			- Any kill will grant a soul, not just melee. This encourages sitting at a distance and fishing for souls risk-free with Skull Servants instead of getting in and fighting.
 //				- Make players drop timed soul pickups that the SB player needs to manually pick up to gain the soul. Upon being picked up, these souls immediately heal the user for 75 HP.
-//					- This is a fairly drastic change. Only do this if people think SB is overpowered (which is entirely possible).
+//					- This is a fairly drastic change. Only do this if people think SB is overpowered.
 //					- Thanks to all of the work we just put into fake health kits, this should be super easy to implement!
 //		////////////////////////////////////////////
 //		- Orbital Sniper:
 //			- There's not a lot of viable counterplay against an Orbital hugging the skybox, besides having another Orbital counter-snipe them.
 //				- This will be solved with future characters who also have decent ranged choices.
-//			- The rifle on its own deals enough damage that you don't really need to use the height advantage gimmick most of the time.
-//				- Make base damage lower and increase the strength of the height advantage gimmick. This might make his damage feel "random" but it's better than free 550 damage headshots without engaging with the character's main gimmick at all.
 //		////////////////////////////////////////////
 //		- Count Heavnich:
-//			- Minigun damage might be a little too big? +10% bullets per shot and +15% rate of fire aren't big numbers, but they add up when put on an already pretty beefy weapon.
-//			- Still have yet to properly test ult charge to see if it's too fast or too slow.
+//			- "Chow Down" might be too strong compared to "Share Sandvich", resulting in players never using Share.
 //		////////////////////////////////////////////
 //		- Demopan:
-//			- Using Refined Bombs to blast jump *might* give him too much mobility for a tank. At the very least, I don't think it's reasonable for him to have so much mobility and ALSO have 700 max HP.
+//			- Using Profit Blast to blast jump *might* give him too much mobility for a tank.
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Everything that happens on client disconnect (possibly already covered, not sure).
@@ -65,6 +61,7 @@
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
 //	- For some reason, players get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? It's invisible while alive but becomes visible on death. This has no effect on gameplay but it's really ugly. Honestly baffling.
+//			- This may have fixed itself, I never see the Apparatchik's Apparel anymore.
 //	- Certain hats, when equipped via the wearable system, usually do not visually appear on bots (but they do work *sometimes*). Count Heavnich's "Noble Amassment of Hats" is an example of such a hat. 
 //	- COUNT HEAVNICH: I don't know how, but "Chow Down" *sometimes* still causes you to T-pose when it ends. This is fixed immediately by switching weapons, and has no permanent side effects. It does look very unprofessional, though, so I am inclined to find a fix if possible.
 //
