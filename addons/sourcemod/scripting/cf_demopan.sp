@@ -651,7 +651,7 @@ public void CF_OnFakeMediShieldCollision(int shield, int collider, int owner)
 	GetClientAbsOrigin(collider, pos);
 	pos[2] += 40.0;
 	
-	if (f_ShieldKB[shield] > 0.0)
+	if (f_ShieldKB[shield] > 0.0 && !TF2_IsPlayerInCondition(collider, TFCond_MegaHeal))
 	{
 		float dummy[3], ang[3], vel[3];
 		GetAngleToPoint(shield, pos, dummy, ang, _, _, f_ShieldHeight[owner]);
@@ -659,7 +659,7 @@ public void CF_OnFakeMediShieldCollision(int shield, int collider, int owner)
 		GetAngleVectors(ang, dummy, NULL_VECTOR, NULL_VECTOR);
 		vel[0] = dummy[0] * f_ShieldKB[shield];
 		vel[1] = dummy[1] * f_ShieldKB[shield];
-		vel[2] = dummy[2] * f_ShieldKB[shield] + 100.0;
+		vel[2] = dummy[2] * f_ShieldKB[shield] + 200.0;
 		
 		TeleportEntity(collider, NULL_VECTOR, NULL_VECTOR, vel);
 		
