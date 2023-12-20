@@ -1157,7 +1157,7 @@ native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit);
 native int CF_CreateHealthPickup(int owner, float amt, float radius, int mode, float lifespan, char plugin[255], Function filter, float pos[3], char model[255] = "models/items/medkit_medium.mdl", char sequence[255] = "idle", float rate = 1.0, float scale = 1.0, int skin = 0, char sound[255] = "items/smallmedkit1.wav", float hpMult = 1.0, char physModel[255] = "models/items/medkit_medium.mdl", char redParticle[255] = "healthgained_red_large", char blueParticle[255] = "healthgained_blu_large");
 
 /**
- * Creates a simulated medigun shield
+ * Creates a simulated medigun shield by using a physics prop.
  *
  * @param owner					The client who owns the medigun shield.
  * @param model					The model to be used for the medigun shield. THIS MODEL MUST HAVE WORKING PHYSICS!
@@ -1171,6 +1171,24 @@ native int CF_CreateHealthPickup(int owner, float amt, float radius, int mode, f
  * @return	The entity index of the medigun shield, or -1 if it fails to spawn.
  */
 native int CF_CreateShieldWall(int owner, char model[255], char skin[16], float scale, float health, float pos[3], float ang[3], float lifespan = 0.0);
+
+/**
+ * Retrieves the remaining HP of a simulated medigun shield.
+ *
+ * @param shield					The shield.
+ *
+ * @return	The remaining HP of the shield, or 0.0 if the entity is not a simulated medigun shield.
+ */
+native float CF_GetShieldWallHealth(int shield);
+
+/**
+ * Retrieves the max HP of a simulated medigun shield.
+ *
+ * @param shield					The shield.
+ *
+ * @return	The max HP of the shield, or 0.0 if the entity is not a simulated medigun shield.
+ */
+native float CF_GetShieldWallMaxHealth(int shield);
 
 /**
  * Inflicts generic area-of-effect damage within a specified radius

@@ -20,6 +20,7 @@
 //			- Make Ultimate Ability, "GLOBAL TRADE".
 //			- Make various improvements to CF_CreateShieldWall:
 //				- Figure out how to let allies shoot bullets through it, currently it blocks ALL hitscan not just enemies.
+//				- Make a custom model for the shield wall with its own animations. There should be 5 animations total: one for full health, one for partially damaged, one for decently damaged, one for heavily damaged, and one for when it breaks.
 //				- Figure out a way to let custom damage sources deal damage to shields.
 //				- Include shields in the generic AOE native.
 //				- Include shields in the default trace.
@@ -75,6 +76,7 @@
 //			- Try messing around with the max ammo/clip size attributes.
 //	- DEVELOPMENT: The change to the wearables system which fixed demo shields not having a charge meter also broke cosmetic styles.
 //	- DEVELOPMENT: Using the "precache" section of the character config for model precaches will cause that character to not load, and will break the !characters menu.
+//			- This actually might just be me being an idiot and forgetting to add the "1" before the path. Test later.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

@@ -26,6 +26,7 @@ int glowModel;
 #define PARTICLE_REFINED_EXPLODE		"mvm_cash_explosion"
 
 #define MODEL_REFINED					"models/player/items/taunts/cash_wad.mdl"
+#define MODEL_SHIELD_DAMAGED			"models/chaos_fortress/demopan/refined_shield.mdl"
 
 #define SOUND_BOMB_EXPLODE				"weapons/explode1.wav"
 #define SOUND_BOMB_LOOP					"weapons/cow_mangler_idle.wav"
@@ -38,6 +39,7 @@ public void OnMapStart()
 	PrecacheSound(SOUND_SHIELD_HIT);
 	
 	PrecacheModel(MODEL_REFINED);
+	PrecacheModel(MODEL_SHIELD_DAMAGED);
 	
 	lgtModel = PrecacheModel("materials/sprites/lgtning.vmt");
 	glowModel = PrecacheModel("materials/sprites/glow02.vmt");
@@ -491,6 +493,7 @@ int i_Shield[MAXPLAYERS + 1] = { -1, ... };
 
 bool b_HoldingShield[MAXPLAYERS + 1] = { false, ... };
 bool b_IsShield[2049] = { false, ... };
+bool b_ShieldIsDamaged[2049] = { false, ... };
 
 float f_ShieldBaseSpeed[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ShieldDistance[MAXPLAYERS + 1] = { 0.0, ... };
@@ -499,6 +502,7 @@ float f_ShieldDMG[2049] = { 0.0, ... };
 float f_ShieldKB[2049] = { 0.0, ... };
 float f_ShieldHitRate[2049] = { 0.0, ... };
 float f_ShieldBlockCollision[2049] = { 0.0, ... };
+float f_ShieldAnimTime[2049] = { 0.0, ... };
 float f_NextShieldHit[2049][MAXPLAYERS + 1];
 
 int Flash_BaseMainColor = 160;
@@ -544,6 +548,8 @@ public void Shield_Activate(int client, char abilityName[255])
 		i_Shield[client] = EntIndexToEntRef(shield);
 		b_HoldingShield[client] = true;
 		b_IsShield[shield] = true;
+		b_ShieldIsDamaged[shield] = false;
+		f_ShieldAnimTime[shield] = 0.0;
 		SetEntityMoveType(shield, MOVETYPE_NONE);
 		SDKUnhook(client, SDKHook_PreThink, Shield_PreThink);
 		SDKHook(client, SDKHook_PreThink, Shield_PreThink);
@@ -567,7 +573,7 @@ public void Shield_Activate(int client, char abilityName[255])
 		RequestFrame(Shield_FlashDecay, EntIndexToEntRef(shield));
 		
 		//Block collision while the user is holding the shield, otherwise you can trap people with them which is very bad.
-		f_ShieldBlockCollision[shield] = 999999.0;
+		//f_ShieldBlockCollision[shield] = 999999.0;
 	}
 }
 
@@ -685,8 +691,79 @@ public void CF_OnFakeMediShieldCollision(int shield, int collider, int owner)
 public Action CF_OnFakeMediShieldDamaged(int shield, int attacker, int inflictor, float &damage, int &damagetype, int owner)
 {
 	if (b_IsShield[shield])
-		Shield_Flash(shield);
+	{
+		float percentage = CF_GetShieldWallHealth(shield) / CF_GetShieldWallMaxHealth(shield);
 		
+		if (!b_ShieldIsDamaged[shield] && percentage <= 0.75)
+		{
+			SetEntityModel(shield, MODEL_SHIELD_DAMAGED);
+			b_ShieldIsDamaged[shield] = true;
+			
+			SetVariantString("idle_lightly_damaged");
+			AcceptEntityInput(shield, "SetAnimation");
+		}
+		
+		if (damage >= CF_GetShieldWallHealth(shield))
+		{
+			//TODO: Break animation
+		}
+		else if (b_ShieldIsDamaged[shield] && GetGameTime() >= f_ShieldAnimTime[shield])
+		{
+			//why does this not do anything God I hate Source
+			//probably because it's a phys prop, TODO: instead of setting the phys prop's model and animations, spawn a prop_dynamic that follows the phys prop
+			//then hide the phys prop by setting its alpha to 0
+			if (percentage > 0.5)
+			{
+				SetVariantString("flinch_lightly_damaged");
+				AcceptEntityInput(shield, "SetAnimation");
+			}
+			else if (percentage <= 0.5 && percentage > 0.25)
+			{
+				SetVariantString("flinch_mid_damaged");
+				AcceptEntityInput(shield, "SetAnimation");
+			}
+			else
+			{
+				SetVariantString("flinch_heavily_damaged");
+				AcceptEntityInput(shield, "SetAnimation");
+			}
+			
+			f_ShieldAnimTime[shield] = GetGameTime() + 0.12;
+			CreateTimer(0.13, Shield_ResetSequence, EntIndexToEntRef(shield), TIMER_FLAG_NO_MAPCHANGE);
+		}
+		
+		Shield_Flash(shield);
+	}
+		
+	return Plugin_Continue;
+}
+
+public Action Shield_ResetSequence(Handle timer, int ref)
+{
+	int shield = EntRefToEntIndex(ref);
+	if (!IsValidEntity(shield))
+		return Plugin_Continue;
+	
+	if (GetGameTime() > f_ShieldAnimTime[shield])
+	{
+		float percentage = CF_GetShieldWallHealth(shield) / CF_GetShieldWallMaxHealth(shield);
+		
+		if (percentage > 0.5)
+		{
+			SetVariantString("idle_lightly_damaged");
+		}
+		else if (percentage <= 0.5 && percentage > 0.25)
+		{
+			SetVariantString("idle_mid_damaged");
+		}
+		else
+		{
+			SetVariantString("idle_heavily_damaged");
+		}
+		
+		AcceptEntityInput(shield, "SetAnimation");
+	}
+	
 	return Plugin_Continue;
 }
 

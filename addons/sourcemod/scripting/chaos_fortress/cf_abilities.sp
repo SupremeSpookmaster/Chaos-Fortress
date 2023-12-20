@@ -33,6 +33,7 @@ float f_RScale[MAXPLAYERS + 1] = { 0.0, ... };
 float f_NextShieldCollisionForward[2049][2049];
 float f_ChargeRetain = 0.0;
 float f_FakeMediShieldHP[2049] = { 0.0, ... };
+float f_FakeMediShieldMaxHP[2049] = { 0.0, ... };
 
 char s_UltName[MAXPLAYERS + 1][255];
 char s_M2Name[MAXPLAYERS + 1][255];
@@ -124,6 +125,8 @@ public void CFA_MakeNatives()
 	CreateNative("CF_GenericAOEDamage", Native_CF_GenericAOEDamage);
 	CreateNative("CF_CreateHealthPickup", Native_CF_CreateHealthPickup);
 	CreateNative("CF_CreateShieldWall", Native_CF_CreateShieldWall);
+	CreateNative("CF_GetShieldWallHealth", Native_CF_GetShieldWallHealth);
+	CreateNative("CF_GetShieldWallMaxHealth", Native_CF_GetShieldWallMaxHealth);
 }
 
 public void CFA_MakeForwards()
@@ -196,6 +199,7 @@ public void CFA_OnEntityDestroyed(int entity)
 	b_IsFakeHealthKit[entity] = false;
 	b_IsMedigunShield[entity] = false;
 	f_FakeMediShieldHP[entity] = 0.0;
+	f_FakeMediShieldMaxHP[entity] = 0.0;
 }
 
 public void CFA_OnEntityCreated(int entity, const char[] classname)
@@ -2520,6 +2524,7 @@ public Native_CF_CreateShieldWall(Handle plugin, int numParams)
 		DispatchKeyValue(prop, "Health", healthChar);
 		SetEntityHealth(prop, RoundFloat(health));
 		f_FakeMediShieldHP[prop] = health;
+		f_FakeMediShieldMaxHP[prop] = health;
 		
 		char scalechar[16];
 		Format(scalechar, sizeof(scalechar), "%f", scale);
@@ -2572,8 +2577,6 @@ public Action Shield_OnTakeDamage(int prop, int &attacker, int &inflictor, float
 	{
 		RemoveEntity(prop);
 	}
-	
-	CPrintToChatAll("The shield took %i damage.", RoundFloat(damage));
 	
 	damage = 0.0;
 	
@@ -2649,6 +2652,32 @@ bool MediShield_Collision(int ent1, int ent2)
 	
 	//All checks returned false, don't do anything.
 	return false;
+}
+
+public any Native_CF_GetShieldWallHealth(Handle plugin, int numParams)
+{
+	int shield = GetNativeCell(1);
+	
+	if (!IsValidEntity(shield))
+		return 0.0;
+		
+	if (!b_IsMedigunShield[shield])
+		return 0.0;
+		
+	return f_FakeMediShieldHP[shield];
+}
+
+public any Native_CF_GetShieldWallMaxHealth(Handle plugin, int numParams)
+{
+	int shield = GetNativeCell(1);
+	
+	if (!IsValidEntity(shield))
+		return 0.0;
+		
+	if (!b_IsMedigunShield[shield])
+		return 0.0;
+		
+	return f_FakeMediShieldMaxHP[shield];
 }
 
 public Native_CF_CreateHealthPickup(Handle plugin, int numParams)
