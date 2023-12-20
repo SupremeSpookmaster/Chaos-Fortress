@@ -31,12 +31,18 @@ int glowModel;
 #define SOUND_BOMB_EXPLODE				"weapons/explode1.wav"
 #define SOUND_BOMB_LOOP					"weapons/cow_mangler_idle.wav"
 #define SOUND_SHIELD_HIT				"misc/halloween/spell_lightning_ball_impact.wav"
+#define SOUND_SHIELD_TAKEDAMAGE			"weapons/fx/rics/ric1.wav"
+#define SOUND_SHIELD_STAGEBREAK			"chaos_fortress/demopan/demopan_shield_break_minor.mp3"
+#define SOUND_SHIELD_FULLBREAK			"chaos_fortress/demopan/demopan_shield_break_final.mp3"
 
 public void OnMapStart()
 {
 	PrecacheSound(SOUND_BOMB_EXPLODE);
 	PrecacheSound(SOUND_BOMB_LOOP);
 	PrecacheSound(SOUND_SHIELD_HIT);
+	PrecacheSound(SOUND_SHIELD_TAKEDAMAGE);
+	PrecacheSound(SOUND_SHIELD_STAGEBREAK);
+	PrecacheSound(SOUND_SHIELD_FULLBREAK);
 	
 	PrecacheModel(MODEL_REFINED);
 	PrecacheModel(MODEL_SHIELD_DAMAGED);
@@ -490,6 +496,7 @@ public MRESReturn Bomb_Explode(int bomb)
 }
 
 int i_Shield[MAXPLAYERS + 1] = { -1, ... };
+int i_ShieldProp[2049] = { -1, ... };
 
 bool b_HoldingShield[MAXPLAYERS + 1] = { false, ... };
 bool b_IsShield[2049] = { false, ... };
@@ -504,6 +511,7 @@ float f_ShieldHitRate[2049] = { 0.0, ... };
 float f_ShieldBlockCollision[2049] = { 0.0, ... };
 float f_ShieldAnimTime[2049] = { 0.0, ... };
 float f_NextShieldHit[2049][MAXPLAYERS + 1];
+float f_OldPercentage[2049] = { 1.0, ... };
 
 int Flash_BaseMainColor = 160;
 int Flash_BaseSecondaryColor = 60;
@@ -583,6 +591,12 @@ public void Shield_FlashDecay(int ref)
 	if (!IsValidEntity(shield))
 		return;
 		
+	if (b_ShieldIsDamaged[shield])
+	{
+		SetEntityRenderColor(shield, 0, 0, 0, 0);
+		return;
+	}
+	
 	TFTeam team = view_as<TFTeam>(GetEntProp(shield, Prop_Send, "m_iTeamNum"));
 	
 	int r, g, b, a;
@@ -641,6 +655,8 @@ public void CF_OnFakeMediShieldCollision(int shield, int collider, int owner)
 	if (f_NextShieldHit[shield][collider] > gt)
 		return;
 		
+	int prop = EntRefToEntIndex(i_ShieldProp[shield]);
+		
 	bool AtLeastOne = false;
 	if (f_ShieldDMG[shield] > 0.0)
 	{
@@ -679,7 +695,7 @@ public void CF_OnFakeMediShieldCollision(int shield, int collider, int owner)
 		EmitSoundToClient(owner, SOUND_SHIELD_HIT);
 		f_NextShieldHit[shield][collider] = gt + f_ShieldHitRate[shield];
 		
-		Shield_Flash(shield);
+		Shield_Flash(IsValidEntity(prop) ? prop : shield);
 		
 		if (gt <= f_ShieldBlockCollision[shield])
 		{
@@ -688,63 +704,186 @@ public void CF_OnFakeMediShieldCollision(int shield, int collider, int owner)
 	}
 }
 
+public int Shield_CreateProp(int shield)
+{
+	if (!IsValidEntity(shield))
+		return -1;
+		
+	int prop = CreateEntityByName("prop_dynamic_override");
+	if (IsValidEntity(prop))
+	{
+		int owner = GetEntPropEnt(shield, Prop_Send, "m_hOwnerEntity");
+		int team = GetEntProp(shield, Prop_Send, "m_iTeamNum");
+		
+		SetEntPropEnt(prop, Prop_Send, "m_hOwnerEntity", owner);
+		SetEntProp(prop, Prop_Send, "m_iTeamNum", team);
+		
+		SetEntityModel(prop, MODEL_SHIELD_DAMAGED);
+		DispatchKeyValue(prop, "skin", team == view_as<int>(TFTeam_Red) ? "0" : "1");
+		
+		DispatchSpawn(prop);
+					
+		AcceptEntityInput(prop, "Enable");
+		
+		float pos[3], ang[3];
+		GetEntPropVector(shield, Prop_Send, "m_vecOrigin", pos);
+		GetEntPropVector(shield, Prop_Data, "m_angRotation", ang);
+
+		float scale = GetEntPropFloat(shield, Prop_Send, "m_flModelScale");
+		SetEntPropFloat(prop, Prop_Send, "m_flModelScale", scale); 
+
+		//ang[1] += 180.0;
+		TeleportEntity(prop, pos, ang, NULL_VECTOR);
+		SetEntityRenderMode(prop, RENDER_TRANSALPHA);
+	}
+	
+	return prop;
+}
+
 public Action CF_OnFakeMediShieldDamaged(int shield, int attacker, int inflictor, float &damage, int &damagetype, int owner)
 {
-	if (b_IsShield[shield])
+	if (b_IsShield[shield] && damage > 0.0)
 	{
+		bool soundPlayed = false;
 		float percentage = CF_GetShieldWallHealth(shield) / CF_GetShieldWallMaxHealth(shield);
+		
+		int prop = EntRefToEntIndex(i_ShieldProp[shield]);
 		
 		if (!b_ShieldIsDamaged[shield] && percentage <= 0.75)
 		{
-			SetEntityModel(shield, MODEL_SHIELD_DAMAGED);
-			b_ShieldIsDamaged[shield] = true;
+			prop = Shield_CreateProp(shield);
+			if (IsValidEntity(prop))
+			{
+				i_ShieldProp[shield] = EntIndexToEntRef(prop);
+				RequestFrame(Shield_FlashDecay, EntIndexToEntRef(prop));
+				SetVariantString("idle_lightly_damaged");
+				AcceptEntityInput(prop, "SetAnimation");
+				EmitSoundToAll(SOUND_SHIELD_STAGEBREAK, prop, SNDCHAN_STATIC, 120, _, _, 120);
+				EmitSoundToAll(SOUND_SHIELD_STAGEBREAK, prop, SNDCHAN_STATIC, 120, _, _, 120);
+				EmitSoundToAll(SOUND_SHIELD_STAGEBREAK, prop, SNDCHAN_STATIC, 120, _, _, 120);
+				
+				if (IsValidClient(owner))
+					EmitSoundToClient(owner, SOUND_SHIELD_STAGEBREAK, _, SNDCHAN_STATIC, 120, _, _, 120);
+				
+				if (IsValidClient(attacker))
+					EmitSoundToClient(attacker, SOUND_SHIELD_STAGEBREAK, _, SNDCHAN_STATIC, 120, _, _, 120);
+					
+				soundPlayed = true;
+				
+				SetEntityRenderColor(shield, 0, 0, 0, 0);
+			}
 			
-			SetVariantString("idle_lightly_damaged");
-			AcceptEntityInput(shield, "SetAnimation");
+			b_ShieldIsDamaged[shield] = true;
 		}
 		
-		if (damage >= CF_GetShieldWallHealth(shield))
+		if (damage >= CF_GetShieldWallHealth(shield) && IsValidEntity(prop))
 		{
-			//TODO: Break animation
+			SetVariantString("break");
+			AcceptEntityInput(prop, "SetAnimation");
+			CreateTimer(0.33, Timer_RemoveEntity, EntIndexToEntRef(prop), TIMER_FLAG_NO_MAPCHANGE);
+			RequestFrame(Shield_FadeOut, EntIndexToEntRef(prop));
+			EmitSoundToAll(SOUND_SHIELD_FULLBREAK, prop, SNDCHAN_STATIC, 120);
+			EmitSoundToAll(SOUND_SHIELD_FULLBREAK, prop, SNDCHAN_STATIC, 120);
+			//EmitSoundToAll(SOUND_SHIELD_FULLBREAK, prop, SNDCHAN_STATIC, 120);
+			
+			if (IsValidClient(owner))
+				EmitSoundToClient(owner, SOUND_SHIELD_FULLBREAK, _, SNDCHAN_STATIC, 120);
+				
+			if (IsValidClient(attacker))
+				EmitSoundToClient(attacker, SOUND_SHIELD_FULLBREAK, _, SNDCHAN_STATIC, 120);
+					
+			soundPlayed = true;
 		}
-		else if (b_ShieldIsDamaged[shield] && GetGameTime() >= f_ShieldAnimTime[shield])
+		else if (b_ShieldIsDamaged[shield] && IsValidEntity(prop) && f_ShieldAnimTime[prop] - GetGameTime() < 0.33)
 		{
-			//why does this not do anything God I hate Source
-			//probably because it's a phys prop, TODO: instead of setting the phys prop's model and animations, spawn a prop_dynamic that follows the phys prop
-			//then hide the phys prop by setting its alpha to 0
 			if (percentage > 0.5)
 			{
 				SetVariantString("flinch_lightly_damaged");
-				AcceptEntityInput(shield, "SetAnimation");
+				AcceptEntityInput(prop, "SetAnimation");
 			}
 			else if (percentage <= 0.5 && percentage > 0.25)
 			{
 				SetVariantString("flinch_mid_damaged");
-				AcceptEntityInput(shield, "SetAnimation");
+				AcceptEntityInput(prop, "SetAnimation");
+				if (f_OldPercentage[prop] > 0.5)
+				{
+					EmitSoundToAll(SOUND_SHIELD_STAGEBREAK, prop, SNDCHAN_STATIC, 120, _, _, 100);
+					EmitSoundToAll(SOUND_SHIELD_STAGEBREAK, prop, SNDCHAN_STATIC, 120, _, _, 100);
+					EmitSoundToAll(SOUND_SHIELD_STAGEBREAK, prop, SNDCHAN_STATIC, 120, _, _, 100);
+					
+					if (IsValidClient(owner))
+						EmitSoundToClient(owner, SOUND_SHIELD_STAGEBREAK, _, SNDCHAN_STATIC, 120, _, _, 100);
+				
+					if (IsValidClient(attacker))
+						EmitSoundToClient(attacker, SOUND_SHIELD_STAGEBREAK, _, SNDCHAN_STATIC, 120, _, _, 100);
+						
+					soundPlayed = true;
+				}
 			}
 			else
 			{
 				SetVariantString("flinch_heavily_damaged");
-				AcceptEntityInput(shield, "SetAnimation");
+				AcceptEntityInput(prop, "SetAnimation");
+				if (f_OldPercentage[prop] > 0.25)
+				{
+					EmitSoundToAll(SOUND_SHIELD_STAGEBREAK, prop, SNDCHAN_STATIC, 120, _, _, 80);
+					EmitSoundToAll(SOUND_SHIELD_STAGEBREAK, prop, SNDCHAN_STATIC, 120, _, _, 80);
+					EmitSoundToAll(SOUND_SHIELD_STAGEBREAK, prop, SNDCHAN_STATIC, 120, _, _, 80);
+					
+					if (IsValidClient(owner))
+						EmitSoundToClient(owner, SOUND_SHIELD_STAGEBREAK, _, SNDCHAN_STATIC, 120, _, _, 80);
+				
+					if (IsValidClient(attacker))
+						EmitSoundToClient(attacker, SOUND_SHIELD_STAGEBREAK, _, SNDCHAN_STATIC, 120, _, _, 80);
+						
+					soundPlayed = true;
+				}
 			}
 			
-			f_ShieldAnimTime[shield] = GetGameTime() + 0.12;
-			CreateTimer(0.13, Shield_ResetSequence, EntIndexToEntRef(shield), TIMER_FLAG_NO_MAPCHANGE);
+			f_ShieldAnimTime[prop] = GetGameTime() + 0.12;
+			DataPack pack = new DataPack();
+			CreateDataTimer(0.13, Shield_ResetSequence, pack, TIMER_FLAG_NO_MAPCHANGE);
+			WritePackCell(pack, EntIndexToEntRef(shield));
+			WritePackCell(pack, EntIndexToEntRef(prop));
+			
+			f_OldPercentage[prop] = percentage;
 		}
 		
-		Shield_Flash(shield);
+		Shield_Flash(IsValidEntity(prop) ? prop : shield);
+		if (!soundPlayed)
+			EmitSoundToAll(SOUND_SHIELD_TAKEDAMAGE, IsValidEntity(prop) ? prop : shield, SNDCHAN_STATIC, 80, _, _, GetRandomInt(80, 110));
 	}
 		
 	return Plugin_Continue;
 }
 
-public Action Shield_ResetSequence(Handle timer, int ref)
+public void Shield_FadeOut(int ref)
 {
-	int shield = EntRefToEntIndex(ref);
-	if (!IsValidEntity(shield))
+	int prop = EntRefToEntIndex(ref);
+	if (!IsValidEntity(prop))
+		return;
+		
+	int r, g, b, a;
+	GetEntityRenderColor(prop, r, g, b, a);
+	a -= 6;
+	if (a < 0)
+		a = 0;
+		
+	SetEntityRenderColor(prop, r, g, b, a);
+	
+	RequestFrame(Shield_FadeOut, ref);
+}
+
+public Action Shield_ResetSequence(Handle timer, DataPack pack)
+{
+	ResetPack(pack);
+	int shield = EntRefToEntIndex(ReadPackCell(pack));
+	int prop = EntRefToEntIndex(ReadPackCell(pack));
+	
+	if (!IsValidEntity(shield) || !IsValidEntity(prop))
 		return Plugin_Continue;
 	
-	if (GetGameTime() > f_ShieldAnimTime[shield])
+	if (GetGameTime() > f_ShieldAnimTime[prop])
 	{
 		float percentage = CF_GetShieldWallHealth(shield) / CF_GetShieldWallMaxHealth(shield);
 		
@@ -761,7 +900,7 @@ public Action Shield_ResetSequence(Handle timer, int ref)
 			SetVariantString("idle_heavily_damaged");
 		}
 		
-		AcceptEntityInput(shield, "SetAnimation");
+		AcceptEntityInput(prop, "SetAnimation");
 	}
 	
 	return Plugin_Continue;
@@ -819,6 +958,17 @@ public Action Shield_PreThink(int client)
 	
 	SetEntProp(shield, Prop_Send, "m_ubInterpolationFrame", frame);
 	
+	int prop = EntRefToEntIndex(i_ShieldProp[shield]);
+	if (IsValidEntity(prop))
+	{
+		//eyeAng[1] += 180.0;
+		frame = GetEntProp(prop, Prop_Send, "m_ubInterpolationFrame");
+	
+		TeleportEntity(prop, pos, eyeAng, NULL_VECTOR);
+	
+		SetEntProp(prop, Prop_Send, "m_ubInterpolationFrame", frame);
+	}
+	
 	return Plugin_Continue;
 }
 
@@ -864,6 +1014,7 @@ public void OnEntityDestroyed(int entity)
 		Bomb_Particle[entity] = -1;
 		b_IsABomb[entity] = false;
 		b_IsShield[entity] = false;
+		i_ShieldProp[entity] = -1;
 		Shield_ClearHits(entity);
 		
 		if (b_IsResourceProp[entity])

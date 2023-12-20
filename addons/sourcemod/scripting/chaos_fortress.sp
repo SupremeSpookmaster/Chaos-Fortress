@@ -77,6 +77,7 @@
 //	- DEVELOPMENT: The change to the wearables system which fixed demo shields not having a charge meter also broke cosmetic styles.
 //	- DEVELOPMENT: Using the "precache" section of the character config for model precaches will cause that character to not load, and will break the !characters menu.
 //			- This actually might just be me being an idiot and forgetting to add the "1" before the path. Test later.
+//	- DEVELOPMENT: I don't know what I did, but suddenly friendly projectiles cannot pass through medigun shields. What the fuck.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

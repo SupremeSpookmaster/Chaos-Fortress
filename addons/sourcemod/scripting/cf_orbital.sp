@@ -438,7 +438,6 @@ public bool Taser_CheckHit(int ent1, int ent2)
 	return !Blocked;
 }
 
-//Need a CH_ShouldCollide filter for world collision
 public void Taser_Collide(int taser, int ent)
 {
 	int owner = GetEntPropEnt(taser, Prop_Send, "m_hOwnerEntity");
