@@ -17,13 +17,9 @@
 //		- Count Heavnich:
 //			- Optional: properly implement mega deflector weapon sounds.
 //		- Demopan:
-//			- Make Ultimate Ability, "GLOBAL TRADE".
-//			- Make various improvements to CF_CreateShieldWall:
-//				- Figure out how to let allies shoot bullets through it, currently it blocks ALL hitscan not just enemies.
-//				- Make a custom model for the shield wall with its own animations. There should be 5 animations total: one for full health, one for partially damaged, one for decently damaged, one for heavily damaged, and one for when it breaks.
-//				- Figure out a way to let custom damage sources deal damage to shields.
-//				- Include shields in the generic AOE native.
-//				- Include shields in the default trace.
+//			- Figure out a way to let custom damage sources deal damage to shields.
+//			- Include shields in the generic AOE native.
+//			- Include shields in the default trace.
 //			- Tinker with shield charge attributes.
 //		- Future Development:
 //			- Look into using the m_afButtonForced property.
@@ -75,6 +71,8 @@
 //	- ALL: Clipless weapons (sniper rifle, minigun, flamethrower) can pick up ammo from dispensers/the payload, but do not actually replenish ammo upon doing so, and cannot pick up ammo packs. This will make characters like Heavnich useless, so it MUST be fixed before the open beta.
 //			- Try messing around with the max ammo/clip size attributes.
 //	- DEVELOPMENT: The change to the wearables system which fixed demo shields not having a charge meter also broke cosmetic styles.
+//	- DEMOPAN: Players can get stuck in his shield if he holds it and they walk into it. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.
+//			- Until a fix is found, the only way to deal with this is to classify it as exploiting and punish players as such. It's unfortunate, but limitations like these are what happens when working in a game engine that's old enough to be in college.
 //	- DEVELOPMENT: I don't know what I did, but suddenly friendly projectiles cannot pass through medigun shields. What the fuck.
 //			- Once this is fixed, medigun shields will FINALLY be done.
 
