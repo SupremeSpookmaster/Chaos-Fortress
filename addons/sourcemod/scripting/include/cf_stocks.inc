@@ -1510,3 +1510,12 @@ stock bool IsPayloadCart(int ent)
 	
 	return StrEqual(the_train, the_ent);
 }
+
+stock float fmax(float n1, float n2)
+{
+	return n1 > n2 ? n1 : n2;
+}
+stock float fmin(float n1, float n2)
+{
+	return n1 < n2 ? n1 : n2;
+}

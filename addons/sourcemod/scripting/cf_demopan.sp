@@ -22,6 +22,9 @@ int glowModel;
 #define PARTICLE_REFINED_DESPAWN		"mvm_loot_smoke"
 #define PARTICLE_SHIELD_RED				"drg_cow_explosioncore_charged"
 #define PARTICLE_SHIELD_BLUE			"drg_cow_explosioncore_charged_blue"
+#define PARTICLE_TRADE_RED				"spell_fireball_small_red"
+#define PARTICLE_TRADE_BLUE				"spell_fireball_small_blue"
+#define PARTICLE_TRADE_EXPLOSION		"ExplosionCore_MidAir"
 
 #define PARTICLE_REFINED_EXPLODE		"mvm_cash_explosion"
 
@@ -34,6 +37,8 @@ int glowModel;
 #define SOUND_SHIELD_TAKEDAMAGE			"weapons/fx/rics/ric1.wav"
 #define SOUND_SHIELD_STAGEBREAK			"chaos_fortress/demopan/demopan_shield_break_minor.mp3"
 #define SOUND_SHIELD_FULLBREAK			"chaos_fortress/demopan/demopan_shield_break_final.mp3"
+#define SOUND_TRADE_EXPLOSION_1			"weapons/explode1.wav"
+#define SOUND_TRADE_EXPLOSION_2			"ui/notification_alert.wav"
 
 public void OnMapStart()
 {
@@ -43,6 +48,8 @@ public void OnMapStart()
 	PrecacheSound(SOUND_SHIELD_TAKEDAMAGE);
 	PrecacheSound(SOUND_SHIELD_STAGEBREAK);
 	PrecacheSound(SOUND_SHIELD_FULLBREAK);
+	PrecacheSound(SOUND_TRADE_EXPLOSION_1);
+	PrecacheSound(SOUND_TRADE_EXPLOSION_2);
 	
 	PrecacheModel(MODEL_REFINED);
 	PrecacheModel(MODEL_SHIELD_DAMAGED);
@@ -683,6 +690,11 @@ public void CF_OnFakeMediShieldCollision(int shield, int collider, int owner)
 		vel[1] = dummy[1] * f_ShieldKB[shield];
 		vel[2] = dummy[2] * f_ShieldKB[shield] + 200.0;
 		
+		if ((GetEntityFlags(collider) & FL_ONGROUND) != 0 || GetEntProp(collider, Prop_Send, "m_nWaterLevel") >= 1)
+			vel[2] = fmax(vel[2], 310.0);
+		else
+			vel[2] += 50.0;
+		
 		TeleportEntity(collider, NULL_VECTOR, NULL_VECTOR, vel);
 		
 		AtLeastOne = true;
@@ -992,9 +1004,104 @@ public void Shield_End(int client, char abilityName[255], bool resupply)
 	b_HoldingShield[client] = false;
 }
 
+float f_TradeEndTime[MAXPLAYERS + 1] = { 0.0, ... };
+float f_TradeNextHit[MAXPLAYERS + 1] = { 0.0, ... };
+float f_TradeRadius[MAXPLAYERS + 1] = { 0.0, ... };
+float f_TradeDamage[MAXPLAYERS + 1] = { 0.0, ... };
+float f_TradeVelocity[MAXPLAYERS + 1] = { 0.0, ... };
+float f_TradeHitRate[MAXPLAYERS + 1] = { 0.0, ... };
+
 public void Trade_Activate(int client, char abilityName[255])
 {
+	float delay = CF_GetArgF(client, DEMOPAN, abilityName, "delay");
+	float duration = CF_GetArgF(client, DEMOPAN, abilityName, "duration");
 	
+	f_TradeEndTime[client] = delay + duration + GetGameTime();
+	f_TradeRadius[client] = CF_GetArgF(client, DEMOPAN, abilityName, "radius");
+	f_TradeDamage[client] = CF_GetArgF(client, DEMOPAN, abilityName, "damage");
+	f_TradeVelocity[client] = CF_GetArgF(client, DEMOPAN, abilityName, "velocity");
+	f_TradeHitRate[client] = CF_GetArgF(client, DEMOPAN, abilityName, "hit_rate");
+	f_TradeNextHit[client] = 0.0;
+	
+	SDKUnhook(client, SDKHook_PreThink, Trade_PreThink);
+	CF_AttachParticle(client, "charge_up", "root", _, delay, 0.0, 0.0, 60.0 * CF_GetCharacterScale(client));
+	TF2_AddCondition(client, TFCond_Ubercharged, delay);
+	TF2_AddCondition(client, TFCond_FreezeInput, delay);
+	TF2_AddCondition(client, TFCond_MegaHeal, delay + duration);
+	SetEntityMoveType(client, MOVETYPE_NONE);
+	CreateTimer(delay, Trade_Begin, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+}
+
+public Action Trade_Begin(Handle begin, int id)
+{
+	int client = GetClientOfUserId(id);
+	if (IsValidClient(client))
+	{
+		SetEntityMoveType(client, MOVETYPE_WALK);
+		SDKUnhook(client, SDKHook_PreThink, Trade_PreThink);
+		SDKHook(client, SDKHook_PreThink, Trade_PreThink);
+		CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_TRADE_RED : PARTICLE_TRADE_BLUE, "flag", _, f_TradeEndTime[client] - GetGameTime());
+	}
+	
+	return Plugin_Continue;
+}
+
+public Action Trade_PreThink(int client)
+{
+	float gt = GetGameTime();
+	if (gt >= f_TradeEndTime[client])
+		return Plugin_Stop;
+		
+	float ang[3], vel[3], buffer[3], pos[3];
+	GetClientEyeAngles(client, ang);
+	GetClientAbsOrigin(client, pos);
+	GetAngleVectors(ang, buffer, NULL_VECTOR, NULL_VECTOR);
+	
+	for (int i = 0; i < 3; i++)
+		vel[i] = buffer[i] * f_TradeVelocity[client];
+		
+	if ((GetEntityFlags(client) & FL_ONGROUND) != 0 || GetEntProp(client, Prop_Send, "m_nWaterLevel") >= 1)
+		vel[2] = fmax(vel[2], 310.0);
+	else
+		vel[2] += 50.0;
+		
+	//int frame = GetEntProp(client, Prop_Send, "m_ubInterpolationFrame");
+	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
+	//SetEntProp(client, Prop_Send, "m_ubInterpolationFrame", frame);
+	
+	if (gt >= f_TradeNextHit[client])
+	{
+		Handle victims = CF_GenericAOEDamage(client, client, client, f_TradeDamage[client], DMG_CLUB | DMG_BLAST | DMG_ALWAYSGIB, f_TradeRadius[client], pos, 99999.0, 0.0, false, false, false);
+		
+		for (int vic = 0; vic < GetArraySize(victims); vic++)
+		{
+			int victim = GetArrayCell(victims, vic);
+			if (IsValidMulti(victim))
+			{
+				TeleportEntity(victim, NULL_VECTOR, NULL_VECTOR, vel);
+			}
+		}
+		
+		delete victims;
+		
+		for (int i = 0; i < GetRandomInt(3, 5); i++)
+		{
+			GetClientAbsOrigin(client, pos);
+			pos[0] += GetRandomFloat(-f_TradeRadius[client], f_TradeRadius[client]);
+			pos[1] += GetRandomFloat(-f_TradeRadius[client], f_TradeRadius[client]);
+			pos[2] += GetRandomFloat(-f_TradeRadius[client], f_TradeRadius[client]);
+			SpawnParticle(pos, PARTICLE_TRADE_EXPLOSION, 2.0);
+		}
+		
+		GetClientAbsOrigin(client, pos);
+		SpawnParticle(pos, PARTICLE_TRADE_EXPLOSION, 2.0);
+		EmitSoundToAll(SOUND_TRADE_EXPLOSION_1, client, SNDCHAN_STATIC);
+		EmitSoundToAll(SOUND_TRADE_EXPLOSION_2, client, SNDCHAN_STATIC);
+		
+		f_TradeNextHit[client] = gt + f_TradeHitRate[client];
+	}
+		
+	return Plugin_Continue;
 }
 
 public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
@@ -1040,6 +1147,7 @@ public void CF_OnCharacterRemoved(int client)
 	i_HeldBomb[client] = -1;
 	b_HoldingShield[client] = false;
 	StopSound(client, SNDCHAN_AUTO, SOUND_BOMB_LOOP);
+	SDKUnhook(client, SDKHook_PreThink, Trade_PreThink);
 }
 
 public bool Passives_Trace(entity, contentsMask)
