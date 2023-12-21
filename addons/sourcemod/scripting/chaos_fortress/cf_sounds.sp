@@ -212,6 +212,9 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 			CanPlay = false;
 		}
 		
+		if (CanPlay && ultType == 0)
+			level -= CF_GetDialogueReduction(source);
+		
 		DeleteCfg(cfgMap);
 	}
 	

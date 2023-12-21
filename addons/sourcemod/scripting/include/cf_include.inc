@@ -68,7 +68,7 @@ public bool CF_DefaultTrace(entity, contentsMask)
 	char classname[255];
 	GetEntityClassname(entity, classname, sizeof(classname));
 	
-	if (StrContains(classname, "tf_projectile") != -1)
+	if (StrContains(classname, "tf_projectile") != -1 || StrContains(classname, "info_") != -1 || StrContains(classname, "trigger_") != -1)
 		return false;
 		
 	return true;
@@ -482,6 +482,20 @@ forward Action CF_OnPassFilter(int ent1, int ent2, bool &result);
  * @return Set result to false and return Plugin_Changed to prevent collision, otherwise return Plugin_Continue.
  */
 forward Action CF_OnShouldCollide(int ent1, int ent2, bool &result);
+
+/**
+ * Called when checking to see if an ability can be used. Only compatible with the default ability types: Ultimate, M2, M3, and Reload.
+ *
+ * @param client		The client who is being checked.
+ * @param plugin		The plugin_name of the ability being checked.
+ * @param ability		The ability_name of the ability being checked.
+ * @param type			The ability slot being checked, such as CF_AbilityType_Ultimate.
+ * @param result 		Set to false and return Plugin_Changed to block the ability from being used. Otherwise, set to true and return Plugin_Continue.
+ *
+ * @return Set result to false and return Plugin_Changed to block the ability, otherwise return Plugin_Continue.
+ */
+forward Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result);
+
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
 ///////////////////////////////////////
@@ -957,6 +971,11 @@ native CF_EndHeldAbility(int client, char pluginName[255], char abilityName[255]
  *
  */
 native CF_ActivateAbilitySlot(int client, int slot);
+
+/**
+ * DEPRECATED; USE CF_IsAbilitySlotBlocked INSTEAD!
+ */
+native CF_CheckIsSlotBlocked(int client, int slot);
 
 /**
  * Checks if a given character has a specified ability.

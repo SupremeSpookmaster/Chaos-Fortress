@@ -22,8 +22,8 @@ int glowModel;
 #define PARTICLE_REFINED_DESPAWN		"mvm_loot_smoke"
 #define PARTICLE_SHIELD_RED				"drg_cow_explosioncore_charged"
 #define PARTICLE_SHIELD_BLUE			"drg_cow_explosioncore_charged_blue"
-#define PARTICLE_TRADE_RED				"spell_fireball_small_red"
-#define PARTICLE_TRADE_BLUE				"spell_fireball_small_blue"
+#define PARTICLE_TRADE_RED				"warp_version"
+#define PARTICLE_TRADE_BLUE				"warp_version"
 #define PARTICLE_TRADE_EXPLOSION		"ExplosionCore_MidAir"
 
 #define PARTICLE_REFINED_EXPLODE		"mvm_cash_explosion"
@@ -1041,7 +1041,18 @@ public Action Trade_Begin(Handle begin, int id)
 		SDKUnhook(client, SDKHook_PreThink, Trade_PreThink);
 		SDKHook(client, SDKHook_PreThink, Trade_PreThink);
 		
-		CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_TRADE_RED : PARTICLE_TRADE_BLUE, "flag", _, f_TradeEndTime[client] - GetGameTime());
+		TF2_AddCondition(client, TFCond_HalloweenKartDash, f_TradeEndTime[client] - GetGameTime());
+		
+		float scale = CF_GetCharacterScale(client);
+		
+		for (float i = 0.0; i > -60.0; i -= 10.0)
+		{
+			CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_TRADE_RED : PARTICLE_TRADE_BLUE, "flag", _, f_TradeEndTime[client] - GetGameTime(), 0.0, 0.0, i * scale);
+		}
+		
+		float pos[3];
+		GetClientAbsOrigin(client, pos);
+		SpawnBigExplosion(pos);
 	}
 	
 	return Plugin_Continue;
@@ -1056,6 +1067,7 @@ public Action Trade_PreThink(int client)
 	float ang[3], vel[3], buffer[3], pos[3];
 	GetClientEyeAngles(client, ang);
 	GetClientAbsOrigin(client, pos);
+	SpawnSpriteExplosion(pos);
 	GetAngleVectors(ang, buffer, NULL_VECTOR, NULL_VECTOR);
 	
 	for (int i = 0; i < 3; i++)
@@ -1091,11 +1103,9 @@ public Action Trade_PreThink(int client)
 			pos[0] += GetRandomFloat(-f_TradeRadius[client], f_TradeRadius[client]);
 			pos[1] += GetRandomFloat(-f_TradeRadius[client], f_TradeRadius[client]);
 			pos[2] += GetRandomFloat(-f_TradeRadius[client], f_TradeRadius[client]);
-			SpawnParticle(pos, PARTICLE_TRADE_EXPLOSION, 2.0);
+			SpawnSmallExplosion(pos);
 		}
 		
-		GetClientAbsOrigin(client, pos);
-		SpawnParticle(pos, PARTICLE_TRADE_EXPLOSION, 2.0);
 		EmitSoundToAll(SOUND_TRADE_EXPLOSION_1, client, SNDCHAN_STATIC);
 		EmitSoundToAll(SOUND_TRADE_EXPLOSION_2, client, SNDCHAN_STATIC);
 		

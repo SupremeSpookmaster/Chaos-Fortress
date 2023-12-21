@@ -15,6 +15,20 @@
 #include <dhooks>
 #include <collisionhook>
 
+#define EXPLOSION_PARTICLE_LARGE_1 "fireSmoke_collumn_mvmAcres"
+#define EXPLOSION_PARTICLE_LARGE_2 "hightower_explosion"
+
+#define EXPLOSION_PARTICLE_SMALL_1 "ExplosionCore_MidAir"
+#define EXPLOSION_PARTICLE_SMALL_2 "ExplosionCore_buildings"
+#define EXPLOSION_PARTICLE_SMALL_3 "ExplosionCore_Wall"
+#define EXPLOSION_PARTICLE_SMALL_4 "rd_robot_explosion"
+
+#define CRIT1	"player/crit_hit.wav"
+#define CRIT2	"player/crit_hit2.wav"
+#define CRIT3	"player/crit_hit3.wav"
+#define CRIT4	"player/crit_hit4.wav"
+#define CRIT5	"player/crit_hit5.wav"
+
 #define EF_NODRAW	32
 
 float OFF_THE_MAP[3] = {1182792704.0, 1182792704.0, -964690944.0};
@@ -1518,4 +1532,203 @@ stock float fmax(float n1, float n2)
 stock float fmin(float n1, float n2)
 {
 	return n1 < n2 ? n1 : n2;
+}
+
+/**
+ * Plays a crit sound effect to a client.
+ *
+ * @param client		Client to play to.
+ *
+ */
+public void PlayCritSound(int client)
+{
+	switch(GetRandomInt(1, 5))
+	{
+		case 1:
+		{
+			PrecacheSound(CRIT1);
+			EmitSoundToClient(client, CRIT1);
+		}
+		case 2:
+		{
+			PrecacheSound(CRIT2);
+			EmitSoundToClient(client, CRIT2);
+		}
+		case 3:
+		{
+			PrecacheSound(CRIT3);
+			EmitSoundToClient(client, CRIT3);
+		}
+		case 4:
+		{
+			PrecacheSound(CRIT4);
+			EmitSoundToClient(client, CRIT4);
+		}
+		case 5:
+		{
+			PrecacheSound(CRIT5);
+			EmitSoundToClient(client, CRIT5);
+		}
+	}
+}
+
+/**
+ * Spawns a small explosion particle at a given location. This does NOT deal damage.
+ *
+ * @param DetLoc		Explosion location.
+ * @param SFX		Explosion sound.
+ *
+ * @error		Incomplete explosion origin data.
+ */
+stock void SpawnSmallExplosion(float DetLoc[3], char SFX[255] = "")
+{
+	int littleBoom = CreateEntityByName("info_particle_system");
+	
+	if (IsValidEdict(littleBoom))
+	{
+		float pos[3];
+		pos[0] += DetLoc[0] + GetRandomFloat(-80.0, 80.0);
+		pos[1] += DetLoc[1] + GetRandomFloat(-80.0, 80.0);
+		pos[2] += DetLoc[2] + GetRandomFloat(0.0, 80.0);
+		TeleportEntity(littleBoom, pos, NULL_VECTOR, NULL_VECTOR);
+		
+		char particleName[255];
+		
+		switch(GetRandomInt(1, 4))
+		{
+			case 1:
+			{
+				particleName = EXPLOSION_PARTICLE_SMALL_1;
+			}
+			case 2:
+			{
+				particleName = EXPLOSION_PARTICLE_SMALL_2;
+			}
+			case 3:
+			{
+				particleName = EXPLOSION_PARTICLE_SMALL_3;
+			}
+			case 4:
+			{
+				particleName = EXPLOSION_PARTICLE_SMALL_4;
+			}
+		}
+		
+		DispatchKeyValue(littleBoom, "effect_name", particleName);
+		DispatchKeyValue(littleBoom, "targetname", "present");
+		DispatchSpawn(littleBoom);
+		ActivateEntity(littleBoom);
+		AcceptEntityInput(littleBoom, "Start");
+		
+		CreateTimer(1.2, Timer_RemoveEntity, EntIndexToEntRef(littleBoom), TIMER_FLAG_NO_MAPCHANGE);
+		
+		if (SFX[0])
+		{
+			EmitSoundToAll(SFX, littleBoom, _, 120);
+		}
+	}
+}
+
+/**
+ * Spawns a big explosion particle at a given location. This does NOT deal damage.
+ *
+ * @param DetLoc		Explosion location.
+ * @param SFX		Explosion sound.
+ *
+ * @error		Incomplete explosion origin data.
+ */
+stock void SpawnBigExplosion(float DetLoc[3], char SFX[255] = "")
+{
+	int littleBoom = CreateEntityByName("info_particle_system");
+	
+	if (IsValidEdict(littleBoom))
+	{
+		float pos[3];
+		pos[0] += DetLoc[0] + GetRandomFloat(-80.0, 80.0);
+		pos[1] += DetLoc[1] + GetRandomFloat(-80.0, 80.0);
+		pos[2] += DetLoc[2] + GetRandomFloat(0.0, 80.0);
+		TeleportEntity(littleBoom, pos, NULL_VECTOR, NULL_VECTOR);
+		
+		char particleName[255];
+		
+		switch(GetRandomInt(1, 4))
+		{
+			case 1:
+			{
+				particleName = EXPLOSION_PARTICLE_LARGE_1;
+			}
+			case 2:
+			{
+				particleName = EXPLOSION_PARTICLE_LARGE_2;
+			}
+		}
+		
+		DispatchKeyValue(littleBoom, "effect_name", particleName);
+		DispatchKeyValue(littleBoom, "targetname", "present");
+		DispatchSpawn(littleBoom);
+		ActivateEntity(littleBoom);
+		AcceptEntityInput(littleBoom, "Start");
+		
+		CreateTimer(4.0, Timer_RemoveEntity, EntIndexToEntRef(littleBoom), TIMER_FLAG_NO_MAPCHANGE);
+		
+		if (SFX[0])
+		{
+			EmitSoundToAll(SFX, littleBoom, _, 120);
+		}
+	}
+}
+
+stock void SpawnSpriteExplosion(float pos[3], int sound = 0)
+{
+	DataPack pack_boom = new DataPack();
+	pack_boom.WriteFloat(pos[0]);
+	pack_boom.WriteFloat(pos[1]);
+	pack_boom.WriteFloat(pos[2]);
+	pack_boom.WriteCell(sound);
+	RequestFrame(Stock_MakeExplosionFrameLater, pack_boom);
+}
+
+public void Stock_MakeExplosionFrameLater(DataPack pack)
+{
+	pack.Reset();
+	float vec_pos[3];
+	vec_pos[0] = pack.ReadFloat();
+	vec_pos[1] = pack.ReadFloat();
+	vec_pos[2] = pack.ReadFloat();
+	int Do_Sound = pack.ReadCell();
+	
+	int ent = CreateEntityByName("env_explosion");
+	if(ent != -1)
+	{
+	//	SetEntPropEnt(ent, Prop_Data, "m_hOwnerEntity", client);
+		
+		if(Do_Sound == 1)
+		{		
+			PrecacheSound("ambient/explosions/explode_3.wav");
+			EmitAmbientSound("ambient/explosions/explode_3.wav", vec_pos);
+		}
+		
+		DispatchKeyValueVector(ent, "origin", vec_pos);
+		DispatchKeyValue(ent, "spawnflags", "64");
+						
+		DispatchKeyValue(ent, "rendermode", "5");
+		DispatchKeyValue(ent, "fireballsprite", "spirites/zerogxplode.spr");
+										
+		DispatchKeyValueFloat(ent, "DamageForce", 0.0);								
+		SetEntProp(ent, Prop_Data, "m_iMagnitude", 0); 
+		SetEntProp(ent, Prop_Data, "m_iRadiusOverride", 0); 
+									
+		DispatchSpawn(ent);
+		ActivateEntity(ent);
+									
+		AcceptEntityInput(ent, "explode");
+		AcceptEntityInput(ent, "kill");
+	}		
+	delete pack;
+}
+
+stock bool TF2_IsPlayerStunned(int client)
+{
+	return (TF2_IsPlayerInCondition(client, TFCond_Slowed) || TF2_IsPlayerInCondition(client, TFCond_Dazed)
+	|| TF2_IsPlayerInCondition(client, TFCond_FreezeInput) || TF2_IsPlayerInCondition(client, TFCond_Taunting));
 }

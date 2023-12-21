@@ -30,7 +30,6 @@
 //			- None! (Pending public opinion during beta)
 //		////////////////////////////////////////////
 //		- Spookmaster Bones:
-//			- Required ult charge is definitely too low, skeletons spawned by ult kills allow ults to snowball into each other.
 //			- Any kill will grant a soul, not just melee. This encourages sitting at a distance and fishing for souls risk-free with Skull Servants instead of getting in and fighting.
 //				- Make players drop timed soul pickups that the SB player needs to manually pick up to gain the soul. Upon being picked up, these souls immediately heal the user for 75 HP.
 //					- This is a fairly drastic change. Only do this if people think SB is overpowered.
@@ -47,6 +46,13 @@
 //			- Using Profit Blast to blast jump *might* give him too much mobility for a tank.
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
+//	- TODO: Rewrite the DoAbility system so that the forward can be used to prevent an ability from being activated
+//	- TODO: Disable random crits on the beta test server (melee characters like Spookmaster and Demopan are utterly busted with random crits).
+//	- TODO: Test all game modes (except for CTF which won't be officially supported):
+//		- [X] Payload
+//		- [ ] Payload Race
+//		- [ ] Control Points
+//		- [ ] King of the Hill
 //	- TODO: Everything that happens on client disconnect (possibly already covered, not sure).
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
 //	- TODO: Finalize the wiki by updating each page with all of the changes.
@@ -58,23 +64,20 @@
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
 //	- For some reason, players get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? It's invisible while alive but becomes visible on death. This has no effect on gameplay but it's really ugly. Honestly baffling.
-//			- This may have fixed itself, I never see the Apparatchik's Apparel anymore.
 //	- Certain hats, when equipped via the wearable system, usually do not visually appear on bots (but they do work *sometimes*). Count Heavnich's "Noble Amassment of Hats" is an example of such a hat. 
 //	- COUNT HEAVNICH: I don't know how, but "Chow Down" *sometimes* still causes you to T-pose when it ends. This is fixed immediately by switching weapons, and has no permanent side effects. It does look very unprofessional, though, so I am inclined to find a fix if possible.
+//	- DEMOPAN: Becoming übercharged on BLU team causes your cosmetics to use the RED team's über texture.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //			- Scrap this feature entirely and remove all mentions of it from the code. This will be a giant pain in the ass but does not need to be done until public release.
-//	- SPOOKMASTER BONES: Dialogue is too loud and can be heard from nearly anywhere on the map, make a cf_soundpack ability to make all of them quieter.
-//			- Not really a bug, but still sloppy work that I would like to *not* have present on release.
-//	- ALL: The default trace gets blocked by invisible clips like spawn doors and such. Filter them out.
-//	- ALL: Clipless weapons (sniper rifle, minigun, flamethrower) can pick up ammo from dispensers/the payload, but do not actually replenish ammo upon doing so, and cannot pick up ammo packs. This will make characters like Heavnich useless, so it MUST be fixed before the open beta.
-//			- Try messing around with the max ammo/clip size attributes.
-//	- DEVELOPMENT: The change to the wearables system which fixed demo shields not having a charge meter also broke cosmetic styles.
-//	- DEMOPAN: Players can get stuck in his shield if he holds it and they walk into it. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.
-//			- Until a fix is found, the only way to deal with this is to classify it as exploiting and punish players as such. It's unfortunate, but limitations like these are what happens when working in a game engine that's old enough to be in college.
 //	- DEVELOPMENT: I don't know what I did, but suddenly friendly projectiles cannot pass through medigun shields. What the fuck.
 //			- Once this is fixed, medigun shields will FINALLY be done.
+//	- GAMEPLAY: The game is having that issue again where it becomes EXTREMELY laggy as soon as the round starts.
+//			- Current Theory: None. There's not a memory leak, so it can't be that, and all of my other theories are disproven by the fact that the game runs fine in the pre-round.
+//
+//	- PRESUMED UNFIXABLE (major bugs which I don't believe can be fixed with my current SourceMod expertise. The best thing you can do is classify these as exploits and punish them as such):
+//		- DEMOPAN: Enemies can get stuck in his shield if they walk into it while it is held. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

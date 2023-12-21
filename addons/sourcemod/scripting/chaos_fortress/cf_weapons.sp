@@ -163,8 +163,7 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 	{
 		#if defined TESTING
 		
-		SetAmmo(client, entity, reserve);
-		SetClip(client, entity, clip);
+		CFW_SetAmmo(client, entity, clip, reserve);
 		
 		#else
 
@@ -174,8 +173,7 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 		//I don't intend to make CF work with bots, so I won't bother fixing this myself, but it DOES make testing very difficult, hence the #if defined TESTING.
 		if (!spawn)
 		{
-			SetAmmo(client, entity, reserve);
-			SetClip(client, entity, clip);
+			CFW_SetAmmo(client, entity, clip, reserve);
 		}
 		else
 		{
@@ -198,6 +196,21 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 	return entity;
 }
 
+public void CFW_SetAmmo(int client, int weapon, int clip, int reserve)
+{
+	if (!IsValidClient(client) || !IsValidEntity(weapon))
+		return;
+		
+	if (clip > 0)
+		SetEntProp(weapon, Prop_Data, "m_iClip1", clip);
+		
+	int ammoType = (reserve > -1 ? GetEntProp(weapon, Prop_Send, "m_iPrimaryAmmoType") : -1);
+	if(ammoType!=-1)
+	{
+		SetEntProp(client, Prop_Data, "m_iAmmo", reserve, _, ammoType);
+	}
+}
+
 public void CFW_GiveAmmoOnDelay(DataPack pack)
 {
 	ResetPack(pack);
@@ -210,8 +223,7 @@ public void CFW_GiveAmmoOnDelay(DataPack pack)
 	if (!IsValidClient(client) || !IsValidEntity(weapon))
 		return;
 		
-	SetAmmo(client, weapon, reserve);
-	SetClip(client, weapon, clip);
+	CFW_SetAmmo(client, weapon, clip, reserve);
 }
 
 //Don't let characters who just happen to be spies or engineers have sappers or PDAs.

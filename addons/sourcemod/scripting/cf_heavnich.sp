@@ -7,6 +7,7 @@
 #define SHARE		"heavnich_share_sandviches"
 #define CHOW		"heavnich_chow_down"
 #define MEGA		"heavnich_mega_cosmetics"
+#define REV_BLOCK	"passive_block_rev"
 
 #define MODEL_SANDVICH					"models/items/plate.mdl"
 
@@ -57,6 +58,50 @@ public void OnMapStart()
 public void OnPluginStart()
 {
 	
+}
+
+bool Rev_Active[MAXPLAYERS + 1] = { false, ... };
+float Rev_Duration[MAXPLAYERS + 1] = { 0.0, ... };
+float Rev_EndTime[MAXPLAYERS + 1] = { 0.0, ... };
+bool Rev_Blocks[MAXPLAYERS + 1][4];
+
+public void CF_OnCharacterCreated(int client)
+{
+	if (CF_HasAbility(client, HEAVNICH, REV_BLOCK))
+	{
+		Rev_Duration[client] = CF_GetArgF(client, HEAVNICH, REV_BLOCK, "duration");
+		Rev_Active[client] = true;
+		
+		Rev_Blocks[client][0] = CF_GetArgI(client, HEAVNICH, REV_BLOCK, "block_ult") != 0;
+		Rev_Blocks[client][1] = CF_GetArgI(client, HEAVNICH, REV_BLOCK, "block_m2") != 0;
+		Rev_Blocks[client][2] = CF_GetArgI(client, HEAVNICH, REV_BLOCK, "block_m3") != 0;
+		Rev_Blocks[client][3] = CF_GetArgI(client, HEAVNICH, REV_BLOCK, "block_reload") != 0;
+	}
+}
+
+public void TF2_OnConditionRemoved(int client, TFCond condition)
+{
+	if (!Rev_Active[client])
+		return;
+	
+	if (condition == TFCond_Slowed)
+		Rev_EndTime[client] = GetGameTime() + Rev_Duration[client];
+}
+
+public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result)
+{
+	if (!Rev_Active[client] || Rev_EndTime[client] < GetGameTime())
+		return Plugin_Continue;
+		
+	int slot = view_as<int>(type);
+	
+	if (Rev_Blocks[client][slot])
+	{
+		result = false;
+		return Plugin_Changed;
+	}
+	
+	return Plugin_Continue;
 }
 
 public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
@@ -353,4 +398,5 @@ public void CF_OnCharacterRemoved(int client)
 	}
 	
 	f_MegaEndTime[client] = 0.0;
+	Rev_Active[client] = false;
 }

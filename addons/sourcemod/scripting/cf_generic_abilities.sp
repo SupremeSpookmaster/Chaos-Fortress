@@ -154,7 +154,10 @@ public void CF_OnCharacterCreated(int client)
 {
 	for (int i = 0; i < 4; i++)
 	{
-		delete g_BlockTimers[client][i];
+		if (g_BlockTimers[client][i] != null && g_BlockTimers[client][i] != INVALID_HANDLE)	//I know SM already checks if the handle isn't null, but if I don't put this check here I get error spam.
+		{
+			KillTimer(g_BlockTimers[client][i]);
+		}
 	}
 	
 	delete g_ModelTimer[client];
@@ -836,7 +839,10 @@ public void CF_OnCharacterRemoved(int client)
 	for (int i = 0; i < 4; i++)
 	{
 		Limit_NumUses[client][i] = 0;
-		delete g_BlockTimers[client][i];
+		if (g_BlockTimers[client][i] != null && g_BlockTimers[client][i] != INVALID_HANDLE)	//I know SM already checks if the handle isn't null, but if I don't put this check here I get error spam.
+		{
+			KillTimer(g_BlockTimers[client][i]);
+		}
 	}
 	
 	b_WearablesHidden[client] = false;

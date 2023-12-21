@@ -89,6 +89,7 @@ GlobalForward g_PassFilter;
 GlobalForward g_ShouldCollide;
 GlobalForward g_FakeMediShieldCollision;
 GlobalForward g_FakeMediShieldDamaged;
+GlobalForward g_AttemptAbility;
 
 int i_GenericProjectileOwner[2049] = { -1, ... };
 int i_HealingDone[MAXPLAYERS + 1] = { 0, ... };
@@ -127,6 +128,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_CreateShieldWall", Native_CF_CreateShieldWall);
 	CreateNative("CF_GetShieldWallHealth", Native_CF_GetShieldWallHealth);
 	CreateNative("CF_GetShieldWallMaxHealth", Native_CF_GetShieldWallMaxHealth);
+	CreateNative("CF_CheckIsSlotBlocked", Native_CF_CheckIsSlotBlocked);
 }
 
 public void CFA_MakeForwards()
@@ -148,6 +150,7 @@ public void CFA_MakeForwards()
 	g_ShouldCollide = new GlobalForward("CF_OnShouldCollide", ET_Event, Param_Cell, Param_Cell, Param_CellByRef);
 	g_FakeMediShieldCollision = new GlobalForward("CF_OnFakeMediShieldCollision", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
 	g_FakeMediShieldDamaged = new GlobalForward("CF_OnFakeMediShieldDamaged", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_FloatByRef, Param_CellByRef, Param_Cell);
+	g_AttemptAbility = new GlobalForward("CF_OnAbilityCheckCanUse", ET_Event, Param_Cell, Param_String, Param_String, Param_Cell, Param_CellByRef);
 }
 
 public void CFA_OGF()
@@ -1145,6 +1148,9 @@ public bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type)
 	
 	if (i_HeldBlocked[client] != CF_AbilityType_None && i_HeldBlocked[client] != type)
 		return false;
+		
+	if (TF2_IsPlayerStunned(client))
+		return false;
 	
 	float cost; bool onground = GetEntityFlags(client) & FL_ONGROUND != 0;
 	
@@ -1213,7 +1219,7 @@ public bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type)
 		}
 	}
 	
-	return true;
+	return !CF_CheckIsSlotBlocked(client, view_as<int>(type) + 1);
 }
 
 public Native_CF_GiveUltCharge(Handle plugin, int numParams)
@@ -1671,6 +1677,70 @@ public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
 	}
 	
 	DeleteCfg(map);
+}
+
+public any Native_CF_CheckIsSlotBlocked(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return true;
+		
+	int slot = GetNativeCell(2);
+	
+	char pluginName[255], abName[255];
+	
+	ConfigMap map = new ConfigMap(g_Characters[client].MapPath);
+	if (map == null)
+		return true;
+		
+	ConfigMap abilities = map.GetSection("character.abilities");
+	if (abilities == null)
+	{
+		DeleteCfg(map);
+		return true;
+	}
+		
+	int i = 1;
+	char secName[255];
+	Format(secName, sizeof(secName), "ability_%i", i);
+		
+	ConfigMap subsection = abilities.GetSection(secName);
+	while (subsection != null)
+	{
+		if (GetIntFromConfigMap(subsection, "slot", -1) == slot)
+		{
+			subsection.Get("ability_name", abName, sizeof(abName));
+			subsection.Get("plugin_name", pluginName, sizeof(pluginName));
+			
+			bool result = true;
+			
+			Call_StartForward(g_AttemptAbility);
+			
+			Call_PushCell(client);
+			Call_PushString(pluginName);
+			Call_PushString(abName);
+			Call_PushCell(view_as<CF_AbilityType>(slot - 1));
+			Call_PushCellRef(result);
+			
+			Action diditwork;
+			Call_Finish(diditwork);
+			
+			if (diditwork == Plugin_Changed && !result)
+			{
+				DeleteCfg(map);
+				return true;
+			}
+		}
+		
+		i++;
+		Format(secName, sizeof(secName), "ability_%i", i);
+		subsection = abilities.GetSection(secName);
+	}
+	
+	DeleteCfg(map);
+	
+	return false;
 }
 
 public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)

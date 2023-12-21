@@ -130,6 +130,7 @@ bool b_SpawnPreviewParticleNextFrame[MAXPLAYERS + 1] = { false, ... };
 #endif
 
 int i_CharacterParticleOwner[2049] = { -1, ... };
+int i_DialogueReduction[MAXPLAYERS + 1] = { 0, ... };
 
 bool b_DisplayRole = true;
 bool b_CharacterApplied[MAXPLAYERS + 1] = { false, ... }; //Whether or not the client's character has been applied to them already. If true: skip MakeCharacter for that client. Set to false automatically on death, round end, disconnect, and if the player changes their character selection.
@@ -1113,6 +1114,7 @@ public void CF_ResetMadeStatus(int client)
 	float speed = GetFloatFromConfigMap(map, "character.speed", 300.0);
 	float health = GetFloatFromConfigMap(map, "character.health", 250.0);
 	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
+	i_DialogueReduction[client] = GetIntFromConfigMap(map, "character.be_quiet", 1);
 	float scale = GetFloatFromConfigMap(map, "character.scale", 1.0);
 	
 	g_Characters[client].Create(speed, health, Classes[class], model, name, scale, conf);
@@ -1796,8 +1798,8 @@ public Native_CF_AttachWearable(Handle plugin, int numParams)
 	GetNativeString(3, classname, sizeof(classname));
 	bool visible = GetNativeCell(4);
 	int paint = GetNativeCell(5);
-	int style = GetNativeCell(7);
-	bool preserve = GetNativeCell(8);
+	int style = GetNativeCell(6);
+	bool preserve = GetNativeCell(7);
 	GetNativeString(8, atts, sizeof(atts));
 	float lifespan = GetNativeCell(9);
 		
@@ -2011,4 +2013,12 @@ public void SetScale_DelayResize(DataPack pack)
 	WritePackString(pack2, message_success);
 					
 	RequestFrame(SetScale_DelayResize, pack2);
+}
+
+public int CF_GetDialogueReduction(int client)
+{
+	if (!CF_IsPlayerCharacter(client))
+		return 0;
+		
+	return i_DialogueReduction[client];
 }
