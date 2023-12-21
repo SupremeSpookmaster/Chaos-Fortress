@@ -508,6 +508,7 @@ int i_ShieldProp[2049] = { -1, ... };
 bool b_HoldingShield[MAXPLAYERS + 1] = { false, ... };
 bool b_IsShield[2049] = { false, ... };
 bool b_ShieldIsDamaged[2049] = { false, ... };
+bool b_PropIsBreaking[2049] = { false, ... };
 
 float f_ShieldBaseSpeed[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ShieldDistance[MAXPLAYERS + 1] = { 0.0, ... };
@@ -792,6 +793,7 @@ public Action CF_OnFakeMediShieldDamaged(int shield, int attacker, int inflictor
 		{
 			SetVariantString("break");
 			AcceptEntityInput(prop, "SetAnimation");
+			b_PropIsBreaking[prop] = true;
 			CreateTimer(0.33, Timer_RemoveEntity, EntIndexToEntRef(prop), TIMER_FLAG_NO_MAPCHANGE);
 			RequestFrame(Shield_FadeOut, EntIndexToEntRef(prop));
 			EmitSoundToAll(SOUND_SHIELD_FULLBREAK, prop, SNDCHAN_STATIC, 120);
@@ -1132,6 +1134,10 @@ public void OnEntityDestroyed(int entity)
 		Bomb_Particle[entity] = -1;
 		b_IsABomb[entity] = false;
 		b_IsShield[entity] = false;
+		b_PropIsBreaking[entity] = false;
+		int prop = EntRefToEntIndex(i_ShieldProp[entity]);
+		if (IsValidEntity(prop) && !b_PropIsBreaking[prop])
+			RemoveEntity(prop);
 		i_ShieldProp[entity] = -1;
 		Shield_ClearHits(entity);
 		

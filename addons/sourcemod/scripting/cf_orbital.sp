@@ -119,6 +119,34 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 	return ReturnValue;
 }
 
+public Action CF_OnFakeMediShieldDamaged(int shield, int attacker, int inflictor, float &damage, int &damagetype, int owner)
+{
+	if (!IsValidClient(attacker) || IsValidMulti(owner, false, _, true, TF2_GetClientTeam(attacker)))
+		return Plugin_Continue;
+		
+	if (CF_HasAbility(attacker, ORBITAL, HEIGHT))
+	{
+		float minDist = CF_GetArgF(attacker, ORBITAL, HEIGHT, "start");
+		
+		float user[3], vic[3];
+		GetClientAbsOrigin(attacker, user);
+		GetEntPropVector(shield, Prop_Send, "m_vecOrigin", vic);
+		
+		float dist = user[2] - vic[2];
+		if (dist >= minDist)
+		{
+			float maxDist = CF_GetArgF(attacker, ORBITAL, HEIGHT, "end") - minDist;
+			float maxBonus = CF_GetArgF(attacker, ORBITAL, HEIGHT, "max_bonus");
+			dist -= minDist;
+			
+			damage *= 1.0 + ((dist / maxDist) * maxBonus);
+			return Plugin_Changed;
+		}
+	}
+	
+	return Plugin_Continue;
+}
+
 bool Tracer_FullyCharged[MAXPLAYERS + 1] = { false, ... };
 
 public void TF2_OnConditionAdded(int client, TFCond condition)
@@ -176,7 +204,7 @@ public Action Tracer_PreThink(int client)
 	
 	if (GetGameTime() >= Tracer_NextBeam[client])
 	{
-		Handle trace = getAimTrace(client, false, true);
+		Handle trace = getAimTrace(client, CF_DefaultTrace);
 		TR_GetEndPosition(endPos, trace);
 		delete trace;
 		
@@ -527,7 +555,7 @@ public void VFX_Activate(int client, char abilityName[255])
 		GetClientEyePosition(client, startPos);
 		startPos[2] -= 5.0;
 		
-		Handle trace = getAimTrace(client, false, true);
+		Handle trace = getAimTrace(client, CF_DefaultTrace);
 		TR_GetEndPosition(endPos, trace);
 		delete trace;
 		
@@ -563,7 +591,7 @@ public void Strike_Activate(int client, char abilityName[255])
 	float falloffMax = CF_GetArgF(client, ORBITAL, abilityName, "falloff_max");
 
 	float groundZero[3];
-	Handle trace = getAimTrace(client);
+	Handle trace = getAimTrace(client, CF_DefaultTrace);
 	TR_GetEndPosition(groundZero, trace);
 	delete trace;
 

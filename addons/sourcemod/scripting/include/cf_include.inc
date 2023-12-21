@@ -71,6 +71,17 @@ public bool CF_DefaultTrace(entity, contentsMask)
 	if (StrContains(classname, "tf_projectile") != -1 || StrContains(classname, "info_") != -1 || StrContains(classname, "trigger_") != -1)
 		return false;
 		
+	if (StrContains(classname, "func_") != -1)
+	{
+		if (!StrEqual("func_brush", classname)
+			&& !StrEqual("func_door", classname) && !StrEqual("func_detail", classname) && !StrEqual("func_wall", classname) && !StrEqual("func_rotating", classname)
+			&& !StrEqual("func_reflective_glass", classname) && !StrEqual("func_physbox", classname) && !StrEqual("func_movelinear", classname) && !StrEqual("func_door_rotating", classname)
+			&& !StrEqual("func_breakable", classname))
+		{
+			return false;
+		}
+	}
+		
 	return true;
 }
 

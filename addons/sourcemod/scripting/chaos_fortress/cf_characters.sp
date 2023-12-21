@@ -438,7 +438,7 @@ public Action CFC_OpenMenu(int client, int args)
 		GetClientEyePosition(client, spawnLoc);
 			
 		float aimLoc[3];
-		Handle trace = getAimTrace(client);
+		Handle trace = getAimTrace(client, CF_DefaultTrace);
 		if (TR_DidHit(trace))
 		{
 			TR_GetEndPosition(aimLoc, trace);
@@ -550,7 +550,7 @@ public Action CFC_OpenMenu(int client, int args)
 	GetClientEyePosition(client, spawnLoc);
 			
 	float aimLoc[3];
-	Handle trace = getAimTrace(client);
+	Handle trace = getAimTrace(client, CF_DefaultTrace);
 	if (TR_DidHit(trace))
 	{
 		TR_GetEndPosition(aimLoc, trace);

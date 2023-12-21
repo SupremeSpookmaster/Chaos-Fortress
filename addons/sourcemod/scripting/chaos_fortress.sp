@@ -10,12 +10,8 @@
 //#define TESTING
 //
 //	- IMMEDIATE PLANS:
-//		- Spookmaster Bones:
-//			- Make him quieter.
 //		- Orbital Sniper:
 //			- Make custom sounds and implement them. Remove the DSP effect attribute once this is done.
-//		- Count Heavnich:
-//			- Optional: properly implement mega deflector weapon sounds.
 //		- Demopan:
 //			- Figure out a way to let custom damage sources deal damage to shields.
 //			- Include shields in the generic AOE native.
@@ -75,6 +71,8 @@
 //			- Once this is fixed, medigun shields will FINALLY be done.
 //	- GAMEPLAY: The game is having that issue again where it becomes EXTREMELY laggy as soon as the round starts.
 //			- Current Theory: None. There's not a memory leak, so it can't be that, and all of my other theories are disproven by the fact that the game runs fine in the pre-round.
+//			- Maybe try temporarily turning the soundhook off to see if that fixes it?
+//			- I don't see anything in the code that should be causing this lag. The lag might just be because my PC is not a dedicated server, so the server isn't getting enough resources to run well?
 //
 //	- PRESUMED UNFIXABLE (major bugs which I don't believe can be fixed with my current SourceMod expertise. The best thing you can do is classify these as exploits and punish them as such):
 //		- DEMOPAN: Enemies can get stuck in his shield if they walk into it while it is held. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.
