@@ -1025,7 +1025,7 @@ public void Trade_Activate(int client, char abilityName[255])
 	
 	SDKUnhook(client, SDKHook_PreThink, Trade_PreThink);
 	CF_AttachParticle(client, "charge_up", "root", _, delay, 0.0, 0.0, 60.0 * CF_GetCharacterScale(client));
-	TF2_AddCondition(client, TFCond_Ubercharged, delay);
+	TF2_AddCondition(client, TFCond_Ubercharged, delay + 0.33);	//Give über for a little longer than the freeze time so snipers can't just cheese him out of his ult with a headshot.
 	TF2_AddCondition(client, TFCond_FreezeInput, delay);
 	TF2_AddCondition(client, TFCond_MegaHeal, delay + duration);
 	SetEntityMoveType(client, MOVETYPE_NONE);
@@ -1040,6 +1040,7 @@ public Action Trade_Begin(Handle begin, int id)
 		SetEntityMoveType(client, MOVETYPE_WALK);
 		SDKUnhook(client, SDKHook_PreThink, Trade_PreThink);
 		SDKHook(client, SDKHook_PreThink, Trade_PreThink);
+		
 		CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_TRADE_RED : PARTICLE_TRADE_BLUE, "flag", _, f_TradeEndTime[client] - GetGameTime());
 	}
 	
