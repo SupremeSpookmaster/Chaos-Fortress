@@ -12,8 +12,6 @@
 //	- IMMEDIATE PLANS:
 //		- Orbital Sniper:
 //			- Make custom sounds and implement them. Remove the DSP effect attribute once this is done.
-//		- Demopan:
-//			- Remove debug stats from config and push to GitHub.
 //		- Future Development:
 //			- Look into using the m_afButtonForced property.
 //
@@ -35,6 +33,7 @@
 //		////////////////////////////////////////////
 //		- Count Heavnich:
 //			- "Chow Down" might be too strong compared to "Share Sandvich", resulting in players never using Share.
+//				- Maybe make Chow cost two Sandviches, then increase Sandvich base regen rate?
 //		////////////////////////////////////////////
 //		- Demopan:
 //			- Using Profit Blast to blast jump *might* give him too much mobility for a tank.
