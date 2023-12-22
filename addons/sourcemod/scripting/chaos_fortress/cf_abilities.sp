@@ -260,19 +260,23 @@ public void ScoreThink(int entity)
 public Action CFA_HUDTimer(Handle timer)
 {
 	int rState = CF_GetRoundState();
+	bool wouldBeStuck;
+	bool tooPoor;
+	bool CanUse;
+	float remCD;
+	
 	for (int client = 1; client <= MaxClients; client++)
 	{
 		if (CF_IsPlayerCharacter(client))
 		{
 			bool showHUD = GetClientButtons(client) & IN_SCORE == 0 && b_UseHUD[client];
-			bool CanUseUnderNormalCircumstances;
 			if (IsPlayerAlive(client))
 			{
 				char HUDText[255];
 				
 				if (b_CharacterHasUlt[client])
 				{
-					float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_Ult);
+					remCD = CF_GetAbilityCooldown(client, CF_AbilityType_Ult);
 					if (remCD < 0.1 && rState == 1)
 					{
 						CF_GiveUltCharge(client, f_UltChargeOnRegen[client]/10.0, CF_ResourceType_Percentage);
@@ -280,19 +284,13 @@ public Action CFA_HUDTimer(Handle timer)
 					
 					if (showHUD)
 					{
-						bool wouldBeStuck = false;
-						if (!b_UltBlocked[client] && f_UltScale[client] > 0.0 && remCD <= 0.0)
-						{
-							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_UltScale[client]);
-						}
+						CanUse = CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_Ult, wouldBeStuck, tooPoor);
 						
-						CanUseUnderNormalCircumstances = f_UltCharge[client] >= f_UltChargeRequired[client];
-						
-						if ((!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_Ult) && CanUseUnderNormalCircumstances) || CF_GetRoundState() != 1)
+						if ((!CanUse && !tooPoor && !wouldBeStuck) || CF_GetRoundState() != 1)
 						{
 							Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE [BLOCKED]\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0));
 						}
-						else if (wouldBeStuck && CanUseUnderNormalCircumstances)
+						else if (wouldBeStuck && !tooPoor)
 						{
 							Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE [BLOCKED; YOU WOULD GET STUCK]\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0));
 						}
@@ -305,7 +303,7 @@ public Action CFA_HUDTimer(Handle timer)
 				
 				if (b_UsingResources[client] && !b_ResourceIsUlt[client])
 				{
-					if (/*rState == 1 && */GetGameTime() >= f_NextResourceRegen[client])
+					if (GetGameTime() >= f_NextResourceRegen[client])
 					{
 						CF_GiveSpecialResource(client, 1.0, CF_ResourceType_Regen);
 					}
@@ -327,20 +325,13 @@ public Action CFA_HUDTimer(Handle timer)
 				{
 					if (b_HasM2[client])
 					{
-						bool wouldBeStuck = false;
-						float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M2);
-						if (!b_M2Blocked[client] && f_M2Scale[client] > 0.0 && remCD <= 0.0)
-						{
-							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_M2Scale[client]);
-						}
+						CanUse = CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M2, wouldBeStuck, tooPoor);
 						
-						CanUseUnderNormalCircumstances = (!b_UsingResources[client] || CF_GetSpecialResource(client) >= f_M2Cost[client]) && remCD <= 0.0;
-						
-						if (!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M2) && CanUseUnderNormalCircumstances)
+						if (!CanUse && !tooPoor && !wouldBeStuck)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M2Name[client]);
 						}
-						else if (wouldBeStuck && CanUseUnderNormalCircumstances)
+						else if (wouldBeStuck && !tooPoor)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED; YOU WOULD GET STUCK]\n", HUDText, s_M2Name[client]);
 						}
@@ -358,6 +349,7 @@ public Action CFA_HUDTimer(Handle timer)
 								}
 							}
 							
+							remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M2);
 							if (remCD > 0.0)
 							{
 								Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_M2Name[client], remCD);
@@ -371,20 +363,13 @@ public Action CFA_HUDTimer(Handle timer)
 					
 					if (b_HasM3[client])
 					{
-						bool wouldBeStuck = false;
-						float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M3);
-						if (!b_M3Blocked[client] && f_M3Scale[client] > 0.0 && remCD <= 0.0)
-						{
-							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_M3Scale[client]);
-						}
+						CanUse = CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M3, wouldBeStuck, tooPoor);
 						
-						CanUseUnderNormalCircumstances = (!b_UsingResources[client] || CF_GetSpecialResource(client) >= f_M3Cost[client]) && remCD <= 0.0;
-						
-						if (!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M3) && CanUseUnderNormalCircumstances)
+						if (!CanUse && !tooPoor && !wouldBeStuck)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M3Name[client]);
 						}
-						else if (wouldBeStuck && CanUseUnderNormalCircumstances)
+						else if (wouldBeStuck && !tooPoor)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED; YOU WOULD GET STUCK]\n", HUDText, s_M3Name[client]);
 						}
@@ -402,6 +387,7 @@ public Action CFA_HUDTimer(Handle timer)
 								}
 							}
 							
+							remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M3);
 							if (remCD > 0.0)
 							{
 								Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_M3Name[client], remCD);
@@ -415,20 +401,13 @@ public Action CFA_HUDTimer(Handle timer)
 					
 					if (b_HasReload[client])
 					{
-						bool wouldBeStuck = false;
-						float remCD = CF_GetAbilityCooldown(client, CF_AbilityType_Reload);
-						if (!b_ReloadBlocked[client] && f_RScale[client] > 0.0 && remCD <= 0.0)
-						{
-							wouldBeStuck = CheckPlayerWouldGetStuck(client, f_RScale[client]);
-						}
+						CanUse = CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_Reload, wouldBeStuck, tooPoor);
 						
-						CanUseUnderNormalCircumstances = (!b_UsingResources[client] || CF_GetSpecialResource(client) >= f_ReloadCost[client]) && remCD <= 0.0;
-						
-						if (!CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_Reload) && CanUseUnderNormalCircumstances)
+						if (!CanUse && !tooPoor && !wouldBeStuck)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_ReloadName[client]);
 						}
-						else if (wouldBeStuck && CanUseUnderNormalCircumstances)
+						else if (wouldBeStuck && !tooPoor)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED; YOU WOULD GET STUCK]\n", HUDText, s_ReloadName[client]);
 						}
@@ -446,6 +425,7 @@ public Action CFA_HUDTimer(Handle timer)
 								}
 							}
 							
+							remCD = CF_GetAbilityCooldown(client, CF_AbilityType_Reload);
 							if (remCD > 0.0)
 							{
 								Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_ReloadName[client], remCD);
@@ -1141,8 +1121,11 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 	}
 }
 
-public bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type)
+bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedByResize = false, bool &BlockedByTooFewResources = false)
 {
+	BlockedByResize = false;
+	BlockedByTooFewResources = false;
+	
 	if (CF_GetAbilityCooldown(client, type) > 0.0)
 		return false;
 	
@@ -1165,7 +1148,10 @@ public bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type)
 				return false;
 				
 			if (f_UltScale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_UltScale[client]))
+			{
+				BlockedByResize = true;
 				return false;
+			}
 					
 			cost = f_UltChargeRequired[client];
 		}
@@ -1178,7 +1164,10 @@ public bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type)
 				return false;
 				
 			if (f_M2Scale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_M2Scale[client]))
+			{
+				BlockedByResize = true;
 				return false;
+			}
 					
 			cost = f_M2Cost[client];
 		}
@@ -1191,7 +1180,10 @@ public bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type)
 				return false;
 					
 			if (f_M3Scale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_M3Scale[client]))
+			{
+				BlockedByResize = true;
 				return false;
+			}
 					
 			cost = f_M3Cost[client];
 		}
@@ -1204,7 +1196,10 @@ public bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type)
 				return false;
 				
 			if (f_RScale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_RScale[client]))
+			{
+				BlockedByResize = true;
 				return false;
+			}
 					
 			cost = f_ReloadCost[client];
 		}
@@ -1215,6 +1210,7 @@ public bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type)
 		float available = (b_ResourceIsUlt[client] || type == CF_AbilityType_Ult) ? f_UltCharge[client] : f_Resources[client];
 		if (cost > available)
 		{
+			BlockedByTooFewResources = true;
 			return false;
 		}
 	}

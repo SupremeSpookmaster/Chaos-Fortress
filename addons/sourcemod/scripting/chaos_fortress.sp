@@ -70,12 +70,41 @@
 //	- DEVELOPMENT: I don't know what I did, but suddenly friendly projectiles cannot pass through medigun shields. What the fuck.
 //			- Once this is fixed, medigun shields will FINALLY be done.
 //	- GAMEPLAY: The game is having that issue again where it becomes EXTREMELY laggy as soon as the round starts.
-//			- Current Theory: None. There's not a memory leak, so it can't be that, and all of my other theories are disproven by the fact that the game runs fine in the pre-round.
-//			- Maybe try temporarily turning the soundhook off to see if that fixes it?
-//			- I don't see anything in the code that should be causing this lag. The lag might just be because my PC is not a dedicated server, so the server isn't getting enough resources to run well?
+//			- Current Theory: "CF_CanPlayerUseAbilitySlot" being spammed 10x per second per living player, per ability slot is responsible for the majority of the lag. I am going to have to rewrite the HUD text system so that it somehow doesn't need to spam CF_CanPlayerUseAbilitySlot to display if the slot is blocked.
+//	- Sometimes when I open chat to change my character while everyone is spawning in, my game just fucking crashes and tells me "out of memory, something something texture address"?????????????????
 //
 //	- PRESUMED UNFIXABLE (major bugs which I don't believe can be fixed with my current SourceMod expertise. The best thing you can do is classify these as exploits and punish them as such):
 //		- DEMOPAN: Enemies can get stuck in his shield if they walk into it while it is held. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.
+//
+//	- THINGS TO KEEP IN MIND FOR FUTURE REFERENCE:
+//		- Cool and/or Frequently-Used Particle Effects:
+//			- doomsday_tentpole_vanish01 (big, green, pole-shaped flash, could be used for a reskin of SSB's Necrotic Blast)
+//			- raygun_projectile_blue, raygun_projectile_red, raygun_projectile_blue_crit, raygun_projectile_red_crit
+//			- rd_robot_explosion
+//			- eyeboss_tp_vortex, eyeboss_death_vortex
+//			- spell_fireball_small_blue, spell_fireball_small_red
+//			- merasmus_tp_flash02, merasmus_spawn_flash, merasmus_spawn_flash2
+//			- merasmus_dazed_explosion
+//			- merasmus_zap
+//			- spell_lightningball_hit_red, spell_lightningball_hit_blue
+//			- drg_cow_explosioncore_charged, drg_cow_explosioncore_charged_blue
+//			- flaregun_trail_red, flaregun_trail_blue
+//			- charge_up
+//			- crit_text, heal_text, hit_text, minicrit_text, miss_text, mvm_pow_bam, mvm_pow_crack, mvm_pow_crash, mvm_pow_crit, mvm_pow_punch, mvm_pow_smash
+//			- duck_collect_green
+//			- dxhr_lightningball_parent_red, dxhr_lightningball_parent_blue
+//			- eyeboss_team_blue, eyeboss_team_red
+//			- green_vortex_rain, green_vortex_rain_3
+//			- halloween_pickup_active_green_2, halloween_pickup_active_red_2
+//			- hammer_bones_kickup, hammer_dust_kickup
+//			- hammer_lock_vanish01, hammer_souls_rising
+//			- healthgained_blu, healthgained_blu_2, healthgained_blu_giant, healthgained_blu_giant_2, healthgained_blu_large, healthgained_blu_large_2
+//			- healthgained_red, healthgained_red_2, healthgained_red_giant, healthgained_red_giant_2, healthgained_red_large, healthgained_red_large_2
+//			- heavy_ring_of_fire
+//			- hwn_skeleton_glow_blue, hwn_skeleton_glow_red
+//			- scorchshot_trail_red, scorchshot_trail_blue
+//			- smoke_marker (blue beacon effect)
+//			- spell_lightningball_parent_blue, spell_lightningball_parent_red
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

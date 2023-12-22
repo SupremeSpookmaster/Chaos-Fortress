@@ -19,6 +19,10 @@
 #define PARTICLE_CALCIUM_SPARKS_BLUE		"drg_cow_explosion_sparkles_charged_blue"
 #define PARTICLE_CALCIUM_CHAIN_RED		"dxhr_lightningball_hit_zap_red"
 #define PARTICLE_CALCIUM_CHAIN_BLUE		"dxhr_lightningball_hit_zap_blue"
+#define PARTICLE_ABSORB_1				"eye_powerup_green_lvl_1"
+#define PARTICLE_ABSORB_2				"eye_powerup_green_lvl_2"
+#define PARTICLE_ABSORB_3				"eye_powerup_green_lvl_3"
+#define PARTICLE_ABSORB_4				"eye_powerup_green_lvl_4"
 
 #define SOUND_DISCARD_EXPLODE		"misc/halloween/spell_fireball_impact.wav"
 
@@ -51,8 +55,8 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	if (!StrEqual(pluginName, SPOOKMASTER))
 		return;
 		
-	if (StrContains(abilityName, HARVESTER) != -1)
-		Harvester_Activate(client, abilityName);
+	//if (StrContains(abilityName, HARVESTER) != -1)
+	//	Harvester_Activate(client, abilityName);
 		
 	if (StrEqual(abilityName, ABSORB))
 		Absorb_Activate(client, abilityName);
@@ -69,10 +73,12 @@ int Harvester_RightParticle[MAXPLAYERS + 1] = { -1, ... };
 
 float Discard_Bonus[MAXPLAYERS + 1] = { 0.0, ... };
 
-public void Harvester_Activate(int client, char abilityName[255])
+public Action CF_OnSpecialResourceApplied(int client, float current, float &amt)
 {
-	float resources = CF_GetSpecialResource(client);
-	if (resources > 0.0)
+	if (!CF_HasAbility(client, SPOOKMASTER, HARVESTER))
+		return Plugin_Continue;
+		
+	if (amt > 0.0)
 	{
 		int L = EntRefToEntIndex(Harvester_LeftParticle[client]);
 		int R = EntRefToEntIndex(Harvester_RightParticle[client]);
@@ -80,13 +86,13 @@ public void Harvester_Activate(int client, char abilityName[255])
 		char LName[255], RName[255];
 		if (TF2_GetClientTeam(client) == TFTeam_Red)
 		{
-			CF_GetArgS(client, SPOOKMASTER, abilityName, "left_red", LName, sizeof(LName));
-			CF_GetArgS(client, SPOOKMASTER, abilityName, "right_red", RName, sizeof(RName));
+			CF_GetArgS(client, SPOOKMASTER, HARVESTER, "left_red", LName, sizeof(LName));
+			CF_GetArgS(client, SPOOKMASTER, HARVESTER, "right_red", RName, sizeof(RName));
 		}
 		else
 		{
-			CF_GetArgS(client, SPOOKMASTER, abilityName, "left_blue", LName, sizeof(LName));
-			CF_GetArgS(client, SPOOKMASTER, abilityName, "right_blue", RName, sizeof(RName));
+			CF_GetArgS(client, SPOOKMASTER, HARVESTER, "left_blue", LName, sizeof(LName));
+			CF_GetArgS(client, SPOOKMASTER, HARVESTER, "right_blue", RName, sizeof(RName));
 		}
 		
 		if (!IsValidEntity(L))
@@ -99,6 +105,8 @@ public void Harvester_Activate(int client, char abilityName[255])
 	{
 		Harvester_DeleteParticles(client);
 	}
+	
+	return Plugin_Continue;
 }
 
 public void Harvester_DeleteParticles(int client)
@@ -122,6 +130,8 @@ float Absorb_Speed[MAXPLAYERS + 1] = { 0.0, ... };
 float Absorb_Heal[MAXPLAYERS + 1] = { 0.0, ... };
 float Absorb_Swing[MAXPLAYERS + 1] = { 0.0, ... };
 float Absorb_Melee[MAXPLAYERS + 1] = { 0.0, ... };
+int Absorb_Left[MAXPLAYERS + 1] = { -1, ... };
+int Absorb_Right[MAXPLAYERS + 1] = { -1, ... };
 
 public void Absorb_Activate(int client, char abilityName[255])
 {
@@ -153,6 +163,20 @@ public void Absorb_Activate(int client, char abilityName[255])
 	Absorb_Uses[client]++;
 }
 
+void Absorb_DestroyEyeParticles(int client)
+{
+	int left = EntRefToEntIndex(Absorb_Left[client]);
+	int right = EntRefToEntIndex(Absorb_Right[client]);
+	
+	if (IsValidEntity(left))
+		RemoveEntity(left);
+	if (IsValidEntity(right))
+		RemoveEntity(right);
+		
+	Absorb_Left[client] = -1;
+	Absorb_Right[client] = -1;
+}
+
 void Absorb_SetStats(int client, float NumTimes = 0.0)
 {
 	TF2Attrib_SetByDefIndex(client, 26, Absorb_Health[client]);
@@ -171,6 +195,32 @@ void Absorb_SetStats(int client, float NumTimes = 0.0)
 	TF2Attrib_SetByDefIndex(weapon, 396, Absorb_Swing[client]);
 	TF2Attrib_SetByDefIndex(weapon, 2, Absorb_Melee[client]);
 	CF_SetCharacterScale(client, NumTimes > 0.0 ? 1.0 + (0.03 * NumTimes) : CF_GetCharacterScale(client) + 0.03, CF_StuckMethod_DelayResize);
+	
+	Absorb_DestroyEyeParticles(client);
+	
+	char particle[255];
+	switch(Absorb_Uses[client])
+	{
+		case 0:
+		{
+			particle = PARTICLE_ABSORB_1;
+		}
+		case 1:
+		{
+			particle = PARTICLE_ABSORB_2;
+		}
+		case 2:
+		{
+			particle = PARTICLE_ABSORB_3;
+		}
+		default:
+		{
+			particle = PARTICLE_ABSORB_4;
+		}
+	}
+	
+	Absorb_Left[client] = EntIndexToEntRef(CF_AttachParticle(client, particle, "lefteye", true));
+	Absorb_Right[client] = EntIndexToEntRef(CF_AttachParticle(client, particle, "righteye", true));
 }
 
 public void Absorb_HealOnDelay(DataPack pack)
@@ -187,6 +237,7 @@ public void CF_OnCharacterRemoved(int client)
 {
 	Discard_Bonus[client] = 0.0;
 	Absorb_Uses[client] = 0;
+	Absorb_DestroyEyeParticles(client);
 }
 
 public void CF_OnCharacterCreated(int client)
