@@ -2373,6 +2373,15 @@ public Native_CF_FireGenericRocket(Handle plugin, int numParams)
 	return -1;
 }
 
+int entityBeingTraced = -1;
+public bool CF_AOETrace(entity, contentsmask)
+{
+	if (!CF_DefaultTrace(entity, contentsmask))
+		return false;
+		
+	return entity != entityBeingTraced;
+}
+
 public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 {
 	Handle ReturnValue = CreateArray(16);
@@ -2395,15 +2404,30 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 	bool includeUser = GetNativeCell(11);
 	bool ignoreInvuln = GetNativeCell(12);
 	
-	for (int i = 1; i <= MaxClients; i++)
+	int targTeam = GetClientTeam(attacker);
+	
+	for (int i = 1; i <= 2048; i++)
 	{
-		if (IsValidMulti(i, true, true, true, grabEnemyTeam(attacker)) || (i == attacker && includeUser))
+		if (IsValidEntity(i))
 		{
-			if (ignoreInvuln || !IsInvuln(i))
+			if (IsValidClient(i))
+			{
+				if (!IsPlayerAlive(i) || (IsInvuln(i) && !ignoreInvuln))
+					continue;
+			}
+				
+			if (!HasEntProp(i, Prop_Send, "m_iTeamNum") || !HasEntProp(i, Prop_Send, "m_vecOrigin"))
+				continue;
+				
+			if (GetEntProp(i, Prop_Send, "m_iTeamNum") != targTeam || (i == attacker && includeUser))
 			{
 				float vicLoc[3];
-				GetClientAbsOrigin(i, vicLoc);
-				vicLoc[2] += 40.0;	//Target the middle of the body instead of their feet, so small displacements don't screw with los checks
+				GetEntPropVector(i, Prop_Send, "m_vecOrigin", vicLoc);
+				
+				if (IsValidClient(i))
+				{
+					vicLoc[2] += 40.0;
+				}
 				
 				float dist = GetVectorDistance(groundZero, vicLoc);
 				
@@ -2413,7 +2437,8 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 					
 					if (!skipDefault)
 					{
-						Handle trace = TR_TraceRayFilterEx(groundZero, vicLoc, MASK_PLAYERSOLID_BRUSHONLY, RayType_EndPoint, CF_DefaultTrace);
+						entityBeingTraced = i;
+						Handle trace = TR_TraceRayFilterEx(groundZero, vicLoc, MASK_PLAYERSOLID_BRUSHONLY, RayType_EndPoint, CF_AOETrace);
 						passed = !TR_DidHit(trace);
 						delete trace;
 					}
@@ -2682,22 +2707,25 @@ bool MediShield_Collision(int ent1, int ent2)
 	if (!b_IsMedigunShield[ent1] && !b_IsMedigunShield[ent2])
 		return false;
 		
-	int ent1Owner = -1; int ent2Owner = -1;
+	/*int ent1Owner = -1; int ent2Owner = -1;
 	if (b_IsMedigunShield[ent1])
 		ent1Owner = GetEntPropEnt(ent1, Prop_Data, "m_hOwnerEntity");
 	if (b_IsMedigunShield[ent2])
-		ent2Owner = GetEntPropEnt(ent2, Prop_Data, "m_hOwnerEntity");
-		
-	int team1 = GetEntProp(ent1, Prop_Send, "m_iTeamNum");
-	int team2 = GetEntProp(ent2, Prop_Send, "m_iTeamNum");
+		ent2Owner = GetEntPropEnt(ent2, Prop_Data, "m_hOwnerEntity");*/
 		
 	//Block collision if a medigun shield is colliding with the world.
 	if (b_IsMedigunShield[ent1] && ent2 == 0 || b_IsMedigunShield[ent2] && ent1 == 0)
 		return true;
 		
-	//Both entities are medigun shields, prevent collision if they belong to the same team.
+	int team1 = GetEntProp(ent1, Prop_Send, "m_iTeamNum");
+	int team2 = GetEntProp(ent2, Prop_Send, "m_iTeamNum");
+	
+	//The entity being collided with is not the world, block collision if the entities are on different teams.
+	return team1 == team2;
+		
+	/*//Both entities are medigun shields, prevent collision if they belong to the same team.
 	if (b_IsMedigunShield[ent1] && b_IsMedigunShield[ent2])
-		return IsValidMulti(ent1Owner, false, _, true, TF2_GetClientTeam(ent2Owner)) && IsValidMulti(ent1Owner, false, _, true, TF2_GetClientTeam(ent1Owner));
+		return team1 == team2;
 		
 	//Entity 1 is a medigun shield, block collision if entity 2 is on the opposite team.
 	if (b_IsMedigunShield[ent1])
@@ -2744,7 +2772,7 @@ bool MediShield_Collision(int ent1, int ent2)
 	}
 	
 	//All checks returned false, don't do anything.
-	return false;
+	return false;*/
 }
 
 public any Native_CF_GetShieldWallHealth(Handle plugin, int numParams)

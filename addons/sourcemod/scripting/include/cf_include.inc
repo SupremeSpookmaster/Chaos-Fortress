@@ -1236,6 +1236,6 @@ native float CF_GetShieldWallMaxHealth(int shield);
  * @param includeUser			If set to true, this can damage the user if they are within the radius.
  * @param ignoreInvuln			If set to true, invulnerable players are added to the array returned by this native as long as they would have still been hit by it otherwise.
  *
- * @return	An array containing the client indices of all players hit by this damage, useful for applying additional effects to players who are hit. This gets returned even if it is empty, you will need to manually close the handle when you are done with it.
+ * @return	An array containing the entity indices of all entities hit by this damage, useful for applying additional effects to victims. This gets returned even if it is empty, you will need to manually close the handle when you are done with it.
  */
 native Handle CF_GenericAOEDamage(int attacker, int inflictor, int weapon, float dmg, int damageType, float radius, float groundZero[3], float falloffStart, float falloffMax, bool skipDefaultFilter = false, bool includeUser = true, bool ignoreInvuln = false);

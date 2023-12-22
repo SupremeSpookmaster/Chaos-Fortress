@@ -477,19 +477,23 @@ public void Taser_Collide(int taser, int ent)
 		EmitSoundToAll(SOUND_TASER_BLAST, taser, SNDCHAN_STATIC);
 	}
 	
-	if (IsValidMulti(ent))
+	if (IsValidEntity(ent))
 	{
 		SDKHooks_TakeDamage(ent, taser, IsValidClient(owner) ? owner : 0, Taser_DMG[taser]);
-		char atts[255];
-		Format(atts, sizeof(atts), "107 ; %.4f", 1.0 - Taser_Slow[taser]);
-		CF_AttachWearable(ent, view_as<int>(CF_ClassToken_Sniper), "tf_wearable", false, 0, 0, false, atts, Taser_Duration[taser]);
-		TF2_AddCondition(ent, TFCond_SpeedBuffAlly, 0.001);
-		CreateTimer(Taser_Duration[taser] + 0.1, Taser_Unslow, GetClientUserId(ent), TIMER_FLAG_NO_MAPCHANGE);
 		
-		DataPack pack = new DataPack();
-		CreateDataTimer(0.2, Taser_VFX, pack, TIMER_FLAG_NO_MAPCHANGE);
-		WritePackCell(pack, GetClientUserId(ent));
-		WritePackFloat(pack, Taser_Duration[taser]);
+		if (IsValidMulti(ent))
+		{
+			char atts[255];
+			Format(atts, sizeof(atts), "107 ; %.4f", 1.0 - Taser_Slow[taser]);
+			CF_AttachWearable(ent, view_as<int>(CF_ClassToken_Sniper), "tf_wearable", false, 0, 0, false, atts, Taser_Duration[taser]);
+			TF2_AddCondition(ent, TFCond_SpeedBuffAlly, 0.001);
+			CreateTimer(Taser_Duration[taser] + 0.1, Taser_Unslow, GetClientUserId(ent), TIMER_FLAG_NO_MAPCHANGE);
+			
+			DataPack pack = new DataPack();
+			CreateDataTimer(0.2, Taser_VFX, pack, TIMER_FLAG_NO_MAPCHANGE);
+			WritePackCell(pack, GetClientUserId(ent));
+			WritePackFloat(pack, Taser_Duration[taser]);
+		}
 	}
 	
 	RemoveEntity(taser);
@@ -744,7 +748,8 @@ public Action Strike_DealDamage(Handle smackthoserats, DataPack pack)
 	if (GetGameTime() > endTime || !IsValidClient(client))
 		return Plugin_Continue;
 
-	CF_GenericAOEDamage(client, client, client, damage, DMG_CLUB|DMG_BLAST|DMG_ALWAYSGIB, radius, groundZero, falloffStart, falloffMax, true, false);
+	Handle victims = CF_GenericAOEDamage(client, client, client, damage, DMG_CLUB|DMG_BLAST|DMG_ALWAYSGIB, radius, groundZero, falloffStart, falloffMax, true, false);
+	delete victims;
 
 	int r = 255;
 	int b = 0;
