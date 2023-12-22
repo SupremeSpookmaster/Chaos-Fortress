@@ -69,9 +69,7 @@
 //			- Scrap this feature entirely and remove all mentions of it from the code. This will be a giant pain in the ass but does not need to be done until public release.
 //	- DEVELOPMENT: I don't know what I did, but suddenly friendly projectiles cannot pass through medigun shields. What the fuck.
 //			- Once this is fixed, medigun shields will FINALLY be done.
-//	- GAMEPLAY: The game is having that issue again where it becomes EXTREMELY laggy as soon as the round starts.
-//			- Current Theory: "CF_CanPlayerUseAbilitySlot" being spammed 10x per second per living player, per ability slot is responsible for the majority of the lag. I am going to have to rewrite the HUD text system so that it somehow doesn't need to spam CF_CanPlayerUseAbilitySlot to display if the slot is blocked.
-//	- Sometimes when I open chat to change my character while everyone is spawning in, my game just fucking crashes and tells me "out of memory, something something texture address"?????????????????
+//	- COUNT HEAVNICH: Chow Down has suddenly started healing to full instantly. It also deletes your shotgun. I didn't even touch Chow Down. I hate Source spaghetti.
 //
 //	- PRESUMED UNFIXABLE (major bugs which I don't believe can be fixed with my current SourceMod expertise. The best thing you can do is classify these as exploits and punish them as such):
 //		- DEMOPAN: Enemies can get stuck in his shield if they walk into it while it is held. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.

@@ -80,7 +80,10 @@ enum struct CFCharacter
 	
 	bool Exists;
 	
-	//ConfigMap Map;
+	Handle Abilities_Ult;
+	Handle Abilities_M2;
+	Handle Abilities_M3;
+	Handle Abilities_Reload;
 	
 	void Create(float newSpeed, float newMaxHP, TFClassType newClass, char newModel[255], char newName[255], float newScale, char newMapPath[255])
 	{
@@ -91,11 +94,12 @@ enum struct CFCharacter
 		this.Name = newName;
 		this.Scale = newScale;
 		
-		//DeleteCfg(this.Map);
-		//delete this.Map;
-			
-		//this.Map = new ConfigMap(newMapPath);
 		this.MapPath = newMapPath;
+		
+		delete this.Abilities_Ult;
+		delete this.Abilities_M2;
+		delete this.Abilities_M3;
+		delete this.Abilities_Reload;
 		
 		this.Exists = true;
 	}
@@ -103,12 +107,77 @@ enum struct CFCharacter
 	void Destroy()
 	{
 		this.Exists = false;
-		//DeleteCfg(this.Map);
-		//delete this.Map;
+		
+		delete this.Abilities_Ult;
+		delete this.Abilities_M2;
+		delete this.Abilities_M3;
+		delete this.Abilities_Reload;
 	}
 }
 
 CFCharacter g_Characters[MAXPLAYERS + 1];
+
+public void CFC_StoreAbilities(int client, CF_AbilityType type, ConfigMap abilities)
+{
+	int i = 1;
+	char secName[255], abName[255], pluginName[255];
+	Format(secName, sizeof(secName), "ability_%i", i);
+		
+	ConfigMap subsection = abilities.GetSection(secName);
+	while (subsection != null)
+	{
+		int slot = GetIntFromConfigMap(subsection, "slot", 1) - 1;
+		
+		if (slot >= 0 && slot < 4)
+		{
+			if (slot == view_as<int>(type))
+			{
+				subsection.Get("ability_name", abName, sizeof(abName));
+				subsection.Get("plugin_name", pluginName, sizeof(pluginName));
+				
+				switch (type)
+				{
+					case CF_AbilityType_Ult:
+					{
+						if (g_Characters[client].Abilities_Ult == null)
+							g_Characters[client].Abilities_Ult = CreateArray(255);
+							
+						PushArrayString(g_Characters[client].Abilities_Ult, pluginName);
+						PushArrayString(g_Characters[client].Abilities_Ult, abName);
+					}
+					case CF_AbilityType_M2:
+					{
+						if (g_Characters[client].Abilities_M2 == null)
+							g_Characters[client].Abilities_M2 = CreateArray(255);
+							
+						PushArrayString(g_Characters[client].Abilities_M2, pluginName);
+						PushArrayString(g_Characters[client].Abilities_M2, abName);
+					}
+					case CF_AbilityType_M3:
+					{
+						if (g_Characters[client].Abilities_M3 == null)
+							g_Characters[client].Abilities_M3 = CreateArray(255);
+							
+						PushArrayString(g_Characters[client].Abilities_M3, pluginName);
+						PushArrayString(g_Characters[client].Abilities_M3, abName);
+					}
+					case CF_AbilityType_Reload:
+					{
+						if (g_Characters[client].Abilities_Reload == null)
+							g_Characters[client].Abilities_Reload = CreateArray(255);
+							
+						PushArrayString(g_Characters[client].Abilities_Reload, pluginName);
+						PushArrayString(g_Characters[client].Abilities_Reload, abName);
+					}
+				}
+			}
+		}
+		
+		i++;
+		Format(secName, sizeof(secName), "ability_%i", i);
+		subsection = abilities.GetSection(secName);
+	}
+}
 
 //Store configs and names in two separate arrays so we aren't reading every single character's config every single time someone opens the !characters menu:
 Handle CF_Characters_Configs;

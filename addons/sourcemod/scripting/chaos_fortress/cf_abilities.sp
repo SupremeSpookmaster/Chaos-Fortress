@@ -470,6 +470,7 @@ public void CFA_PlayerKilled(int attacker, int victim)
 
 public bool CFA_InitializeUltimate(int client, ConfigMap map)
 {
+	ConfigMap abilities = map.GetSection("character.abilities");
 	ConfigMap subsection = map.GetSection("character.ultimate_stats");
 	if (subsection != null)
 	{
@@ -483,6 +484,8 @@ public bool CFA_InitializeUltimate(int client, ConfigMap map)
 		f_UltCD[client] = GetFloatFromConfigMap(subsection, "cooldown", 0.0);
 		f_UltScale[client] = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
 		b_UltIsGrounded[client] = GetBoolFromConfigMap(subsection, "grounded", false);
+		
+		CFC_StoreAbilities(client, CF_AbilityType_Ult, abilities);
 		
 		b_CharacterHasUlt[client] = true;
 	}
@@ -500,6 +503,7 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 	
 	bool AtLeastOne = false;
 	
+	ConfigMap abilities = map.GetSection("character.abilities");
 	ConfigMap subsection = map.GetSection("character.m2_ability");
 	if (subsection != null)
 	{
@@ -515,6 +519,8 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		f_M2Scale[client] = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
 		b_M2IsGrounded[client] = GetBoolFromConfigMap(subsection, "grounded", false);
 		b_HeldM2BlocksOthers[client] = GetBoolFromConfigMap(subsection, "held_block", false) && b_M2IsHeld[client];
+		
+		CFC_StoreAbilities(client, CF_AbilityType_M2, abilities);
 		
 		b_HasM2[client] = true;
 		AtLeastOne = true;
@@ -540,6 +546,8 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		b_M3IsGrounded[client] = GetBoolFromConfigMap(subsection, "grounded", false);
 		b_HeldM3BlocksOthers[client] = GetBoolFromConfigMap(subsection, "held_block", false) && b_M3IsHeld[client];
 		
+		CFC_StoreAbilities(client, CF_AbilityType_M3, abilities);
+		
 		b_HasM3[client] = true;
 		AtLeastOne = true;
 	}
@@ -563,6 +571,8 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		f_RScale[client] = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
 		b_ReloadIsGrounded[client] = GetBoolFromConfigMap(subsection, "grounded", false);
 		b_HeldReloadBlocksOthers[client] = GetBoolFromConfigMap(subsection, "held_block", false) && b_ReloadIsHeld[client];
+		
+		CFC_StoreAbilities(client, CF_AbilityType_Reload, abilities);
 		
 		b_HasReload[client] = true;
 		
@@ -1135,8 +1145,6 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 	if (TF2_IsPlayerStunned(client))
 		return false;
 	
-	float cost; bool onground = GetEntityFlags(client) & FL_ONGROUND != 0;
-	
 	switch(type)
 	{
 		case CF_AbilityType_Ult:
@@ -1144,78 +1152,98 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 			if (b_UltBlocked[client])
 				return false;
 				
-			if (b_UltIsGrounded[client] && !onground)
+			if (b_UltIsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
 				return false;
+				
+			if (!HasEnoughResources(client, f_UltChargeRequired[client], type))
+			{
+				BlockedByTooFewResources = true;
+				return false;
+			}
 				
 			if (f_UltScale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_UltScale[client]))
 			{
 				BlockedByResize = true;
 				return false;
 			}
-					
-			cost = f_UltChargeRequired[client];
 		}
 		case CF_AbilityType_M2:
 		{
 			if (b_M2Blocked[client])
 				return false;
 				
-			if (b_M2IsGrounded[client] && !onground)
+			if (b_M2IsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
 				return false;
 				
+			if (!HasEnoughResources(client, f_M2Cost[client], type))
+			{
+				BlockedByTooFewResources = true;
+				return false;
+			}	
+			
 			if (f_M2Scale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_M2Scale[client]))
 			{
 				BlockedByResize = true;
 				return false;
 			}
-					
-			cost = f_M2Cost[client];
 		}
 		case CF_AbilityType_M3:
 		{
 			if (b_M3Blocked[client])
 				return false;
 				
-			if (b_M3IsGrounded[client] && !onground)
+			if (b_M3IsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
 				return false;
+					
+			if (!HasEnoughResources(client, f_M3Cost[client], type))
+			{
+				BlockedByTooFewResources = true;
+				return false;
+			}
 					
 			if (f_M3Scale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_M3Scale[client]))
 			{
 				BlockedByResize = true;
 				return false;
 			}
-					
-			cost = f_M3Cost[client];
 		}
 		case CF_AbilityType_Reload:
 		{
 			if (b_ReloadBlocked[client])
 				return false;
 				
-			if (b_ReloadIsGrounded[client] && !onground)
+			if (b_ReloadIsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
 				return false;
+				
+			if (!HasEnoughResources(client, f_ReloadCost[client], type))
+			{
+				BlockedByTooFewResources = true;
+				return false;
+			}
 				
 			if (f_RScale[client] > 0.0 && CheckPlayerWouldGetStuck(client, f_RScale[client]))
 			{
 				BlockedByResize = true;
 				return false;
 			}
-					
-			cost = f_ReloadCost[client];
 		}
 	}
 	
+	return !CF_CheckIsSlotBlocked(client, view_as<int>(type) + 1);
+}
+
+public bool HasEnoughResources(int client, float cost, CF_AbilityType type)
+{
 	if(b_UsingResources[client] || type == CF_AbilityType_Ult)
 	{
 		float available = (b_ResourceIsUlt[client] || type == CF_AbilityType_Ult) ? f_UltCharge[client] : f_Resources[client];
 		if (cost > available)
 		{
-			BlockedByTooFewResources = true;
 			return false;
 		}
 	}
 	
-	return !CF_CheckIsSlotBlocked(client, view_as<int>(type) + 1);
+	return true;
 }
 
 public Native_CF_GiveUltCharge(Handle plugin, int numParams)
@@ -1316,7 +1344,7 @@ public Native_CF_SetUltCharge(Handle plugin, int numParams)
 			CF_PlayRandomSound(client, "", "sound_ultimate_ready");
 		}
 		
-		if (oldCharge != amt)
+		/*if (oldCharge != amt)
 		{
 			CF_ActivateAbilitySlot(client, 10);
 			
@@ -1324,7 +1352,7 @@ public Native_CF_SetUltCharge(Handle plugin, int numParams)
 				CF_ActivateAbilitySlot(client, 8);
 			else
 				CF_ActivateAbilitySlot(client, 9);
-		}
+		}*/
 	}
 }
 
@@ -1444,12 +1472,12 @@ public Native_CF_SetSpecialResource(Handle plugin, int numParams)
 				}
 			}
 			
-			CF_ActivateAbilitySlot(client, 7);
+			/*CF_ActivateAbilitySlot(client, 7);
 			
 			if (amt > oldResources)
 				CF_ActivateAbilitySlot(client, 5);
 			else
-				CF_ActivateAbilitySlot(client, 6);
+				CF_ActivateAbilitySlot(client, 6);*/
 		}
 	}
 }
@@ -1633,108 +1661,107 @@ public Native_CF_DoAbility(Handle plugin, int numParams)
 public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
+	int slot = GetNativeCell(2);
 	
 	if (!CF_IsPlayerCharacter(client))
 		return;
 		
-	int slot = GetNativeCell(2);
-	
-	char pluginName[255], abName[255];
-	
-	ConfigMap map = new ConfigMap(g_Characters[client].MapPath);
-	if (map == null)
-		return;
-		
-	ConfigMap abilities = map.GetSection("character.abilities");
-	if (abilities == null)
+	switch(slot)
 	{
-		DeleteCfg(map);
-		return;
-	}
-		
-	int i = 1;
-	char secName[255];
-	Format(secName, sizeof(secName), "ability_%i", i);
-		
-	ConfigMap subsection = abilities.GetSection(secName);
-	while (subsection != null)
-	{
-		if (GetIntFromConfigMap(subsection, "slot", -1) == slot)
+		case 1:
 		{
-			subsection.Get("ability_name", abName, sizeof(abName));
-			subsection.Get("plugin_name", pluginName, sizeof(pluginName));
-			
-			CF_DoAbility(client, pluginName, abName);
+			DoAllAbilities(client, g_Characters[client].Abilities_Ult);
 		}
-		
-		i++;
-		Format(secName, sizeof(secName), "ability_%i", i);
-		subsection = abilities.GetSection(secName);
+		case 2:
+		{
+			DoAllAbilities(client, g_Characters[client].Abilities_M2);
+		}
+		case 3:
+		{
+			DoAllAbilities(client, g_Characters[client].Abilities_M3);
+		}
+		case 4:
+		{
+			DoAllAbilities(client, g_Characters[client].Abilities_Reload);
+		}
 	}
-	
-	DeleteCfg(map);
+}
+
+public void DoAllAbilities(int client, Handle abilities)
+{
+	if (abilities == null)
+		return;
+		
+	for (int i = 0; i < GetArraySize(abilities); i += 2)
+	{
+		char abName[255], plugName[255];
+		GetArrayString(abilities, i, plugName, sizeof(plugName));
+		GetArrayString(abilities, i + 1, abName, sizeof(abName));
+		CF_DoAbility(client, plugName, abName);
+	}
 }
 
 public any Native_CF_CheckIsSlotBlocked(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
+	int slot = GetNativeCell(2);
 	
 	if (!CF_IsPlayerCharacter(client))
 		return true;
 		
-	int slot = GetNativeCell(2);
-	
-	char pluginName[255], abName[255];
-	
-	ConfigMap map = new ConfigMap(g_Characters[client].MapPath);
-	if (map == null)
-		return true;
-		
-	ConfigMap abilities = map.GetSection("character.abilities");
-	if (abilities == null)
+	bool result = false;
+	switch(slot)
 	{
-		DeleteCfg(map);
-		return true;
-	}
-		
-	int i = 1;
-	char secName[255];
-	Format(secName, sizeof(secName), "ability_%i", i);
-		
-	ConfigMap subsection = abilities.GetSection(secName);
-	while (subsection != null)
-	{
-		if (GetIntFromConfigMap(subsection, "slot", -1) == slot)
+		case 1:
 		{
-			subsection.Get("ability_name", abName, sizeof(abName));
-			subsection.Get("plugin_name", pluginName, sizeof(pluginName));
-			
-			bool result = true;
-			
-			Call_StartForward(g_AttemptAbility);
-			
-			Call_PushCell(client);
-			Call_PushString(pluginName);
-			Call_PushString(abName);
-			Call_PushCell(view_as<CF_AbilityType>(slot - 1));
-			Call_PushCellRef(result);
-			
-			Action diditwork;
-			Call_Finish(diditwork);
-			
-			if (diditwork == Plugin_Changed && !result)
-			{
-				DeleteCfg(map);
-				return true;
-			}
+			result = ScanAllAbilities(client, g_Characters[client].Abilities_Ult, slot);
 		}
-		
-		i++;
-		Format(secName, sizeof(secName), "ability_%i", i);
-		subsection = abilities.GetSection(secName);
+		case 2:
+		{
+			result = ScanAllAbilities(client, g_Characters[client].Abilities_M2, slot);
+		}
+		case 3:
+		{
+			result = ScanAllAbilities(client, g_Characters[client].Abilities_M3, slot);
+		}
+		case 4:
+		{
+			result = ScanAllAbilities(client, g_Characters[client].Abilities_Reload, slot);
+		}
 	}
 	
-	DeleteCfg(map);
+	return result;
+}
+
+public bool ScanAllAbilities(int client, Handle abilities, int slot)
+{
+	if (abilities == null)
+		return true;
+		
+	bool result = false;
+		
+	for (int i = 0; i < GetArraySize(abilities); i += 2)
+	{
+		char abName[255], plugName[255];
+		GetArrayString(abilities, i, plugName, sizeof(plugName));
+		GetArrayString(abilities, i + 1, abName, sizeof(abName));
+		
+		Call_StartForward(g_AttemptAbility);
+			
+		Call_PushCell(client);
+		Call_PushString(plugName);
+		Call_PushString(abName);
+		Call_PushCell(view_as<CF_AbilityType>(slot - 1));
+		Call_PushCellRef(result);
+			
+		Action diditwork;
+		Call_Finish(diditwork);
+			
+		if (diditwork == Plugin_Changed && !result)
+		{
+			return true;
+		}
+	}
 	
 	return false;
 }
