@@ -27,7 +27,7 @@
   - Look at **[mercenary.cfg](https://github.com/SupremeSpookmaster/Chaos-Fortress/blob/main/addons/sourcemod/configs/chaos_fortress/mercenary.cfg)** to see an example of a ***Chaos Fortress*** character CFG.
     - *This file doubles as a character CFG template. Feel free to use it to speed up the development of your characters!*
   - Look at **[cf_mercenary.sp](https://github.com/SupremeSpookmaster/Chaos-Fortress/blob/main/addons/sourcemod/scripting/cf_mercenary.sp)** to see an example of a basic ***Chaos Fortress*** character plugin.
-  - Look at **[FILE PENDING]** for a ***Chaos Fortress*** character plugin template to speed up the development of your characters!
+  - Look at **[cf_plugin_template.sp](https://github.com/SupremeSpookmaster/Chaos-Fortress/blob/main/addons/sourcemod/scripting/cf_plugin_template.sp)** for a ***Chaos Fortress*** character plugin template to speed up the development of your characters!
   - Character plugins do not require a special file extension or directory. Just drop the compiled SMX in your server's plugins folder and it will work.
     - *For the sake of organization, you are recommended to put your character plugins in a sub-folder, such as plugins/chaos_fortress. Again, this is just a recommendation, and is not mandatory.*
   - Please note that despite the similarities in their development process, FF2 plugins and configs will ***not*** work for ***Chaos Fortress*** characters.
