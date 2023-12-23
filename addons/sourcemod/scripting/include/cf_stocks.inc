@@ -1210,6 +1210,46 @@ stock void GetAttribStringFromWeapon(int weapon, char output[255])
 	}
 }
 
+stock void SetWeaponAttribsFromString(int weapon, char attributes[255])
+{
+	if (!IsValidEntity(weapon))
+		return;
+		
+	char atts[32][32];
+	int count = ExplodeString(attributes, ";", atts, 32, 32);
+
+	if(count % 2)
+		--count;
+		
+	for (int i; i < count; i += 2)
+	{
+		int attrib = StringToInt(atts[i]);
+		float val = StringToFloat(atts[i + 1]);
+		
+		if(attrib)
+		{
+			TF2Attrib_SetByDefIndex(weapon, attrib, val);
+		}
+	}
+}
+
+//Credit to Zombie Riot:
+stock void SetForceButtonState(int client, bool apply, int button_flag)
+{
+	int Buttons = GetEntProp(client, Prop_Data, "m_afButtonForced");
+
+	if(apply)
+	{
+		Buttons |= button_flag;
+	}
+	else
+	{
+		Buttons &= ~button_flag;
+	}
+	
+	SetEntProp(client, Prop_Data, "m_afButtonForced", Buttons);
+}
+
 //Below is borrowed from DarthNinja
 stock void SetAmmo(int client, int weapon, int newAmmo)
 {
@@ -1289,6 +1329,22 @@ stock float GetAttributeValue(int entity, int attribute, float defaultVal)
 		return defaultVal;
 		
 	return TF2Attrib_GetValue(addy);
+}
+
+stock void WritePackFloatArray(DataPack pack, const float[] arr, int size)
+{
+	for (int i = 0; i < size; i++)
+	{
+		WritePackFloat(pack, arr[i]);
+	}
+}
+
+stock void ReadPackFloatArray(DataPack pack, float[] arr, int size)
+{
+	for (int i = 0; i < size; i++)
+	{
+		arr[i] = ReadPackFloat(pack);
+	}
 }
 
 stock DynamicHook DHook_CreateVirtual(GameData gd, const char[] name)
@@ -1728,6 +1784,6 @@ public void Stock_MakeExplosionFrameLater(DataPack pack)
 
 stock bool TF2_IsPlayerStunned(int client)
 {
-	return (TF2_IsPlayerInCondition(client, TFCond_Slowed) || TF2_IsPlayerInCondition(client, TFCond_Dazed)
+	return (TF2_IsPlayerInCondition(client, TFCond_Dazed)
 	|| TF2_IsPlayerInCondition(client, TFCond_FreezeInput) || TF2_IsPlayerInCondition(client, TFCond_Taunting));
 }

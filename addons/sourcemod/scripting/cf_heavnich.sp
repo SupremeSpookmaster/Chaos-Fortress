@@ -90,7 +90,7 @@ public void TF2_OnConditionRemoved(int client, TFCond condition)
 
 public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result)
 {
-	if (!Rev_Active[client] || Rev_EndTime[client] < GetGameTime())
+	if (!Rev_Active[client] || (Rev_EndTime[client] < GetGameTime() && !TF2_IsPlayerInCondition(client, TFCond_Slowed)))
 		return Plugin_Continue;
 		
 	int slot = view_as<int>(type);

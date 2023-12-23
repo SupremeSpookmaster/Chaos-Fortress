@@ -38,6 +38,7 @@
 !cf_heavnich.sp
 !cf_demopan.sp
 !cf_plugin_template.sp
+!cf_cbs.sp
 
 #Include Files
 !cf_include.inc
