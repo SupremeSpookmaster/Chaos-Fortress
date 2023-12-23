@@ -93,6 +93,14 @@ GlobalForward g_AttemptAbility;
 
 int i_GenericProjectileOwner[2049] = { -1, ... };
 int i_HealingDone[MAXPLAYERS + 1] = { 0, ... };
+int i_UltWeaponSlot[MAXPLAYERS + 1] = { -1, ... };
+int i_M2WeaponSlot[MAXPLAYERS + 1] = { -1, ... };
+int i_M3WeaponSlot[MAXPLAYERS + 1] = { -1, ... };
+int i_ReloadWeaponSlot[MAXPLAYERS + 1] = { -1, ... };
+int i_UltAmmo[MAXPLAYERS + 1] = { -1, ... };
+int i_M2Ammo[MAXPLAYERS + 1] = { -1, ... };
+int i_M3Ammo[MAXPLAYERS + 1] = { -1, ... };
+int i_ReloadAmmo[MAXPLAYERS + 1] = { -1, ... };
 
 CF_AbilityType i_HeldBlocked[MAXPLAYERS + 1] = { CF_AbilityType_None, ... };
 
@@ -484,6 +492,8 @@ public bool CFA_InitializeUltimate(int client, ConfigMap map)
 		f_UltCD[client] = GetFloatFromConfigMap(subsection, "cooldown", 0.0);
 		f_UltScale[client] = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
 		b_UltIsGrounded[client] = GetBoolFromConfigMap(subsection, "grounded", false);
+		i_UltWeaponSlot[client] = GetIntFromConfigMap(subsection, "weapon_slot", -1);
+		i_UltAmmo[client] = GetIntFromConfigMap(subsection, "ammo", 0);
 		
 		CFC_StoreAbilities(client, CF_AbilityType_Ult, abilities);
 		
@@ -519,6 +529,8 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		f_M2Scale[client] = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
 		b_M2IsGrounded[client] = GetBoolFromConfigMap(subsection, "grounded", false);
 		b_HeldM2BlocksOthers[client] = GetBoolFromConfigMap(subsection, "held_block", false) && b_M2IsHeld[client];
+		i_M2WeaponSlot[client] = GetIntFromConfigMap(subsection, "weapon_slot", -1);
+		i_M2Ammo[client] = GetIntFromConfigMap(subsection, "ammo", 0);
 		
 		CFC_StoreAbilities(client, CF_AbilityType_M2, abilities);
 		
@@ -546,6 +558,9 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		b_M3IsGrounded[client] = GetBoolFromConfigMap(subsection, "grounded", false);
 		b_HeldM3BlocksOthers[client] = GetBoolFromConfigMap(subsection, "held_block", false) && b_M3IsHeld[client];
 		
+		i_M3WeaponSlot[client] = GetIntFromConfigMap(subsection, "weapon_slot", -1);
+		i_M3Ammo[client] = GetIntFromConfigMap(subsection, "ammo", 0);
+		
 		CFC_StoreAbilities(client, CF_AbilityType_M3, abilities);
 		
 		b_HasM3[client] = true;
@@ -571,6 +586,9 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		f_RScale[client] = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
 		b_ReloadIsGrounded[client] = GetBoolFromConfigMap(subsection, "grounded", false);
 		b_HeldReloadBlocksOthers[client] = GetBoolFromConfigMap(subsection, "held_block", false) && b_ReloadIsHeld[client];
+		
+		i_ReloadWeaponSlot[client] = GetIntFromConfigMap(subsection, "weapon_slot", -1);
+		i_ReloadAmmo[client] = GetIntFromConfigMap(subsection, "ammo", 0);
 		
 		CFC_StoreAbilities(client, CF_AbilityType_Reload, abilities);
 		
@@ -1155,6 +1173,14 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 			if (b_UltIsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
 				return false;
 				
+			int acWep = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+			
+			if (i_UltWeaponSlot[client] > -1 && (!IsValidEntity(acWep) || GetPlayerWeaponSlot(client, i_UltWeaponSlot[client]) != acWep))
+				return false;
+				
+			if (i_UltAmmo[client] > 0 && (!IsValidEntity(acWep) || i_UltAmmo[client] < GetClip(acWep)))
+				return false;
+				
 			if (!HasEnoughResources(client, f_UltChargeRequired[client], type))
 			{
 				BlockedByTooFewResources = true;
@@ -1173,6 +1199,14 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 				return false;
 				
 			if (b_M2IsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
+				return false;
+				
+			int acWep = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+			
+			if (i_M2WeaponSlot[client] > -1 && (!IsValidEntity(acWep) || GetPlayerWeaponSlot(client, i_M2WeaponSlot[client]) != acWep))
+				return false;
+				
+			if (i_M2Ammo[client] > 0 && (!IsValidEntity(acWep) || i_M2Ammo[client] < GetClip(acWep)))
 				return false;
 				
 			if (!HasEnoughResources(client, f_M2Cost[client], type))
@@ -1194,7 +1228,15 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 				
 			if (b_M3IsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
 				return false;
-					
+				
+			int acWep = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+			
+			if (i_M3WeaponSlot[client] > -1 && (!IsValidEntity(acWep) || GetPlayerWeaponSlot(client, i_M3WeaponSlot[client]) != acWep))
+				return false;
+				
+			if (i_M3Ammo[client] > 0 && (!IsValidEntity(acWep) || i_M3Ammo[client] < GetClip(acWep)))
+				return false;
+
 			if (!HasEnoughResources(client, f_M3Cost[client], type))
 			{
 				BlockedByTooFewResources = true;
@@ -1213,6 +1255,14 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 				return false;
 				
 			if (b_ReloadIsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
+				return false;
+				
+			int acWep = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+			
+			if (i_ReloadWeaponSlot[client] > -1 && (!IsValidEntity(acWep) || GetPlayerWeaponSlot(client, i_ReloadWeaponSlot[client]) != acWep))
+				return false;
+				
+			if (i_ReloadAmmo[client] > 0 && (!IsValidEntity(acWep) || i_ReloadAmmo[client] < GetClip(acWep)))
 				return false;
 				
 			if (!HasEnoughResources(client, f_ReloadCost[client], type))
@@ -2707,12 +2757,6 @@ bool MediShield_Collision(int ent1, int ent2)
 	if (!b_IsMedigunShield[ent1] && !b_IsMedigunShield[ent2])
 		return false;
 		
-	/*int ent1Owner = -1; int ent2Owner = -1;
-	if (b_IsMedigunShield[ent1])
-		ent1Owner = GetEntPropEnt(ent1, Prop_Data, "m_hOwnerEntity");
-	if (b_IsMedigunShield[ent2])
-		ent2Owner = GetEntPropEnt(ent2, Prop_Data, "m_hOwnerEntity");*/
-		
 	//Block collision if a medigun shield is colliding with the world.
 	if (b_IsMedigunShield[ent1] && ent2 == 0 || b_IsMedigunShield[ent2] && ent1 == 0)
 		return true;
@@ -2720,59 +2764,8 @@ bool MediShield_Collision(int ent1, int ent2)
 	int team1 = GetEntProp(ent1, Prop_Send, "m_iTeamNum");
 	int team2 = GetEntProp(ent2, Prop_Send, "m_iTeamNum");
 	
-	//The entity being collided with is not the world, block collision if the entities are on different teams.
+	//The entity being collided with is not the world, block collision if the entities are on the same team.
 	return team1 == team2;
-		
-	/*//Both entities are medigun shields, prevent collision if they belong to the same team.
-	if (b_IsMedigunShield[ent1] && b_IsMedigunShield[ent2])
-		return team1 == team2;
-		
-	//Entity 1 is a medigun shield, block collision if entity 2 is on the opposite team.
-	if (b_IsMedigunShield[ent1])
-	{
-		if (IsValidClient(ent2))
-		{
-			if (TF2_GetClientTeam(ent2) != TF2_GetClientTeam(ent1Owner))
-			{
-				return false;
-			}
-			
-			return true;
-		}
-		
-		//This was originally in place to allow payload carts to go through shields instead of being blocked.
-		//As it turns out, the payload cart deals 1k damage per half-second to phys props, INCLUDING simulated shields.
-		//I thought it would be cool and unique to let players waste a shield to temporarily stall the cart, so I removed this check.
-		//if (IsPayloadCart(ent2))
-		//	return true;
-			
-		return team1 != team2;
-	}
-	
-	//Entity 2 is a medigun shield, block collision if entity 1 is on the opposite team.
-	if (b_IsMedigunShield[ent2])
-	{
-		if (IsValidClient(ent1))
-		{
-			if (TF2_GetClientTeam(ent1) != TF2_GetClientTeam(ent2Owner))
-			{
-				return false;
-			}
-			
-			return true;
-		}
-			
-		//This was originally in place to allow payload carts to go through shields instead of being blocked.
-		//As it turns out, the payload cart deals 1k damage per half-second to phys props, INCLUDING simulated shields.
-		//I thought it would be cool and unique to let players waste a shield to temporarily stall the cart, so I removed this check.
-		//if (IsPayloadCart(ent1))
-		//	return true;
-			
-		return team1 != team2;
-	}
-	
-	//All checks returned false, don't do anything.
-	return false;*/
 }
 
 public any Native_CF_GetShieldWallHealth(Handle plugin, int numParams)
