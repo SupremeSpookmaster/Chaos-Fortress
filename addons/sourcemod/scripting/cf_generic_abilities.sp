@@ -19,6 +19,7 @@
 #define SPEED				"generic_speed"
 #define HEALTH				"generic_health"
 #define SCALE				"generic_scale_ability"
+#define SHAKE				"generic_shake"
 
 float Weapon_EndTime[2049] = { 0.0, ... };
 
@@ -271,6 +272,24 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	{
 		Scale_Activate(client, abilityName);
 	}
+	
+	if (StrContains(abilityName, SHAKE) != -1)
+	{
+		Shake_Activate(client, abilityName);
+	}
+}
+
+public void Shake_Activate(int client, char abilityName[255])
+{
+	float pos[3];
+	GetClientAbsOrigin(client, pos);
+	
+	int amp = CF_GetArgI(client, GENERIC, abilityName, "amp");
+	int radius = CF_GetArgI(client, GENERIC, abilityName, "radius");
+	int duration = CF_GetArgI(client, GENERIC, abilityName, "duration");
+	int frequency = CF_GetArgI(client, GENERIC, abilityName, "frequency");
+	
+	SpawnShaker(pos, amp, radius, duration, frequency, 4);
 }
 
 public void Scale_Activate(int client, char abilityName[255])

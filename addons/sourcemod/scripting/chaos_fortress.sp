@@ -17,6 +17,9 @@
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////
+//		-ALL:
+//			- Ult charge rate may be way too slow across the board. We will find out during the public beta test.
+//		////////////////////////////////////////////
 //		- Mercenary:
 //			- None! (Pending public opinion during beta)
 //		////////////////////////////////////////////
@@ -37,6 +40,10 @@
 //		////////////////////////////////////////////
 //		- Demopan:
 //			- Using Profit Blast to blast jump *might* give him too much mobility for a tank.
+//		////////////////////////////////////////////
+//		- Christian Brutal Sniper:
+//			- With the exception of fighting against tanks, it is almost never worth it to go for headshots, and it is almost always worth it to use Blast Bolt with Heavy Draw.
+//				- Removing the "crits become mini-crits" attribute would solve this issue, but then he would be disgustingly overpowered.
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Add Demopan's fancy ult delay effect to all characters.

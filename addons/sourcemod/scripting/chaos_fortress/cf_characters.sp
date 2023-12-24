@@ -1684,7 +1684,8 @@ public void CF_ResetMadeStatus(int client)
  	int hp = ReadPackCell(pack);
  	delete pack;
  	
- 	SetEntProp(client, Prop_Send, "m_iHealth", hp);
+ 	if (IsValidClient(client))
+ 		SetEntProp(client, Prop_Send, "m_iHealth", hp);
  }
  
  public any Native_CF_GetCharacterMaxHealth(Handle plugin, int numParams)

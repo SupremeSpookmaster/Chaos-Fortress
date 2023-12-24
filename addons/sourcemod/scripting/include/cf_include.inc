@@ -395,7 +395,7 @@ forward void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255
 forward void CF_OnCharacterCreated(int client);
 
 /**
- * Called when a player's character is removed, or they are made to no longer be a character. This occurs when the player dies and whenever the round state changes.
+ * Called when a player's character is removed, or they are made to no longer be a character. This occurs when the player dies or becomes a new character, and whenever the round state changes.
  *
  * @param client			The client whose character was removed.
  *

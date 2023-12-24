@@ -333,9 +333,9 @@ public Action CFA_HUDTimer(Handle timer)
 				{
 					if (b_HasM2[client])
 					{
-						CanUse = CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M2, wouldBeStuck, tooPoor);
+						CanUse = CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M2, wouldBeStuck, tooPoor, remCD);
 						
-						if (!CanUse && !tooPoor && !wouldBeStuck)
+						if (!CanUse && !tooPoor && !wouldBeStuck && remCD < 0.1)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M2Name[client]);
 						}
@@ -371,9 +371,9 @@ public Action CFA_HUDTimer(Handle timer)
 					
 					if (b_HasM3[client])
 					{
-						CanUse = CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M3, wouldBeStuck, tooPoor);
+						CanUse = CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M3, wouldBeStuck, tooPoor, remCD);
 						
-						if (!CanUse && !tooPoor && !wouldBeStuck)
+						if (!CanUse && !tooPoor && !wouldBeStuck && remCD < 0.1)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M3Name[client]);
 						}
@@ -409,9 +409,9 @@ public Action CFA_HUDTimer(Handle timer)
 					
 					if (b_HasReload[client])
 					{
-						CanUse = CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_Reload, wouldBeStuck, tooPoor);
+						CanUse = CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_Reload, wouldBeStuck, tooPoor, remCD);
 						
-						if (!CanUse && !tooPoor && !wouldBeStuck)
+						if (!CanUse && !tooPoor && !wouldBeStuck && remCD < 0.1)
 						{
 							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_ReloadName[client]);
 						}
@@ -1149,12 +1149,13 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 	}
 }
 
-bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedByResize = false, bool &BlockedByTooFewResources = false)
+bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedByResize = false, bool &BlockedByTooFewResources = false, float &remCD = 0.0)
 {
 	BlockedByResize = false;
 	BlockedByTooFewResources = false;
+	remCD = CF_GetAbilityCooldown(client, type);
 	
-	if (CF_GetAbilityCooldown(client, type) > 0.0)
+	if (remCD > 0.0)
 		return false;
 	
 	if (i_HeldBlocked[client] != CF_AbilityType_None && i_HeldBlocked[client] != type)
