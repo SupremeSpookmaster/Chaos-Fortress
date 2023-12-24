@@ -6,8 +6,8 @@
 //#define DEBUG_GAMERULES
 //#define DEBUG_SOUNDS
 //#define USE_PREVIEWS
-
 //#define TESTING
+
 //
 //	- IMMEDIATE PLANS:
 //		- Orbital Sniper:
@@ -44,9 +44,10 @@
 //		- Christian Brutal Sniper:
 //			- With the exception of fighting against tanks, it is almost never worth it to go for headshots, and it is almost always worth it to use Blast Bolt with Heavy Draw.
 //				- Removing the "crits become mini-crits" attribute would solve this issue, but then he would be disgustingly overpowered.
+//			- If multiple CBSs use Thousand Volley at the same time, the server will more than likely crash due to too many edicts (unconfirmed, cannot test with bots).
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
-//	- TODO: Add Demopan's fancy ult delay effect to all characters.
+//	- TODO: Make Demopan's fancy ult delay an officially supported feature that you can enable or disable by setting "warning_delay" in the ultimate stats section.
 //	- TODO: Disable random crits on the beta test server (melee characters like Spookmaster and Demopan are utterly busted with random crits).
 //	- TODO: Test all game modes (except for CTF which won't be officially supported):
 //		- [X] Payload
@@ -55,12 +56,11 @@
 //		- [ ] King of the Hill
 //	- TODO: Everything that happens on client disconnect (possibly already covered, not sure).
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
-//	- TODO: Finalize the wiki by updating each page with all of the changes.
+//	- TODO: Finalize the wiki by updating each page with all of the changes. This will take several days at the bare minimum.
 //	- TODO: Add support for translations. This will be a huge pain in the ass, but does not need to be done until public release.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
-//	- Make natives which share the names of FF2's natives and do the same things, so porting FF2 plugins is as simple as just changing the include file and recompiling.
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
 //	- For some reason, players get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? It's invisible while alive but becomes visible on death and also displays in the 3D player model shown in the HUD. This has no effect on gameplay but it's really ugly. Honestly baffling.
@@ -69,7 +69,7 @@
 //	- DEMOPAN: Becoming übercharged on BLU team causes your cosmetics to use the RED team's über texture.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
-//	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
+//	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This feature may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //			- Scrap this feature entirely and remove all mentions of it from the code. This will be a giant pain in the ass but does not need to be done until public release.
 //
 //	- PRESUMED UNFIXABLE (major bugs which I don't believe can be fixed with my current SourceMod expertise. The best thing you can do is classify these as exploits and punish them as such):
