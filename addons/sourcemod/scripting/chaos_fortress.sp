@@ -10,8 +10,29 @@
 
 //
 //	- IMMEDIATE PLANS:
+//		- Fake Player Models System:
+//			- Can be enabled on a character by setting "animator_model" to a valid model in the config.
+//			- If enabled: the player gets parented to an invisible prop_dynamic which uses the model specified in animator_model, something like this:
+/*
+			SetEntProp(client, Prop_Send, "m_fEffects", EF_BONEMERGE|EF_PARENT_ANIMATES);
+
+			SetVariantString("!activator");
+			AcceptEntityInput(client, "SetParent", prop, client);
+*/
+//			- This should force the player to use the animations of that prop_dynamic. It will also shift their hitboxes, wearables, and weapon models to match the prop_dynamic.
+//				- NOTE: Collision hulls will be unchanged. This is something developers will need to be aware of when using the FPM system.
+//			- The prop_dynamic must use the same skin as the player model at all times. This can be done by simply copying the m_nSkin property every frame.
+//			- THE HARD PART: The prop_dynamic will need to perfectly match the animations of a normal player model. This will require a LOT of trial and error.
+//			- Natives to add during development:
+//				- CFAnimator_SetAnimator(int client, char model[255]): Changes the model of the player's prop_dynamic. Can be used to enable the FPM system on players who aren't currently using it.
+//				- CFAnimator_SetCycle(int client, char sequences[255][], CFAnimator_SequenceType type): Changes the animations used for the specified animation cycle. "type" refers to the type of cycle being changed, such as a walk cycle, crouch cycle, swim cycle, etc.
+//				- CFAnimator_ForceAnimation(int client, char sequence[255], float duration, bool BlockGestures, bool BlockLook): Forces an animation on a client. If BlockGestures is enabled, all gestures (EX: your character gives a thumbs-up when you say "good job") are blocked for the duration. BlockLook does the same for pitch/yaw morphs.
+//				- CFAnimator_AddGesture(int client, char sequence[255], float duration): Adds a gesture to the player's FPM for the specified duration.
+//
 //		- Orbital Sniper:
 //			- Make custom sounds and implement them. Remove the DSP effect attribute once this is done.
+//		- Christian Brutal Sniper:
+//			- Implement Badass' team-colored model and add him to the credits.
 //		- Doktor Medick:
 //			- Implement a native that gets the *base* speed of a character instead of their current speed. Then, add or subtract a percentage of that base speed as needed to modify movement speed, and reverse that add/subtract operation when the effect ends.
 //				- Reuse this method for Orbital Sniper's taser and Mercenary's sprint so they don't rely on a wearable.
@@ -67,9 +88,11 @@
 //	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
 //	- TODO: Finalize the wiki by updating each page with all of the changes. This will take several days at the bare minimum.
 //	- TODO: Add support for translations. This will be a huge pain in the ass, but does not need to be done until public release.
+//	- TODO: Make sure plugin variables automatically get reset on map change. I imagine this will not be a problem, but if it's like ZR and variables don't get reset automatically, it's going to be a nightmare to deal with.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
+//		- "desc_brief" will be what shows up when you first open a character's page in the !characters menu. "desc_detailed" is a secondary menu like the lore button, but with multiple pages of detailed info.
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
 //	- For some reason, players get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? It's invisible while alive but becomes visible on death and also displays in the 3D player model shown in the HUD. This has no effect on gameplay but it's really ugly. Honestly baffling.
