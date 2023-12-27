@@ -12,8 +12,17 @@
 //	- IMMEDIATE PLANS:
 //		- Orbital Sniper:
 //			- Make custom sounds and implement them. Remove the DSP effect attribute once this is done.
-//		- Future Development:
-//			- Look into using the m_afButtonForced property.
+//		- Doktor Medick:
+//			- Implement a native that gets the *base* speed of a character instead of their current speed. Then, add or subtract a percentage of that base speed as needed to modify movement speed, and reverse that add/subtract operation when the effect ends.
+//				- Reuse this method for Orbital Sniper's taser and Mercenary's sprint so they don't rely on a wearable.
+//				- Probably make this method a built-in native for ease-of-use.
+//			- Write Cocainum.
+//			- Write medigun passives.
+//			- Write Surprise Surgery.
+//				- Write a separate plugin (something like "tf2_playercollisions") for the "stuck_method" arg. Then, we can use this plugin to fix BvB's collision issues as well. Two birds with one stone and what-not.
+//			- Write High Time.
+//				- Use m_flNextPrimaryAttack instead of attributes for the attack speed modifier.
+//				- Reload speed boosts will unfortunately not be possible, as a netprop does not exist for reload time. I could use attributes, but that would be unclean and highly likely to cause cross-plugin conflicts.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////
@@ -26,13 +35,13 @@
 //		- Spookmaster Bones:
 //			- Turns into an ungodly, unstoppable monster at max souls. This might just be because of random crits giving him triple damage 60% of the time. Test further after removing random crits.
 //			- Any kill will grant a soul, not just melee. This encourages sitting at a distance and fishing for souls risk-free with Skull Servants instead of getting in and fighting.
-//				- Make players drop timed soul pickups that the SB player needs to manually pick up to gain the soul. Upon being picked up, these souls immediately heal the user for 75 HP.
+//				- Make players drop timed soul pickups that the SB player needs to manually pick up to gain the soul. Upon being picked up, these souls immediately heal the user for 75 HP and the player gains 1 Soul to do whatever they want with.
 //					- This is a fairly drastic change. Only do this if people think SB is overpowered.
 //					- Thanks to all of the work we just put into fake health kits, this should be super easy to implement!
 //		////////////////////////////////////////////
 //		- Orbital Sniper:
 //			- There's not a lot of viable counterplay against an Orbital hugging the skybox, besides having another Orbital counter-snipe them.
-//				- This will be solved with future characters who also have decent ranged choices.
+//				- This will be solved with future characters who also have decent ranged choices (CBS's Heavy Draw is already a solid counter since Orbital can't move fast enough to avoid the arrow on instinct, and it will one-shot him at full charge).
 //		////////////////////////////////////////////
 //		- Count Heavnich:
 //			- "Chow Down" might be too strong compared to "Share Sandvich", resulting in players never using Share.
@@ -104,6 +113,10 @@
 //			- scorchshot_trail_red, scorchshot_trail_blue
 //			- smoke_marker (blue beacon effect)
 //			- spell_lightningball_parent_blue, spell_lightningball_parent_red
+//		- Cool and/or Frequently-Used Netprops:
+//			- m_flNextPrimaryAttack
+//			- m_hOwnerEntity
+//			- m_vecOrigin, m_angRotation, m_vecAbsVelocity
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
