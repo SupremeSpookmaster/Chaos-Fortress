@@ -1177,9 +1177,10 @@ public void CF_ResetMadeStatus(int client)
 	CF_SetPlayerConfig(client, conf);
 	SetClientCookie(client, c_DesiredCharacter, conf);
 		
-	char model[255], name[255];
+	char model[255], name[255]/*, animator[255]*/;
 	map.Get("character.model", model, sizeof(model));
 	map.Get("character.name", name, sizeof(name));
+	//map.Get("character.animator_model", animator, sizeof(animator));
 	float speed = GetFloatFromConfigMap(map, "character.speed", 300.0);
 	float health = GetFloatFromConfigMap(map, "character.health", 250.0);
 	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
@@ -1214,6 +1215,15 @@ public void CF_ResetMadeStatus(int client)
 	{
 		SetVariantString(model);
 		AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
+		
+		/*if (CheckFile(animator))
+		{
+			DataPack pack = new DataPack();
+			WritePackCell(pack, GetClientUserId(client));
+			WritePackString(pack, animator);
+			WritePackString(pack, model);
+			RequestFrame(CFA_ApplyAnimatorOnDelay, pack);
+		}*/
 	}
 	
 	CF_SetCharacterScale(client, scale, CF_StuckMethod_DelayResize, "");
@@ -1735,6 +1745,7 @@ public void CF_ResetMadeStatus(int client)
  	g_Characters[client].Destroy();
  	
  	CFC_DeleteParticles(client, true);
+ 	CFA_RemoveAnimator(client);
  }
  
  public Native_CF_GetPlayerConfig(Handle plugin, int numParams)

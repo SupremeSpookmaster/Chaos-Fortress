@@ -10,25 +10,6 @@
 
 //
 //	- IMMEDIATE PLANS:
-//		- Fake Player Models System:
-//			- Can be enabled on a character by setting "animator_model" to a valid model in the config.
-//			- If enabled: the player gets parented to an invisible prop_dynamic which uses the model specified in animator_model, something like this:
-/*
-			SetEntProp(client, Prop_Send, "m_fEffects", EF_BONEMERGE|EF_PARENT_ANIMATES);
-
-			SetVariantString("!activator");
-			AcceptEntityInput(client, "SetParent", prop, client);
-*/
-//			- This should force the player to use the animations of that prop_dynamic. It will also shift their hitboxes, wearables, and weapon models to match the prop_dynamic.
-//				- NOTE: Collision hulls will be unchanged. This is something developers will need to be aware of when using the FPM system.
-//			- The prop_dynamic must use the same skin as the player model at all times. This can be done by simply copying the m_nSkin property every frame.
-//			- THE HARD PART: The prop_dynamic will need to perfectly match the animations of a normal player model. This will require a LOT of trial and error.
-//			- Natives to add during development:
-//				- CFAnimator_SetAnimator(int client, char model[255]): Changes the model of the player's prop_dynamic. Can be used to enable the FPM system on players who aren't currently using it.
-//				- CFAnimator_SetCycle(int client, char sequences[255][], CFAnimator_SequenceType type): Changes the animations used for the specified animation cycle. "type" refers to the type of cycle being changed, such as a walk cycle, crouch cycle, swim cycle, etc.
-//				- CFAnimator_ForceAnimation(int client, char sequence[255], float duration, bool BlockGestures, bool BlockLook): Forces an animation on a client. If BlockGestures is enabled, all gestures (EX: your character gives a thumbs-up when you say "good job") are blocked for the duration. BlockLook does the same for pitch/yaw morphs.
-//				- CFAnimator_AddGesture(int client, char sequence[255], float duration): Adds a gesture to the player's FPM for the specified duration.
-//
 //		- Orbital Sniper:
 //			- Make custom sounds and implement them. Remove the DSP effect attribute once this is done.
 //		- Christian Brutal Sniper:
