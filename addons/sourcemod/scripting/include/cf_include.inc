@@ -1239,3 +1239,30 @@ native float CF_GetShieldWallMaxHealth(int shield);
  * @return	An array containing the entity indices of all entities hit by this damage, useful for applying additional effects to victims. This gets returned even if it is empty, you will need to manually close the handle when you are done with it.
  */
 native Handle CF_GenericAOEDamage(int attacker, int inflictor, int weapon, float dmg, int damageType, float radius, float groundZero[3], float falloffStart, float falloffMax, bool skipDefaultFilter = false, bool includeUser = true, bool ignoreInvuln = false);
+
+/**
+ * Applies a temporary change to the client's movement speed.
+ *
+ * @param client			The client whose speed to modify.
+ * @param mode				Used to determine how to modify the client's speed.
+ *							1: Multiply the client's BASE speed by "amt", then add or subtract speed based on the amount of speed gained or lost. IE, if this is 0.8 and the client's base speed is 100, the client's speed will be reduced by 20 HU/s.
+ *							2: Multiply the client's CURRENT speed by "amt". IE, if this is 1.2, and the client's current speed is 100, the client's speed will increase by 20 HU/s.
+ *							All Other Values: Directly add/subtract "amt" to/from the client's current speed.
+ * @param amt				The coefficient to be used to modify the client's speed, based on the chosen mode.
+ * @param duration			The duration of the speed change. 0.0 or below: duration is infinite.
+ * @param maxMode			Used to determine how to limit the client's speed.
+ *							0: Do not check for a max movement speed.
+ *							1: If the user's movement speed would become higher than their base speed multiplied by maxSpeed, cap their speed at the product of that operation.
+ *							All Other Values: If the user's movement speed would become higher than maxSpeed, cap their speed at maxSpeed.
+ * @param sounds			If true: plays the speed boost sound effects of the Disciplinary Action when the speed change begins and when it ends.
+ */
+native CF_ApplyTemporarySpeedChange(int client, int mode, float amt, float duration, int maxMode, float maxSpeed, bool sounds = true);
+
+/**
+ * Retrieves the client's base movement speed, before any external modifiers.
+ *
+ * @param client			The client whose base speed to retrieve.
+ *
+ * @return	The client's base movement speed, or 0.0 if the client is invalid/not a character.
+ */
+native float CF_GetCharacterBaseSpeed(int client);

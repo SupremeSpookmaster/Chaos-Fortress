@@ -137,6 +137,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_GetShieldWallHealth", Native_CF_GetShieldWallHealth);
 	CreateNative("CF_GetShieldWallMaxHealth", Native_CF_GetShieldWallMaxHealth);
 	CreateNative("CF_CheckIsSlotBlocked", Native_CF_CheckIsSlotBlocked);
+	CreateNative("CF_ApplyTemporarySpeedChange", Native_CF_ApplyTemporarySpeedChange);
 }
 
 public void CFA_MakeForwards()
@@ -239,6 +240,9 @@ Handle HudSync;
 #define HEAL_DEFAULT		"items/smallmedkit1.wav"
 #define HEAL_DEFAULT_MODEL	"models/items/medkit_medium.mdl"
 
+#define SOUND_SPEED_APPLY		"weapons/discipline_device_power_up.wav"
+#define SOUND_SPEED_REMOVE		"weapons/discipline_device_power_down.wav"
+
 public void CFA_MapStart()
 {
 	HudSync = CreateHudSynchronizer();
@@ -248,6 +252,9 @@ public void CFA_MapStart()
 	PrecacheSound(NOPE);
 	PrecacheSound(HEAL_DEFAULT);
 	PrecacheModel(HEAL_DEFAULT_MODEL);
+	
+	PrecacheSound(SOUND_SPEED_APPLY);
+	PrecacheSound(SOUND_SPEED_REMOVE);
 	
 	int entity = FindEntityByClassname(MaxClients + 1, "tf_player_manager");
 	if(IsValidEntity(entity))
@@ -2793,6 +2800,92 @@ public any Native_CF_GetShieldWallMaxHealth(Handle plugin, int numParams)
 		return 0.0;
 		
 	return f_FakeMediShieldMaxHP[shield];
+}
+
+public Native_CF_ApplyTemporarySpeedChange(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	int mode = GetNativeCell(2);
+	float amt = GetNativeCell(3);
+	float duration = GetNativeCell(4);
+	int maxMode = GetNativeCell(5);
+	float maxSpeed = GetNativeCell(6);
+	bool sound = GetNativeCell(7);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	float baseSpeed = CF_GetCharacterBaseSpeed(client);
+	float currentSpeed = CF_GetCharacterSpeed(client);
+
+	float targetSpeed;
+	switch (mode)
+	{
+		case 1:
+			targetSpeed = currentSpeed + ((baseSpeed * amt) - baseSpeed);
+		case 2:
+			targetSpeed = currentSpeed * amt;
+		default:
+			targetSpeed = currentSpeed + amt;
+	}
+		
+	if (maxMode != 0)
+	{
+		float targetMax = maxSpeed;
+		if (maxMode == 1)
+			targetMax *= baseSpeed;
+
+		//We only cap targetSpeed if it is faster than the user's current speed, because that means this speed change is meant to be a buff.
+		//We don't want buffs to slow people down just because they already have a stronger buff active.
+		if (targetSpeed > targetMax && targetSpeed > currentSpeed)
+			targetSpeed = targetMax;
+	}
+	
+	float speedGained = targetSpeed - currentSpeed;
+	if (speedGained != 0.0 && duration > 0.0)
+	{
+		CF_SetCharacterSpeed(client, targetSpeed);
+		
+		DataPack pack = new DataPack();
+		WritePackCell(pack, GetClientUserId(client));
+		WritePackFloat(pack, speedGained);
+		WritePackFloat(pack, GetGameTime() + duration);
+		WritePackCell(pack, sound);
+		RequestFrame(TempSpeed_Check, pack);
+	}
+	
+	if (sound)
+		EmitSoundToClient(client, SOUND_SPEED_APPLY);
+}
+
+public void TempSpeed_Check(DataPack pack)
+{
+	ResetPack(pack);
+	
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	float speedGained = ReadPackFloat(pack);
+	float endTime = ReadPackFloat(pack);
+	bool sound = ReadPackCell(pack);
+	
+	if (!CF_IsPlayerCharacter(client))
+	{
+		delete pack;
+		return;
+	}
+	
+	if (GetGameTime() >= endTime)
+	{
+		float current = CF_GetCharacterSpeed(client);
+		CF_SetCharacterSpeed(client, current - speedGained);
+		
+		if (sound)
+			EmitSoundToClient(client, SOUND_SPEED_REMOVE);
+		
+		delete pack;
+		return;
+	}
+	
+	RequestFrame(TempSpeed_Check, pack);
 }
 
 public Native_CF_CreateHealthPickup(Handle plugin, int numParams)

@@ -15,6 +15,12 @@
 //		- Christian Brutal Sniper:
 //			- Implement Badass' team-colored model and add him to the credits.
 //		- Doktor Medick:
+//			- Yes, he's meant to be a healer, but he has WAY too many forms of healing in his kit. Two AoE healing skills, a medigun, AND a Crusader's Crossbow is a bit much, even in a high-damage game like Chaos Fortress
+//				- VERDICT: 
+//					1. Remove damage from Surprise Surgery and make the radius REALLY small, so you need to teleport directly next to someone to heal them. Make the healing really high in return, like 500, with up to +100% overheal.
+//					2. Keep the Crusader's Crossbow as-is, but add an ability to make it deal 50% reduced damage to enemies, so spamming it down chokes doesn't hand out cheesy kills.
+//					3. Medigun - Disable übercharge.
+//					4. Cocainum - Keep current stats.
 //			- Implement a native that gets the *base* speed of a character instead of their current speed. Then, add or subtract a percentage of that base speed as needed to modify movement speed, and reverse that add/subtract operation when the effect ends.
 //				- Reuse this method for Orbital Sniper's taser and Mercenary's sprint so they don't rely on a wearable.
 //				- Probably make this method a built-in native for ease-of-use.
@@ -35,6 +41,8 @@
 //			- None! (Pending public opinion during beta)
 //		////////////////////////////////////////////
 //		- Spookmaster Bones:
+//			- The red cape is an iconic part of his design, but it is bound to cause team recognition problems for players who are unfamiliar with the character.
+//				- Fix the model to use proper team colors if people complain about it a lot.
 //			- Turns into an ungodly, unstoppable monster at max souls. This might just be because of random crits giving him triple damage 60% of the time. Test further after removing random crits.
 //			- Any kill will grant a soul, not just melee. This encourages sitting at a distance and fishing for souls risk-free with Skull Servants instead of getting in and fighting.
 //				- Make players drop timed soul pickups that the SB player needs to manually pick up to gain the soul. Upon being picked up, these souls immediately heal the user for 75 HP and the player gains 1 Soul to do whatever they want with.
@@ -53,8 +61,6 @@
 //			- Using Profit Blast to blast jump *might* give him too much mobility for a tank.
 //		////////////////////////////////////////////
 //		- Christian Brutal Sniper:
-//			- With the exception of fighting against tanks, it is almost never worth it to go for headshots, and it is almost always worth it to use Blast Bolt with Heavy Draw.
-//				- Removing the "crits become mini-crits" attribute would solve this issue, but then he would be disgustingly overpowered.
 //			- If multiple CBSs use Thousand Volley at the same time, the server will more than likely crash due to too many edicts (unconfirmed, cannot test with bots).
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):

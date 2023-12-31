@@ -71,6 +71,7 @@ enum struct CFCharacter
 	float Speed;
 	float MaxHP;
 	float Scale;
+	float BaseSpeed;
 	
 	char Model[255];
 	char Name[255];
@@ -93,6 +94,7 @@ enum struct CFCharacter
 		this.Model = newModel;
 		this.Name = newName;
 		this.Scale = newScale;
+		this.BaseSpeed = newSpeed;
 		
 		this.MapPath = newMapPath;
 		
@@ -253,6 +255,8 @@ public void CFC_MakeNatives()
 	
 	CreateNative("CF_AttachParticle", Native_CF_AttachParticle);
 	CreateNative("CF_AttachWearable", Native_CF_AttachWearable);
+	
+	CreateNative("CF_GetCharacterBaseSpeed", Native_CF_GetCharacterBaseSpeed);
 }
 
 GlobalForward g_OnCharacterCreated;
@@ -1978,6 +1982,18 @@ public any Native_CF_GetCharacterSpeed(Handle plugin, int numParams)
 	if (CF_IsPlayerCharacter(client))
 	{
 		return g_Characters[client].Speed;
+	}
+	
+	return 0.0;
+}
+
+public any Native_CF_GetCharacterBaseSpeed(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+
+	if (CF_IsPlayerCharacter(client))
+	{
+		return g_Characters[client].BaseSpeed;
 	}
 	
 	return 0.0;
