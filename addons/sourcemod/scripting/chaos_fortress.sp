@@ -293,7 +293,7 @@ public Action CF_ReloadCharacters(int client, int args)
 
 public Action CF_ForceCharacter(int client, int args)
 {	
-	if (args < 2 || args > 3)
+	if (args < 2 || args > 32)
 	{
 		ReplyToCommand(client, "[Chaos Fortress] Usage: cf_makecharacter <client> <name of character's config> <optional message printed to client's screen>");
 		return Plugin_Continue;
@@ -302,8 +302,25 @@ public Action CF_ForceCharacter(int client, int args)
 	char name[32], character[255], message[255];
 	GetCmdArg(1, name, sizeof(name));
 	GetCmdArg(2, character, sizeof(character));
-	if (args == 3)
-		GetCmdArg(3, message, sizeof(message));
+	if (args >= 3)
+	{
+		bool prevWasNotAlpha = false;
+		for (int i = 3; i <= args; i++)
+		{
+			char word[32];
+			GetCmdArg(i, word, sizeof(word));
+			
+			if (i == 3)
+				Format(message, sizeof(message), "%s", word);
+			else if ((!IsCharAlpha(word[0]) && !IsCharNumeric(word[0])) || prevWasNotAlpha)
+			{
+				Format(message, sizeof(message), "%s%s", message, word);
+				prevWasNotAlpha = !prevWasNotAlpha;
+			}
+			else
+				Format(message, sizeof(message), "%s %s", message, word);
+		}
+	}
 	else
 		message = "";
 	
