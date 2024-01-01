@@ -1155,10 +1155,11 @@ native CF_HealPlayer(int client, int healer, int amt, float hpMult);
  * @param dmg					The rocket's base damage.
  * @param velocity				The rocket's base velocity.
  * @param crit					Set to true to make the rocket crit.
+ * @param collideWithAllies		Set to true to allow the rocket to collide with allies.
  *
  * @return	The entity index of the rocket. 
  */
-native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit);
+native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit = false, bool collideWithAllies = false);
 
 /**
  * Creates a simulated health kit, with more customizable options than just creating an 'item_healthkit'.
@@ -1266,3 +1267,22 @@ native CF_ApplyTemporarySpeedChange(int client, int mode, float amt, float durat
  * @return	The client's base movement speed, or 0.0 if the client is invalid/not a character.
  */
 native float CF_GetCharacterBaseSpeed(int client);
+
+/**
+ * Transforms a client into the specified character.
+ *
+ * @param client			The client to set. This client must be a valid, living player.
+ * @param character			The config name of the character to set, relative to configs/chaos_fortress. You may also write the entire, full path of the config, relative to the sourcemod folder.
+ * @param message			Optional message printed to the client's screen.
+ *
+ * @return	True if the character was successfully forced, false otherwise.
+ */
+native bool CF_MakeClientCharacter(int client, char character[255], char message[255] = "");
+
+/**
+ * Enables or disables Chaos Fortress' default HUD for a given client. Note that the HUD is automatically re-enabled when the player becomes a character, if that character uses CF's built-in ability system.
+ *
+ * @param client			The client to toggle the HUD for.
+ * @param toggle			True to use the default HUD, false to turn it off.
+ */
+native CF_ToggleHUD(int client, bool toggle);

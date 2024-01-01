@@ -257,6 +257,8 @@ public void CFC_MakeNatives()
 	CreateNative("CF_AttachWearable", Native_CF_AttachWearable);
 	
 	CreateNative("CF_GetCharacterBaseSpeed", Native_CF_GetCharacterBaseSpeed);
+	
+	CreateNative("CF_MakeClientCharacter", Native_CF_MakeClientCharacter);
 }
 
 GlobalForward g_OnCharacterCreated;
@@ -1145,9 +1147,13 @@ public void CF_ResetMadeStatus(int client)
 /**
  * Turns a player into their selected Chaos Fortress character, or the default specified in game_rules if they haven't chosen.
  *
- * @param client			The client to convert.
+ * @param client				The client to convert.
+ * @param callForward			Set to true to call the OnCharacterCreated forward.
+ * @param ForceNewCharStatus	Set to true to force this event to treat the player as if they have swapped to a new character.
+ * @param ForcedCharacter 		Set to the full path of a character's CFG to force the player to become a specific character.
+ * @param message				Optional message to be printed to the client's screen.
  */
- void CF_MakeCharacter(int client, bool callForward = true, bool ForceNewCharStatus = false)
+ void CF_MakeCharacter(int client, bool callForward = true, bool ForceNewCharStatus = false, char ForcedCharacter[255] = "", char message[255] = "")
  {
  	if (!IsValidClient(client))
  		return;
@@ -1158,6 +1164,10 @@ public void CF_ResetMadeStatus(int client)
 
 	char conf[255];
 	GetClientCookie(client, c_DesiredCharacter, conf, sizeof(conf));
+	
+	if (CF_CharacterExists(ForcedCharacter))
+		conf = ForcedCharacter;
+		
 	if (!CF_CharacterExists(conf) || IsFakeClient(client))
 	{
 		if (!CF_CharacterExists(s_DefaultCharacter) || IsFakeClient(client))	//Choose a random character if the default character does not exist, or the client is a bot
@@ -1292,16 +1302,19 @@ public void CF_ResetMadeStatus(int client)
  			CF_PlayRandomSound(client, "", "sound_spawn_neutral");
  	}
  	
- 	int r = 255;
- 	int b = 120;
- 	if (TF2_GetClientTeam(client) == TFTeam_Blue)
+ 	if (!StrEqual(message, ""))
  	{
- 		b = 255;
- 		r = 120;
- 	}
- 	
- 	SetHudTextParams(-1.0, 0.33, 5.0, r, 120, b, 255, 0, 5.0, 0.8, 0.4);
- 	ShowHudText(client, -1, "You spawned as: %s", name);
+ 		int r = 255;
+	 	int b = 120;
+	 	if (TF2_GetClientTeam(client) == TFTeam_Blue)
+	 	{
+	 		b = 255;
+	 		r = 120;
+	 	}
+	 	
+	 	SetHudTextParams(-1.0, 0.25, 5.0, r, 120, b, 255, 0, 5.0, 0.8, 0.4);
+	 	ShowHudText(client, -1, message, name);
+	}
  	
  	bool hasUlt = CFA_InitializeUltimate(client, map);
  	bool hasAbilities = CFA_InitializeAbilities(client, map, IsNewCharacter);
@@ -1330,7 +1343,8 @@ public void CF_ResetMadeStatus(int client)
 	 }
  }
  
- public bool CF_CharacterExists(char conf[255])
+ //Shortened is set to true if the character is located using ONLY their config name and not the full path.
+ bool CF_CharacterExists(char conf[255], bool &shortened = false)
  {
  	if (StrEqual(conf, ""))
  		return false;
@@ -1340,8 +1354,21 @@ public void CF_ResetMadeStatus(int client)
  		char item[255];
  		GetArrayString(CF_Characters_Configs, i, item, sizeof(item));
  		
- 		if (StrEqual(item, conf))
+ 		if (!StrEqual(item, conf))
+ 		{
+ 			char copy[255];
+			Format(copy, sizeof(copy), "configs/chaos_fortress/%s.cfg", conf);
+		
+			if (StrEqual(item, copy))
+			{
+				shortened = true;
+				return true;
+			}
+ 		}
+ 		else
+ 		{
  			return true;
+ 		}
  	}
  	
  	return false;
@@ -2012,6 +2039,32 @@ public any Native_CF_SetCharacterSpeed(Handle plugin, int numParams)
 	}
 	
 	return 0.0;
+}
+
+public any Native_CF_MakeClientCharacter(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	char character[255], message[255];
+	GetNativeString(2, character, sizeof(character));
+	GetNativeString(3, message, sizeof(message));
+	
+	if (!IsValidMulti(client))
+		return false;
+	
+	bool shortened;
+	if (!CF_CharacterExists(character, shortened))
+		return false;
+	
+	if (shortened)
+		Format(character, sizeof(character), "configs/chaos_fortress/%s.cfg", character);
+	
+	//CF_MakeCharacter(client, true, true, character);
+	//CF_MakeCharacter(client, true, true, character);
+	CF_UnmakeCharacter(client, true);
+	CF_MakeCharacter(client, false, _, character);
+	CF_MakeCharacter(client, _, _, character, message);
+	
+	return true;
 }
 
 public any Native_CF_GetCharacterScale(Handle plugin, int numParams)

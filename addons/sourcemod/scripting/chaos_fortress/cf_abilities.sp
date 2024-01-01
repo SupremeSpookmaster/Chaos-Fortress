@@ -102,6 +102,8 @@ int i_M2Ammo[MAXPLAYERS + 1] = { -1, ... };
 int i_M3Ammo[MAXPLAYERS + 1] = { -1, ... };
 int i_ReloadAmmo[MAXPLAYERS + 1] = { -1, ... };
 
+bool b_ProjectileCanCollideWithAllies[2049] = { false, ... };
+
 CF_AbilityType i_HeldBlocked[MAXPLAYERS + 1] = { CF_AbilityType_None, ... };
 
 public void CFA_MakeNatives()
@@ -138,6 +140,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_GetShieldWallMaxHealth", Native_CF_GetShieldWallMaxHealth);
 	CreateNative("CF_CheckIsSlotBlocked", Native_CF_CheckIsSlotBlocked);
 	CreateNative("CF_ApplyTemporarySpeedChange", Native_CF_ApplyTemporarySpeedChange);
+	CreateNative("CF_ToggleHUD", Native_CF_ToggleHUD);
 }
 
 public void CFA_MakeForwards()
@@ -212,6 +215,7 @@ public void CFA_OnEntityDestroyed(int entity)
 	b_IsMedigunShield[entity] = false;
 	f_FakeMediShieldHP[entity] = 0.0;
 	f_FakeMediShieldMaxHP[entity] = 0.0;
+	b_ProjectileCanCollideWithAllies[entity] = false;
 }
 
 public void CFA_OnEntityCreated(int entity, const char[] classname)
@@ -219,6 +223,7 @@ public void CFA_OnEntityCreated(int entity, const char[] classname)
 	if (StrContains(classname, "tf_projectile") != -1)
 	{
 		SDKHook(entity, SDKHook_SpawnPost, GetOwner);
+		b_ProjectileCanCollideWithAllies[entity] = StrEqual(classname, "tf_projectile_healing_bolt");
 	}
 }
 
@@ -2392,6 +2397,7 @@ public Native_CF_FireGenericRocket(Handle plugin, int numParams)
 	float dmg = GetNativeCell(2);
 	float velocity = GetNativeCell(3);
 	bool crit = GetNativeCell(4);
+	bool allowAlliedCollisions = GetNativeCell(5);
 	
 	int rocket = CreateEntityByName("tf_projectile_rocket");
 	
@@ -2424,6 +2430,8 @@ public Native_CF_FireGenericRocket(Handle plugin, int numParams)
 		rocketVel[2] = vBuffer[2]*velocity;
 			
 		TeleportEntity(rocket, spawnLoc, angles, rocketVel);
+		
+		b_ProjectileCanCollideWithAllies[rocket] = allowAlliedCollisions;
 		
 		return rocket;
 	}
@@ -2605,8 +2613,9 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 	//First test: don't allow TF2 projectiles to collide with their owners or players who are on their owner's team:
 	if (IsValidClient(GetClientOfUserId(i_GenericProjectileOwner[ent1])))
 	{
-		int owner = GetClientOfUserId(i_GenericProjectileOwner[ent1]);
-		if (IsValidMulti(ent2, true, true, true, TF2_GetClientTeam(owner)))
+		TFTeam team = view_as<TFTeam>(GetEntProp(ent1, Prop_Send, "m_iTeamNum"));
+		int owner = GetEntPropEnt(ent1, Prop_Send, "m_hOwnerEntity");
+		if (ent2 == owner || (IsValidMulti(ent2, true, true, true, team) && !b_ProjectileCanCollideWithAllies[ent1]))
 		{
 			result = false;
 			ReturnVal = Plugin_Changed;
@@ -2615,8 +2624,9 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 	}
 	else if (IsValidClient(GetClientOfUserId(i_GenericProjectileOwner[ent2])))
 	{
-		int owner = GetClientOfUserId(i_GenericProjectileOwner[ent2]);
-		if (IsValidMulti(ent1, true, true, true, TF2_GetClientTeam(owner)))
+		TFTeam team = view_as<TFTeam>(GetEntProp(ent2, Prop_Send, "m_iTeamNum"));
+		int owner = GetEntPropEnt(ent2, Prop_Send, "m_hOwnerEntity");
+		if (ent1 == owner || (IsValidMulti(ent1, true, true, true, team) && !b_ProjectileCanCollideWithAllies[ent2]))
 		{
 			result = false;
 			ReturnVal = Plugin_Changed;
@@ -2886,6 +2896,14 @@ public void TempSpeed_Check(DataPack pack)
 	}
 	
 	RequestFrame(TempSpeed_Check, pack);
+}
+
+public Native_CF_ToggleHUD(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	bool toggle = GetNativeCell(2);
+	
+	CFA_ToggleHUD(client, toggle);
 }
 
 public Native_CF_CreateHealthPickup(Handle plugin, int numParams)

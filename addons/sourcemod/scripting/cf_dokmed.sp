@@ -12,12 +12,12 @@
 #define PARTICLE_FLASK_TRAIL_RED		"healshot_trail_red"
 #define PARTICLE_FLASK_TRAIL_BLUE		"healshot_trail_blue"
 #define PARTICLE_FLASK_SHATTER			"peejar_impact_milk"
-#define PARTICLE_FLASK_SHATTER_RED		"medic_healradius_red_buffed"
-#define PARTICLE_FLASK_SHATTER_BLUE		"medic_healradius_blue_buffed"
 #define PARTICLE_HEALING_RED			"healthgained_red"
 #define PARTICLE_HEALING_BLUE			"healthgained_blu"
 #define PARTICLE_HEALING_BURST_RED		"spell_overheal_red"
 #define PARTICLE_HEALING_BURST_BLUE		"spell_overheal_blue"
+#define PARTICLE_HEALING_AURA_RED		"medic_healradius_red_buffed"
+#define PARTICLE_HEALING_AURA_BLUE		"medic_healradius_blue_buffed"
 #define PARTICLE_POISON_RED				"healthlost_red"
 #define PARTICLE_POISON_BLUE			"healthlost_blu"
 #define PARTICLE_TELEPORT_BEAM			"merasmus_zap"
@@ -25,6 +25,8 @@
 
 #define SOUND_FLASK_SHATTER				"physics/glass/glass_sheet_break1.wav"
 #define SOUND_FLASK_HEAL				"items/smallmedkit1.wav"
+#define SOUND_FLASK_POISON				"items/powerup_pickup_plague_infected.wav"
+#define SOUND_FLASK_POISON_LOOP			"items/powerup_pickup_plague_infected_loop.wav"
 
 int laserModel;
 
@@ -35,6 +37,8 @@ public void OnMapStart()
 	
 	PrecacheSound(SOUND_FLASK_SHATTER);
 	PrecacheSound(SOUND_FLASK_HEAL);
+	PrecacheSound(SOUND_FLASK_POISON);
+	PrecacheSound(SOUND_FLASK_POISON_LOOP);
 	
 	laserModel = PrecacheModel("materials/sprites/laser.vmt");
 }
@@ -79,7 +83,7 @@ float Flask_DMGDuration[2049] = { 0.0, ... };
 public void Cocainum_Activate(int client, char abilityName[255])
 {
 	float vel = CF_GetArgF(client, DOKMED, abilityName, "velocity");
-	int bottle = CF_FireGenericRocket(client, 0.0, vel, false);
+	int bottle = CF_FireGenericRocket(client, 0.0, vel, false, true);
 	if (IsValidEntity(bottle))
 	{
 		Flask_Radius[bottle] = CF_GetArgF(client, DOKMED, abilityName, "radius");
@@ -165,8 +169,7 @@ public MRESReturn Bottle_Shatter(int bottle)
 			
 			if (GetVectorDistance(pos, clientPos) <= Flask_Radius[bottle])
 			{
-				spawnRing_Vector(clientPos, 120.0, 0.0, 0.0, 15.0, laserModel, team == TFTeam_Red ? 255 : 120, 120, team == TFTeam_Red ? 120 : 255, 255, 1, 0.33, 4.0, 0.1, 1, 0.1);
-				CF_AttachParticle(i, team == TFTeam_Red ? PARTICLE_HEALING_RED : PARTICLE_HEALING_BLUE, "root", _, 2.0);
+				CF_AttachParticle(i, team == TFTeam_Red ? PARTICLE_HEALING_BURST_RED : PARTICLE_HEALING_BURST_BLUE, "root", _, 2.0);
 				
 				EmitSoundToClient(i, SOUND_FLASK_HEAL);
 				
@@ -185,20 +188,105 @@ public MRESReturn Bottle_Shatter(int bottle)
 					WritePackFloat(pack, gt + Flask_HealDuration[bottle]);
 					RequestFrame(Flask_HealOverTime, pack);
 				}
+				
+				float higher = Flask_HealDuration[bottle];
+				if (Flask_SpeedDuration[bottle] > higher)
+					higher = Flask_SpeedDuration[bottle];
+					
+				if (higher > 0.0)
+					CF_AttachParticle(i, team == TFTeam_Red ? PARTICLE_HEALING_AURA_RED : PARTICLE_HEALING_AURA_BLUE, "root", _, higher);
 			}
 		}
 	}
+	
+	Handle victims = CF_GenericAOEDamage(owner, bottle, bottle, Flask_DMGInst[bottle], DMG_GENERIC, Flask_Radius[bottle], pos, 99999.0, 0.0, false, false);
+	
+	for (int i = 0; i < GetArraySize(victims); i++)
+	{
+		int vic = GetArrayCell(victims, i);
+		if (IsValidMulti(vic))
+		{
+			EmitSoundToClient(vic, SOUND_FLASK_POISON);
+				
+			if (Flask_DMGDuration[bottle] > 0.0)
+			{
+				EmitSoundToClient(vic, SOUND_FLASK_POISON_LOOP);
+				DataPack pack = new DataPack();
+				WritePackCell(pack, GetClientUserId(vic));
+				WritePackCell(pack, IsValidClient(owner) ? GetClientUserId(owner) : -1);
+				WritePackFloat(pack, Flask_DMGTicks[bottle]);
+				WritePackFloat(pack, Flask_DMGInterval[bottle]);
+				WritePackFloat(pack, gt + Flask_DMGInterval[bottle]);
+				WritePackFloat(pack, gt + Flask_DMGDuration[bottle]);
+				RequestFrame(Flask_DMGOverTime, pack);
+			}
+		}
+	}
+		
+	delete victims;
 	
 	EmitSoundToAll(SOUND_FLASK_SHATTER, bottle, SNDCHAN_STATIC, _, _, _, GetRandomInt(80, 110));
 	SpawnParticle(pos, PARTICLE_FLASK_SHATTER, 2.0);
 	
 	spawnRing_Vector(pos, 1.0, 0.0, 0.0, 0.0, laserModel, team == TFTeam_Red ? 255 : 160, 160, team == TFTeam_Red ? 160 : 255, 255, 1, 0.25, 16.0, 0.1, 1, Flask_Radius[bottle] * 2.0);
 	//Un-comment and remove the spawnRing_Vector line if a better team-colored burst particle is ever found:
-	//SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_FLASK_SHATTER_RED : PARTICLE_FLASK_SHATTER_BLUE, 2.0);
+	//SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_HEALING_AURA_RED : PARTICLE_HEALING_AURA_BLUE, 2.0);
 	
 	RemoveEntity(bottle);
 	
 	return MRES_Supercede;
+}
+
+public void Flask_DMGOverTime(DataPack pack)
+{
+	ResetPack(pack);
+	
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	int attacker = ReadPackCell(pack);
+	
+	if (attacker != -1)
+		attacker = GetClientOfUserId(attacker);
+		
+	float dmg = ReadPackFloat(pack);
+	float interval = ReadPackFloat(pack);
+	float nextHit = ReadPackFloat(pack);
+	float endTime = ReadPackFloat(pack);
+	
+	delete pack;
+	
+	float gt = GetGameTime();
+	
+	if (!IsValidClient(client))
+		return;
+		
+	if (!IsPlayerAlive(client) || gt > endTime)
+	{
+		StopSound(client, SNDCHAN_AUTO, SOUND_FLASK_POISON_LOOP);
+		return;
+	}
+		
+	if (gt >= nextHit)
+	{
+		if (IsValidClient(attacker))
+			SDKHooks_TakeDamage(client, attacker, attacker, dmg, DMG_GENERIC);
+		else
+			SDKHooks_TakeDamage(client, 0, 0, dmg, DMG_GENERIC);
+
+		float scale = CF_GetCharacterScale(client);
+		TFTeam team = TF2_GetClientTeam(client);
+		CF_AttachParticle(client, team == TFTeam_Red ? PARTICLE_POISON_RED : PARTICLE_POISON_BLUE, "root", _, 2.0, _, _, scale * 80.0);
+		
+		nextHit = gt + interval;
+	}
+	
+	DataPack pack2 = new DataPack();
+	WritePackCell(pack2, GetClientUserId(client));
+	WritePackCell(pack2, IsValidClient(attacker) ? GetClientUserId(attacker) : -1);
+	WritePackFloat(pack2, dmg);
+	WritePackFloat(pack2, interval);
+	WritePackFloat(pack2, nextHit);
+	WritePackFloat(pack2, endTime);
+	RequestFrame(Flask_DMGOverTime, pack2);
 }
 
 public void Flask_HealOverTime(DataPack pack)
@@ -227,12 +315,6 @@ public void Flask_HealOverTime(DataPack pack)
 	if (gt >= nextHeal)
 	{
 		CF_HealPlayer(client, healer, amt, overheal);
-		
-		float clientPos[3];
-		GetClientAbsOrigin(client, clientPos);
-		
-		TFTeam team = TF2_GetClientTeam(client);
-		spawnRing_Vector(clientPos, 120.0, 0.0, 0.0, 15.0, laserModel, team == TFTeam_Red ? 255 : 120, 120, team == TFTeam_Red ? 120 : 255, 255, 1, 0.33, 4.0, 0.1, 1, 0.1);
 		nextHeal = gt + interval;
 	}
 	

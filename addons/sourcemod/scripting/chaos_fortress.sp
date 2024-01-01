@@ -90,6 +90,7 @@
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This feature may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //			- Scrap this feature entirely and remove all mentions of it from the code. This will be a giant pain in the ass but does not need to be done until public release.
+//	- DEVELOPMENT: The temporary speed change native can skew the target's base speed permanently (meaning until they hit a resupply locker) if that player has a speed buff active during any sort of round transition phase (teams get swapped post-game, waiting for players ends and setup begins).
 //
 //	- PRESUMED UNFIXABLE (major bugs which I don't believe can be fixed with my current SourceMod expertise. The best thing you can do is classify these as exploits and punish them as such):
 //		- DEMOPAN: Enemies can get stuck in his shield if they walk into it while it is held. Demopans can abuse this to intentionally get enemies stuck for free kills. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.
@@ -169,6 +170,7 @@ public void OnPluginStart()
 	
 	RegAdminCmd("cf_reloadrules", CF_ReloadRules, ADMFLAG_KICK, "Chaos Fortress: Reloads the settings in game_rules.cfg.");
 	RegAdminCmd("cf_reloadcharacters", CF_ReloadCharacters, ADMFLAG_KICK, "Chaos Fortress: Reloads the character packs, as defined in characters.cfg.");
+	RegAdminCmd("cf_makecharacter", CF_ForceCharacter, ADMFLAG_KICK, "Chaos Fortress: Forces a client to become the specified character.");
 	
 	CF_OnPluginStart();
 }
@@ -247,7 +249,7 @@ public void PlayerReset(Event gEvent, const char[] sEvName, bool bDontBroadcast)
 		//I have no clue why. Yes, I tried delaying the class change by a frame. No, it did not work.
 		//Yes, I am aware this is EXTREMELY suboptimal, no I am not happy I had to do it, but I'm sick of trying to make this thing work seamlessly so I just tossed in a hack and called it a day.
 		CF_MakeCharacter(client, false);
-		CF_MakeCharacter(client);
+		CF_MakeCharacter(client, _, _, _, "You became: %s");
 	}
 	
 	#if defined DEBUG_CHARACTER_CREATION
@@ -287,6 +289,67 @@ public Action CF_ReloadCharacters(int client, int args)
 	}	
 	
 	return Plugin_Continue;
+}
+
+public Action CF_ForceCharacter(int client, int args)
+{	
+	if (args < 2 || args > 3)
+	{
+		ReplyToCommand(client, "[Chaos Fortress] Usage: cf_makecharacter <client> <name of character's config> <optional message printed to client's screen>");
+		return Plugin_Continue;
+	}
+		
+	char name[32], character[255], message[255];
+	GetCmdArg(1, name, sizeof(name));
+	GetCmdArg(2, character, sizeof(character));
+	if (args == 3)
+		GetCmdArg(3, message, sizeof(message));
+	else
+		message = "";
+	
+	if (!CF_CharacterExists(character))
+	{
+		ReplyToCommand(client, "[Chaos Fortress] Failure: character config ''%s'' does not exist.", character);
+		return Plugin_Continue;
+	}
+	
+	if (StrEqual(name, "@all"))
+	{
+		CF_ForceCharacterOnGroup(character, TFTeam_Unassigned, message);
+	}
+	else if (StrEqual(name, "@red"))
+	{
+		CF_ForceCharacterOnGroup(character, TFTeam_Red, message);
+	}
+	else if (StrEqual(name, "@blue"))
+	{
+		CF_ForceCharacterOnGroup(character, TFTeam_Blue, message);
+	}
+	else
+	{
+		int target = FindTarget(client, name, false, false);
+		
+		if (!IsValidMulti(target) && IsValidClient(client))
+		{
+			ReplyToCommand(client, "[Chaos Fortress] Failure: the target must be alive and in-game.");
+			return Plugin_Continue;
+		}
+		
+		CF_MakeClientCharacter(target, character, message);
+	}
+
+	return Plugin_Continue;
+}
+
+public void CF_ForceCharacterOnGroup(char character[255], TFTeam group, char message[255])
+{
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (IsValidMulti(i) && (TF2_GetClientTeam(i) == group || group == TFTeam_Unassigned))
+		{
+			CF_MakeClientCharacter(i, character, message);
+		}
+	}
 }
 
 public void OnClientDisconnect(int client)
