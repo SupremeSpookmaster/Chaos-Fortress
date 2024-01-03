@@ -52,6 +52,21 @@ public void OnPluginStart()
 	delete gamedata;
 }
 
+public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
+{
+	if (!IsValidEntity(weapon))
+		return Plugin_Continue;
+		
+	float mult = TF2CustAttr_GetFloat(weapon, "crossbow damage multiplier", 1.0);
+	if (mult != 1.0)
+	{
+		damage *= mult;
+		return Plugin_Changed;
+	}
+	
+	return Plugin_Continue;
+}
+
 public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
 {
 	if (!StrEqual(pluginName, DOKMED))

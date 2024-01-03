@@ -1331,6 +1331,8 @@ public void CF_ResetMadeStatus(int client)
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	
+ 	CFA_UpdateMadeCharacter(client);
+ 	
  	b_FirstSpawn[client] = false;
  	
  	if (callForward)
@@ -1920,6 +1922,7 @@ public Native_CF_AttachWearable(Handle plugin, int numParams)
 	{
 		SDKCall_EquipWearable(client, wearable);
 		b_WearableIsPreserved[wearable] = preserve;
+		SetEntProp(wearable, Prop_Send, "m_iTeamNum", GetEntProp(client, Prop_Send, "m_iTeamNum"));
 		return wearable;
 	}
 	

@@ -12,19 +12,16 @@
 //	- IMMEDIATE PLANS:
 //		- Orbital Sniper:
 //			- Make custom sounds and implement them. Remove the DSP effect attribute once this is done.
+//			- Try using interpolation frames to make hovering smoother.
 //		- Christian Brutal Sniper:
 //			- Implement Badass' team-colored model and add him to the credits.
 //		- Doktor Medick:
 //			- Yes, he's meant to be a healer, but he has WAY too many forms of healing in his kit. Two AoE healing skills, a medigun, AND a Crusader's Crossbow is a bit much, even in a high-damage game like Chaos Fortress
 //				- VERDICT: 
-//					1. Remove damage from Surprise Surgery and make the radius REALLY small, so you need to teleport directly next to someone to heal them. Make the healing really high in return, like 500, with up to +100% overheal.
+//					1. Make the radius for Surprise Surgery REALLY small, so you need to teleport directly next to someone to heal/hurt them. Make the potency really high in return, like 300 for both healing and damage (damage needs harsh falloff though, min damage should be 100).
 //					2. Keep the Crusader's Crossbow as-is, but add an ability to make it deal 50% reduced damage to enemies, so spamming it down chokes doesn't hand out cheesy kills.
-//					3. Medigun - Disable übercharge.
+//					3. Medigun - Remember to disable übercharge.
 //					4. Cocainum - Keep current stats.
-//			- Implement a native that gets the *base* speed of a character instead of their current speed. Then, add or subtract a percentage of that base speed as needed to modify movement speed, and reverse that add/subtract operation when the effect ends.
-//				- Reuse this method for Orbital Sniper's taser and Mercenary's sprint so they don't rely on a wearable.
-//				- Probably make this method a built-in native for ease-of-use.
-//			- Write Cocainum.
 //			- Write medigun passives.
 //			- Write Surprise Surgery.
 //				- Write a separate plugin (something like "tf2_playercollisions") for the "stuck_method" arg. Then, we can use this plugin to fix BvB's collision issues as well. Two birds with one stone and what-not.
@@ -83,17 +80,17 @@
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
 //	- For some reason, players get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? It's invisible while alive but becomes visible on death and also displays in the 3D player model shown in the HUD. This has no effect on gameplay but it's really ugly. Honestly baffling.
-//	- Certain hats, when equipped via the wearable system, usually do not visually appear on bots (but they do work *sometimes*). Count Heavnich's "Noble Amassment of Hats" is an example of such a hat. 
+//	- Certain hats, when equipped via the wearable system, do not visually appear on bots (but they do work *sometimes*). Count Heavnich's "Noble Amassment of Hats" is an example of such a hat. 
 //	- COUNT HEAVNICH: I don't know how, but "Chow Down" *sometimes* still causes you to T-pose when it ends. This is fixed immediately by switching weapons, and has no permanent side effects. It does look very unprofessional, though, so I am inclined to find a fix if possible.
-//	- DEMOPAN: Becoming übercharged on BLU team causes your cosmetics to use the RED team's über texture.
+//	- DEMOPAN: Becoming übercharged on BLU team causes your cosmetics to use the RED team's über texture. This may actually be all wearables, I have not tested über textures on BLU with other characters.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This feature may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //			- Scrap this feature entirely and remove all mentions of it from the code. This will be a giant pain in the ass but does not need to be done until public release.
-//	- DEVELOPMENT: The temporary speed change native can skew the target's base speed permanently (meaning until they hit a resupply locker) if that player has a speed buff active during any sort of round transition phase (teams get swapped post-game, waiting for players ends and setup begins).
 //
 //	- PRESUMED UNFIXABLE (major bugs which I don't believe can be fixed with my current SourceMod expertise. The best thing you can do is classify these as exploits and punish them as such):
-//		- DEMOPAN: Enemies can get stuck in his shield if they walk into it while it is held. Demopans can abuse this to intentionally get enemies stuck for free kills. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.
+//	- DEMOPAN: Enemies can get stuck in his shield if they walk into it while it is held. Demopans can abuse this to intentionally get enemies stuck for free kills. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.
+//	- ALL: Players can occasionally get stuck in each other if at least one of them has a scale bigger than 1.0.
 //
 //	- THINGS TO KEEP IN MIND FOR FUTURE REFERENCE:
 //		- Cool and/or Frequently-Used Particle Effects:

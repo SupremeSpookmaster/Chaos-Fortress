@@ -30,6 +30,7 @@ float f_UltScale[MAXPLAYERS + 1] = { 0.0, ... };
 float f_M2Scale[MAXPLAYERS + 1] = { 0.0, ... };
 float f_M3Scale[MAXPLAYERS + 1] = { 0.0, ... };
 float f_RScale[MAXPLAYERS + 1] = { 0.0, ... };
+float f_CancelTemporarySpeedMod[MAXPLAYERS + 1] = { 0.0, ... };
 float f_NextShieldCollisionForward[2049][2049];
 float f_ChargeRetain = 0.0;
 float f_FakeMediShieldHP[2049] = { 0.0, ... };
@@ -225,6 +226,11 @@ public void CFA_OnEntityCreated(int entity, const char[] classname)
 		SDKHook(entity, SDKHook_SpawnPost, GetOwner);
 		b_ProjectileCanCollideWithAllies[entity] = StrEqual(classname, "tf_projectile_healing_bolt");
 	}
+}
+
+void CFA_UpdateMadeCharacter(int client)
+{
+	f_CancelTemporarySpeedMod[client] = GetGameTime() + 0.5;
 }
 
 public Action GetOwner(int ent)
@@ -2877,7 +2883,8 @@ public void TempSpeed_Check(DataPack pack)
 	float endTime = ReadPackFloat(pack);
 	bool sound = ReadPackCell(pack);
 	
-	if (!CF_IsPlayerCharacter(client))
+	//f_CancelTemporarySpeedMod is used so that we don't revert speed if the client becomes a new character before the speed is set to revert.
+	if (!CF_IsPlayerCharacter(client) || GetGameTime() < f_CancelTemporarySpeedMod[client])
 	{
 		delete pack;
 		return;
