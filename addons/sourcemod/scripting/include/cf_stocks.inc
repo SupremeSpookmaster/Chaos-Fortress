@@ -1490,6 +1490,21 @@ stock float GetDistanceToGround(float location[3])
 	return GetVectorDistance(location, otherLoc);
 }
 
+stock float GetDistanceToCeiling(float location[3])
+{
+	float angles[3], otherLoc[3];
+	angles[0] = -90.0;
+	angles[1] = 0.0;
+	angles[2] = 0.0;
+	
+	Handle trace = TR_TraceRayFilterEx(location, angles, MASK_SHOT, RayType_Infinite, TraceEntityFilterPlayer_GAT);
+	TR_GetEndPosition(otherLoc, trace);
+	//CloseHandle(trace);
+	delete trace;
+	
+	return GetVectorDistance(location, otherLoc);
+}
+
 int i_StuckCheckUser = -1;
 
 stock bool CheckPlayerWouldGetStuck(int client, float scale)
@@ -1501,6 +1516,18 @@ stock bool CheckPlayerWouldGetStuck(int client, float scale)
 	
 	GetClientAbsOrigin(client, pos);
     
+	i_StuckCheckUser = client;
+	TR_TraceHullFilter(pos, pos, mins, maxs, MASK_PLAYERSOLID, Trace_StuckCheck);
+	return TR_GetEntityIndex() != -1;
+}
+
+stock bool CheckPlayerWouldGetStuckAtPos(int client, float scale, float pos[3])
+{
+	float mins[3] = { -24.5, -24.5, 0.0 }, maxs[3] = { 24.5,  24.5, 83.0};
+	
+	ScaleVector(mins, scale);
+	ScaleVector(maxs, scale);
+	
 	i_StuckCheckUser = client;
 	TR_TraceHullFilter(pos, pos, mins, maxs, MASK_PLAYERSOLID, Trace_StuckCheck);
 	return TR_GetEntityIndex() != -1;

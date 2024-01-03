@@ -142,6 +142,8 @@ public void CFA_MakeNatives()
 	CreateNative("CF_CheckIsSlotBlocked", Native_CF_CheckIsSlotBlocked);
 	CreateNative("CF_ApplyTemporarySpeedChange", Native_CF_ApplyTemporarySpeedChange);
 	CreateNative("CF_ToggleHUD", Native_CF_ToggleHUD);
+	CreateNative("CF_Teleport", Native_CF_Teleport);
+	CreateNative("CF_CheckTeleport", Native_CF_CheckTeleport);
 }
 
 public void CFA_MakeForwards()

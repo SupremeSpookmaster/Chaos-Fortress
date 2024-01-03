@@ -5,6 +5,7 @@
 
 #define DOKMED			"cf_dokmed"
 #define COCAINUM		"dokmed_cocainum"
+#define SURGERY			"dokmed_surprise_surgery"
 
 #define MODEL_FLASK_RED					"models/passtime/flasks/flask_bottle_red.mdl"
 #define MODEL_FLASK_BLUE				"models/props_halloween/flask_bottle.mdl"
@@ -21,7 +22,9 @@
 #define PARTICLE_POISON_RED				"healthlost_red"
 #define PARTICLE_POISON_BLUE			"healthlost_blu"
 #define PARTICLE_TELEPORT_BEAM			"merasmus_zap"
-#define PARTICLE_TELEPORT_FLASH			"green_vortex_rain_3"
+#define PARTICLE_TELEPORT_FLASH_1		"merasmus_tp_flash02"
+#define PARTICLE_TELEPORT_FLASH_2		"merasmus_spawn_flash"
+#define PARTICLE_TELEPORT_FLASH_3		"merasmus_spawn_flash2"
 
 #define SOUND_FLASK_SHATTER				"physics/glass/glass_sheet_break1.wav"
 #define SOUND_FLASK_HEAL				"items/smallmedkit1.wav"
@@ -74,6 +77,9 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	
 	if (StrContains(abilityName, COCAINUM) != -1)
 		Cocainum_Activate(client, abilityName);
+		
+	if (StrContains(abilityName, SURGERY) != -1)
+		Surgery_Activate(client, abilityName);
 }
 
 int Flask_SpeedMode[2049] = { 0, ... };
@@ -342,6 +348,46 @@ public void Flask_HealOverTime(DataPack pack)
 	WritePackFloat(pack2, nextHeal);
 	WritePackFloat(pack2, endTime);
 	RequestFrame(Flask_HealOverTime, pack2);
+}
+
+public void Surgery_Activate(int client, char ability[255])
+{
+	float dist = CF_GetArgF(client, DOKMED, ability, "distance");
+	
+	float currentLoc[3], endLoc[3];
+	
+	float scale = CF_GetCharacterScale(client);
+	GetClientAbsOrigin(client, currentLoc);
+	
+	CF_Teleport(client, dist, false, endLoc);
+	
+	currentLoc[2] += 40.0 * scale;
+	endLoc[2] += 40.0 * scale;
+	SpawnParticle_ControlPoints(currentLoc, endLoc, PARTICLE_TELEPORT_BEAM, 2.0);
+	SpawnParticle(endLoc, PARTICLE_TELEPORT_FLASH_1, 2.0);
+	SpawnParticle(endLoc, PARTICLE_TELEPORT_FLASH_2, 2.0);
+	SpawnParticle(endLoc, PARTICLE_TELEPORT_FLASH_3, 2.0);
+}
+
+public bool Surgery_CheckTeleport(int client, char ability[255])
+{
+	float dist = CF_GetArgF(client, DOKMED, ability, "distance");
+	
+	return CF_CheckTeleport(client, dist, false);
+}
+
+public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result)
+{
+	if (!StrEqual(plugin, DOKMED))
+		return Plugin_Continue;
+		
+	if (StrContains(ability, SURGERY) != -1)
+	{
+		result = Surgery_CheckTeleport(client, ability);
+		return Plugin_Changed;
+	}
+	
+	return Plugin_Continue;
 }
 
 public void CF_OnCharacterCreated(int client)

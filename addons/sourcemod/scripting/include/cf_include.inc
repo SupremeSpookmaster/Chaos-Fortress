@@ -1286,3 +1286,28 @@ native bool CF_MakeClientCharacter(int client, char character[255], char message
  * @param toggle			True to use the default HUD, false to turn it off.
  */
 native CF_ToggleHUD(int client, bool toggle);
+
+/**
+ * Checks if a client should be able to teleport to the location they are aiming at, up to a certain distance away.
+ * ALL FUNCTIONALITY PROVIDED BY THIS NATIVE AND CF_Teleport WERE WRITTEN BY SARYSA! All I did was port them and add the "directional" feature.
+ *
+ * @param client			The client to attempt the teleport.
+ * @param distance			The distance of the teleport.
+ * @param directional		If true, the direction of the teleport is affected by the user's movement keys.
+ * @param output			Optional output vector to store the position the client will teleport to.
+ *
+ * @return	True if the client can teleport without getting stuck, false if they can't or are an invalid client.
+ */
+native bool CF_CheckTeleport(int client, float distance, bool directional, float output[3] = NULL_VECTOR)
+
+/**
+ * Makes a client teleport in the direction they are aiming, up to a certain distance away.
+ * ALL FUNCTIONALITY PROVIDED BY THIS NATIVE AND CF_CheckTeleport WERE WRITTEN BY SARYSA! All I did was port them and add the "directional" feature.
+ *
+ * @param client			The client to attempt the teleport.
+ * @param distance			The distance of the teleport.
+ * @param directional		If true, the direction of the teleport is affected by the user's movement keys.
+ * @param output			Optional output vector to store the position the client will teleport to.
+ *
+ */
+native void CF_Teleport(int client, float distance, bool directional, float output[3] = NULL_VECTOR)
