@@ -359,7 +359,7 @@ public void Surgery_Activate(int client, char ability[255])
 	float scale = CF_GetCharacterScale(client);
 	GetClientAbsOrigin(client, currentLoc);
 	
-	CF_Teleport(client, dist, false, endLoc);
+	CF_Teleport(client, dist, false, endLoc, true);
 	
 	currentLoc[2] += 40.0 * scale;
 	endLoc[2] += 40.0 * scale;

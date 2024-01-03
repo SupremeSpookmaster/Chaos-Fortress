@@ -1814,3 +1814,363 @@ stock bool TF2_IsPlayerStunned(int client)
 	return (TF2_IsPlayerInCondition(client, TFCond_Dazed)
 	|| TF2_IsPlayerInCondition(client, TFCond_FreezeInput) || TF2_IsPlayerInCondition(client, TFCond_Taunting));
 }
+
+//EVERYTHING below this is borrowed from Dynamic Defaults by Sarysa, then modified for Chaos Fortress.
+//All credit for the following code goes to him, the CF_Teleport natives would not be possible otherwise. 
+
+#define MAX_PLAYERS_ARRAY 36
+#define MAX_PLAYERS (MAX_PLAYERS_ARRAY < (MaxClients + 1) ? MAX_PLAYERS_ARRAY : (MaxClients + 1))
+#define MAX_ENTITY_CLASSNAME_LENGTH 48
+
+int DPT_Player;
+stock bool DPT_TracePlayersAndBuildings(entity, contentsMask)
+{
+	if (IsValidMulti(entity) && GetClientTeam(entity) != GetClientTeam(DPT_Player))
+		return true;
+	else if (IsValidMulti(entity))
+		return false;
+		
+	return IsValidEntity(entity);
+}
+
+stock bool DPT_TraceWallsOnly(entity, contentsMask)
+{
+	return false;
+}
+ 
+stock bool DPT_TryTeleport(int client, float range, bool directional, float output[3], bool IgnoreSafety = false)
+{
+	float sizeMultiplier = GetEntPropFloat(client, Prop_Send, "m_flModelScale");
+	static float startPos[3];
+	static float endPos[3];
+	static float testPos[3];
+	static float eyeAngles[3];
+	GetClientEyePosition(client, startPos);
+	GetClientEyeAngles(client, eyeAngles);
+	
+	if (directional)
+	{
+		bool GoingLeft = GetClientButtons(client) & IN_MOVELEFT != 0;
+		bool GoingRight = GetClientButtons(client) & IN_MOVERIGHT != 0;
+		bool GoingBack = GetClientButtons(client) & IN_BACK != 0;
+		
+		int pitch = 0;
+		int yaw = 1;
+		
+		if (GoingLeft && !GoingRight && !GoingBack)
+		{
+			eyeAngles[yaw] += 90.0;
+		}
+	
+		if (GoingRight && !GoingLeft && !GoingBack)
+		{
+			eyeAngles[yaw] += -90.0;
+		}
+		
+		if (GoingBack && !GoingLeft && !GoingRight)
+		{
+			eyeAngles[pitch] += 180.0;
+		}
+	}
+	
+	DPT_Player = client;
+	TR_TraceRayFilter(startPos, eyeAngles, MASK_PLAYERSOLID, RayType_Infinite, DPT_TracePlayersAndBuildings);
+	TR_GetEndPosition(endPos);
+	
+	// don't even try if the distance is less than 82
+	float distance = GetVectorDistance(startPos, endPos);
+	if (distance < 82.0)
+	{
+		return false;
+	}
+		
+	if (distance > range)
+		constrainDistance(startPos, endPos, distance, range);
+	else // shave just a tiny bit off the end position so our point isn't directly on top of a wall
+		constrainDistance(startPos, endPos, distance, distance - 1.0);
+	
+	// now for the tests. I go 1 extra on the standard mins/maxs on purpose.
+	bool found = false;
+	for (int x = 0; x < 3; x++)
+	{
+		if (found)
+			break;
+	
+		float xOffset;
+		if (x == 0)
+			xOffset = 0.0;
+		else if (x == 1)
+			xOffset = 12.5 * sizeMultiplier;
+		else
+			xOffset = 25.0 * sizeMultiplier;
+		
+		if (endPos[0] < startPos[0])
+			testPos[0] = endPos[0] + xOffset;
+		else if (endPos[0] > startPos[0])
+			testPos[0] = endPos[0] - xOffset;
+		else if (xOffset != 0.0)
+			break; // super rare but not impossible, no sense wasting on unnecessary tests
+	
+		for (int y = 0; y < 3; y++)
+		{
+			if (found)
+				break;
+
+			float yOffset;
+			if (y == 0)
+				yOffset = 0.0;
+			else if (y == 1)
+				yOffset = 12.5 * sizeMultiplier;
+			else
+				yOffset = 25.0 * sizeMultiplier;
+
+			if (endPos[1] < startPos[1])
+				testPos[1] = endPos[1] + yOffset;
+			else if (endPos[1] > startPos[1])
+				testPos[1] = endPos[1] - yOffset;
+			else if (yOffset != 0.0)
+				break; // super rare but not impossible, no sense wasting on unnecessary tests
+		
+			for (int z = 0; z < 3; z++)
+			{
+				if (found)
+					break;
+
+				float zOffset;
+				if (z == 0)
+					zOffset = 0.0;
+				else if (z == 1)
+					zOffset = 41.5 * sizeMultiplier;
+				else
+					zOffset = 83.0 * sizeMultiplier;
+
+				if (endPos[2] < startPos[2])
+					testPos[2] = endPos[2] + zOffset;
+				else if (endPos[2] > startPos[2])
+					testPos[2] = endPos[2] - zOffset;
+				else if (zOffset != 0.0)
+					break; // super rare but not impossible, no sense wasting on unnecessary tests
+
+				// before we test this position, ensure it has line of sight from the point our player looked from
+				// this ensures the player can't teleport through walls
+				static float tmpPos[3];
+				TR_TraceRayFilter(endPos, testPos, MASK_PLAYERSOLID, RayType_EndPoint, DPT_TraceWallsOnly);
+				TR_GetEndPosition(tmpPos);
+				if (testPos[0] != tmpPos[0] || testPos[1] != tmpPos[1] || testPos[2] != tmpPos[2])
+					continue;
+				found = IsSpotSafe(client, testPos, sizeMultiplier);
+			}
+		}
+	}
+	
+	if (!found && !IgnoreSafety)
+	{
+		return false;
+	}
+		
+	output = testPos;
+	return true;
+}
+
+stock constrainDistance(const float startPoint[3], float endPoint[3], float distance, float maxDistance)
+{
+	float constrainFactor = maxDistance / distance;
+	endPoint[0] = ((endPoint[0] - startPoint[0]) * constrainFactor) + startPoint[0];
+	endPoint[1] = ((endPoint[1] - startPoint[1]) * constrainFactor) + startPoint[1];
+	endPoint[2] = ((endPoint[2] - startPoint[2]) * constrainFactor) + startPoint[2];
+}
+
+bool ResizeTraceFailed;
+int ResizeMyTeam;
+
+stock bool IsSpotSafe(client, float playerPos[3], float sizeMultiplier)
+{
+	ResizeTraceFailed = false;
+	ResizeMyTeam = GetClientTeam(client);
+	static float mins[3];
+	static float maxs[3];
+	mins[0] = -24.0 * sizeMultiplier;
+	mins[1] = -24.0 * sizeMultiplier;
+	mins[2] = 0.0;
+	maxs[0] = 24.0 * sizeMultiplier;
+	maxs[1] = 24.0 * sizeMultiplier;
+	maxs[2] = 82.0 * sizeMultiplier;
+
+	// the eight 45 degree angles and center, which only checks the z offset
+	if (!Resize_TestResizeOffset(playerPos, mins[0], mins[1], maxs[2])) return false;
+	if (!Resize_TestResizeOffset(playerPos, mins[0], 0.0, maxs[2])) return false;
+	if (!Resize_TestResizeOffset(playerPos, mins[0], maxs[1], maxs[2])) return false;
+	if (!Resize_TestResizeOffset(playerPos, 0.0, mins[1], maxs[2])) return false;
+	if (!Resize_TestResizeOffset(playerPos, 0.0, 0.0, maxs[2])) return false;
+	if (!Resize_TestResizeOffset(playerPos, 0.0, maxs[1], maxs[2])) return false;
+	if (!Resize_TestResizeOffset(playerPos, maxs[0], mins[1], maxs[2])) return false;
+	if (!Resize_TestResizeOffset(playerPos, maxs[0], 0.0, maxs[2])) return false;
+	if (!Resize_TestResizeOffset(playerPos, maxs[0], maxs[1], maxs[2])) return false;
+
+	// 22.5 angles as well, for paranoia sake
+	if (!Resize_TestResizeOffset(playerPos, mins[0], mins[1] * 0.5, maxs[2])) return false;
+	if (!Resize_TestResizeOffset(playerPos, mins[0], maxs[1] * 0.5, maxs[2])) return false;
+	if (!Resize_TestResizeOffset(playerPos, maxs[0], mins[1] * 0.5, maxs[2])) return false;
+	if (!Resize_TestResizeOffset(playerPos, maxs[0], maxs[1] * 0.5, maxs[2])) return false;
+	if (!Resize_TestResizeOffset(playerPos, mins[0] * 0.5, mins[1], maxs[2])) return false;
+	if (!Resize_TestResizeOffset(playerPos, maxs[0] * 0.5, mins[1], maxs[2])) return false;
+	if (!Resize_TestResizeOffset(playerPos, mins[0] * 0.5, maxs[1], maxs[2])) return false;
+	if (!Resize_TestResizeOffset(playerPos, maxs[0] * 0.5, maxs[1], maxs[2])) return false;
+
+	// four square tests
+	if (!Resize_TestSquare(playerPos, mins[0], maxs[0], mins[1], maxs[1], maxs[2])) return false;
+	if (!Resize_TestSquare(playerPos, mins[0] * 0.75, maxs[0] * 0.75, mins[1] * 0.75, maxs[1] * 0.75, maxs[2])) return false;
+	if (!Resize_TestSquare(playerPos, mins[0] * 0.5, maxs[0] * 0.5, mins[1] * 0.5, maxs[1] * 0.5, maxs[2])) return false;
+	if (!Resize_TestSquare(playerPos, mins[0] * 0.25, maxs[0] * 0.25, mins[1] * 0.25, maxs[1] * 0.25, maxs[2])) return false;
+	
+	return true;
+}
+
+stock bool Resize_TracePlayersAndBuildings(entity, contentsMask)
+{
+	if (IsValidMulti(entity))
+	{
+		if (GetClientTeam(entity) != ResizeMyTeam)
+		{
+			ResizeTraceFailed = true;
+		}
+	}
+	else if (IsValidEntity(entity))
+	{
+		static char classname[MAX_ENTITY_CLASSNAME_LENGTH];
+		GetEntityClassname(entity, classname, sizeof(classname));
+		if ((strcmp(classname, "obj_sentrygun") == 0) || (strcmp(classname, "obj_dispenser") == 0) || (strcmp(classname, "obj_teleporter") == 0)
+			|| (strcmp(classname, "prop_dynamic") == 0) || (strcmp(classname, "func_physbox") == 0) || (strcmp(classname, "func_breakable") == 0) || (strcmp(classname, "func_door") == 0) || (strcmp(classname, "func_detail") == 0) || (strcmp(classname, "func_moving") == 0) || (strcmp(classname, "func_movelinear") == 0) || (strcmp(classname, "prop_static") == 0) || (strcmp(classname, "prop_physics") == 0))
+		{
+			ResizeTraceFailed = true;
+		}
+	}
+
+	return false;
+}
+
+stock bool Resize_OneTrace(const float startPos[3], const float endPos[3])
+{
+	static float result[3];
+	TR_TraceRayFilter(startPos, endPos, MASK_PLAYERSOLID, RayType_EndPoint, Resize_TracePlayersAndBuildings);
+	if (ResizeTraceFailed)
+	{
+		return false;
+	}
+	TR_GetEndPosition(result);
+	if (endPos[0] != result[0] || endPos[1] != result[1] || endPos[2] != result[2])
+	{
+		return false;
+	}
+	
+	return true;
+}
+
+// the purpose of this method is to first trace outward, upward, and then back in.
+stock bool Resize_TestResizeOffset(const float bossOrigin[3], float xOffset, float yOffset, float zOffset)
+{
+	static float tmpOrigin[3];
+	tmpOrigin[0] = bossOrigin[0];
+	tmpOrigin[1] = bossOrigin[1];
+	tmpOrigin[2] = bossOrigin[2];
+	static float targetOrigin[3];
+	targetOrigin[0] = bossOrigin[0] + xOffset;
+	targetOrigin[1] = bossOrigin[1] + yOffset;
+	targetOrigin[2] = bossOrigin[2];
+	
+	if (!(xOffset == 0.0 && yOffset == 0.0))
+		if (!Resize_OneTrace(tmpOrigin, targetOrigin))
+			return false;
+		
+	tmpOrigin[0] = targetOrigin[0];
+	tmpOrigin[1] = targetOrigin[1];
+	tmpOrigin[2] = targetOrigin[2] + zOffset;
+
+	if (!Resize_OneTrace(targetOrigin, tmpOrigin))
+		return false;
+		
+	targetOrigin[0] = bossOrigin[0];
+	targetOrigin[1] = bossOrigin[1];
+	targetOrigin[2] = bossOrigin[2] + zOffset;
+		
+	if (!(xOffset == 0.0 && yOffset == 0.0))
+		if (!Resize_OneTrace(tmpOrigin, targetOrigin))
+			return false;
+		
+	return true;
+}
+
+stock bool Resize_TestSquare(const float bossOrigin[3], float xmin, float xmax, float ymin, float ymax, float zOffset)
+{
+	static float pointA[3];
+	static float pointB[3];
+	for (int phase = 0; phase <= 7; phase++)
+	{
+		// going counterclockwise
+		if (phase == 0)
+		{
+			pointA[0] = bossOrigin[0] + 0.0;
+			pointA[1] = bossOrigin[1] + ymax;
+			pointB[0] = bossOrigin[0] + xmax;
+			pointB[1] = bossOrigin[1] + ymax;
+		}
+		else if (phase == 1)
+		{
+			pointA[0] = bossOrigin[0] + xmax;
+			pointA[1] = bossOrigin[1] + ymax;
+			pointB[0] = bossOrigin[0] + xmax;
+			pointB[1] = bossOrigin[1] + 0.0;
+		}
+		else if (phase == 2)
+		{
+			pointA[0] = bossOrigin[0] + xmax;
+			pointA[1] = bossOrigin[1] + 0.0;
+			pointB[0] = bossOrigin[0] + xmax;
+			pointB[1] = bossOrigin[1] + ymin;
+		}
+		else if (phase == 3)
+		{
+			pointA[0] = bossOrigin[0] + xmax;
+			pointA[1] = bossOrigin[1] + ymin;
+			pointB[0] = bossOrigin[0] + 0.0;
+			pointB[1] = bossOrigin[1] + ymin;
+		}
+		else if (phase == 4)
+		{
+			pointA[0] = bossOrigin[0] + 0.0;
+			pointA[1] = bossOrigin[1] + ymin;
+			pointB[0] = bossOrigin[0] + xmin;
+			pointB[1] = bossOrigin[1] + ymin;
+		}
+		else if (phase == 5)
+		{
+			pointA[0] = bossOrigin[0] + xmin;
+			pointA[1] = bossOrigin[1] + ymin;
+			pointB[0] = bossOrigin[0] + xmin;
+			pointB[1] = bossOrigin[1] + 0.0;
+		}
+		else if (phase == 6)
+		{
+			pointA[0] = bossOrigin[0] + xmin;
+			pointA[1] = bossOrigin[1] + 0.0;
+			pointB[0] = bossOrigin[0] + xmin;
+			pointB[1] = bossOrigin[1] + ymax;
+		}
+		else if (phase == 7)
+		{
+			pointA[0] = bossOrigin[0] + xmin;
+			pointA[1] = bossOrigin[1] + ymax;
+			pointB[0] = bossOrigin[0] + 0.0;
+			pointB[1] = bossOrigin[1] + ymax;
+		}
+
+		for (int shouldZ = 0; shouldZ <= 1; shouldZ++)
+		{
+			pointA[2] = pointB[2] = shouldZ == 0 ? bossOrigin[2] : (bossOrigin[2] + zOffset);
+			if (!Resize_OneTrace(pointA, pointB))
+				return false;
+		}
+	}
+		
+	return true;
+}

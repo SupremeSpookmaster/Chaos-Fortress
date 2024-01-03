@@ -2807,6 +2807,85 @@ public any Native_CF_GetShieldWallHealth(Handle plugin, int numParams)
 	return f_FakeMediShieldHP[shield];
 }
 
+public any Native_CF_CheckTeleport(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	float distance = GetNativeCell(2); 
+	bool directional = GetNativeCell(3);
+	
+	if (!IsValidMulti(client))
+		return false;
+		
+	float pos[3];
+	bool result = DPT_TryTeleport(client, distance, directional, pos);
+	SetNativeArray(4, pos, sizeof(pos));
+	return result;
+}
+
+public Native_CF_Teleport(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	float distance = GetNativeCell(2); 
+	bool directional = GetNativeCell(3);
+	bool IgnoreSafety = GetNativeCell(5);
+	
+	if (!IsValidMulti(client))
+		return;
+		
+	float pos[3];
+	bool result = DPT_TryTeleport(client, distance, directional, pos, IgnoreSafety);
+	SetNativeArray(4, pos, sizeof(pos));
+	
+	if (result)
+	{
+		float eyeAngles[3];
+		GetClientEyeAngles(client, eyeAngles);
+		
+		int buttons = GetClientButtons(client);
+		if (buttons & IN_DUCK != 0)
+		{
+			if (directional)
+			{
+				bool left = buttons & IN_LEFT != 0 && buttons & IN_RIGHT == 0;
+				bool right = buttons & IN_RIGHT != 0 && buttons & IN_LEFT == 0;
+				
+				float flipmod = 0.0;
+				
+				if (left)
+				{
+					flipmod = 90.0;
+				}
+				else if (right)
+				{
+					flipmod = -90.0;
+				}
+				
+				if (flipmod > 0.0)
+				{
+					eyeAngles[1] += -flipmod * 2.0;
+				}
+				else
+				{
+					if (buttons & IN_BACK != 0 && buttons & IN_FORWARD == 0)
+					{
+						eyeAngles[0] += 180.0;
+					}
+					else
+					{
+						eyeAngles[1] += 180.0;
+					}
+				}
+			}
+			else
+			{
+				eyeAngles[1] += 180.0;
+			}
+		}
+		
+		TeleportEntity(client, pos, eyeAngles, NULL_VECTOR);
+	}
+}
+
 public any Native_CF_GetShieldWallMaxHealth(Handle plugin, int numParams)
 {
 	int shield = GetNativeCell(1);

@@ -1308,6 +1308,7 @@ native bool CF_CheckTeleport(int client, float distance, bool directional, float
  * @param distance			The distance of the teleport.
  * @param directional		If true, the direction of the teleport is affected by the user's movement keys.
  * @param output			Optional output vector to store the position the client will teleport to.
+ * @param IgnoreSafetyCheck	If set to true, the teleport will occur even if something is in the way of your destination or you would get stuck.
  *
  */
-native void CF_Teleport(int client, float distance, bool directional, float output[3] = NULL_VECTOR)
+native void CF_Teleport(int client, float distance, bool directional, float output[3] = NULL_VECTOR, bool IgnoreSafetyCheck = false)
