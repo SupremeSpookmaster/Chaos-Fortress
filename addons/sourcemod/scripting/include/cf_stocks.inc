@@ -2196,3 +2196,25 @@ stock bool Resize_TestSquare(const float bossOrigin[3], float xmin, float xmax, 
 		
 	return true;
 }
+
+void DoOverlay(int client, const char[] overlay, int Methods = 0)
+{
+	if(Methods == 1 || Methods == 2)
+	{
+		int flags = GetCommandFlags("r_screenoverlay");
+		SetCommandFlags("r_screenoverlay", flags & ~FCVAR_CHEAT);
+		if(overlay[0])
+		{
+			ClientCommand(client, "r_screenoverlay \"%s\"", overlay);
+		}
+		else
+		{
+			ClientCommand(client, "r_screenoverlay off");
+		}
+		SetCommandFlags("r_screenoverlay", flags);
+	}
+	if(Methods == 0 || Methods == 2)
+	{
+		SetEntPropString(client, Prop_Send, "m_szScriptOverlayMaterial", overlay);
+	}
+}

@@ -442,6 +442,9 @@ public void Surgery_Teleport(int client)
 	TFTeam team = TF2_GetClientTeam(client);
 		
 	CF_Teleport(client, 0.0, false, NULL_VECTOR, true, Surgery_Destination[client], true);
+	SpawnShaker(Surgery_Destination[client], 8, 100, 4, 4, 4);
+	DoOverlay(client, GetRandomInt(1, 1000) != 777 ? "lights/white005" : "models/player/medic/medic_head_red", 0);
+	CreateTimer(0.1, Surgery_RemoveOverlay, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
 		
 	Handle victims = CF_GenericAOEDamage(client, client, client, Surgery_DMG[client], DMG_GENERIC | DMG_CLUB | DMG_ALWAYSGIB, Surgery_DMGRadius[client], Surgery_Destination[client], Surgery_DMGFalloffStart[client], Surgery_DMGFalloffMax[client], _, false);
 	delete victims;
@@ -472,8 +475,18 @@ public void Surgery_Teleport(int client)
 	SpawnParticle(Surgery_Destination[client], team == TFTeam_Red ? PARTICLE_TELEPORT_FLASH_RED_4 : PARTICLE_TELEPORT_FLASH_BLUE_4, 2.0);
 	
 	CF_PlayRandomSound(client, "", "sound_surgery_teleport");
+	CF_PlayRandomSound(client, "", "sound_surgery_teleport_dialogue");
 	
 	Surgery_RecentlyTeleported[client] = GetGameTime() + 0.5;
+}
+
+public Action Surgery_RemoveOverlay(Handle helpmeimblind, int id)
+{
+	int client = GetClientOfUserId(id);
+	if (IsValidClient(client))
+		DoOverlay(client, "");
+		
+	return Plugin_Continue;
 }
 
 public bool Surgery_CheckTeleport(int client, char ability[255])
