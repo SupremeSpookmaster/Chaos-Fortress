@@ -25,6 +25,22 @@
 #define PARTICLE_TELEPORT_FLASH_1		"merasmus_tp_flash02"
 #define PARTICLE_TELEPORT_FLASH_2		"merasmus_spawn_flash"
 #define PARTICLE_TELEPORT_FLASH_3		"merasmus_spawn_flash2"
+#define PARTICLE_TELEPORT_FLASH_4		"duck_collect_sparkles_green"
+
+#define PARTICLE_TELEPORT_BEAM_RED		"spell_lightningball_hit_red"
+#define PARTICLE_TELEPORT_BEAM_BLUE		"spell_lightningball_hit_blue"
+#define PARTICLE_TELEPORT_FLASH_BLUE_1	"electrocuted_gibbed_blue_2"
+#define PARTICLE_TELEPORT_FLASH_BLUE_2	"electrocuted_gibbed_blue_3"
+#define PARTICLE_TELEPORT_FLASH_BLUE_3	"electrocuted_blue_flash"
+#define PARTICLE_TELEPORT_FLASH_BLUE_4	"electrocuted_blue_5"
+#define PARTICLE_TELEPORT_FLASH_RED_1	"electrocuted_gibbed_red_2"
+#define PARTICLE_TELEPORT_FLASH_RED_2	"electrocuted_gibbed_red_3"
+#define PARTICLE_TELEPORT_FLASH_RED_3	"electrocuted_red_flash"
+#define PARTICLE_TELEPORT_FLASH_RED_4	"electrocuted_red_5"
+#define PARTICLE_TELEPORT_CHARGEUP_BLUE	"dxhr_lightningball_parent_blue"
+#define PARTICLE_TELEPORT_CHARGEUP_RED	"dxhr_lightningball_parent_red"
+#define PARTICLE_TELEPORT_WARNING_RED	"eyeboss_team_red"
+#define PARTICLE_TELEPORT_WARNING_BLUE	"eyeboss_team_blue"
 
 #define SOUND_FLASK_SHATTER				"physics/glass/glass_sheet_break1.wav"
 #define SOUND_FLASK_HEAL				"items/smallmedkit1.wav"
@@ -350,23 +366,111 @@ public void Flask_HealOverTime(DataPack pack)
 	RequestFrame(Flask_HealOverTime, pack2);
 }
 
+int Surgery_WarningParticle[MAXPLAYERS + 1] = { -1, ... };
+
+float Surgery_Destination[MAXPLAYERS + 1][3];
+float Surgery_TeleTime[MAXPLAYERS + 1] = { 0.0, ... };
+float Surgery_DMG[MAXPLAYERS + 1] = { 0.0, ... };
+float Surgery_DMGRadius[MAXPLAYERS + 1] = { 0.0, ... };
+float Surgery_DMGFalloffStart[MAXPLAYERS + 1] = { 0.0, ... };
+float Surgery_DMGFalloffMax[MAXPLAYERS + 1] = { 0.0, ... };
+float Surgery_HealingRadius[MAXPLAYERS + 1] = { 0.0, ... };
+float Surgery_HealingAmt[MAXPLAYERS + 1] = { 0.0, ... };
+float Surgery_HealingOverheal[MAXPLAYERS + 1] = { 0.0, ... };
+
 public void Surgery_Activate(int client, char ability[255])
 {
 	float dist = CF_GetArgF(client, DOKMED, ability, "distance");
+	float delay = CF_GetArgF(client, DOKMED, ability, "delay");
 	
-	float currentLoc[3], endLoc[3];
+	CF_CheckTeleport(client, dist, false, Surgery_Destination[client]);
 	
-	float scale = CF_GetCharacterScale(client);
+	Surgery_Cancel(client);
+	Surgery_TeleTime[client] = GetGameTime() + delay;
+	
+	Surgery_DMGRadius[client] = CF_GetArgF(client, DOKMED, ability, "damage_radius");
+	Surgery_DMG[client] = CF_GetArgF(client, DOKMED, ability, "damage_amt");
+	Surgery_DMGFalloffStart[client] = CF_GetArgF(client, DOKMED, ability, "damage_falloff_start");
+	Surgery_DMGFalloffMax[client] = CF_GetArgF(client, DOKMED, ability, "damage_falloff_max");
+	Surgery_HealingRadius[client] = CF_GetArgF(client, DOKMED, ability, "healing_radius");
+	Surgery_HealingAmt[client] = CF_GetArgF(client, DOKMED, ability, "healing_amt");
+	Surgery_HealingOverheal[client] = CF_GetArgF(client, DOKMED, ability, "healing_overheal");
+	
+	if (delay <= 0.0)
+	{
+		Surgery_Teleport(client);
+	}
+	else
+	{
+		int mode = CF_GetArgI(client, DOKMED, ability, "speed_mode");
+		float amt = CF_GetArgF(client, DOKMED, ability, "speed_amt");
+		CF_ApplyTemporarySpeedChange(client, mode, amt, delay, 0, 0.0, false);
+		
+		TFTeam team = TF2_GetClientTeam(client);
+		float scale = CF_GetCharacterScale(client);
+		
+		CF_AttachParticle(client, team == TFTeam_Red ? PARTICLE_TELEPORT_CHARGEUP_RED : PARTICLE_TELEPORT_CHARGEUP_BLUE, "root", _, delay, _, _, scale * 50.0);
+		Surgery_WarningParticle[client] = EntIndexToEntRef(SpawnParticle(Surgery_Destination[client], team == TFTeam_Red ? PARTICLE_TELEPORT_WARNING_RED : PARTICLE_TELEPORT_WARNING_BLUE, delay));
+	
+		RequestFrame(Surgery_DelayedTeleport, GetClientUserId(client));
+		CF_PlayRandomSound(client, "", "sound_surgery_chargeup");
+	}
+}
+
+public void Surgery_DelayedTeleport(int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client) || Surgery_TeleTime[client] <= 0.0)
+		return;
+		
+	if (GetGameTime() >= Surgery_TeleTime[client])
+	{
+		Surgery_Teleport(client);
+		Surgery_Cancel(client);
+		return;
+	}
+		
+	RequestFrame(Surgery_DelayedTeleport, id);
+}
+
+public void Surgery_Teleport(int client)
+{
+	float currentLoc[3];
 	GetClientAbsOrigin(client, currentLoc);
+		
+	CF_Teleport(client, 0.0, false, NULL_VECTOR, true, Surgery_Destination[client], true);
+		
+	float scale = CF_GetCharacterScale(client);
+	currentLoc[2] += 40.0 * scale;	
+	Surgery_Destination[client][2] += 40.0 * scale;
 	
-	CF_Teleport(client, dist, false, endLoc, true);
+	TFTeam team = TF2_GetClientTeam(client);
 	
-	currentLoc[2] += 40.0 * scale;
-	endLoc[2] += 40.0 * scale;
-	SpawnParticle_ControlPoints(currentLoc, endLoc, PARTICLE_TELEPORT_BEAM, 2.0);
-	SpawnParticle(endLoc, PARTICLE_TELEPORT_FLASH_1, 2.0);
-	SpawnParticle(endLoc, PARTICLE_TELEPORT_FLASH_2, 2.0);
-	SpawnParticle(endLoc, PARTICLE_TELEPORT_FLASH_3, 2.0);
+	SpawnParticle_ControlPoints(currentLoc, Surgery_Destination[client], team == TFTeam_Red ? PARTICLE_TELEPORT_BEAM_RED : PARTICLE_TELEPORT_BEAM_BLUE, 2.0);
+	SpawnParticle(Surgery_Destination[client], team == TFTeam_Red ? PARTICLE_TELEPORT_FLASH_RED_1 : PARTICLE_TELEPORT_FLASH_BLUE_1, 2.0);
+	SpawnParticle(Surgery_Destination[client], team == TFTeam_Red ? PARTICLE_TELEPORT_FLASH_RED_2 : PARTICLE_TELEPORT_FLASH_BLUE_2, 2.0);
+	SpawnParticle(Surgery_Destination[client], team == TFTeam_Red ? PARTICLE_TELEPORT_FLASH_RED_3 : PARTICLE_TELEPORT_FLASH_BLUE_3, 2.0);
+	SpawnParticle(Surgery_Destination[client], team == TFTeam_Red ? PARTICLE_TELEPORT_FLASH_RED_4 : PARTICLE_TELEPORT_FLASH_BLUE_4, 2.0);
+	
+	CF_PlayRandomSound(client, "", "sound_surgery_teleport");
+	
+	Handle victims = CF_GenericAOEDamage(client, client, client, Surgery_DMG[client], DMG_GENERIC | DMG_CLUB | DMG_ALWAYSGIB, Surgery_DMGRadius[client], Surgery_Destination[client], Surgery_DMGFalloffStart[client], Surgery_DMGFalloffMax[client], _, false);
+	delete victims;
+	
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (IsValidMulti(i, true, true, true, team))
+		{
+			float pos[3];
+			GetClientAbsOrigin(i, pos);
+			if (GetVectorDistance(pos, Surgery_Destination[client]) <= Surgery_HealingRadius[client])
+			{
+				CF_HealPlayer(i, client, RoundFloat(Surgery_HealingAmt[client]), Surgery_HealingOverheal[client]);
+				CF_AttachParticle(i, team == TFTeam_Red ? PARTICLE_HEALING_BURST_RED : PARTICLE_HEALING_BURST_BLUE, "root", _, 2.0);
+				EmitSoundToClient(i, SOUND_FLASK_HEAL);
+			}
+		}
+	}
 }
 
 public bool Surgery_CheckTeleport(int client, char ability[255])
@@ -374,6 +478,14 @@ public bool Surgery_CheckTeleport(int client, char ability[255])
 	float dist = CF_GetArgF(client, DOKMED, ability, "distance");
 	
 	return CF_CheckTeleport(client, dist, false);
+}
+
+public void Surgery_Cancel(int client)
+{
+	Surgery_TeleTime[client] = 0.0;
+	int particle = EntRefToEntIndex(Surgery_WarningParticle[client]);
+	if (IsValidEntity(particle))
+		RemoveEntity(particle);
 }
 
 public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result)
@@ -391,9 +503,11 @@ public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability
 }
 
 public void CF_OnCharacterCreated(int client)
-{	
+{
+	Surgery_Cancel(client);
 }
 
 public void CF_OnCharacterRemoved(int client)
 {
+	Surgery_Cancel(client);
 }

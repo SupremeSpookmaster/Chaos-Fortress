@@ -1295,20 +1295,25 @@ native CF_ToggleHUD(int client, bool toggle);
  * @param distance			The distance of the teleport.
  * @param directional		If true, the direction of the teleport is affected by the user's movement keys.
  * @param output			Optional output vector to store the position the client will teleport to.
+ * @param PositionOverride	If set to a valid vector and UseOverride is set to true, this position will be checked instead of the position at the player's crosshairs. This bypasses "distance" and "directional".
+ * @param UseOverride		Set PositionOverride to a valid vector and set this to true to override the destination being checked.
  *
  * @return	True if the client can teleport without getting stuck, false if they can't or are an invalid client.
  */
-native bool CF_CheckTeleport(int client, float distance, bool directional, float output[3] = NULL_VECTOR)
+native bool CF_CheckTeleport(int client, float distance, bool directional, float output[3] = NULL_VECTOR, float PositionOverride[3] = NULL_VECTOR, bool UseOverride = false)
 
 /**
- * Makes a client teleport in the direction they are aiming, up to a certain distance away.
- * ALL FUNCTIONALITY PROVIDED BY THIS NATIVE AND CF_CheckTeleport WERE WRITTEN BY SARYSA! All I did was port them and add the "directional" feature.
+ * Makes a client teleport in the direction they are aiming, up to a certain distance away. If they are holding crouch, they will "flip" to view the location they were at before the teleport.
+ * ALL FUNCTIONALITY PROVIDED BY THIS NATIVE AND CF_CheckTeleport WERE WRITTEN BY SARYSA! 
+ * All I did was port them and add the "directional" and "flip" features.
  *
  * @param client			The client to attempt the teleport.
  * @param distance			The distance of the teleport.
  * @param directional		If true, the direction of the teleport is affected by the user's movement keys.
  * @param output			Optional output vector to store the position the client will teleport to.
  * @param IgnoreSafetyCheck	If set to true, the teleport will occur even if something is in the way of your destination or you would get stuck.
+ * @param PositionOverride	If set to a valid vector and UseOverride is set to true, the player will be teleported to that position instead of to their cursor. This bypasses "distance" and "directional".
+ * @param UseOverride		Set PositionOverride to a valid vector and set this to true to override the teleport destination.
  *
  */
-native void CF_Teleport(int client, float distance, bool directional, float output[3] = NULL_VECTOR, bool IgnoreSafetyCheck = false)
+native void CF_Teleport(int client, float distance, bool directional, float output[3] = NULL_VECTOR, bool IgnoreSafetyCheck = false, float PositionOverride[3] = NULL_VECTOR, bool UseOverride = false)

@@ -798,13 +798,23 @@ stock int AttachParticleToEntity(int entity, char type[255], char point[255], fl
 			pos[2] += zOff;
 			
 			TeleportEntity(part1, pos, NULL_VECTOR, NULL_VECTOR);
+			
+			char name[16];
+			FormatEx(name, sizeof(name), "target%d", entity);
+			DispatchKeyValue(entity, "targetname", name);
+			DispatchKeyValue(part1, "targetname", "tf2particle");
+			DispatchKeyValue(part1, "parentname", name);
 			DispatchKeyValue(part1, "effect_name", type);
+			
+			/*
 			SetVariantString("!activator");
 			AcceptEntityInput(part1, "SetParent", entity, part1);
 			SetVariantString(point);
 			AcceptEntityInput(part1, "SetParentAttachmentMaintainOffset", part1, part1);
-			DispatchKeyValue(part1, "targetname", "present");
+			DispatchKeyValue(part1, "targetname", "present");*/
 			DispatchSpawn(part1);
+			SetVariantString(name);
+			AcceptEntityInput(part1, "SetParent", part1, part1);
 			ActivateEntity(part1);
 			AcceptEntityInput(part1, "Start");
 			
@@ -1838,7 +1848,7 @@ stock bool DPT_TraceWallsOnly(entity, contentsMask)
 	return false;
 }
  
-stock bool DPT_TryTeleport(int client, float range, bool directional, float output[3], bool IgnoreSafety = false)
+stock bool DPT_TryTeleport(int client, float range, bool directional, float output[3], bool IgnoreSafety = false, float override[3] = NULL_VECTOR, bool UseOverride = false)
 {
 	float sizeMultiplier = GetEntPropFloat(client, Prop_Send, "m_flModelScale");
 	static float startPos[3];
@@ -1848,7 +1858,7 @@ stock bool DPT_TryTeleport(int client, float range, bool directional, float outp
 	GetClientEyePosition(client, startPos);
 	GetClientEyeAngles(client, eyeAngles);
 	
-	if (directional)
+	if (directional && !UseOverride)
 	{
 		bool GoingLeft = GetClientButtons(client) & IN_MOVELEFT != 0;
 		bool GoingRight = GetClientButtons(client) & IN_MOVERIGHT != 0;
@@ -1874,20 +1884,28 @@ stock bool DPT_TryTeleport(int client, float range, bool directional, float outp
 	}
 	
 	DPT_Player = client;
-	TR_TraceRayFilter(startPos, eyeAngles, MASK_PLAYERSOLID, RayType_Infinite, DPT_TracePlayersAndBuildings);
-	TR_GetEndPosition(endPos);
 	
-	// don't even try if the distance is less than 82
-	float distance = GetVectorDistance(startPos, endPos);
-	if (distance < 82.0)
+	if (!UseOverride)
 	{
-		return false;
-	}
+		TR_TraceRayFilter(startPos, eyeAngles, MASK_PLAYERSOLID, RayType_Infinite, DPT_TracePlayersAndBuildings);
+		TR_GetEndPosition(endPos);
 		
-	if (distance > range)
-		constrainDistance(startPos, endPos, distance, range);
-	else // shave just a tiny bit off the end position so our point isn't directly on top of a wall
-		constrainDistance(startPos, endPos, distance, distance - 1.0);
+		// don't even try if the distance is less than 82
+		float distance = GetVectorDistance(startPos, endPos);
+		if (distance < 82.0)
+		{
+			return false;
+		}
+			
+		if (distance > range)
+			constrainDistance(startPos, endPos, distance, range);
+		else // shave just a tiny bit off the end position so our point isn't directly on top of a wall
+			constrainDistance(startPos, endPos, distance, distance - 1.0);
+	}
+	else
+	{
+		endPos = override;
+	}
 	
 	// now for the tests. I go 1 extra on the standard mins/maxs on purpose.
 	bool found = false;
@@ -1953,11 +1971,15 @@ stock bool DPT_TryTeleport(int client, float range, bool directional, float outp
 
 				// before we test this position, ensure it has line of sight from the point our player looked from
 				// this ensures the player can't teleport through walls
-				static float tmpPos[3];
-				TR_TraceRayFilter(endPos, testPos, MASK_PLAYERSOLID, RayType_EndPoint, DPT_TraceWallsOnly);
-				TR_GetEndPosition(tmpPos);
-				if (testPos[0] != tmpPos[0] || testPos[1] != tmpPos[1] || testPos[2] != tmpPos[2])
-					continue;
+				if (!UseOverride)
+				{
+					static float tmpPos[3];
+					TR_TraceRayFilter(endPos, testPos, MASK_PLAYERSOLID, RayType_EndPoint, DPT_TraceWallsOnly);
+					TR_GetEndPosition(tmpPos);
+					if (testPos[0] != tmpPos[0] || testPos[1] != tmpPos[1] || testPos[2] != tmpPos[2])
+						continue;
+				}
+					
 				found = IsSpotSafe(client, testPos, sizeMultiplier);
 			}
 		}

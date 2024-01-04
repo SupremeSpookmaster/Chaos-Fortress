@@ -2812,12 +2812,15 @@ public any Native_CF_CheckTeleport(Handle plugin, int numParams)
 	int client = GetNativeCell(1);
 	float distance = GetNativeCell(2); 
 	bool directional = GetNativeCell(3);
+	float override[3];
+	GetNativeArray(5, override, sizeof(override));
+	bool UseOverride = GetNativeCell(6);
 	
 	if (!IsValidMulti(client))
 		return false;
 		
 	float pos[3];
-	bool result = DPT_TryTeleport(client, distance, directional, pos);
+	bool result = DPT_TryTeleport(client, distance, directional, pos, false, override, UseOverride);
 	SetNativeArray(4, pos, sizeof(pos));
 	return result;
 }
@@ -2828,12 +2831,15 @@ public Native_CF_Teleport(Handle plugin, int numParams)
 	float distance = GetNativeCell(2); 
 	bool directional = GetNativeCell(3);
 	bool IgnoreSafety = GetNativeCell(5);
+	float override[3];
+	GetNativeArray(6, override, sizeof(override));
+	bool UseOverride = GetNativeCell(7);
 	
 	if (!IsValidMulti(client))
 		return;
 		
 	float pos[3];
-	bool result = DPT_TryTeleport(client, distance, directional, pos, IgnoreSafety);
+	bool result = DPT_TryTeleport(client, distance, directional, pos, IgnoreSafety, override, UseOverride);
 	SetNativeArray(4, pos, sizeof(pos));
 	
 	if (result)
