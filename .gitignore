@@ -41,7 +41,9 @@
 !cf_plugin_template.sp
 !cf_cbs.sp
 !cf_dokmed.sp
+!tf2_playercollisions.sp
 
 #Include Files
 !cf_include.inc
 !cf_stocks.inc
+!tf_player_collisions.inc
