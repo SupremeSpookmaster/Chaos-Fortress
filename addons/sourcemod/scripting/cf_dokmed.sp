@@ -3,10 +3,12 @@
 #include <tf2_stocks>
 #include <cf_stocks>
 #include <tf_player_collisions>
+#include <fakeparticles>
 
 #define DOKMED			"cf_dokmed"
 #define COCAINUM		"dokmed_cocainum"
 #define SURGERY			"dokmed_surprise_surgery"
+#define MEDIGUN			"dokmed_medigun_passives"
 
 #define MODEL_FLASK_RED					"models/passtime/flasks/flask_bottle_red.mdl"
 #define MODEL_FLASK_BLUE				"models/props_halloween/flask_bottle.mdl"
@@ -97,6 +99,9 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 		
 	if (StrContains(abilityName, SURGERY) != -1)
 		Surgery_Activate(client, abilityName);
+		
+	if (StrContains(abilityName, MEDIGUN) != -1)
+		Medigun_CycleBuff(client);
 }
 
 int Flask_SpeedMode[2049] = { 0, ... };
@@ -532,12 +537,215 @@ public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability
 	return Plugin_Continue;
 }
 
+enum MedigunBuff
+{
+    MedigunBuff_Speed = 0,
+    MedigunBuff_Res,
+    MedigunBuff_DMG,
+    MedigunBuff_None
+};
+
+MedigunBuff Medigun_CurrentBuff[MAXPLAYERS + 1] = { MedigunBuff_None, ... };
+
+CF_AbilityType Medigun_Slot[MAXPLAYERS + 1] = { CF_AbilityType_None, ... };
+
+char Medigun_Name[MAXPLAYERS + 1][3][255];
+
+float Medigun_Coefficient[MAXPLAYERS + 1][3];
+float Medigun_SelfHeal[MAXPLAYERS + 1] = { 0.0, ... };
+
+int Medigun_Target[MAXPLAYERS + 1] = { -1, ... };
+int Medigun_SelfParticle[MAXPLAYERS + 1] = { -1, ... };
+int Medigun_TargetParticle[MAXPLAYERS + 1] = { -1, ... };
+
+bool Medigun_Active[MAXPLAYERS + 1] = { false, ... };
+
+public void Medigun_Check(int client)
+{
+	if (!CF_HasAbility(client, DOKMED, MEDIGUN))
+		return;
+		
+	Medigun_Coefficient[client][0] = CF_GetArgF(client, DOKMED, MEDIGUN, "speed");
+	Medigun_Coefficient[client][1] = CF_GetArgF(client, DOKMED, MEDIGUN, "resistance");
+	Medigun_Coefficient[client][2] = CF_GetArgF(client, DOKMED, MEDIGUN, "damage");
+	Medigun_SelfHeal[client] = CF_GetArgF(client, DOKMED, MEDIGUN, "self_heal");
+	
+	CF_GetArgS(client, DOKMED, MEDIGUN, "speed_name", Medigun_Name[client][0], 255);
+	CF_GetArgS(client, DOKMED, MEDIGUN, "resistance_name", Medigun_Name[client][1], 255);
+	CF_GetArgS(client, DOKMED, MEDIGUN, "damage_name", Medigun_Name[client][2], 255);
+	
+	int slot = CF_GetArgI(client, DOKMED, MEDIGUN, "slot") - 1;
+	
+	if (slot > -1 && slot < 11)
+		Medigun_Slot[client] = view_as<CF_AbilityType>(slot);
+	
+	Medigun_Active[client] = true;
+	
+	Medigun_CycleBuff(client);
+	SDKHook(client, SDKHook_PreThink, Medigun_PreThink);
+}
+
+public Action Medigun_PreThink(int client)
+{
+	if (!IsPlayerHoldingWeapon(client, 1))
+		return Plugin_Continue;
+	
+	int medigun = GetPlayerWeaponSlot(client, 1);
+	if (!IsValidEntity(medigun))
+		return Plugin_Continue;
+		
+	char classname[255];
+	GetEntityClassname(medigun, classname, sizeof(classname));
+	
+	if (StrContains(classname, "medigun") == -1)
+		return Plugin_Continue;
+		
+	int target = GetEntPropEnt(medigun, Prop_Send, "m_hHealingTarget");
+	int current = Medigun_GetTarget(client);
+	if (target != current)
+	{
+		Medigun_TargetChanged(client, current, target);
+	}
+	
+	return Plugin_Continue;
+}
+
+public int Medigun_GetTarget(int client) { return GetClientOfUserId(Medigun_Target[client]); }
+
+public void Medigun_TargetChanged(int client, int currentTarget, int newTarget)
+{
+	Medigun_Detach(client, currentTarget);
+	
+	if (IsValidMulti(newTarget))
+		Medigun_Attach(client, newTarget);
+}
+
+public void Medigun_Detach(int client, int target)
+{
+	Medigun_RemoveParticles(client);
+		
+	Medigun_Target[client] = -1;
+}
+
+public void Medigun_Attach(int client, int target)
+{
+	DataPack pack = new DataPack();
+	WritePackCell(pack, GetClientUserId(client));
+	WritePackCell(pack, GetClientUserId(target));
+	RequestFrame(Medigun_AttachParticlesDelayed, pack);
+	
+	Medigun_Target[client] = GetClientUserId(target);
+}
+
+public void Medigun_AttachParticlesDelayed(DataPack pack)
+{
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	int target = GetClientOfUserId(ReadPackCell(pack));
+	delete pack;
+	
+	if (IsValidMulti(client) && IsValidMulti(target))
+		Medigun_AttachParticles(client, target);
+}
+
+public void Medigun_RemoveParticles(int client)
+{
+	int particle = EntRefToEntIndex(Medigun_SelfParticle[client]);
+	if (IsValidEntity(particle))
+		RemoveEntity(particle);
+		
+	particle = EntRefToEntIndex(Medigun_TargetParticle[client]);
+	if (IsValidEntity(particle))
+		RemoveEntity(particle);
+}
+
+public void Medigun_AttachParticles(int client, int target)
+{
+	int skin;
+	int r;
+	int b;
+	switch(Medigun_CurrentBuff[client])
+	{
+		case MedigunBuff_Res:
+		{
+			skin = 0;
+		}
+		case MedigunBuff_Speed:
+		{
+			skin = 1;
+		}
+		case MedigunBuff_DMG:
+		{
+			skin = 2;
+		}
+	}
+	
+	if (TF2_GetClientTeam(client) == TFTeam_Red)
+	{
+		r = 255;
+		b = 180;
+	}
+	else
+	{
+		r = 180;
+		b = 255;
+	}
+	
+	Medigun_SelfParticle[client] = EntIndexToEntRef(FPS_AttachFakeParticleToEntity(client, "root", "models/fake_particles/chaos_fortress/player_aura.mdl", skin, "rotate", 0.75, _, r, 180, b, 255));
+	Medigun_TargetParticle[client] = EntIndexToEntRef(FPS_AttachFakeParticleToEntity(target, "root", "models/fake_particles/chaos_fortress/player_aura.mdl", skin, "rotate", 0.75, _, r, 180, b, 255));
+}
+
+public void Medigun_CycleBuff(int client)
+{
+	if (!Medigun_Active[client] || Medigun_AllDisabled(client))
+		return;
+		
+	int current = view_as<int>(Medigun_CurrentBuff[client]);
+	bool success = false;
+	while (!success)
+	{
+		current++;
+		if (current > 2)
+			current = 0;
+			
+		if (Medigun_Coefficient[client][current] != 0.0)
+		{
+			Medigun_CurrentBuff[client] = view_as<MedigunBuff>(current);
+			CF_ChangeAbilityTitle(client, Medigun_Slot[client], Medigun_Name[client][current]);
+			
+			int target = Medigun_GetTarget(client);
+			if (IsValidMulti(target))
+			{
+				Medigun_RemoveParticles(client);
+				Medigun_AttachParticles(client, target);
+			}
+			success = true;
+		}
+	}
+}
+
+public bool Medigun_AllDisabled(int client)
+{
+	for (int i = 0; i < 3; i++)
+	{
+		if (Medigun_Coefficient[client][i] != 0.0)
+			return false;
+	}
+	
+	return true;
+}
+
 public void CF_OnCharacterCreated(int client)
 {
 	Surgery_Cancel(client);
+	Medigun_Check(client);
+	Medigun_Detach(client, Medigun_GetTarget(client));
 }
 
 public void CF_OnCharacterRemoved(int client)
 {
 	Surgery_Cancel(client);
+	Medigun_CurrentBuff[client] = MedigunBuff_None;
+	Medigun_Active[client] = false;
+	Medigun_Detach(client, Medigun_GetTarget(client));
 }

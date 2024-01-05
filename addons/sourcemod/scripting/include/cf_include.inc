@@ -1288,6 +1288,42 @@ native bool CF_MakeClientCharacter(int client, char character[255], char message
 native CF_ToggleHUD(int client, bool toggle);
 
 /**
+ * Changes the display name of a given ability slot for the specified client.
+ *
+ * @param client			The client to change the ability name for.
+ * @param type				The ability slot to change the display name for.
+ * @param newName			The new display name.
+ */
+native CF_ChangeAbilityTitle(int client, CF_AbilityType type, char newName[255]);
+
+/**
+ * Retrieves the display name of a given ability slot for the specified client, stored in the output buffer.
+ *
+ * @param client			The client to retrieve the ability name of.
+ * @param type				The ability slot to retrieve the display name of.
+ * @param output			Output buffer to store the ability's name in.
+ */
+native CF_GetAbilityTitle(int client, CF_AbilityType type, char output[255]);
+
+/**
+ * Changes the display name of the given client's special resource.
+ *
+ * @param client			The client to change the resource name for.
+ * @param newName			The new display name.
+ * @param newNamePlural		The new display name to be used if the user does not have exactly 1 of the special resource.
+ */
+native CF_ChangeSpecialResourceTitle(int client, char newName[255], char newNamePlural[255]);
+
+/**
+ * Retrieves the display name of the given client's special resource, stored in the output buffers.
+ *
+ * @param client			The client to retrieve the special resource name of.
+ * @param output			Output buffer to store the special resource's name in.
+ * @param output_plural		Output buffer to store the title of the special resource used when the user does not have exactly 1 of the special resource.
+ */
+native CF_GetSpecialResourceTitle(int client, char output[255], char output_plural[255]);
+
+/**
  * Checks if a client should be able to teleport to the location they are aiming at, up to a certain distance away.
  * ALL FUNCTIONALITY PROVIDED BY THIS NATIVE AND CF_Teleport WERE WRITTEN BY SARYSA! All I did was port them and add the "directional" feature.
  *
@@ -1316,4 +1352,4 @@ native bool CF_CheckTeleport(int client, float distance, bool directional, float
  * @param UseOverride		Set PositionOverride to a valid vector and set this to true to override the teleport destination.
  *
  */
-native void CF_Teleport(int client, float distance, bool directional, float output[3] = NULL_VECTOR, bool IgnoreSafetyCheck = false, float PositionOverride[3] = NULL_VECTOR, bool UseOverride = false)
+native void CF_Teleport(int client, float distance, bool directional, float output[3] = NULL_VECTOR, bool IgnoreSafetyCheck = false, float PositionOverride[3] = NULL_VECTOR, bool UseOverride = false);

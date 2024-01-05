@@ -144,6 +144,10 @@ public void CFA_MakeNatives()
 	CreateNative("CF_ToggleHUD", Native_CF_ToggleHUD);
 	CreateNative("CF_Teleport", Native_CF_Teleport);
 	CreateNative("CF_CheckTeleport", Native_CF_CheckTeleport);
+	CreateNative("CF_ChangeAbilityTitle", Native_CF_ChangeAbilityTitle);
+	CreateNative("CF_GetAbilityTitle", Native_CF_GetAbilityTitle);
+	CreateNative("CF_ChangeSpecialResourceTitle", Native_CF_ChangeSpecialResourceTitle);
+	CreateNative("CF_GetSpecialResourceTitle", Native_CF_GetSpecialResourceTitle);
 }
 
 public void CFA_MakeForwards()
@@ -2805,6 +2809,78 @@ public any Native_CF_GetShieldWallHealth(Handle plugin, int numParams)
 		return 0.0;
 		
 	return f_FakeMediShieldHP[shield];
+}
+
+public Native_CF_ChangeAbilityTitle(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	CF_AbilityType type = GetNativeCell(2);
+	char newName[255];
+	GetNativeString(3, newName, sizeof(newName));
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	switch(type)
+	{
+		case CF_AbilityType_Ult:
+			Format(s_UltName[client], 255, "%s", newName);
+		case CF_AbilityType_M2:
+			Format(s_M2Name[client], 255, "%s", newName);
+		case CF_AbilityType_M3:
+			Format(s_M3Name[client], 255, "%s", newName);
+		case CF_AbilityType_Reload:
+			Format(s_ReloadName[client], 255, "%s", newName);
+	}
+}
+
+public Native_CF_GetAbilityTitle(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	CF_AbilityType type = GetNativeCell(2);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	switch(type)
+	{
+		case CF_AbilityType_Ult:
+			SetNativeString(3, s_UltName[client], 255);
+		case CF_AbilityType_M2:
+			SetNativeString(3, s_M2Name[client], 255);
+		case CF_AbilityType_M3:
+			SetNativeString(3, s_M3Name[client], 255);
+		case CF_AbilityType_Reload:
+			SetNativeString(3, s_ReloadName[client], 255);
+	}
+}
+
+public Native_CF_ChangeSpecialResourceTitle(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	char newName[255], newNamePlural[255];
+	GetNativeString(2, newName, sizeof(newName));
+	GetNativeString(3, newNamePlural, sizeof(newNamePlural));
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	Format(s_ResourceName[client], 255, "%s", newName);
+	Format(s_ResourceName_Plural[client], 255, "%s", newNamePlural);
+}
+
+public Native_CF_GetSpecialResourceTitle(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	char newName[255], newNamePlural[255];
+	GetNativeString(2, newName, sizeof(newName));
+	GetNativeString(3, newNamePlural, sizeof(newNamePlural));
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	SetNativeString(2, s_ResourceName[client], 255);
+	SetNativeString(3, s_ResourceName_Plural[client], 255);
 }
 
 public any Native_CF_CheckTeleport(Handle plugin, int numParams)

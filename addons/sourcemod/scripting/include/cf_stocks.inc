@@ -1165,6 +1165,12 @@ stock void HidePlayerWeapon(int client, float duration)
 	}
 } 
 
+stock bool IsPlayerHoldingWeapon(int client, int slot)
+{
+	int ent = TF2_GetActiveWeapon(client);
+	return GetPlayerWeaponSlot(client, slot) == ent;
+}
+
 public Action UnhideWeapon(Handle unhide, int ref)
 {
 	int ent = EntRefToEntIndex(ref);
@@ -2197,7 +2203,7 @@ stock bool Resize_TestSquare(const float bossOrigin[3], float xmin, float xmax, 
 	return true;
 }
 
-void DoOverlay(int client, const char[] overlay, int Methods = 0)
+stock void DoOverlay(int client, const char[] overlay, int Methods = 0)
 {
 	if(Methods == 1 || Methods == 2)
 	{
