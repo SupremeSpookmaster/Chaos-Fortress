@@ -16,13 +16,9 @@
 //		- Christian Brutal Sniper:
 //			- Implement Badass' team-colored model and add him to the credits.
 //		- Doktor Medick:
-//			- Yes, he's meant to be a healer, but he has WAY too many forms of healing in his kit. Two AoE healing skills, a medigun, AND a Crusader's Crossbow is a bit much, even in a high-damage game like Chaos Fortress
-//				- VERDICT: 
-//					1. Make the radius for Surprise Surgery REALLY small, so you need to teleport directly next to someone to heal/hurt them. Make the potency really high in return, like 300 for both healing and damage (damage needs harsh falloff though, min damage should be 100).
-//					2. Keep the Crusader's Crossbow as-is, but add an ability to make it deal 50% reduced damage to enemies, so spamming it down chokes doesn't hand out cheesy kills.
-//					3. Medigun - Remember to disable übercharge.
-//					4. Cocainum - Keep current stats.
+//			- Remember to disable the medigun's übercharge.
 //			- Write medigun passives.
+//				- The visual effects are all done, but the buffs don't actually do anything yet.
 //			- Write Surprise Surgery.
 //				- Write a separate plugin (something like "tf2_playercollisions") for the "stuck_method" arg. Then, we can use this plugin to fix BvB's collision issues as well. Two birds with one stone and what-not.
 //			- Write High Time.

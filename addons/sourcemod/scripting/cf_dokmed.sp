@@ -553,12 +553,15 @@ char Medigun_Name[MAXPLAYERS + 1][3][255];
 
 float Medigun_Coefficient[MAXPLAYERS + 1][3];
 float Medigun_SelfHeal[MAXPLAYERS + 1] = { 0.0, ... };
+float Medigun_HealBucket[MAXPLAYERS + 1] = { 0.0, ... };
+float Medigun_HealCap[MAXPLAYERS + 1] = { 0.0, ... };
 
 int Medigun_Target[MAXPLAYERS + 1] = { -1, ... };
 int Medigun_SelfParticle[MAXPLAYERS + 1] = { -1, ... };
 int Medigun_TargetParticle[MAXPLAYERS + 1] = { -1, ... };
 
 bool Medigun_Active[MAXPLAYERS + 1] = { false, ... };
+bool Medigun_BlockUber[MAXPLAYERS + 1] = { false, ... };
 
 public void Medigun_Check(int client)
 {
@@ -569,6 +572,8 @@ public void Medigun_Check(int client)
 	Medigun_Coefficient[client][1] = CF_GetArgF(client, DOKMED, MEDIGUN, "resistance");
 	Medigun_Coefficient[client][2] = CF_GetArgF(client, DOKMED, MEDIGUN, "damage");
 	Medigun_SelfHeal[client] = CF_GetArgF(client, DOKMED, MEDIGUN, "self_heal");
+	Medigun_HealCap[client] = CF_GetArgF(client, DOKMED, MEDIGUN, "self_overheal");
+	Medigun_BlockUber[client] = CF_GetArgI(client, DOKMED, MEDIGUN, "block_uber") != 0;
 	
 	CF_GetArgS(client, DOKMED, MEDIGUN, "speed_name", Medigun_Name[client][0], 255);
 	CF_GetArgS(client, DOKMED, MEDIGUN, "resistance_name", Medigun_Name[client][1], 255);
@@ -582,6 +587,7 @@ public void Medigun_Check(int client)
 	Medigun_Active[client] = true;
 	
 	Medigun_CycleBuff(client);
+	SDKUnhook(client, SDKHook_PreThink, Medigun_PreThink);
 	SDKHook(client, SDKHook_PreThink, Medigun_PreThink);
 }
 
@@ -599,12 +605,28 @@ public Action Medigun_PreThink(int client)
 	
 	if (StrContains(classname, "medigun") == -1)
 		return Plugin_Continue;
+	
+	if (Medigun_BlockUber[client])
+		SetEntPropFloat(medigun, Prop_Send, "m_flChargeLevel", 0.0);
 		
 	int target = GetEntPropEnt(medigun, Prop_Send, "m_hHealingTarget");
 	int current = Medigun_GetTarget(client);
 	if (target != current)
 	{
 		Medigun_TargetChanged(client, current, target);
+	}
+	
+	if (IsValidMulti(current))
+	{
+		Medigun_HealBucket[client] += Medigun_SelfHeal[client] / 63.0;
+		if (Medigun_HealBucket[client] >= 1.0)
+		{
+			int heals = RoundToFloor(Medigun_HealBucket[client]);
+			float remainder = Medigun_HealBucket[client] - float(heals);
+			
+			CF_HealPlayer(client, client, heals, Medigun_HealCap[client]);
+			Medigun_HealBucket[client] = remainder;
+		}
 	}
 	
 	return Plugin_Continue;
@@ -625,6 +647,7 @@ public void Medigun_Detach(int client, int target)
 	Medigun_RemoveParticles(client);
 		
 	Medigun_Target[client] = -1;
+	Medigun_HealBucket[client] = 0.0;
 }
 
 public void Medigun_Attach(int client, int target)
