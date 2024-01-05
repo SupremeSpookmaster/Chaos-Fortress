@@ -80,6 +80,9 @@
 //	- COUNT HEAVNICH: I don't know how, but "Chow Down" *sometimes* still causes you to T-pose when it ends. This is fixed immediately by switching weapons, and has no permanent side effects. It does look very unprofessional, though, so I am inclined to find a fix if possible.
 //	- DEMOPAN: Becoming übercharged on BLU team causes your cosmetics to use the RED team's über texture. This may actually be all wearables, I have not tested über textures on BLU with other characters.
 //	- CF_Teleport can get you stuck in enemy spawn doors. I'm not going to bother fixing this, if you're enough of a scumbag to try to teleport into the enemy's spawn you deserve to get stuck and die.
+//	- The PlayerHealed event doesn't seem to detect medigun healing, so it doesn't show up on the scoreboard as healing credit. I don't plan on Chaos Fortress being a sweaty game mode, but it would be nice for support players to see *accurate* numbers. Kind of the entire reason why I gave the HealPlayer native scoreboard credit in the first place.
+//		- The healedbymedic event would work if it displayed the amount healed. It does not, unfortunately.
+//		- May need to code a workaround using custom medigun heal logic. Could reuse what DokMed has for this.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This feature may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
@@ -161,6 +164,7 @@ public void OnPluginStart()
 	HookEvent("teamplay_round_stalemate", RoundEnd);
 	HookEvent("player_changeclass", ClassChange);
 	HookEvent("player_healed", PlayerHealed);
+	HookEvent("crossbow_heal", PlayerHealed_Crossbow);
 	
 	RegAdminCmd("cf_reloadrules", CF_ReloadRules, ADMFLAG_KICK, "Chaos Fortress: Reloads the settings in game_rules.cfg.");
 	RegAdminCmd("cf_reloadcharacters", CF_ReloadCharacters, ADMFLAG_KICK, "Chaos Fortress: Reloads the character packs, as defined in characters.cfg.");
@@ -201,6 +205,21 @@ public Action PlayerHealed(Event hEvent, const char[] sEvName, bool bDontBroadca
 {
 	int patient = GetClientOfUserId(hEvent.GetInt("patient"));
 	int healer = hEvent.GetInt("healer");
+	int amount = GetClientOfUserId(hEvent.GetInt("amount"));
+
+	if (IsValidClient(healer) && healer != patient)
+	{
+		CFA_GiveChargesForHealing(healer, float(amount));
+		CFA_AddHealingPoints(healer, amount);
+	}
+
+	return Plugin_Continue;
+}
+
+public Action PlayerHealed_Crossbow(Event hEvent, const char[] sEvName, bool bDontBroadcast)
+{
+	int healer = hEvent.GetInt("healer");
+	int patient = GetClientOfUserId(hEvent.GetInt("target"));
 	int amount = GetClientOfUserId(hEvent.GetInt("amount"));
 
 	if (IsValidClient(healer) && healer != patient)
