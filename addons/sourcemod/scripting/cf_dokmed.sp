@@ -609,6 +609,7 @@ int Medigun_TargetParticle[MAXPLAYERS + 1] = { -1, ... };
 
 bool Medigun_Active[MAXPLAYERS + 1] = { false, ... };
 bool Medigun_BlockUber[MAXPLAYERS + 1] = { false, ... };
+bool b_FadingOut[2049] = { false, ... };
 
 public void Medigun_Check(int client)
 {
@@ -750,11 +751,61 @@ public void Medigun_RemoveParticles(int client)
 {
 	int particle = EntRefToEntIndex(Medigun_SelfParticle[client]);
 	if (IsValidEntity(particle))
-		RemoveEntity(particle);
+	{
+		b_FadingOut[particle] = true;
+		RequestFrame(Medigun_FadeOut, EntIndexToEntRef(particle));
+	}
 		
 	particle = EntRefToEntIndex(Medigun_TargetParticle[client]);
 	if (IsValidEntity(particle))
-		RemoveEntity(particle);
+	{
+		b_FadingOut[particle] = true;
+		RequestFrame(Medigun_FadeOut, EntIndexToEntRef(particle));
+	}
+}
+
+public void Medigun_FadeOut(int ref)
+{
+	int ent = EntRefToEntIndex(ref);
+	if (!IsValidEntity(ent))
+		return;
+	
+	int r, g, b, a;
+	GetEntityRenderColor(ent, r, g, b, a);
+	
+	a -= 3;
+	if (a < 1)
+	{
+		RemoveEntity(ent);
+		return;
+	}
+	else
+		SetEntityRenderColor(ent, r, g, b, a);
+		
+	RequestFrame(Medigun_FadeOut, ref);
+}
+
+public void Medigun_FadeIn(int ref)
+{
+	int ent = EntRefToEntIndex(ref);
+	if (!IsValidEntity(ent))
+		return;
+		
+	if (b_FadingOut[ent])
+		return;
+		
+	int r, g, b, a;
+	GetEntityRenderColor(ent, r, g, b, a);
+	
+	a += 6;
+	if (a > 255)
+		a = 255;
+
+	SetEntityRenderColor(ent, r, g, b, a);
+	if (a == 255)
+		return;
+		
+	RequestFrame(Medigun_FadeIn, ref);
 }
 
 public void Medigun_AttachParticles(int client, int target)
@@ -789,8 +840,11 @@ public void Medigun_AttachParticles(int client, int target)
 		b = 255;
 	}
 	
-	Medigun_SelfParticle[client] = EntIndexToEntRef(FPS_AttachFakeParticleToEntity(client, "root", "models/fake_particles/chaos_fortress/player_aura.mdl", skin, "rotate", 0.75, _, r, 180, b, 255));
-	Medigun_TargetParticle[client] = EntIndexToEntRef(FPS_AttachFakeParticleToEntity(target, "root", "models/fake_particles/chaos_fortress/player_aura.mdl", skin, "rotate", 0.75, _, r, 180, b, 255));
+	Medigun_SelfParticle[client] = EntIndexToEntRef(FPS_AttachFakeParticleToEntity(client, "root", "models/fake_particles/chaos_fortress/player_aura.mdl", skin, "rotate", 0.75, _, r, 180, b, 0));
+	Medigun_TargetParticle[client] = EntIndexToEntRef(FPS_AttachFakeParticleToEntity(target, "root", "models/fake_particles/chaos_fortress/player_aura.mdl", skin, "rotate", 0.75, _, r, 180, b, 0));
+	
+	RequestFrame(Medigun_FadeIn, Medigun_SelfParticle[client]);
+	RequestFrame(Medigun_FadeIn, Medigun_TargetParticle[client]);
 }
 
 public void Medigun_CycleBuff(int client)
@@ -878,7 +932,6 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 	float mult = Medigun_GetResMult(victim);
 	if (mult != 1.0)
 	{
-		CPrintToChatAll("Res mult returned %.2f, damage should now be %.2f.", mult, damage * mult);
 		damage *= mult;
 		return Plugin_Changed;
 	}
@@ -891,7 +944,6 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 	float mult = Medigun_GetDMGMult(victim);
 	if (mult != 1.0)
 	{
-		CPrintToChatAll("DMG mult returned %.2f, damage should now be %.2f.", mult, damage * mult);
 		damage *= mult;
 		return Plugin_Changed;
 	}
@@ -914,4 +966,10 @@ public void CF_OnCharacterRemoved(int client)
 	Medigun_CurrentBuff[client] = MedigunBuff_None;
 	Medigun_Active[client] = false;
 	Medigun_Detach(client, Medigun_GetTarget(client));
+}
+
+public void OnEntityDestroyed(int entity)
+{
+	if (entity > 0 && entity < 2049)
+		b_FadingOut[entity] = false;
 }

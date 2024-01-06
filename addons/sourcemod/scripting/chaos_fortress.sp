@@ -75,7 +75,6 @@
 //	- For some reason, players get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? It's invisible while alive but becomes visible on death and also displays in the 3D player model shown in the HUD. This has no effect on gameplay but it's really ugly. Honestly baffling.
 //	- Certain hats, when equipped via the wearable system, do not visually appear on bots (but they do work *sometimes*). Count Heavnich's "Noble Amassment of Hats" is an example of such a hat. 
 //	- COUNT HEAVNICH: I don't know how, but "Chow Down" *sometimes* still causes you to T-pose when it ends. This is fixed immediately by switching weapons, and has no permanent side effects. It does look very unprofessional, though, so I am inclined to find a fix if possible.
-//	- DEMOPAN: Becoming übercharged on BLU team causes your cosmetics to use the RED team's über texture. This may actually be all wearables, I have not tested über textures on BLU with other characters.
 //	- CF_Teleport can get you stuck in enemy spawn doors. I'm not going to bother fixing this, if you're enough of a scumbag to try to teleport into the enemy's spawn you deserve to get stuck and die.
 //	- The PlayerHealed event doesn't seem to detect medigun healing, so it doesn't contribute to special resources or ult charge given to the healer, nor does it appear on the scoreboard. Dispensers most likely have the same problem, but I can't check right now.
 //		- May need to code a workaround to detect how much healing the user's medigun is doing and award charge/scoreboard points accordingly.
@@ -83,7 +82,7 @@
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This feature may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //			- Scrap this feature entirely and remove all mentions of it from the code. This will be a giant pain in the ass but does not need to be done until public release.
-//	- DEVELOPMENT: The game mode seems to randomly trigger "no free edicts" crashes without warning. There's no lag beforehand, and dumping handles shows there's not a memory leak. The server just randomly runs out of edicts and crashes. No idea why.
+//	- DEVELOPMENT: The game mode seems to randomly trigger "no free edicts" crashes without warning. There's no lag beforehand, it doesn't reliably happen on any given event or time, and dumping handles shows there's not a memory leak. The server just randomly runs out of edicts and crashes. No idea why.
 //
 //	- PRESUMED UNFIXABLE (major bugs which I don't believe can be fixed with my current SourceMod expertise. The best thing you can do is classify these as exploits and punish them as such):
 //	- DEMOPAN: Enemies can get stuck in his shield if they walk into it while it is held. Demopans can abuse this to intentionally get enemies stuck for free kills. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.
