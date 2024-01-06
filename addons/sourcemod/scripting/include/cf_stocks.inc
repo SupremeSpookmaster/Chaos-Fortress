@@ -50,6 +50,54 @@ enum ViewmodelSequence
 	VMS_Jarate_Throw
 };
 
+stock void Overlay_Apply(int client, const char[] overlay, int Methods = 0)
+{
+	if(Methods == 1 || Methods == 2)
+	{
+		int flags = GetCommandFlags("r_screenoverlay");
+		SetCommandFlags("r_screenoverlay", flags & ~FCVAR_CHEAT);
+		if(overlay[0])
+		{
+			ClientCommand(client, "r_screenoverlay \"%s\"", overlay);
+		}
+		else
+		{
+			ClientCommand(client, "r_screenoverlay off");
+		}
+		SetCommandFlags("r_screenoverlay", flags);
+	}
+	if(Methods == 0 || Methods == 2)
+	{
+		SetEntPropString(client, Prop_Send, "m_szScriptOverlayMaterial", overlay);
+	}
+}
+
+stock void Overlay_Flash(int client, const char[] overlay, float duration)
+{
+	Overlay_Apply(client, overlay, 0);
+	CreateTimer(duration, EndOverlayFlash, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+}
+
+public Action EndOverlayFlash(Handle flashed, int id)
+{
+	int client = GetClientOfUserId(id);
+	if (IsValidClient(client))
+	{
+		Overlay_Apply(client, "");
+	}
+	
+	return Plugin_Continue;
+}
+
+stock void GetVelocityInDirection(float angles[3], float velocity, float output[3])
+{
+	float buffer[3];
+	GetAngleVectors(angles, buffer, NULL_VECTOR, NULL_VECTOR);
+	
+	for (int i = 0; i < 3; i++)
+	  output[i] = buffer[i] * velocity;
+}
+
 /**
  * Checks if a client is valid.
  *
@@ -2201,26 +2249,4 @@ stock bool Resize_TestSquare(const float bossOrigin[3], float xmin, float xmax, 
 	}
 		
 	return true;
-}
-
-stock void DoOverlay(int client, const char[] overlay, int Methods = 0)
-{
-	if(Methods == 1 || Methods == 2)
-	{
-		int flags = GetCommandFlags("r_screenoverlay");
-		SetCommandFlags("r_screenoverlay", flags & ~FCVAR_CHEAT);
-		if(overlay[0])
-		{
-			ClientCommand(client, "r_screenoverlay \"%s\"", overlay);
-		}
-		else
-		{
-			ClientCommand(client, "r_screenoverlay off");
-		}
-		SetCommandFlags("r_screenoverlay", flags);
-	}
-	if(Methods == 0 || Methods == 2)
-	{
-		SetEntPropString(client, Prop_Send, "m_szScriptOverlayMaterial", overlay);
-	}
 }

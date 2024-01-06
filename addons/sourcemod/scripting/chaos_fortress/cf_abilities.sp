@@ -2389,7 +2389,7 @@ public Native_CF_HealPlayer(Handle plugin, int numParams)
 	{
 		CFA_GiveChargesForHealing(healer, float(healingDone));
 		
-		i_HealingDone[healer] += healingDone;
+		CFA_AddHealingPoints(healer, healingDone);
 	}
 }
 

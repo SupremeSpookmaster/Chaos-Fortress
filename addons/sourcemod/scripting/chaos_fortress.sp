@@ -16,11 +16,8 @@
 //		- Christian Brutal Sniper:
 //			- Implement Badass' team-colored model and add him to the credits.
 //		- Doktor Medick:
-//			- Remember to disable the medigun's übercharge.
 //			- Write medigun passives.
 //				- The visual effects are all done, but the buffs don't actually do anything yet.
-//			- Write Surprise Surgery.
-//				- Write a separate plugin (something like "tf2_playercollisions") for the "stuck_method" arg. Then, we can use this plugin to fix BvB's collision issues as well. Two birds with one stone and what-not.
 //			- Write High Time.
 //				- Use m_flNextPrimaryAttack instead of attributes for the attack speed modifier.
 //				- Reload speed boosts will unfortunately not be possible, as a netprop does not exist for reload time. I could use attributes, but that would be unclean and highly likely to cause cross-plugin conflicts.
@@ -80,9 +77,8 @@
 //	- COUNT HEAVNICH: I don't know how, but "Chow Down" *sometimes* still causes you to T-pose when it ends. This is fixed immediately by switching weapons, and has no permanent side effects. It does look very unprofessional, though, so I am inclined to find a fix if possible.
 //	- DEMOPAN: Becoming übercharged on BLU team causes your cosmetics to use the RED team's über texture. This may actually be all wearables, I have not tested über textures on BLU with other characters.
 //	- CF_Teleport can get you stuck in enemy spawn doors. I'm not going to bother fixing this, if you're enough of a scumbag to try to teleport into the enemy's spawn you deserve to get stuck and die.
-//	- The PlayerHealed event doesn't seem to detect medigun healing, so it doesn't show up on the scoreboard as healing credit. I don't plan on Chaos Fortress being a sweaty game mode, but it would be nice for support players to see *accurate* numbers. Kind of the entire reason why I gave the HealPlayer native scoreboard credit in the first place.
-//		- The healedbymedic event would work if it displayed the amount healed. It does not, unfortunately.
-//		- May need to code a workaround using custom medigun heal logic. Could reuse what DokMed has for this.
+//	- The PlayerHealed event doesn't seem to detect medigun healing, so it doesn't contribute to special resources or ult charge given to the healer, nor does it appear on the scoreboard. Dispensers most likely have the same problem, but I can't check right now.
+//		- May need to code a workaround to detect how much healing the user's medigun is doing and award charge/scoreboard points accordingly.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This feature may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
