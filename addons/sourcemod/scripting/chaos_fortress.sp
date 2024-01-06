@@ -10,14 +10,15 @@
 
 //
 //	- IMMEDIATE PLANS:
+//		- Mercenary:
+//			- Replace Sprint's wearbale with CF_ApplyTemporarySpeedChange.
 //		- Orbital Sniper:
 //			- Make custom sounds and implement them. Remove the DSP effect attribute once this is done.
 //			- Try using interpolation frames to make hovering smoother.
+//			- Replace Taser's wearable with CF_ApplyTemporarySpeedChange.
 //		- Christian Brutal Sniper:
 //			- Implement Badass' team-colored model and add him to the credits.
 //		- Doktor Medick:
-//			- Write medigun passives.
-//				- All buffs are done except for the passive speed boost for the user and their medigun target. That will be the hard part.
 //			- Write High Time.
 //				- Use m_flNextPrimaryAttack instead of attributes for the attack speed modifier.
 //				- Reload speed boosts will unfortunately not be possible, as a netprop does not exist for reload time. I could use attributes, but that would be unclean and highly likely to cause cross-plugin conflicts.

@@ -159,6 +159,12 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 		SetEntPropFloat(entity, Prop_Send, "m_flModelScale", 0.001);
 	}
 	
+	if (StrEqual(name, "tf_weapon_medigun"))
+	{
+		SDKUnhook(client, SDKHook_PreThink, Medigun_PreThink);
+		SDKHook(client, SDKHook_PreThink, Medigun_PreThink);
+	}
+	
 	if (slot < 2)
 	{
 		#if defined TESTING

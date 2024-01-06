@@ -3021,16 +3021,19 @@ public Native_CF_ApplyTemporarySpeedChange(Handle plugin, int numParams)
 	}
 	
 	float speedGained = targetSpeed - currentSpeed;
-	if (speedGained != 0.0 && duration > 0.0)
+	if (speedGained != 0.0)
 	{
 		CF_SetCharacterSpeed(client, targetSpeed);
 		
-		DataPack pack = new DataPack();
-		WritePackCell(pack, GetClientUserId(client));
-		WritePackFloat(pack, speedGained);
-		WritePackFloat(pack, GetGameTime() + duration);
-		WritePackCell(pack, sound);
-		RequestFrame(TempSpeed_Check, pack);
+		if (duration > 0.0)
+		{
+			DataPack pack = new DataPack();
+			WritePackCell(pack, GetClientUserId(client));
+			WritePackFloat(pack, speedGained);
+			WritePackFloat(pack, GetGameTime() + duration);
+			WritePackCell(pack, sound);
+			RequestFrame(TempSpeed_Check, pack);
+		}
 	}
 	
 	if (sound)
@@ -3265,4 +3268,62 @@ public void FakeHealthKit_Think(DataPack pack)
 	}
 		
 	RequestFrame(FakeHealthKit_Think, pack);
+}
+
+float Medigun_HealBucket[MAXPLAYERS + 1] = { 0.0, ... };
+
+public Action Medigun_PreThink(int client)
+{
+	if (!IsPlayerHoldingWeapon(client, 1))
+		return Plugin_Continue;
+	
+	int medigun = GetPlayerWeaponSlot(client, 1);
+	if (!IsValidEntity(medigun))
+		return Plugin_Continue;
+		
+	char classname[255];
+	GetEntityClassname(medigun, classname, sizeof(classname));
+	
+	if (StrContains(classname, "medigun") == -1)
+	{
+		SDKUnhook(client, SDKHook_PreThink, Medigun_PreThink);
+		return Plugin_Stop;
+	}
+	
+	int target = GetEntPropEnt(medigun, Prop_Send, "m_hHealingTarget");
+	if (IsValidMulti(target))
+	{
+		float amt = Medigun_CalculateHealRate(medigun, client) / 63.0;
+		CFA_GiveChargesForHealing(client, amt);
+		
+		Medigun_HealBucket[client] += amt;
+		if (Medigun_HealBucket[client] >= 1.0)
+		{
+			int heals = RoundToFloor(Medigun_HealBucket[client]);
+			float remainder = Medigun_HealBucket[client] - float(heals);
+			
+			CFA_AddHealingPoints(client, heals);
+			Medigun_HealBucket[client] = remainder;
+		}
+	}
+	
+	return Plugin_Continue;
+}
+
+//Note that this does not account for crit heals.
+float Medigun_CalculateHealRate(int medigun, int client)
+{
+	float BaseHealingRate = 24.0;
+	BaseHealingRate *= GetAttributeValue(medigun, 7, 1.0);
+	BaseHealingRate *= GetAttributeValue(medigun, 8, 1.0);
+	float mastery = 0.25 * GetAttributeValue(medigun, 493, 0.0);
+	BaseHealingRate *= (1.0 + mastery);
+	
+	if (TF2_IsPlayerInCondition(client, TFCond_RuneHaste))
+		BaseHealingRate *= 2.0;
+		
+	if (TF2_IsPlayerInCondition(client, TFCond_KingAura) || TF2_IsPlayerInCondition(client, TFCond_KingRune))
+		BaseHealingRate *= 1.5;
+		
+	return BaseHealingRate;
 }

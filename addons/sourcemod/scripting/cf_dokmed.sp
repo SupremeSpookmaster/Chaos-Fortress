@@ -602,6 +602,8 @@ float Medigun_Coefficient[MAXPLAYERS + 1][3];
 float Medigun_SelfHeal[MAXPLAYERS + 1] = { 0.0, ... };
 float Medigun_HealBucket[MAXPLAYERS + 1] = { 0.0, ... };
 float Medigun_HealCap[MAXPLAYERS + 1] = { 0.0, ... };
+float Medigun_SpeedAdded[MAXPLAYERS + 1] = { 0.0, ... };
+float Medigun_TargetSpeedAdded[MAXPLAYERS + 1] = { 0.0, ... };
 
 int Medigun_Target[MAXPLAYERS + 1] = { -1, ... };
 int Medigun_SelfParticle[MAXPLAYERS + 1] = { -1, ... };
@@ -693,7 +695,8 @@ public void Medigun_TargetChanged(int client, int currentTarget, int newTarget)
 public void Medigun_Detach(int client, int target)
 {
 	Medigun_RemoveParticles(client);
-		
+	Medigun_RemoveSpeedBonus(client, target);
+	
 	Medigun_Target[client] = -1;
 	Medigun_HealBucket[client] = 0.0;
 	
@@ -710,6 +713,48 @@ public void Medigun_Attach(int client, int target)
 	
 	Medigun_Target[client] = GetClientUserId(target);
 	Medigun_AddToList(target, client);
+	if (Medigun_CurrentBuff[client] == MedigunBuff_Speed)
+		Medigun_ApplySpeedBonus(client, target);
+}
+
+public void Medigun_ApplySpeedBonus(int client, int target)
+{
+	if (!IsValidClient(client))
+		return;
+		
+	Medigun_RemoveSpeedBonus(client, target);
+	
+	if (IsPlayerAlive(client))
+	{
+		float current = CF_GetCharacterSpeed(client);
+		CF_ApplyTemporarySpeedChange(client, 1, 1.0 + Medigun_Coefficient[client][0], 0.0, 0, 9999.0, false);
+		Medigun_SpeedAdded[client] = CF_GetCharacterSpeed(client) - current;
+	}
+	
+	if (IsValidMulti(target))
+	{
+		float current = CF_GetCharacterSpeed(target);
+		CF_ApplyTemporarySpeedChange(target, 1, 1.0 + Medigun_Coefficient[client][0], 0.0, 0, 9999.0, false);
+		Medigun_TargetSpeedAdded[client] = CF_GetCharacterSpeed(target) - current;
+	}
+}
+
+public void Medigun_RemoveSpeedBonus(int client, int target)
+{
+	if (!IsValidClient(client))
+		return;
+		
+	if (IsPlayerAlive(client) && Medigun_SpeedAdded[client] != 0.0)
+	{
+		CF_ApplyTemporarySpeedChange(client, 3, -Medigun_SpeedAdded[client], 0.0, 0, 9999.0, false);
+		Medigun_SpeedAdded[client] = 0.0;
+	}
+	
+	if (IsValidMulti(target) && Medigun_TargetSpeedAdded[client] != 0.0)
+	{
+		CF_ApplyTemporarySpeedChange(target, 3, -Medigun_TargetSpeedAdded[client], 0.0, 0, 9999.0, false);
+		Medigun_TargetSpeedAdded[client] = 0.0;
+	}
 }
 
 public void Medigun_AddToList(int client, int target)
@@ -870,6 +915,11 @@ public void Medigun_CycleBuff(int client)
 			{
 				Medigun_RemoveParticles(client);
 				Medigun_AttachParticles(client, target);
+				
+				if (Medigun_CurrentBuff[client] == MedigunBuff_Speed)
+					Medigun_ApplySpeedBonus(client, target);
+				else
+					Medigun_RemoveSpeedBonus(client, target);
 			}
 			success = true;
 		}
