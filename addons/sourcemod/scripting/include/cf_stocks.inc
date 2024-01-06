@@ -1569,6 +1569,64 @@ stock float GetDistanceToCeiling(float location[3])
 	return GetVectorDistance(location, otherLoc);
 }
 
+stock void ForceGuaranteedDamage(int victim, float damage, int attacker = 0, int inflictor = 0, int weapon = 0, int damagetype = DMG_GENERIC)
+{
+	bool IsClient = IsValidClient(victim);
+	if (IsClient)
+		RemoveAllInvuln(victim);
+	
+	DataPack pack = new DataPack();
+	WritePackCell(pack, view_as<int>(IsClient));
+	WritePackCell(pack, IsClient ? GetClientUserId(victim) : EntIndexToEntRef(victim));
+	WritePackFloat(pack, damage);
+	WritePackCell(pack, IsValidClient(attacker) ? GetClientUserId(attacker) : 0);
+	WritePackCell(pack, inflictor);
+	WritePackCell(pack, weapon);
+	WritePackCell(pack, damagetype);
+	RequestFrame(Force_DamageOnDelay, pack);
+}
+
+public void Force_DamageOnDelay(DataPack pack)
+{
+	ResetPack(pack);
+	bool IsClient = view_as<bool>(ReadPackCell(pack));
+	int victim = ReadPackCell(pack);
+	if (IsClient)
+		victim = GetClientOfUserId(victim);
+	else
+		victim = EntRefToEntIndex(victim);
+		
+	float damage = ReadPackFloat(pack);
+	int attacker = ReadPackCell(pack);
+	if (attacker != 0)
+		attacker = GetClientOfUserId(attacker);
+	int inflictor = ReadPackCell(pack);
+	int weapon = ReadPackCell(pack);
+	int damagetype = ReadPackCell(pack);
+	delete pack;
+	
+	
+	if (IsClient && !IsValidMulti(victim))
+		return;
+	if (!IsValidEntity(victim))
+		return;
+		
+	SDKHooks_TakeDamage(victim, inflictor, attacker, damage, damagetype, weapon);
+}
+
+public void RemoveAllInvuln(int client)
+{
+	TF2_RemoveCondition(client, TFCond_UberBlastResist);
+	TF2_RemoveCondition(client, TFCond_UberchargedHidden);
+	TF2_RemoveCondition(client, TFCond_Ubercharged);
+	TF2_RemoveCondition(client, TFCond_UberchargedCanteen);
+	TF2_RemoveCondition(client, TFCond_UberchargedOnTakeDamage);
+	TF2_RemoveCondition(client, TFCond_PreventDeath);
+	TF2_RemoveCondition(client, TFCond_DodgeChance);
+	TF2_RemoveCondition(client, TFCond_ObscuredSmoke);
+	SetEntProp(client, Prop_Data, "m_takedamage", 2, 1);
+}
+
 int i_StuckCheckUser = -1;
 
 stock bool CheckPlayerWouldGetStuck(int client, float scale)

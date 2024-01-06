@@ -447,6 +447,8 @@ public void Surgery_Teleport(int client)
 	TFTeam team = TF2_GetClientTeam(client);
 		
 	CF_Teleport(client, 0.0, false, NULL_VECTOR, true, Surgery_Destination[client], true);
+	RequestFrame(Surgery_Telefrag, GetClientUserId(client));
+	
 	SpawnShaker(Surgery_Destination[client], 8, 100, 4, 4, 4);
 	Overlay_Flash(client, GetRandomInt(1, 1000) != 777 ? "lights/white005" : "models/player/medic/medic_head_red", 0.1);
 		
@@ -484,6 +486,58 @@ public void Surgery_Teleport(int client)
 	Surgery_RecentlyTeleported[client] = GetGameTime() + 0.5;
 }
 
+int i_SurgeryChecker = -1;
+
+bool b_SurgeryFragged[2049] = { false, ... };
+
+public bool Surgery_TelefragCheck(entity, mask) 
+{
+	if (!HasEntProp(entity, Prop_Send, "m_iTeamNum"))
+		return false;
+		
+	int entTeam = GetEntProp(entity, Prop_Send, "m_iTeamNum");
+	int userTeam = GetEntProp(i_SurgeryChecker, Prop_Send, "m_iTeamNum");
+	
+	if (entTeam != userTeam)
+	{
+		b_SurgeryFragged[entity] = true;
+		return true;
+	}
+	
+	return false;
+} 
+
+//This should only happen if something moves to the player's exact teleport location before the delay goes off.
+//Therefore: kill anyone on the enemy team who the player is touching.
+public void Surgery_Telefrag(int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client))
+		return;
+	
+	float scale = CF_GetCharacterScale(client);
+	if (CheckPlayerWouldGetStuck(client, scale))
+	{
+		float pos[3], mins[3] = { -24.5, -24.5, 0.0 }, maxs[3] = { 24.5,  24.5, 83.0};
+		GetClientAbsOrigin(client, pos);
+	
+		ScaleVector(mins, scale);
+		ScaleVector(maxs, scale);
+	    
+		i_SurgeryChecker = client;
+		TR_TraceHullFilter(pos, pos, mins, maxs, MASK_PLAYERSOLID, Surgery_TelefragCheck);
+		
+		for (int i = 1; i < 2049; i++)
+		{
+			if (b_SurgeryFragged[i])
+			{
+				b_SurgeryFragged[i] = false;
+				ForceGuaranteedDamage(i, 99999999.0, client, client, client, DMG_CLUB | DMG_BLAST | DMG_ALWAYSGIB);
+			}
+		}
+	}
+}
+
 public bool Surgery_CheckTeleport(int client, char ability[255])
 {
 	float dist = CF_GetArgF(client, DOKMED, ability, "distance");
@@ -499,6 +553,7 @@ public void Surgery_Cancel(int client)
 		RemoveEntity(particle);
 }
 
+//TODO: Find out if this works as intended during the beta test, remove it if it doesn't.
 public Action PlayerCollisions_OnCheckCollision(int client, int other, bool &result)
 {
 	float gt = GetGameTime();
@@ -536,6 +591,8 @@ enum MedigunBuff
 };
 
 MedigunBuff Medigun_CurrentBuff[MAXPLAYERS + 1] = { MedigunBuff_None, ... };
+
+Handle Medigun_Healers[MAXPLAYERS + 1] = { null, ... };
 
 CF_AbilityType Medigun_Slot[MAXPLAYERS + 1] = { CF_AbilityType_None, ... };
 
@@ -638,6 +695,9 @@ public void Medigun_Detach(int client, int target)
 		
 	Medigun_Target[client] = -1;
 	Medigun_HealBucket[client] = 0.0;
+	
+	if(IsValidClient(target))
+		Medigun_RemoveFromList(target, client);
 }
 
 public void Medigun_Attach(int client, int target)
@@ -648,6 +708,31 @@ public void Medigun_Attach(int client, int target)
 	RequestFrame(Medigun_AttachParticlesDelayed, pack);
 	
 	Medigun_Target[client] = GetClientUserId(target);
+	Medigun_AddToList(target, client);
+}
+
+public void Medigun_AddToList(int client, int target)
+{
+	if (Medigun_Healers[client] == null)
+		Medigun_Healers[client] = CreateArray(16);
+		
+	PushArrayCell(Medigun_Healers[client], target);
+}
+
+public void Medigun_RemoveFromList(int client, int target)
+{
+	if (Medigun_Healers[client] == null)
+		return;
+		
+	for (int i = 0; i < GetArraySize(Medigun_Healers[client]); i++)
+	{
+		int healer = GetArrayCell(Medigun_Healers[client], i);
+		if (healer == target)
+			RemoveFromArray(Medigun_Healers[client], i);
+	}
+	
+	if (GetArraySize(Medigun_Healers[client]) < 1)
+		delete Medigun_Healers[client];
 }
 
 public void Medigun_AttachParticlesDelayed(DataPack pack)
@@ -748,6 +833,72 @@ public bool Medigun_AllDisabled(int client)
 	return true;
 }
 
+public float Medigun_GetResMult(int victim)
+{
+	float ReturnValue = 1.0;
+	
+	if (Medigun_Active[victim] && Medigun_CurrentBuff[victim] == MedigunBuff_Res && IsValidMulti(Medigun_Target[victim]))
+		ReturnValue *= (1.0 - Medigun_Coefficient[victim][1]);
+		
+	if (Medigun_Healers[victim] != null)
+	{
+		for (int i = 0; i < GetArraySize(Medigun_Healers[victim]); i++)
+		{
+			int healer = GetArrayCell(Medigun_Healers[victim], i);
+			if (Medigun_CurrentBuff[healer] == MedigunBuff_Res)
+				ReturnValue *= (1.0 - Medigun_Coefficient[healer][1]);
+		}
+	}
+	
+	return ReturnValue;
+}
+
+public float Medigun_GetDMGMult(int victim)
+{
+	float ReturnValue = 1.0;
+	
+	if (Medigun_Active[victim] && Medigun_CurrentBuff[victim] == MedigunBuff_DMG && IsValidMulti(Medigun_Target[victim]))
+		ReturnValue += Medigun_Coefficient[victim][2];
+		
+	if (Medigun_Healers[victim] != null)
+	{
+		for (int i = 0; i < GetArraySize(Medigun_Healers[victim]); i++)
+		{
+			int healer = GetArrayCell(Medigun_Healers[victim], i);
+			if (Medigun_CurrentBuff[healer] == MedigunBuff_DMG)
+				ReturnValue += Medigun_Coefficient[healer][2];
+		}
+	}
+	
+	return ReturnValue;
+}
+
+public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
+{
+	float mult = Medigun_GetResMult(victim);
+	if (mult != 1.0)
+	{
+		CPrintToChatAll("Res mult returned %.2f, damage should now be %.2f.", mult, damage * mult);
+		damage *= mult;
+		return Plugin_Changed;
+	}
+	
+	return Plugin_Continue;
+}
+
+public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
+{
+	float mult = Medigun_GetDMGMult(victim);
+	if (mult != 1.0)
+	{
+		CPrintToChatAll("DMG mult returned %.2f, damage should now be %.2f.", mult, damage * mult);
+		damage *= mult;
+		return Plugin_Changed;
+	}
+	
+	return Plugin_Continue;
+}
+
 public void CF_OnCharacterCreated(int client)
 {
 	Surgery_Cancel(client);
@@ -757,6 +908,8 @@ public void CF_OnCharacterCreated(int client)
 
 public void CF_OnCharacterRemoved(int client)
 {
+	delete Medigun_Healers[client];
+	
 	Surgery_Cancel(client);
 	Medigun_CurrentBuff[client] = MedigunBuff_None;
 	Medigun_Active[client] = false;

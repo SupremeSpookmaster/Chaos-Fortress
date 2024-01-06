@@ -17,7 +17,7 @@
 //			- Implement Badass' team-colored model and add him to the credits.
 //		- Doktor Medick:
 //			- Write medigun passives.
-//				- The visual effects are all done, but the buffs don't actually do anything yet.
+//				- All buffs are done except for the passive speed boost for the user and their medigun target. That will be the hard part.
 //			- Write High Time.
 //				- Use m_flNextPrimaryAttack instead of attributes for the attack speed modifier.
 //				- Reload speed boosts will unfortunately not be possible, as a netprop does not exist for reload time. I could use attributes, but that would be unclean and highly likely to cause cross-plugin conflicts.
@@ -83,6 +83,7 @@
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This feature may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //			- Scrap this feature entirely and remove all mentions of it from the code. This will be a giant pain in the ass but does not need to be done until public release.
+//	- DEVELOPMENT: The game mode seems to randomly trigger "no free edicts" crashes without warning. There's no lag beforehand, and dumping handles shows there's not a memory leak. The server just randomly runs out of edicts and crashes. No idea why.
 //
 //	- PRESUMED UNFIXABLE (major bugs which I don't believe can be fixed with my current SourceMod expertise. The best thing you can do is classify these as exploits and punish them as such):
 //	- DEMOPAN: Enemies can get stuck in his shield if they walk into it while it is held. Demopans can abuse this to intentionally get enemies stuck for free kills. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.
