@@ -1320,6 +1320,7 @@ public void CF_ResetMadeStatus(int client)
  	bool hasAbilities = CFA_InitializeAbilities(client, map, IsNewCharacter);
  	
  	CFA_ToggleHUD(client, hasUlt || hasAbilities);
+ 	CF_SetHUDColor(client, 255, 255, 255, 255);
  	
  	b_CharacterApplied[client] = true;
  	b_IsDead[client] = false;

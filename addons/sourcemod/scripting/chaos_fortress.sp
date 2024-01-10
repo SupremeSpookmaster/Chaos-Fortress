@@ -19,6 +19,7 @@
 //		- Christian Brutal Sniper:
 //			- Implement Badass' team-colored model and add him to the credits.
 //		- Doktor Medick:
+//			- Replace the lightning orb used to indicate he is about to teleport with Capper lasers which spawn a short distance away from him and move towards his head, like he's gathering psychic energy with his brain.
 //			- Port High Time's attack rate buff to a Chaos Fortress native so it can be reused in the future.
 //			- Make a custom fake particle model for High Time's radius:
 //				- Optimally this should end up being something time-themed. Maybe a giant clock?
@@ -57,7 +58,7 @@
 //			- If multiple CBSs use Thousand Volley at the same time, the server will more than likely crash due to too many edicts (unconfirmed, cannot test with bots).
 //		////////////////////////////////////////////
 //		- Doktor Medick:
-//			- Cocainum's crowd healing potential might be too high. 120 HP doesn't go very far in CF, but being able to give that to half of your team at once is huge.
+//			- None! (Pending public opinion during beta)
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Make Demopan's fancy ult delay an officially supported feature that you can enable or disable by setting "warning_delay" in the ultimate stats section.
@@ -86,7 +87,6 @@
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This feature may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //			- Scrap this feature entirely and remove all mentions of it from the code. This will be a giant pain in the ass but does not need to be done until public release.
-//	- DEVELOPMENT: The game mode seems to randomly trigger "no free edicts" crashes without warning. There's no lag beforehand, it doesn't reliably happen on any given event or time, and dumping handles shows there's not a memory leak. The server just randomly runs out of edicts and crashes. No idea why.
 //
 //	- PRESUMED UNFIXABLE (major bugs which I don't believe can be fixed with my current SourceMod expertise. The best thing you can do is classify these as exploits and punish them as such):
 //	- DEMOPAN: Enemies can get stuck in his shield if they walk into it while it is held. Demopans can abuse this to intentionally get enemies stuck for free kills. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.

@@ -102,6 +102,10 @@ int i_UltAmmo[MAXPLAYERS + 1] = { -1, ... };
 int i_M2Ammo[MAXPLAYERS + 1] = { -1, ... };
 int i_M3Ammo[MAXPLAYERS + 1] = { -1, ... };
 int i_ReloadAmmo[MAXPLAYERS + 1] = { -1, ... };
+int i_HUDR[MAXPLAYERS + 1] = { 255, ... };
+int i_HUDG[MAXPLAYERS + 1] = { 255, ... };
+int i_HUDB[MAXPLAYERS + 1] = { 255, ... };
+int i_HUDA[MAXPLAYERS + 1] = { 255, ... };
 
 bool b_ProjectileCanCollideWithAllies[2049] = { false, ... };
 
@@ -148,6 +152,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_GetAbilityTitle", Native_CF_GetAbilityTitle);
 	CreateNative("CF_ChangeSpecialResourceTitle", Native_CF_ChangeSpecialResourceTitle);
 	CreateNative("CF_GetSpecialResourceTitle", Native_CF_GetSpecialResourceTitle);
+	CreateNative("CF_SetHUDColor", Native_CF_SetHUDColor);
 }
 
 public void CFA_MakeForwards()
@@ -470,7 +475,7 @@ public Action CFA_HUDTimer(Handle timer)
 					}
 					
 					ReplaceString(HUDText, sizeof(HUDText), "PUTAPERCENTAGEHERE", "%%");
-					SetHudTextParams(-1.0, 0.8, 0.1, 255, 255, 255, 255);
+					SetHudTextParams(-1.0, 0.8, 0.1, i_HUDR[client], i_HUDG[client], i_HUDB[client], i_HUDA[client]);
 					ShowSyncHudText(client, HudSync, HUDText);
 				}
 			}
@@ -2350,6 +2355,27 @@ public Native_CF_UnblockAbilitySlot(Handle plugin, int numParams)
 			b_ReloadBlocked[client] = false;
 		}
 	}
+}
+
+public Native_CF_SetHUDColor(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	int r = GetNativeCell(2);
+	int g = GetNativeCell(3);
+	int b = GetNativeCell(4);
+	int a = GetNativeCell(5);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	if (r >= 0)
+		i_HUDR[client] = r;
+	if (g >= 0)
+		i_HUDG[client] = g;
+	if (b >= 0)
+		i_HUDB[client] = b;	
+	if (a >= 0)
+		i_HUDA[client] = a;
 }
 
 public Native_CF_HealPlayer(Handle plugin, int numParams)

@@ -1353,3 +1353,15 @@ native bool CF_CheckTeleport(int client, float distance, bool directional, float
  *
  */
 native void CF_Teleport(int client, float distance, bool directional, float output[3] = NULL_VECTOR, bool IgnoreSafetyCheck = false, float PositionOverride[3] = NULL_VECTOR, bool UseOverride = false);
+
+/**
+ * Changes the RGBA values of the given client's HUD text. Note that this is automatically reset every time the player respawns, changes their character, or touches a resupply locker.
+ *
+ * @param client			The client to change the HUD color for.
+ * @param r					R value. Set to anything below 0 to leave unchanged.
+ * @param g					G value. Set to anything below 0 to leave unchanged.
+ * @param b					B value. Set to anything below 0 to leave unchanged.
+ * @param a					A value. Set to anything below 0 to leave unchanged.
+ *
+ */
+native void CF_SetHUDColor(int client, int r = 255, int g = 255, int b = 255, int a = 255);
