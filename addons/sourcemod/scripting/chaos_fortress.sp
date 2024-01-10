@@ -11,7 +11,7 @@
 //
 //	- IMMEDIATE PLANS:
 //		- Mercenary:
-//			- Replace Sprint's wearbale with CF_ApplyTemporarySpeedChange.
+//			- Replace Sprint's wearable with CF_ApplyTemporarySpeedChange.
 //		- Orbital Sniper:
 //			- Make custom sounds and implement them. Remove the DSP effect attribute once this is done.
 //			- Try using interpolation frames to make hovering smoother.
@@ -19,9 +19,10 @@
 //		- Christian Brutal Sniper:
 //			- Implement Badass' team-colored model and add him to the credits.
 //		- Doktor Medick:
-//			- Write High Time.
-//				- Use m_flNextPrimaryAttack instead of attributes for the attack speed modifier.
-//				- Reload speed boosts will unfortunately not be possible, as a netprop does not exist for reload time. I could use attributes, but that would be unclean and highly likely to cause cross-plugin conflicts.
+//			- Port High Time's attack rate buff to a Chaos Fortress native so it can be reused in the future.
+//			- Make a custom fake particle model for High Time's radius:
+//				- Optimally this should end up being something time-themed. Maybe a giant clock?
+//				- The aura itself should be a sphere.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////
@@ -34,7 +35,7 @@
 //		- Spookmaster Bones:
 //			- The red cape is an iconic part of his design, but it is bound to cause team recognition problems for players who are unfamiliar with the character.
 //				- Fix the model to use proper team colors if people complain about it a lot.
-//			- Turns into an ungodly, unstoppable monster at max souls. This might just be because of random crits giving him triple damage 60% of the time. Test further after removing random crits.
+//			- Turns into an unstoppable monster at max souls. This might just be because of random crits giving him triple damage 60% of the time. Test further after removing random crits.
 //			- Any kill will grant a soul, not just melee. This encourages sitting at a distance and fishing for souls risk-free with Skull Servants instead of getting in and fighting.
 //				- Make players drop timed soul pickups that the SB player needs to manually pick up to gain the soul. Upon being picked up, these souls immediately heal the user for 75 HP and the player gains 1 Soul to do whatever they want with.
 //					- This is a fairly drastic change. Only do this if people think SB is overpowered.
@@ -47,12 +48,16 @@
 //		- Count Heavnich:
 //			- "Chow Down" might be too strong compared to "Share Sandvich", resulting in players never using Share.
 //				- Maybe make Chow cost two Sandviches, then increase Sandvich base regen rate?
+//				- Alternatively, make sandviches tossed by Share heal more than just half HP.
 //		////////////////////////////////////////////
 //		- Demopan:
 //			- Using Profit Blast to blast jump *might* give him too much mobility for a tank.
 //		////////////////////////////////////////////
 //		- Christian Brutal Sniper:
 //			- If multiple CBSs use Thousand Volley at the same time, the server will more than likely crash due to too many edicts (unconfirmed, cannot test with bots).
+//		////////////////////////////////////////////
+//		- Doktor Medick:
+//			- Cocainum's crowd healing potential might be too high. 120 HP doesn't go very far in CF, but being able to give that to half of your team at once is huge.
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Make Demopan's fancy ult delay an officially supported feature that you can enable or disable by setting "warning_delay" in the ultimate stats section.
@@ -77,8 +82,6 @@
 //	- Certain hats, when equipped via the wearable system, do not visually appear on bots (but they do work *sometimes*). Count Heavnich's "Noble Amassment of Hats" is an example of such a hat. 
 //	- COUNT HEAVNICH: I don't know how, but "Chow Down" *sometimes* still causes you to T-pose when it ends. This is fixed immediately by switching weapons, and has no permanent side effects. It does look very unprofessional, though, so I am inclined to find a fix if possible.
 //	- CF_Teleport can get you stuck in enemy spawn doors. I'm not going to bother fixing this, if you're enough of a scumbag to try to teleport into the enemy's spawn you deserve to get stuck and die.
-//	- The PlayerHealed event doesn't seem to detect medigun healing, so it doesn't contribute to special resources or ult charge given to the healer, nor does it appear on the scoreboard. Dispensers most likely have the same problem, but I can't check right now.
-//		- May need to code a workaround to detect how much healing the user's medigun is doing and award charge/scoreboard points accordingly.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This feature may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.

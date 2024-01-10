@@ -9,6 +9,7 @@
 #define COCAINUM		"dokmed_cocainum"
 #define SURGERY			"dokmed_surprise_surgery"
 #define MEDIGUN			"dokmed_medigun_passives"
+#define TIME			"dokmed_high_time"
 
 #define MODEL_FLASK_RED					"models/passtime/flasks/flask_bottle_red.mdl"
 #define MODEL_FLASK_BLUE				"models/props_halloween/flask_bottle.mdl"
@@ -49,6 +50,9 @@
 #define SOUND_FLASK_HEAL				"items/smallmedkit1.wav"
 #define SOUND_FLASK_POISON				"items/powerup_pickup_plague_infected.wav"
 #define SOUND_FLASK_POISON_LOOP			"items/powerup_pickup_plague_infected_loop.wav"
+#define SOUND_TIME_TICK					"misc/halloween/clock_tick.wav"
+#define SOUND_TIME_BUFFED				"player/invuln_on_vaccinator.wav"
+#define SOUND_TIME_BUFF_REMOVED			"player/invuln_off_vaccinator.wav"
 
 int laserModel;
 
@@ -61,6 +65,9 @@ public void OnMapStart()
 	PrecacheSound(SOUND_FLASK_HEAL);
 	PrecacheSound(SOUND_FLASK_POISON);
 	PrecacheSound(SOUND_FLASK_POISON_LOOP);
+	PrecacheSound(SOUND_TIME_TICK);
+	PrecacheSound(SOUND_TIME_BUFFED);
+	PrecacheSound(SOUND_TIME_BUFF_REMOVED);
 	
 	laserModel = PrecacheModel("materials/sprites/laser.vmt");
 }
@@ -102,6 +109,9 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 		
 	if (StrContains(abilityName, MEDIGUN) != -1)
 		Medigun_CycleBuff(client);
+		
+	if (StrContains(abilityName, TIME) != -1)
+		Time_Activate(client, abilityName);
 }
 
 int Flask_SpeedMode[2049] = { 0, ... };
@@ -941,7 +951,7 @@ public float Medigun_GetResMult(int victim)
 {
 	float ReturnValue = 1.0;
 	
-	if (Medigun_Active[victim] && Medigun_CurrentBuff[victim] == MedigunBuff_Res && IsValidMulti(Medigun_Target[victim]))
+	if (Medigun_Active[victim] && Medigun_CurrentBuff[victim] == MedigunBuff_Res && IsValidMulti(Medigun_GetTarget(victim)))
 		ReturnValue *= (1.0 - Medigun_Coefficient[victim][1]);
 		
 	if (Medigun_Healers[victim] != null)
@@ -961,7 +971,7 @@ public float Medigun_GetDMGMult(int victim)
 {
 	float ReturnValue = 1.0;
 	
-	if (Medigun_Active[victim] && Medigun_CurrentBuff[victim] == MedigunBuff_DMG && IsValidMulti(Medigun_Target[victim]))
+	if (Medigun_Active[victim] && Medigun_CurrentBuff[victim] == MedigunBuff_DMG && IsValidMulti(Medigun_GetTarget(victim)))
 		ReturnValue += Medigun_Coefficient[victim][2];
 		
 	if (Medigun_Healers[victim] != null)
@@ -975,6 +985,308 @@ public float Medigun_GetDMGMult(int victim)
 	}
 	
 	return ReturnValue;
+}
+
+float Time_EndTime[MAXPLAYERS + 1] = { 0.0, ... };
+float Time_HealingOverheal[MAXPLAYERS + 1] = { 0.0, ... };
+float Time_HealingInterval[MAXPLAYERS + 1] = { 0.0, ... };
+float Time_NextHeal[MAXPLAYERS + 1] = { 0.0, ... };
+float Time_SpeedAmt[MAXPLAYERS + 1] = { 0.0, ... };
+float Time_SpeedMax[MAXPLAYERS + 1] = { 0.0, ... };
+float Time_Haste[MAXPLAYERS + 1] = { 0.0, ... };
+float Time_Radius[MAXPLAYERS + 1] = { 0.0, ... };
+float Time_SpeedAdded[MAXPLAYERS + 1][MAXPLAYERS + 1];
+
+int Time_Healing[MAXPLAYERS + 1] = { 0, ... };
+int Time_SpeedMode[MAXPLAYERS + 1] = { 0, ... };
+int Time_SpeedMaxMode[MAXPLAYERS + 1] = { 0, ... };
+int Time_VFX[MAXPLAYERS + 1] = { -1, ... };
+int Time_Particle[MAXPLAYERS + 1][MAXPLAYERS + 1];
+
+bool Time_Buffed[MAXPLAYERS + 1][MAXPLAYERS + 1];
+
+Handle Time_Buffers[MAXPLAYERS + 1] = { null, ... };
+
+//TODO: High Time's aura is going to need its own model, reusing player_aura doesn't work because the bar at the bottom blocks vision...
+
+public void Time_Activate(int client, char abilityName[255])
+{
+	float gt = GetGameTime();
+	float duration = CF_GetArgF(client, DOKMED, abilityName, "duration");
+	Time_EndTime[client] = duration + gt;
+	
+	Time_Healing[client] = CF_GetArgI(client, DOKMED, abilityName, "healing_amt");
+	Time_HealingOverheal[client] = CF_GetArgF(client, DOKMED, abilityName, "healing_overheal");
+	Time_HealingInterval[client] = CF_GetArgF(client, DOKMED, abilityName, "healing_interval");
+	Time_NextHeal[client] = gt + Time_HealingInterval[client];
+	
+	Time_SpeedAmt[client] = CF_GetArgF(client, DOKMED, abilityName, "speed_amt");
+	Time_SpeedMode[client] = CF_GetArgI(client, DOKMED, abilityName, "speed_mode");
+	Time_SpeedMaxMode[client] = CF_GetArgI(client, DOKMED, abilityName, "speed_maxmode");
+	Time_SpeedMax[client] = CF_GetArgF(client, DOKMED, abilityName, "speed_max");
+	
+	Time_Haste[client] = CF_GetArgF(client, DOKMED, abilityName, "haste_amt");
+	
+	Time_Radius[client] = CF_GetArgF(client, DOKMED, abilityName, "effect_radius");
+	
+	if (!IsValidEntity(Time_GetVFX(client)))
+	{
+		Time_MakeVFX(client);
+	}
+	
+	SDKUnhook(client, SDKHook_PreThink, Time_PreThink);
+	SDKHook(client, SDKHook_PreThink, Time_PreThink);
+}
+
+public void Time_MakeVFX(int client)
+{
+	int r;
+	int b;
+	if (TF2_GetClientTeam(client) == TFTeam_Red)
+	{
+		r = 255;
+		b = 180;
+	}
+	else
+	{
+		r = 180;
+		b = 255;
+	}
+	
+	float scale = (Time_Radius[client] * 2.0) / 51.948;
+	
+	Time_VFX[client] = EntIndexToEntRef(FPS_AttachFakeParticleToEntity(client, "root", "models/fake_particles/chaos_fortress/player_aura.mdl", 1, "rotate", 0.1, _, r, 180, b, 0, scale));
+	RequestFrame(Medigun_FadeIn, Time_VFX[client]);
+	RequestFrame(Time_SpeedUp, Time_VFX[client]);
+}
+
+public void Time_ClearVFX(int client)
+{
+	int vfx = EntRefToEntIndex(Time_VFX[client]);
+	if (IsValidEntity(vfx))
+	{
+		b_FadingOut[vfx] = true;
+		RequestFrame(Medigun_FadeOut, Time_VFX[client]);
+		RequestFrame(Time_SlowDown, Time_VFX[client]);
+		Time_VFX[client] = -1;
+	}
+}
+
+public void Time_SpeedUp(int ref)
+{
+	int ent = EntRefToEntIndex(ref);
+	if (!IsValidEntity(ent))
+		return;
+		
+	if (b_FadingOut[ent])
+		return;
+		
+	float rate = GetEntPropFloat(ent, Prop_Send, "m_flPlaybackRate");
+	rate *= 1.05;
+	if (rate > 2.0)
+		rate = 2.0;
+		
+	SetEntPropFloat(ent, Prop_Send, "m_flPlaybackRate", rate);
+	if (rate == 2.0)
+		return;
+		
+	RequestFrame(Time_SpeedUp, ref);
+}
+
+public void Time_SlowDown(int ref)
+{
+	int ent = EntRefToEntIndex(ref);
+	if (!IsValidEntity(ent))
+		return;
+		
+	if (b_FadingOut[ent])
+		return;
+		
+	float rate = GetEntPropFloat(ent, Prop_Send, "m_flPlaybackRate");
+	rate -= 0.05;
+	if (rate < 0.0)
+		return;
+		
+	SetEntPropFloat(ent, Prop_Send, "m_flPlaybackRate", rate);
+		
+	RequestFrame(Time_SpeedUp, ref);
+}
+
+public Action Time_PreThink(int client)
+{
+	float gt = GetGameTime();
+	
+	if (gt > Time_EndTime[client])
+	{
+		Time_End(client);
+		return Plugin_Stop;
+	}
+	
+	float pos[3];
+	GetClientAbsOrigin(client, pos);
+	
+	TFTeam team = TF2_GetClientTeam(client);
+	
+	bool Heal = gt >= Time_NextHeal[client];
+	
+	if (Heal)
+	{
+		Time_NextHeal[client] = gt + Time_HealingInterval[client];
+		EmitSoundToAll(SOUND_TIME_TICK, _, _, _, _, _, GetRandomInt(80, 110));
+		spawnRing_Vector(pos, 1.0, 0.0, 0.0, 0.0, laserModel, team == TFTeam_Red ? 255 : 160, 160, team == TFTeam_Red ? 160 : 255, 255, 1, 0.33, 32.0, 0.1, 1, Time_Radius[client] * 2.0);
+	}
+		
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (IsValidMulti(i, true, true, true, team))
+		{
+			float otherPos[3];
+			GetClientAbsOrigin(i, otherPos);
+			if (GetVectorDistance(otherPos, pos) <= Time_Radius[client])
+			{
+				if (!Time_Buffed[client][i])
+					Time_ApplyBuffs(client, i);
+					
+				if (Heal)
+				{
+					CF_HealPlayer(i, client, Time_Healing[client], Time_HealingOverheal[client]);
+					CF_AttachParticle(i, team == TFTeam_Red ? PARTICLE_HEALING_BURST_RED : PARTICLE_HEALING_BURST_BLUE, "root", _, 2.0);
+				}
+			}
+			else if (Time_Buffed[client][i])
+			{
+				Time_ClearBuffs(client, i);
+			}
+		}
+	}
+	
+	return Plugin_Continue;
+}
+
+public void Time_End(int client)
+{
+	Time_ClearVFX(client);
+	
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (Time_Buffed[client][i])
+		{
+			Time_ClearBuffs(client, i);
+		}
+	}
+}
+
+public void Time_ApplyBuffs(int client, int target)
+{
+	Time_Buffed[client][target] = true;
+	
+	float speed = CF_GetCharacterSpeed(target);
+	CF_ApplyTemporarySpeedChange(target, Time_SpeedMode[client], Time_SpeedAmt[client], 0.0, Time_SpeedMaxMode[client], Time_SpeedMax[client], false);
+	float newSpeed = CF_GetCharacterSpeed(target);
+	Time_SpeedAdded[client][target] = newSpeed - speed;
+	
+	Time_Particle[client][target] = EntIndexToEntRef(CF_AttachParticle(target, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_HEALING_AURA_RED : PARTICLE_HEALING_AURA_BLUE, "root"));
+	
+	EmitSoundToClient(target, SOUND_TIME_BUFFED);
+	
+	if (Time_Buffers[target] == null)
+		Time_Buffers[target] = CreateArray(16);
+		
+	PushArrayCell(Time_Buffers[target], GetClientUserId(client));
+}
+
+public void Time_ClearBuffs(int client, int target)
+{
+	Time_Buffed[client][target] = false;
+			
+	if (Time_SpeedAdded[client][target] != 0.0)
+	{
+		float speed = CF_GetCharacterSpeed(target);
+		speed -= Time_SpeedAdded[client][target];
+		CF_SetCharacterSpeed(target, speed);
+		Time_SpeedAdded[client][target] = 0.0;
+	}
+	
+	int particle = EntRefToEntIndex(Time_Particle[client][target]);
+	if (IsValidEntity(particle))
+		RemoveEntity(particle);
+		
+	Time_Particle[client][target] = -1;
+	
+	EmitSoundToClient(target, SOUND_TIME_BUFF_REMOVED);
+	
+	if (Time_Buffers[target] != null)
+	{
+		int id = GetClientUserId(client);
+		for (int i = 0; i < GetArraySize(Time_Buffers[target]); i++)
+		{
+			int thisID = GetArrayCell(Time_Buffers[target], i);
+			if (thisID == id)
+				RemoveFromArray(Time_Buffers[target], i);
+		}
+		
+		if (GetArraySize(Time_Buffers[target]) < 1)
+			delete Time_Buffers[target];
+	}
+}
+
+public int Time_GetVFX(int client) { return EntRefToEntIndex(Time_VFX[client]); }
+
+public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] weaponname, bool &result)
+{
+	if (Time_Buffers[client] != null)
+		RequestFrame(Time_ChangeAttackSpeed, GetClientUserId(client));
+		
+	return Plugin_Continue;
+}
+
+public void Time_ChangeAttackSpeed(int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client))
+		return;
+		
+	if (Time_Buffers[client] == null)
+		return;
+		
+	float mult = 1.0;
+	for (int i = 0; i < GetArraySize(Time_Buffers[client]); i++)
+	{
+		int buffer = GetClientOfUserId(GetArrayCell(Time_Buffers[client], i));
+		if (IsValidClient(buffer))
+		{
+			mult *= Time_Haste[buffer];
+		}
+	}
+	
+	if (mult != 1.0)
+	{
+		float gt = GetGameTime();
+		for (int wep = 0; wep < 3; wep++)
+		{
+			int weapon = GetPlayerWeaponSlot(client, wep);
+			if (IsValidEntity(weapon))
+			{
+				float nextAttack = GetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack");
+				if (nextAttack > gt)
+				{
+					float difference = nextAttack - gt;
+					difference *= mult;
+					
+					//Melee weapons that aren't knives break if their attack rate is too high, so we'll put a hard-cap on them so they don't break.
+					if (wep == 2)
+					{
+						char classname[255];
+						GetEntityClassname(weapon, classname, sizeof(classname));
+						if (!StrEqual(classname, "tf_weapon_knife") && difference < 0.275)
+							difference = 0.275;
+					}
+						
+					SetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack", gt + difference);
+				}
+			}
+		}
+	}
 }
 
 public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
@@ -1016,6 +1328,19 @@ public void CF_OnCharacterRemoved(int client)
 	Medigun_CurrentBuff[client] = MedigunBuff_None;
 	Medigun_Active[client] = false;
 	Medigun_Detach(client, Medigun_GetTarget(client));
+	
+	delete Time_Buffers[client];
+	
+	if (GetGameTime() <= Time_EndTime[client])
+		Time_End(client);
+		
+	Time_EndTime[client] = 0.0;
+	
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (Time_Buffed[i][client])
+			Time_ClearBuffs(i, client);
+	}
 }
 
 public void OnEntityDestroyed(int entity)
