@@ -483,11 +483,7 @@ public void Taser_Collide(int taser, int ent)
 		
 		if (IsValidMulti(ent))
 		{
-			char atts[255];
-			Format(atts, sizeof(atts), "107 ; %.4f", 1.0 - Taser_Slow[taser]);
-			CF_AttachWearable(ent, view_as<int>(CF_ClassToken_Sniper), "tf_wearable", false, 0, 0, false, atts, Taser_Duration[taser]);
-			TF2_AddCondition(ent, TFCond_SpeedBuffAlly, 0.001);
-			CreateTimer(Taser_Duration[taser] + 0.1, Taser_Unslow, GetClientUserId(ent), TIMER_FLAG_NO_MAPCHANGE);
+			CF_ApplyTemporarySpeedChange(ent, 1, 1.0 - Taser_Slow[taser], Taser_Duration[taser], 0, 999.0, false);
 			
 			DataPack pack = new DataPack();
 			CreateDataTimer(0.2, Taser_VFX, pack, TIMER_FLAG_NO_MAPCHANGE);
@@ -529,17 +525,6 @@ public Action Taser_VFX(Handle tased, DataPack pack)
 		CreateDataTimer(0.2, Taser_VFX, pack2, TIMER_FLAG_NO_MAPCHANGE);
 		WritePackCell(pack2, GetClientUserId(client));
 		WritePackFloat(pack2, time);
-	}
-	
-	return Plugin_Continue;
-}
-
-public Action Taser_Unslow(Handle unslow, int id)
-{
-	int client = GetClientOfUserId(id);
-	if (IsValidClient(client))
-	{
-		TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.001);
 	}
 	
 	return Plugin_Continue;

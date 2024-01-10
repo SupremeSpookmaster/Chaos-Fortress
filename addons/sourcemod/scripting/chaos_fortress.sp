@@ -10,12 +10,9 @@
 
 //
 //	- IMMEDIATE PLANS:
-//		- Mercenary:
-//			- Replace Sprint's wearable with CF_ApplyTemporarySpeedChange.
 //		- Orbital Sniper:
 //			- Make custom sounds and implement them. Remove the DSP effect attribute once this is done.
 //			- Try using interpolation frames to make hovering smoother.
-//			- Replace Taser's wearable with CF_ApplyTemporarySpeedChange.
 //		- Christian Brutal Sniper:
 //			- Implement Badass' team-colored model and add him to the credits.
 //		- Doktor Medick:
@@ -43,13 +40,13 @@
 //					- Thanks to all of the work we just put into fake health kits, this should be super easy to implement!
 //		////////////////////////////////////////////
 //		- Orbital Sniper:
+//			- I messed up somewhere with my math, fully-charged headshots with max height advantage are now dealing well over 1k. For obvious reasons, this needs to be fixed - we can't have Orbital one-shotting tanks.
 //			- There's not a lot of viable counterplay against an Orbital hugging the skybox, besides having another Orbital counter-snipe them.
 //				- This will be solved with future characters who also have decent ranged choices (CBS's Heavy Draw is already a solid counter since Orbital can't move fast enough to avoid the arrow on instinct, and it will one-shot him at full charge).
 //		////////////////////////////////////////////
 //		- Count Heavnich:
 //			- "Chow Down" might be too strong compared to "Share Sandvich", resulting in players never using Share.
 //				- Maybe make Chow cost two Sandviches, then increase Sandvich base regen rate?
-//				- Alternatively, make sandviches tossed by Share heal more than just half HP.
 //		////////////////////////////////////////////
 //		- Demopan:
 //			- Using Profit Blast to blast jump *might* give him too much mobility for a tank.

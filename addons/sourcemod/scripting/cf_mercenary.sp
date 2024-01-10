@@ -50,9 +50,9 @@ float Sprint_CD[MAXPLAYERS + 1] = { 0.0, ... };
 float Sprint_MinCD[MAXPLAYERS + 1] = { 0.0, ... };
 float Sprint_MaxCD[MAXPLAYERS + 1] = { 0.0, ... };
 float Sprint_Potency[MAXPLAYERS + 1] = { 0.0, ... };
+float Sprint_SpeedAdded[MAXPLAYERS + 1] = { 0.0, ... };
 
 int Sprint_Particle[MAXPLAYERS + 1] = { -1, ... };
-int Sprint_Wearable[MAXPLAYERS + 1] = { -1, ... };
 
 bool Sprint_Active[MAXPLAYERS + 1] = { false, ... };
 
@@ -119,11 +119,11 @@ void Sprint_End(int client, bool TimeLimit = false, bool resupply = false)
 		CF_PlayRandomSound(client, "", "sound_merc_sprint_end");
 	}
 
-	Sprint_RemoveAttributes(client);
+	Sprint_RemoveAttributes(client, resupply);
 	SDKUnhook(client, SDKHook_PreThink, Sprint_PreThink);
 }
 
-public void Sprint_RemoveAttributes(int client)
+public void Sprint_RemoveAttributes(int client, bool resupply)
 {
 	int particle = EntRefToEntIndex(Sprint_Particle[client]);
 	if (IsValidEntity(particle) && particle > MaxClients && particle < 2049)
@@ -132,17 +132,18 @@ public void Sprint_RemoveAttributes(int client)
 		Sprint_Particle[client] = -1;
 	}
 	
-	int wearable = EntRefToEntIndex(Sprint_Wearable[client]);
-	if (IsValidEntity(wearable) && wearable > MaxClients && wearable < 2049)
+	if (!resupply)
 	{
-		TF2_RemoveWearable(client, wearable);
-		TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.0001);
+		float speed = CF_GetCharacterSpeed(client);
+		speed -= Sprint_SpeedAdded[client];
+		CF_SetCharacterSpeed(client, speed);
+		Sprint_SpeedAdded[client] = 0.0;
 	}
 }
 
 public void Sprint_ApplyAttributes(int client)
 {
-	Sprint_RemoveAttributes(client);
+	Sprint_RemoveAttributes(client, false);
 	
 	int particle = CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? SPRINT_PARTICLE_RED : SPRINT_PARTICLE_BLUE, "root", _, _, _, _, 75.0);
 	if (IsValidEntity(particle))
@@ -150,15 +151,12 @@ public void Sprint_ApplyAttributes(int client)
 		Sprint_Particle[client] = EntIndexToEntRef(particle);
 	}
 	
-	char atts[255];
-	Format(atts, sizeof(atts), "442 ; %.4f", Sprint_Potency[client]);
-	int wearable = CF_AttachWearable(client, view_as<int>(CF_ClassToken_Soldier), "tf_wearable", false, 0, 0, _, atts);
-	if (IsValidEntity(wearable))
-	{
-		Sprint_Wearable[client] = EntIndexToEntRef(wearable);
-		TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.0001);
-		CF_PlayRandomSound(client, "", "sound_merc_sprint_start");
-	}
+	float speed = CF_GetCharacterSpeed(client);
+	CF_ApplyTemporarySpeedChange(client, 1, Sprint_Potency[client], 0.0, 0, 9999.0, false);
+	float newSpeed = CF_GetCharacterSpeed(client);
+	Sprint_SpeedAdded[client] = newSpeed - speed;
+	
+	CF_PlayRandomSound(client, "", "sound_merc_sprint_start");
 }
 
 public Action Sprint_PreThink(int client)
@@ -216,6 +214,7 @@ public Action Frag_BlockWeaponSwitch(int client, int weapon)
 public void CF_OnCharacterCreated(int client)
 {
 	Frag_NoJarate(client);
+	Sprint_SpeedAdded[client] = 0.0;
 }
 
 public void Frag_NoJarate(int client)
