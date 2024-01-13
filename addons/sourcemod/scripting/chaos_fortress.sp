@@ -17,7 +17,6 @@
 //			- Implement Badass' team-colored model and add him to the credits.
 //		- Doktor Medick:
 //			- Replace the lightning orb used to indicate he is about to teleport with Capper lasers which spawn a short distance away from him and move towards his head, like he's gathering psychic energy with his brain.
-//			- Port High Time's attack rate buff to a Chaos Fortress native so it can be reused in the future.
 //			- Make a custom fake particle model for High Time's radius:
 //				- Optimally this should end up being something time-themed. Maybe a giant clock?
 //				- The aura itself should be a sphere.

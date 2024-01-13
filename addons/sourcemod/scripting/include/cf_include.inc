@@ -507,6 +507,20 @@ forward Action CF_OnShouldCollide(int ent1, int ent2, bool &result);
  */
 forward Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result);
 
+/**
+ * Called one frame after a client attacks with a weapon. Used to modify the time until the weapon can attack again.
+ *
+ * @param client		The client who attacked.
+ * @param weapon		The weapon which was used.
+ * @param slot			The slot the weapon belongs to (0: primary, 1: secondary, 2: melee).
+ * @param classname		The classname of the weapon (IE "tf_weapon_knife").
+ * @param rate			Multiplier to be used to adjust attack rate. 0.5 = attack 50% faster, 2.0 = attack 100% slower, 1.0 = no change.
+ *						Note that no matter what you do, the attack interval for non-knife melee weapons will never fall below 0.275 seconds, because otherwise they would break.
+ *
+ * @return Change "rate" and return Plugin_Changed to modify the attack rate, otherwise return Plugin_Continue.
+ */
+forward Action CF_OnCalcAttackInterval(int client, int weapon, int slot, char classname[255], float &rate);
+
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
 ///////////////////////////////////////

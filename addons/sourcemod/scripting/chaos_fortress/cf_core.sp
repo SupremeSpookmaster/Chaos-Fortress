@@ -55,6 +55,7 @@ public void CF_OnPluginStart()
 	CFW_OnPluginStart();
 	CFA_MakeForwards();
 	CFS_OnPluginStart();
+	CFW_MakeForwards();
 	
 	g_OnPlayerKilled = new GlobalForward("CF_OnPlayerKilled", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	g_OnRoundStateChanged = new GlobalForward("CF_OnRoundStateChanged", ET_Ignore, Param_Cell);

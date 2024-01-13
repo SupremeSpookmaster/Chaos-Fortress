@@ -6,6 +6,8 @@ char s_WeaponFireSound[2049][255];
 
 bool b_WeaponIsVisible[2049] = { false, ... };
 
+GlobalForward g_CalcAttackRate;
+
 public void CFW_OnEntityDestroyed(int entity)
 {
 	i_CharacterParticleOwner[entity] = -1;
@@ -13,6 +15,11 @@ public void CFW_OnEntityDestroyed(int entity)
 	s_WeaponFirePlugin[entity] = "";
 	s_WeaponFireSound[entity] = "";
 	b_WeaponIsVisible[entity] = false;
+}
+
+public void CFW_MakeForwards()
+{
+	g_CalcAttackRate = new GlobalForward("CF_OnCalcAttackInterval", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_String, Param_FloatByRef);
 }
 
 public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] classname, bool &result)
@@ -27,7 +34,63 @@ public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] classname,
 		CF_PlayRandomSound(client, "", s_WeaponFireSound[weapon]);
 	}
 	
+	DataPack pack = new DataPack();
+	WritePackCell(pack, GetClientUserId(client));
+	WritePackCell(pack, EntIndexToEntRef(weapon));
+	WritePackString(pack, classname);
+	RequestFrame(CFW_AttackRate, pack);
+	
 	return Plugin_Continue;
+}
+
+public void CFW_AttackRate(DataPack pack)
+{
+	ResetPack(pack);
+	
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	int weapon = EntRefToEntIndex(ReadPackCell(pack));
+	char classname[255];
+	ReadPackString(pack, classname, sizeof(classname));
+	
+	delete pack;
+	
+	if (!IsValidMulti(client) || !IsValidEntity(weapon))
+		return;
+		
+	int slot = 0;
+	while (!IsPlayerHoldingWeapon(client, slot) && slot < 3)
+		slot++;
+		
+	float rate = 1.0;
+	Action result;
+	
+	Call_StartForward(g_CalcAttackRate);
+	
+	Call_PushCell(client);
+	Call_PushCell(weapon);
+	Call_PushCell(slot);
+	Call_PushString(classname);
+	Call_PushFloatRef(rate);
+	
+	Call_Finish(result);
+	
+	if (result == Plugin_Changed && rate != 1.0)
+	{
+		float gt = GetGameTime();
+		
+		float nextAttack = GetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack");
+		if (nextAttack > gt)
+		{
+			float difference = nextAttack - gt;
+			difference *= rate;
+					
+			//Melee weapons that aren't knives break if their attack rate is too high, so we'll put a hard-cap on them so they don't break.
+			if (slot == 2 && !StrEqual(classname, "tf_weapon_knife") && difference < 0.275)
+					difference = 0.275;
+						
+			SetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack", gt + difference);
+		}
+	}
 }
 
 public void CFW_OnPluginStart()

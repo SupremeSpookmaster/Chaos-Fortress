@@ -1232,61 +1232,21 @@ public void Time_ClearBuffs(int client, int target)
 
 public int Time_GetVFX(int client) { return EntRefToEntIndex(Time_VFX[client]); }
 
-public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] weaponname, bool &result)
+public Action CF_OnCalcAttackInterval(int client, int weapon, int slot, char classname[255], float &rate)
 {
-	if (Time_Buffers[client] != null)
-		RequestFrame(Time_ChangeAttackSpeed, GetClientUserId(client));
-		
-	return Plugin_Continue;
-}
-
-public void Time_ChangeAttackSpeed(int id)
-{
-	int client = GetClientOfUserId(id);
-	if (!IsValidMulti(client))
-		return;
-		
 	if (Time_Buffers[client] == null)
-		return;
+		return Plugin_Continue;
 		
-	float mult = 1.0;
 	for (int i = 0; i < GetArraySize(Time_Buffers[client]); i++)
 	{
 		int buffer = GetClientOfUserId(GetArrayCell(Time_Buffers[client], i));
 		if (IsValidClient(buffer))
 		{
-			mult *= Time_Haste[buffer];
+			rate *= Time_Haste[buffer];
 		}
 	}
 	
-	if (mult != 1.0)
-	{
-		float gt = GetGameTime();
-		for (int wep = 0; wep < 3; wep++)
-		{
-			int weapon = GetPlayerWeaponSlot(client, wep);
-			if (IsValidEntity(weapon))
-			{
-				float nextAttack = GetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack");
-				if (nextAttack > gt)
-				{
-					float difference = nextAttack - gt;
-					difference *= mult;
-					
-					//Melee weapons that aren't knives break if their attack rate is too high, so we'll put a hard-cap on them so they don't break.
-					if (wep == 2)
-					{
-						char classname[255];
-						GetEntityClassname(weapon, classname, sizeof(classname));
-						if (!StrEqual(classname, "tf_weapon_knife") && difference < 0.275)
-							difference = 0.275;
-					}
-						
-					SetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack", gt + difference);
-				}
-			}
-		}
-	}
+	return Plugin_Changed;
 }
 
 public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
