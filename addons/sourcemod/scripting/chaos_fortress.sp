@@ -11,7 +11,6 @@
 //
 //	- IMMEDIATE PLANS:
 //		- Orbital Sniper:
-//			- Make custom sounds and implement them. Remove the DSP effect attribute once this is done.
 //			- Try using interpolation frames to make hovering smoother.
 //		- Christian Brutal Sniper:
 //			- Implement Badass' team-colored model and add him to the credits.
