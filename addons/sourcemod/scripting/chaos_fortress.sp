@@ -15,6 +15,7 @@
 //		- Christian Brutal Sniper:
 //			- Implement Badass' team-colored model and add him to the credits.
 //		- Doktor Medick:
+//			- Port model to Chaos Fortress.
 //			- Replace the lightning orb used to indicate he is about to teleport with Capper lasers which spawn a short distance away from him and move towards his head, like he's gathering psychic energy with his brain.
 //			- Make a custom fake particle model for High Time's radius:
 //				- Optimally this should end up being something time-themed. Maybe a giant clock?
@@ -38,7 +39,6 @@
 //					- Thanks to all of the work we just put into fake health kits, this should be super easy to implement!
 //		////////////////////////////////////////////
 //		- Orbital Sniper:
-//			- I messed up somewhere with my math, fully-charged headshots with max height advantage are now dealing well over 1k. For obvious reasons, this needs to be fixed - we can't have Orbital one-shotting tanks.
 //			- There's not a lot of viable counterplay against an Orbital hugging the skybox, besides having another Orbital counter-snipe them.
 //				- This will be solved with future characters who also have decent ranged choices (CBS's Heavy Draw is already a solid counter since Orbital can't move fast enough to avoid the arrow on instinct, and it will one-shot him at full charge).
 //		////////////////////////////////////////////
@@ -56,6 +56,7 @@
 //			- None! (Pending public opinion during beta)
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
+//	- TODO: Make the K/D ratio used for spawn sounds factor in healing as well, that way healers don't always end up using spawn_angry by the end of the round even if they're winning.
 //	- TODO: Make Demopan's fancy ult delay an officially supported feature that you can enable or disable by setting "warning_delay" in the ultimate stats section.
 //	- TODO: Disable random crits on the beta test server (melee characters like Spookmaster and Demopan are utterly busted with random crits).
 //	- TODO: Test all game modes (except for CTF which won't be officially supported):

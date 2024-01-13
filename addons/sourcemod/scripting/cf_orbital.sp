@@ -110,6 +110,8 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 			float maxDist = CF_GetArgF(attacker, ORBITAL, HEIGHT, "end") - minDist;
 			float maxBonus = CF_GetArgF(attacker, ORBITAL, HEIGHT, "max_bonus");
 			dist -= minDist;
+			if (dist > maxDist)
+				dist = maxDist;
 			
 			damage *= 1.0 + ((dist / maxDist) * maxBonus);
 			ReturnValue = Plugin_Changed;
