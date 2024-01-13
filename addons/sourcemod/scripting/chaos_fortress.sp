@@ -39,6 +39,10 @@
 //					- Thanks to all of the work we just put into fake health kits, this should be super easy to implement!
 //		////////////////////////////////////////////
 //		- Orbital Sniper:
+//			- Assuming full charge, the rifle's lower and upper damage bounds without external modifiers should be:
+//				- LOWEST: 149 (bodyshot, no height advantage bonus)
+//				- HIGHEST: 740 (headshot, max height advantage bonus)
+//				- This is not a balance issue, just a general note for future reference.
 //			- There's not a lot of viable counterplay against an Orbital hugging the skybox, besides having another Orbital counter-snipe them.
 //				- This will be solved with future characters who also have decent ranged choices (CBS's Heavy Draw is already a solid counter since Orbital can't move fast enough to avoid the arrow on instinct, and it will one-shot him at full charge).
 //		////////////////////////////////////////////
