@@ -371,8 +371,12 @@ public void Gravity_SetVelocity(int client)
 	
 	if (currentVel[2] < 1.0)
 		currentVel[2] = 1.0;
-		
+	
+	int frame = GetEntProp(client, Prop_Send, "m_ubInterpolationFrame");
+
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, currentVel);
+	
+	SetEntProp(client, Prop_Send, "m_ubInterpolationFrame", frame);
 }
 
 public void CF_OnCharacterCreated(int client)
