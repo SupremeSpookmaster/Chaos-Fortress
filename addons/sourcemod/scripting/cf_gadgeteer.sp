@@ -67,6 +67,8 @@ int Toss_Level[2049] = { -1, ... };
 int Toss_Owner[2049] = { -1, ... };
 int Toss_Max[MAXPLAYERS + 1] = { 0, ... };
 
+bool b_IsTossedSentry[2049] = { false, ... };
+
 float Toss_DMG[2049] = { 0.0, ... };
 float Toss_KB[2049] = { 0.0, ... };
 float Toss_Scale[2049] = { 0.0, ... };
@@ -116,26 +118,41 @@ public MRESReturn Toss_Explode(int toolbox)
 	int owner = GetEntPropEnt(toolbox, Prop_Send, "m_hOwnerEntity");
 	int team = GetEntProp(toolbox, Prop_Send, "m_iTeamNum");
 
-	float pos[3];
+	float pos[3], dummy[3];
 	GetEntPropVector(toolbox, Prop_Send, "m_vecOrigin", pos);
+	
+	float slope[3], buffer[3], wallPos[3], ceilslope[3];
+	
+	float CeilDist = Toss_GetDistanceToCeiling(pos, toolbox, ceilslope);
+	float WallDist = Toss_GetDistanceToWall(pos, Toss_FacingAng[toolbox], toolbox, slope, wallPos);
+	
+	float height = Toss_CalculateSentryHeight(Toss_Scale[toolbox], Toss_Level[toolbox] < 1 || Toss_Level[toolbox] > 3);
+	float width = Toss_CalculateSentryWidth(Toss_Scale[toolbox], Toss_Level[toolbox] < 1 || Toss_Level[toolbox] > 3);
+	
+	//Sentries cannot target players if they are upside-down, hence ceiling sentries don't work.
+	//Therefore, if the toolbox hits the ceiling, bounce it back down instead of building a sentry there.
+	/*if (Toss_GetDistanceToCeiling(pos, toolbox, dummy) <= height && WallDist > width)
+	{
+		float vel[3];
+		GetEntPropVector(toolbox, Prop_Data, "m_vecVelocity", vel);
+	
+		if (vel[2] > 0.0)
+			vel[2] *= -1.0;
+			
+		TeleportEntity(toolbox, NULL_VECTOR, NULL_VECTOR, vel);
+		return MRES_Supercede;
+	}*/
 	
 	EmitSoundToAll(Toss_BuildSFX[GetRandomInt(0, sizeof(Toss_BuildSFX) - 1)], toolbox, SNDCHAN_STATIC, _, _, _, GetRandomInt(90, 110));
 	SpawnParticle(pos, PARTICLE_TOSS_BUILD, 2.0);
 	
-	//TODO: Figure out how to make wall/ceiling-mounted sentries align with the angle of the surface they are mounted to.
-	//		- Probably make an "anchor point" at the exact spot the sentry wall/ceiling check detected a hit, then set the sentry's position to that point.
-	//		- We're going to need to make a method which calculates the slope of a given surface. That will be a NIGHTMARE.
-	//				- To make the nightmare easier, I am writing down my current theories as to how to create something like this:
-	//				- 1. The method should take a given point, and return the angle of the surface in a vector.
-	//				- 2. The method should "glide" across the surface with a series of VERY small translations, done via traces. It will do this for 10 hammer units, or until it reaches a point where the next translation would be WAY too far away, signifying that we have reached the end of the surface, then mark down the last valid coordinate and compare it to the starting position to get the slope. This calculation will be hard, as I am unfamiliar with calculating slope in a 3D space.
-	//				- 3. Step 2 will be performed both horizontally and vertically. Then, we will compare the slopes of both directions to get the overall angle of the surface. This is the hardest part, as I have no idea what the mathematical formula for this would even be.
-	//				- 4. This will look a bit weird on props, but we don't give a shit about those, plus it will still look better on them than it does now so it's still a net gain.
 	//TODO: Figure out how to make wall/ceiling-mounted sentries actually aim at what they're shooting.
 	//		- There HAS to be a netprop for this somewhere.
 	//		- It's not the end of the world if this doesn't work. It will be a mild nuisance but whatever, can't win every battle with the Source engine.
 	//TODO: Make sure sentries are automatically destroyed if their legs are not actively touching a surface. This prevents players from building floating sentries.
-	//TODO: Make sure the player can't collide with their own sentries, that way they can't get themselves stuck by throwing the toolbox too close to a wall.
+	//TODO: If a player is too close to their sentry when it is built, block collision between the player and their sentry until they are far enough away to not be stuck.
 	//TODO: Don't forget that the toolbox itself needs to bounce off of enemy players and deal damage to them.
+	//TODO: Certain surfaces aren't detected for placing sentries on walls, resulting in sentries that stand normally despite being on a wall.
 	
 	int sentry = CreateEntityByName("obj_sentrygun");
 	if (IsValidEntity(sentry))
@@ -165,6 +182,7 @@ public MRESReturn Toss_Explode(int toolbox)
 		SetEntProp(sentry, Prop_Send, "m_iHighestUpgradeLevel", level);
 		
 		SetEntPropFloat(sentry, Prop_Send, "m_flPercentageConstructed", 0.0);
+		
 		SetEntProp(sentry, Prop_Send, "m_bBuilding", 1);
 		
 		SetEntPropFloat(sentry, Prop_Send, "m_flModelScale", Toss_Scale[toolbox]); 
@@ -173,21 +191,49 @@ public MRESReturn Toss_Explode(int toolbox)
 		
 		DispatchSpawn(sentry);
 		
-		if (Toss_GetDistanceToCeiling(pos, sentry) <= 50.0)
-			Toss_FacingAng[toolbox][2] += 180.0;
-		else if (Toss_GetDistanceToWall(pos, Toss_FacingAng[toolbox], sentry) <= 16.0)
+		if (CeilDist <= height)
+		{
+			Toss_FacingAng[toolbox][0] += 180.0;
+			float diff = CeilDist - (48.0 * Toss_Scale[toolbox]);
+			pos[2] += diff;
+		}
+		else if (WallDist <= width)
+		{
 			Toss_FacingAng[toolbox][0] -= 90.0;
-			
+			pos = wallPos;
+		}
+		
 		DispatchKeyValueVector(sentry, "origin", pos);
 		DispatchKeyValueVector(sentry, "angles", Toss_FacingAng[toolbox]);
 		TeleportEntity(sentry, pos, Toss_FacingAng[toolbox], NULL_VECTOR);
 		
 		Toss_AddToQueue(owner, sentry);
+		b_IsTossedSentry[sentry] = true;
 	}
 	
 	RemoveEntity(toolbox);
 	
 	return MRES_Supercede;
+}
+
+float Toss_CalculateSentryHeight(float scale, bool MiniSentry)
+{
+	float maxs[3] = {15.0, 15.0, 49.5};
+	if (!MiniSentry)
+		maxs = {15.0, 15.0, 49.5};
+	
+	ScaleVector(maxs, scale);
+	return maxs[2];
+}
+
+float Toss_CalculateSentryWidth(float scale, bool MiniSentry)
+{
+	float maxs[3] = {15.0, 15.0, 49.5};
+	if (!MiniSentry)
+		maxs = {15.0, 15.0, 49.5};
+	
+	ScaleVector(maxs, scale);
+	return maxs[0];
 }
 
 public void Toss_AddToQueue(int client, int sentry)
@@ -289,41 +335,70 @@ public void OnEntityDestroyed(int entity)
 			
 			Toss_Owner[entity] = -1;
 		}
+		
+		b_IsTossedSentry[entity] = false;
 	}
 }
 
 int Toss_FilterUser = -1;
 
-stock float Toss_GetDistanceToCeiling(float location[3], int sentry)
+stock float Toss_GetDistanceToCeiling(float location[3], int sentry, float outputSlopeAngle[3])
 {
-	float angles[3], otherLoc[3];
+	float angles[3], otherLoc[3], endPoint[3];
 	angles[0] = -90.0;
 	angles[1] = 0.0;
 	angles[2] = 0.0;
 	
+	/*for (int vec = 0; vec < 3; vec++)
+		endPoint[vec] = location[vec] + (angles[vec] * 99999.0);
+	
+	float fMinsMini[3] = {-15.0, -15.0, 0.0};
+	float fMaxsMini[3] = {15.0, 15.0, 49.5};
+	
 	Toss_FilterUser = sentry;
+	TR_TraceHullFilter(location, endPoint, fMinsMini, fMaxsMini, MASK_ALL, Toss_Trace);
+	TR_GetEndPosition(otherLoc);
+	
+	if (TR_DidHit())
+		TR_GetPlaneNormal(INVALID_HANDLE, outputSlopeAngle);*/
+		
 	Handle trace = TR_TraceRayFilterEx(location, angles, MASK_ALL, RayType_Infinite, Toss_Trace);
 	TR_GetEndPosition(otherLoc, trace);
-	//CloseHandle(trace);
+	
+	if (TR_DidHit(trace))
+	{
+		TR_GetPlaneNormal(trace, outputSlopeAngle);
+	}
+	
 	delete trace;
 	
-	return GetVectorDistance(location, otherLoc);
+	float dist = GetVectorDistance(location, otherLoc);
+	return dist;
 }
 
-stock float Toss_GetDistanceToWall(float location[3], float angles[3], int sentry)
+stock float Toss_GetDistanceToWall(float location[3], float angles[3], int sentry, float outputSlopeAngle[3], float outputWallPosition[3])
 {
 	float otherLoc[3];
 	
 	Toss_FilterUser = sentry;
 	Handle trace = TR_TraceRayFilterEx(location, angles, MASK_ALL, RayType_Infinite, Toss_Trace);
 	TR_GetEndPosition(otherLoc, trace);
-	//CloseHandle(trace);
+
+	if (TR_DidHit(trace))
+	{
+		TR_GetPlaneNormal(trace, outputSlopeAngle);
+	}
+	
 	delete trace;
 	
-	return GetVectorDistance(location, otherLoc);
+	float dist = GetVectorDistance(location, otherLoc);
+	for (int vec = 0; vec < 3; vec++)
+		outputWallPosition[vec] = otherLoc[vec];
+		
+	return dist;
 }
 
-stock float Toss_GetDistanceToGround(float location[3], int sentry)
+stock float Toss_GetDistanceToGround(float location[3], int sentry, float outputSlopeAngle[3])
 {
 	float angles[3], otherLoc[3];
 	angles[0] = 90.0;
@@ -333,7 +408,12 @@ stock float Toss_GetDistanceToGround(float location[3], int sentry)
 	Toss_FilterUser = sentry;
 	Handle trace = TR_TraceRayFilterEx(location, angles, MASK_ALL, RayType_Infinite, Toss_Trace);
 	TR_GetEndPosition(otherLoc, trace);
-	//CloseHandle(trace);
+
+	if (TR_DidHit(trace))
+	{
+		TR_GetPlaneNormal(trace, outputSlopeAngle);
+	}
+	
 	delete trace;
 	
 	return GetVectorDistance(location, otherLoc);
@@ -349,5 +429,5 @@ public bool Toss_Trace(entity, contentsMask)
 			return false;
 	}
 	
-	return entity != Toss_FilterUser;
+	return (entity > MaxClients || entity == 0) && entity != Toss_FilterUser;
 }
