@@ -1569,6 +1569,18 @@ stock float GetDistanceToCeiling(float location[3])
 	return GetVectorDistance(location, otherLoc);
 }
 
+stock float GetDistanceToWall(float location[3], float angles[3])
+{
+	float otherLoc[3];
+	
+	Handle trace = TR_TraceRayFilterEx(location, angles, MASK_SHOT, RayType_Infinite, TraceEntityFilterPlayer_GAT);
+	TR_GetEndPosition(otherLoc, trace);
+	//CloseHandle(trace);
+	delete trace;
+	
+	return GetVectorDistance(location, otherLoc);
+}
+
 stock void ForceGuaranteedDamage(int victim, float damage, int attacker = 0, int inflictor = 0, int weapon = 0, int damagetype = DMG_GENERIC)
 {
 	bool IsClient = IsValidClient(victim);
