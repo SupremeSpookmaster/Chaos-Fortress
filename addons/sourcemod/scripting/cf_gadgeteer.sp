@@ -123,14 +123,20 @@ public MRESReturn Toss_Explode(int toolbox)
 	SpawnParticle(pos, PARTICLE_TOSS_BUILD, 2.0);
 	
 	//TODO: Figure out how to make wall/ceiling-mounted sentries align with the angle of the surface they are mounted to.
-	//		- Probably make an "anchor point" at the exact spot the sentry wall/ceiling check detected a hit, then angle the sentry to face that point.
-	//		- Also set the sentry's position to the anchor point's position.
-	//		- If this doesn't work, we're going to need to make a method which calculates the slope of a given surface. That will be a NIGHTMARE.
+	//		- Probably make an "anchor point" at the exact spot the sentry wall/ceiling check detected a hit, then set the sentry's position to that point.
+	//		- We're going to need to make a method which calculates the slope of a given surface. That will be a NIGHTMARE.
+	//				- To make the nightmare easier, I am writing down my current theories as to how to create something like this:
+	//				- 1. The method should take a given point, and return the angle of the surface in a vector.
+	//				- 2. The method should "glide" across the surface with a series of VERY small translations, done via traces. It will do this for 10 hammer units, or until it reaches a point where the next translation would be WAY too far away, signifying that we have reached the end of the surface, then mark down the last valid coordinate and compare it to the starting position to get the slope. This calculation will be hard, as I am unfamiliar with calculating slope in a 3D space.
+	//				- 3. Step 2 will be performed both horizontally and vertically. Then, we will compare the slopes of both directions to get the overall angle of the surface. This is the hardest part, as I have no idea what the mathematical formula for this would even be.
+	//				- 4. This will look a bit weird on props, but we don't give a shit about those, plus it will still look better on them than it does now so it's still a net gain.
 	//TODO: Figure out how to make wall/ceiling-mounted sentries actually aim at what they're shooting.
-	//		- There HAS to be a netprop for this somewhere. m_iDesiredBuildRotations is the most promising.
+	//		- There HAS to be a netprop for this somewhere.
 	//		- It's not the end of the world if this doesn't work. It will be a mild nuisance but whatever, can't win every battle with the Source engine.
-	//TODO: Make sure toolboxes can't collide with sentries or each other.
-	//TODO: Make sure the player can't collide with their own sentries.
+	//TODO: Make sure sentries are automatically destroyed if their legs are not actively touching a surface. This prevents players from building floating sentries.
+	//TODO: Make sure the player can't collide with their own sentries, that way they can't get themselves stuck by throwing the toolbox too close to a wall.
+	//TODO: Don't forget that the toolbox itself needs to bounce off of enemy players and deal damage to them.
+	
 	int sentry = CreateEntityByName("obj_sentrygun");
 	if (IsValidEntity(sentry))
 	{
@@ -166,7 +172,6 @@ public MRESReturn Toss_Explode(int toolbox)
 		SetEntProp(sentry, Prop_Data, "m_spawnflags", 4);
 		
 		DispatchSpawn(sentry);
-		//ActivateEntity(sentry);
 		
 		if (Toss_GetDistanceToCeiling(pos, sentry) <= 50.0)
 			Toss_FacingAng[toolbox][2] += 180.0;
@@ -194,6 +199,7 @@ public void Toss_AddToQueue(int client, int sentry)
 		Toss_Sentries[client] = new Queue();
 		
 	Toss_Sentries[client].Push(EntIndexToEntRef(sentry));
+	Toss_Owner[sentry] = GetClientUserId(client);
 	
 	if (Toss_Max[client] <= 0)
 		return;
@@ -203,6 +209,7 @@ public void Toss_AddToQueue(int client, int sentry)
 		int oldest = EntRefToEntIndex(Toss_Sentries[client].Pop());
 		if (IsValidEntity(oldest))
 		{
+			Toss_Owner[oldest] = -1;
 			SetVariantInt(0);
 			AcceptEntityInput(oldest, "SetHealth");
 			SDKHooks_TakeDamage(oldest, 0, 0, 999999.0);
