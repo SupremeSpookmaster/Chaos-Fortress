@@ -7,6 +7,9 @@
 #define TOSS			"gadgeteer_sentry_toss"
 
 #define MODEL_TOSS		"models/weapons/w_models/w_toolbox.mdl"
+#define MODEL_HOOK		"models/props_mining/cranehook001.mdl"
+#define MODEL_ROPE_RED	"materials/cable/cable_red.vmt"
+#define MODEL_ROPE_BLUE	"materials/cable/cable_blue.vmt"
 
 #define SOUND_TOSS_BUILD_1	"weapons/sentry_upgrading1.wav"
 #define SOUND_TOSS_BUILD_2	"weapons/sentry_upgrading2.wav"
@@ -17,11 +20,14 @@
 #define SOUND_TOSS_BUILD_7	"weapons/sentry_upgrading7.wav"
 #define SOUND_TOSS_BUILD_8	"weapons/sentry_upgrading8.wav"
 
-#define PARTICLE_TOSS_BUILD		"kart_impact_sparks"
+#define PARTICLE_TOSS_BUILD		"rd_robot_explosion"//"kart_impact_sparks"
 
 public void OnMapStart()
 {
 	PrecacheModel(MODEL_TOSS);
+	PrecacheModel(MODEL_HOOK);
+	PrecacheModel(MODEL_ROPE_RED);
+	PrecacheModel(MODEL_ROPE_BLUE);
 	
 	PrecacheSound(SOUND_TOSS_BUILD_1);
 	PrecacheSound(SOUND_TOSS_BUILD_2);
@@ -66,6 +72,8 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 int Toss_Level[2049] = { -1, ... };
 int Toss_Owner[2049] = { -1, ... };
 int Toss_Max[MAXPLAYERS + 1] = { 0, ... };
+int Toss_Hook[2049] = { -1, ... };
+int Toss_Rope[2049] = { -1, ... };
 
 bool b_IsTossedSentry[2049] = { false, ... };
 
@@ -101,6 +109,9 @@ public void Toss_Activate(int client, char abilityName[255])
 		SetEntityModel(toolbox, MODEL_TOSS);
 		DispatchKeyValue(toolbox, "skin", TF2_GetClientTeam(client) == TFTeam_Red ? "0" : "1");
 		
+		//We make the toolbox 33% smaller because otherwise it instantly collides with things most of the time, which looks bad.
+		SetEntPropFloat(toolbox, Prop_Send, "m_flModelScale", 0.66); 
+		
 		float randAng[3];
 		for (int i = 0; i < 3; i++)
 			randAng[i] = GetRandomFloat(0.0, 360.0);
@@ -112,6 +123,29 @@ public void Toss_Activate(int client, char abilityName[255])
 	}
 }
 
+float Toss_GetNearestWall(float pos[3], float baseAng[3], int toolbox, float slopeBuffer[3], float wallPosBuffer[3])
+{
+	float WallDist = Toss_GetDistanceToWall(pos, baseAng, toolbox, slopeBuffer, wallPosBuffer);
+	
+	for (float i = 45.0; i < 360.0; i += 45.0)
+	{
+		float testAng[3], testSlope[3], testPos[3];
+		testAng[0] = 0.0;
+		testAng[1] = i;
+		testAng[2] = 0.0;
+			
+		float testDist = Toss_GetDistanceToWall(pos, testAng, toolbox, testSlope, testPos);
+		if (testDist < WallDist)
+		{
+			WallDist = testDist;
+			slopeBuffer = testSlope;
+			wallPosBuffer = testPos;
+		}
+	}
+	
+	return WallDist;
+}
+
 //Some of this was borrowed from RTD's "Spawn Sentry" perk and then modified a lot.
 public MRESReturn Toss_Explode(int toolbox)
 {
@@ -121,38 +155,25 @@ public MRESReturn Toss_Explode(int toolbox)
 	float pos[3], dummy[3];
 	GetEntPropVector(toolbox, Prop_Send, "m_vecOrigin", pos);
 	
-	float slope[3], buffer[3], wallPos[3], ceilslope[3];
-	
-	float CeilDist = Toss_GetDistanceToCeiling(pos, toolbox, ceilslope);
-	float WallDist = Toss_GetDistanceToWall(pos, Toss_FacingAng[toolbox], toolbox, slope, wallPos);
+	float slope[3], buffer[3], wallPos[3], ceilslope[3], ceilPos[3];
 	
 	float height = Toss_CalculateSentryHeight(Toss_Scale[toolbox], Toss_Level[toolbox] < 1 || Toss_Level[toolbox] > 3);
-	float width = Toss_CalculateSentryWidth(Toss_Scale[toolbox], Toss_Level[toolbox] < 1 || Toss_Level[toolbox] > 3);
+	float width = Toss_CalculateSentryWidth(Toss_Scale[toolbox], Toss_Level[toolbox] < 1 || Toss_Level[toolbox] > 3) * 2.0;
 	
-	//Sentries cannot target players if they are upside-down, hence ceiling sentries don't work.
-	//Therefore, if the toolbox hits the ceiling, bounce it back down instead of building a sentry there.
-	/*if (Toss_GetDistanceToCeiling(pos, toolbox, dummy) <= height && WallDist > width)
-	{
-		float vel[3];
-		GetEntPropVector(toolbox, Prop_Data, "m_vecVelocity", vel);
+	float CeilDist = Toss_GetDistanceToCeiling(pos, toolbox, ceilslope, ceilPos);
+	float WallDist = Toss_GetNearestWall(pos, Toss_FacingAng[toolbox], toolbox, slope, wallPos); /*Toss_GetDistanceToWall(pos, Toss_FacingAng[toolbox], toolbox, slope, wallPos);*/
 	
-		if (vel[2] > 0.0)
-			vel[2] *= -1.0;
-			
-		TeleportEntity(toolbox, NULL_VECTOR, NULL_VECTOR, vel);
-		return MRES_Supercede;
-	}*/
-	
-	EmitSoundToAll(Toss_BuildSFX[GetRandomInt(0, sizeof(Toss_BuildSFX) - 1)], toolbox, SNDCHAN_STATIC, _, _, _, GetRandomInt(90, 110));
+	int chosen = GetRandomInt(0, sizeof(Toss_BuildSFX) - 1);
+	EmitSoundToAll(Toss_BuildSFX[chosen], toolbox, SNDCHAN_STATIC, 120, _, _, GetRandomInt(90, 110));
+	EmitSoundToAll(Toss_BuildSFX[chosen], toolbox, SNDCHAN_STATIC, 120, _, _, GetRandomInt(90, 110));
 	SpawnParticle(pos, PARTICLE_TOSS_BUILD, 2.0);
 	
-	//TODO: Figure out how to make wall/ceiling-mounted sentries actually aim at what they're shooting.
-	//		- There HAS to be a netprop for this somewhere.
-	//		- It's not the end of the world if this doesn't work. It will be a mild nuisance but whatever, can't win every battle with the Source engine.
 	//TODO: Make sure sentries are automatically destroyed if their legs are not actively touching a surface. This prevents players from building floating sentries.
-	//TODO: If a player is too close to their sentry when it is built, block collision between the player and their sentry until they are far enough away to not be stuck.
-	//TODO: Don't forget that the toolbox itself needs to bounce off of enemy players and deal damage to them.
-	//TODO: Certain surfaces aren't detected for placing sentries on walls, resulting in sentries that stand normally despite being on a wall.
+	//TODO: EASY: If a player is too close to their sentry when it is built, block collision between the player and their sentry until they are far enough away to not be stuck.
+	//TODO: EASY: Don't forget that the toolbox itself needs to bounce off of enemy players and deal damage to them.
+	//TODO: Sentry pitch/yaw can be fixed manually by adjusting pose parameters per frame. Lots of vector math involved, but that's fine. This is only necessary for wall/ceiling sentries.
+	//TODO: Figure out why Rescue Ranger bolts (and likely all projectiles) can't hit ceiling sentries.
+	//TODO: Need to find a fix for sentries fucking up map lighting...
 	
 	int sentry = CreateEntityByName("obj_sentrygun");
 	if (IsValidEntity(sentry))
@@ -187,20 +208,45 @@ public MRESReturn Toss_Explode(int toolbox)
 		
 		SetEntPropFloat(sentry, Prop_Send, "m_flModelScale", Toss_Scale[toolbox]); 
 		
-		SetEntProp(sentry, Prop_Data, "m_spawnflags", 4);
+		//SetEntProp(sentry, Prop_Data, "m_spawnflags", 4);
 		
 		DispatchSpawn(sentry);
 		
 		if (CeilDist <= height)
 		{
+			float ropePos[3], hookPos[3], hookAng[3];
+			ropePos = pos;
+			ropePos[2] -= 40.0 * Toss_Scale[toolbox];
+			
+			hookAng = Toss_FacingAng[toolbox];
+			hookAng[1] += 90.0;
+			
+			hookPos = pos;
+			hookPos[2] += 2.5;
+			
+			int hook = SpawnPropDynamic(MODEL_HOOK, hookPos, hookAng, _, 0.33);
+			int rope = SpawnNewBeam(team == view_as<int>(TFTeam_Red) ? MODEL_ROPE_RED : MODEL_ROPE_BLUE, 255, 255, 255, 255, 2.0, ropePos, sentry);
+			if (IsValidEntity(rope) && IsValidEntity(hook))
+			{
+				ConnectBeam(rope, hook);
+				Toss_Rope[sentry] = EntIndexToEntRef(rope);
+				Toss_Hook[sentry] = EntIndexToEntRef(hook);
+			}
+			
+			
 			Toss_FacingAng[toolbox][0] += 180.0;
-			float diff = CeilDist - (48.0 * Toss_Scale[toolbox]);
+			float diff = CeilDist - 48.0;
 			pos[2] += diff;
 		}
 		else if (WallDist <= width)
 		{
 			Toss_FacingAng[toolbox][0] -= 90.0;
 			pos = wallPos;
+		}
+		else
+		{
+			float floorDist = Toss_GetDistanceToGround(pos, sentry, dummy);
+			pos[2] -= floorDist;
 		}
 		
 		DispatchKeyValueVector(sentry, "origin", pos);
@@ -336,33 +382,39 @@ public void OnEntityDestroyed(int entity)
 			Toss_Owner[entity] = -1;
 		}
 		
+		if (Toss_Hook[entity] != -1)
+		{
+			int hook = EntRefToEntIndex(Toss_Hook[entity]);
+			if (IsValidEntity(hook))
+				MakeEntityFadeOut(hook, 3);
+				
+			Toss_Hook[entity] = -1;
+		}
+		
+		if (Toss_Rope[entity] != -1)
+		{
+			int rope = EntRefToEntIndex(Toss_Rope[entity]);
+			if (IsValidEntity(rope))
+				MakeEntityFadeOut(rope, 3);
+				
+			Toss_Rope[entity] = -1;
+		}
+		
 		b_IsTossedSentry[entity] = false;
 	}
 }
 
 int Toss_FilterUser = -1;
 
-stock float Toss_GetDistanceToCeiling(float location[3], int sentry, float outputSlopeAngle[3])
+stock float Toss_GetDistanceToCeiling(float location[3], int sentry, float outputSlopeAngle[3], float outputPos[3])
 {
 	float angles[3], otherLoc[3], endPoint[3];
 	angles[0] = -90.0;
 	angles[1] = 0.0;
 	angles[2] = 0.0;
-	
-	/*for (int vec = 0; vec < 3; vec++)
-		endPoint[vec] = location[vec] + (angles[vec] * 99999.0);
-	
-	float fMinsMini[3] = {-15.0, -15.0, 0.0};
-	float fMaxsMini[3] = {15.0, 15.0, 49.5};
-	
-	Toss_FilterUser = sentry;
-	TR_TraceHullFilter(location, endPoint, fMinsMini, fMaxsMini, MASK_ALL, Toss_Trace);
-	TR_GetEndPosition(otherLoc);
-	
-	if (TR_DidHit())
-		TR_GetPlaneNormal(INVALID_HANDLE, outputSlopeAngle);*/
 		
-	Handle trace = TR_TraceRayFilterEx(location, angles, MASK_ALL, RayType_Infinite, Toss_Trace);
+	Toss_FilterUser = sentry;
+	Handle trace = TR_TraceRayFilterEx(location, angles, MASK_SHOT, RayType_Infinite, Toss_Trace);
 	TR_GetEndPosition(otherLoc, trace);
 	
 	if (TR_DidHit(trace))
@@ -373,6 +425,7 @@ stock float Toss_GetDistanceToCeiling(float location[3], int sentry, float outpu
 	delete trace;
 	
 	float dist = GetVectorDistance(location, otherLoc);
+	outputPos = otherLoc;
 	return dist;
 }
 
@@ -381,7 +434,7 @@ stock float Toss_GetDistanceToWall(float location[3], float angles[3], int sentr
 	float otherLoc[3];
 	
 	Toss_FilterUser = sentry;
-	Handle trace = TR_TraceRayFilterEx(location, angles, MASK_ALL, RayType_Infinite, Toss_Trace);
+	Handle trace = TR_TraceRayFilterEx(location, angles, MASK_SHOT, RayType_Infinite, Toss_Trace);
 	TR_GetEndPosition(otherLoc, trace);
 
 	if (TR_DidHit(trace))
@@ -406,7 +459,7 @@ stock float Toss_GetDistanceToGround(float location[3], int sentry, float output
 	angles[2] = 0.0;
 	
 	Toss_FilterUser = sentry;
-	Handle trace = TR_TraceRayFilterEx(location, angles, MASK_ALL, RayType_Infinite, Toss_Trace);
+	Handle trace = TR_TraceRayFilterEx(location, angles, MASK_SHOT, RayType_Infinite, Toss_Trace);
 	TR_GetEndPosition(otherLoc, trace);
 
 	if (TR_DidHit(trace))
@@ -427,7 +480,9 @@ public bool Toss_Trace(entity, contentsMask)
 		GetEntityClassname(entity, classname, sizeof(classname));
 		if (StrContains(classname, "tf_projectile") != -1)
 			return false;
+			
+		return entity != Toss_FilterUser;
 	}
 	
-	return (entity > MaxClients || entity == 0) && entity != Toss_FilterUser;
+	return entity == 0;
 }

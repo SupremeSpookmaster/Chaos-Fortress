@@ -1845,6 +1845,115 @@ stock void SpawnSmallExplosion(float DetLoc[3], char SFX[255] = "")
 	}
 }
 
+stock int SpawnPropDynamic(char model[255], float pos[3], float ang[3], int skin = 0, float scale = 1.0, char sequence[255] = "ref", float rate = 1.0)
+{
+	int prop = CreateEntityByName("prop_dynamic_override");
+	
+	if (IsValidEntity(prop))
+	{
+		SetEntityModel(prop, model);
+					
+		char scalechar[16];
+		Format(scalechar, sizeof(scalechar), "%f", scale);
+		DispatchKeyValue(prop, "modelscale", scalechar);
+		DispatchKeyValue(prop, "StartDisabled", "false");
+					
+		DispatchSpawn(prop);
+					
+		AcceptEntityInput(prop, "Enable");
+		
+		SetVariantString(sequence);
+		AcceptEntityInput(prop, "SetAnimation");
+		DispatchKeyValueFloat(prop, "playbackrate", rate);
+		char skinchar[16];
+		Format(skinchar, sizeof(skinchar), "%i", skin);
+		DispatchKeyValue(prop, "skin", skinchar);
+		
+		TeleportEntity(prop, pos, ang, NULL_VECTOR);
+	}
+	
+	return prop;
+}
+
+stock void MakeEntityFadeOut(int entity, int rate, bool remove = true)
+{
+	SetEntityRenderMode(entity, RENDER_TRANSALPHA);
+	
+	DataPack pack = new DataPack();
+	WritePackCell(pack, EntIndexToEntRef(entity));
+	WritePackCell(pack, rate);
+	WritePackCell(pack, remove);
+	RequestFrame(Fade_Out, pack);
+}
+
+stock void Fade_Out(DataPack pack)
+{
+	ResetPack(pack);
+	int entity = EntRefToEntIndex(ReadPackCell(pack));
+	int rate = ReadPackCell(pack);
+	bool remove = ReadPackCell(pack);
+	
+	if (!IsValidEntity(entity))
+	{
+		delete pack;
+		return;
+	}
+	
+	int r, g, b, a;
+	GetEntityRenderColor(entity, r, g, b, a);
+	a -= rate;
+	if (a < 0)
+		a = 0;
+		
+	SetEntityRenderColor(entity, r, g, b, a);
+	
+	if (a == 0)
+	{
+		if (remove)
+			RemoveEntity(entity);
+		
+		delete pack;
+	}
+	else
+		RequestFrame(Fade_Out, pack);
+}
+
+//These two beam stocks were borrowed from Zombie Riot and then modified.
+stock int SpawnNewBeam(char model[255], int r, int g, int b, int a, float width, float pos[3], int owner = 0) 
+{
+	int beam = CreateEntityByName("env_beam");
+	if (IsValidEntity(beam))
+	{
+		SetEntityModel(beam, model);
+		SetEntityRenderColor(beam, r, g, b, a);
+		
+		SetEntProp(beam, Prop_Send, "m_nBeamType", 2);
+		SetEntPropFloat(beam, Prop_Data, "m_fWidth", width);
+		SetEntPropFloat(beam, Prop_Data, "m_fEndWidth", width);
+
+		SetEntPropEnt(beam, Prop_Data, "m_hOwnerEntity", owner);
+
+		DispatchSpawn(beam);
+		ActivateEntity(beam);
+		
+		TeleportEntity(beam, pos);
+	}
+	
+	return beam;
+}
+
+stock void ConnectBeam(int beam, int target) 
+{
+	if (!IsValidEntity(beam) || !IsValidEntity(target))
+		return;
+
+	SetEntPropEnt(beam, Prop_Send, "m_hAttachEntity", EntIndexToEntRef(beam));
+	SetEntPropEnt(beam, Prop_Send, "m_hAttachEntity", EntIndexToEntRef(target), 1);
+	SetEntProp(beam, Prop_Send, "m_nNumBeamEnts", 2);
+
+	AcceptEntityInput(beam, "TurnOn");
+}
+
 /**
  * Spawns a big explosion particle at a given location. This does NOT deal damage.
  *
