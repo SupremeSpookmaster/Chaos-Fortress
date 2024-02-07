@@ -76,6 +76,7 @@ int Toss_Hook[2049] = { -1, ... };
 int Toss_Rope[2049] = { -1, ... };
 
 bool b_IsTossedSentry[2049] = { false, ... };
+bool b_SentryBlocksCollisions[2049] = { false, ... };
 
 float Toss_DMG[2049] = { 0.0, ... };
 float Toss_KB[2049] = { 0.0, ... };
@@ -151,6 +152,12 @@ public MRESReturn Toss_Explode(int toolbox)
 {
 	int owner = GetEntPropEnt(toolbox, Prop_Send, "m_hOwnerEntity");
 	int team = GetEntProp(toolbox, Prop_Send, "m_iTeamNum");
+	
+	if (!IsValidClient(owner))
+	{
+		RemoveEntity(toolbox);
+		return MRES_Supercede;
+	}
 
 	float pos[3], dummy[3];
 	GetEntPropVector(toolbox, Prop_Send, "m_vecOrigin", pos);
@@ -170,10 +177,11 @@ public MRESReturn Toss_Explode(int toolbox)
 	
 	//TODO: Make sure sentries are automatically destroyed if their legs are not actively touching a surface. This prevents players from building floating sentries.
 	//TODO: EASY: If a player is too close to their sentry when it is built, block collision between the player and their sentry until they are far enough away to not be stuck.
+	//		- PassFilter and ShouldCollide have failed, need to find an alternative fix.
 	//TODO: EASY: Don't forget that the toolbox itself needs to bounce off of enemy players and deal damage to them.
 	//TODO: Sentry pitch/yaw can be fixed manually by adjusting pose parameters per frame. Lots of vector math involved, but that's fine. This is only necessary for wall/ceiling sentries.
 	//TODO: Figure out why Rescue Ranger bolts (and likely all projectiles) can't hit ceiling sentries.
-	//TODO: Need to find a fix for sentries fucking up map lighting...
+	//			- NOTE: They actually CAN hit ceiling sentries, but you need to aim for the ceiling itself. The hitbox is very misleading. I don't think this is something I can fix.
 	
 	int sentry = CreateEntityByName("obj_sentrygun");
 	if (IsValidEntity(sentry))
@@ -211,6 +219,7 @@ public MRESReturn Toss_Explode(int toolbox)
 		//SetEntProp(sentry, Prop_Data, "m_spawnflags", 4);
 		
 		DispatchSpawn(sentry);
+		ActivateEntity(sentry);
 		
 		if (CeilDist <= height)
 		{
@@ -255,11 +264,39 @@ public MRESReturn Toss_Explode(int toolbox)
 		
 		Toss_AddToQueue(owner, sentry);
 		b_IsTossedSentry[sentry] = true;
+		
+		if (Toss_IsOwnerTooCloseToSentry(owner, sentry))
+			b_SentryBlocksCollisions[sentry] = true;
 	}
 	
 	RemoveEntity(toolbox);
 	
 	return MRES_Supercede;
+}
+
+int Toss_CurrentDistanceChecker = -1;
+bool Toss_IsOwnerTooCloseToSentry(int owner, int sentry)
+{
+	if (!IsValidClient(owner) || !IsValidEntity(sentry))
+		return false;
+		
+	if (!b_IsTossedSentry[sentry])
+		return false;
+		
+	int realOwner = GetEntPropEnt(sentry, Prop_Send, "m_hOwnerEntity");
+	if (realOwner != owner)
+		return false;
+		
+	float pos[3], mins[3], maxs[3];
+	GetEntPropVector(sentry, Prop_Send, "m_vecOrigin", pos);
+	GetEntPropVector(sentry, Prop_Send, "m_vecMins", mins);
+	GetEntPropVector(sentry, Prop_Send, "m_vecMaxs", maxs);
+	
+	Toss_CurrentDistanceChecker = owner;
+	TR_TraceHullFilter(pos, pos, mins, maxs, MASK_SHOT, Toss_OnlyHitOwner);
+	bool result = TR_DidHit();
+				
+	return result;
 }
 
 float Toss_CalculateSentryHeight(float scale, bool MiniSentry)
@@ -362,6 +399,92 @@ public void CF_OnCharacterRemoved(int client)
 	
 }
 
+/*public Action CF_OnShouldCollide(int ent1, int ent2, bool &result)
+{
+	if (b_IsTossedSentry[ent1] && b_SentryBlocksCollisions[ent1])
+	{
+		int owner = GetEntPropEnt(ent1, Prop_Send, "m_hOwnerEntity");
+		if (ent2 == owner)
+		{
+			if (Toss_IsOwnerTooCloseToSentry(ent2, ent1))
+			{
+				result = false;
+				return Plugin_Changed;
+			}
+			else
+			{
+				//b_SentryBlocksCollisions[ent1] = false;
+				result = true;
+				return Plugin_Changed;
+			}
+		}
+	}
+	
+	if (b_IsTossedSentry[ent2] && b_SentryBlocksCollisions[ent2])
+	{
+		int owner = GetEntPropEnt(ent2, Prop_Send, "m_hOwnerEntity");
+		if (ent1 == owner)
+		{
+			if (Toss_IsOwnerTooCloseToSentry(ent1, ent2))
+			{
+				result = false;
+				return Plugin_Changed;
+			}
+			else
+			{
+				//b_SentryBlocksCollisions[ent2] = false;
+				result = true;
+				return Plugin_Changed;
+			}
+		}
+	}
+	
+	return Plugin_Continue;
+}
+
+public Action CF_OnPassFilter(int ent1, int ent2, bool &result)
+{
+	if (b_IsTossedSentry[ent1] && b_SentryBlocksCollisions[ent1])
+	{
+		int owner = GetEntPropEnt(ent1, Prop_Send, "m_hOwnerEntity");
+		if (ent2 == owner)
+		{
+			if (Toss_IsOwnerTooCloseToSentry(ent2, ent1))
+			{
+				result = false;
+				return Plugin_Changed;
+			}
+			else
+			{
+				//b_SentryBlocksCollisions[ent1] = false;
+				result = true;
+				return Plugin_Changed;
+			}
+		}
+	}
+	
+	if (b_IsTossedSentry[ent2] && b_SentryBlocksCollisions[ent2])
+	{
+		int owner = GetEntPropEnt(ent2, Prop_Send, "m_hOwnerEntity");
+		if (ent1 == owner)
+		{
+			if (Toss_IsOwnerTooCloseToSentry(ent1, ent2))
+			{
+				result = false;
+				return Plugin_Changed;
+			}
+			else
+			{
+				//b_SentryBlocksCollisions[ent2] = false;
+				result = true;
+				return Plugin_Changed;
+			}
+		}
+	}
+	
+	return Plugin_Continue;
+}*/
+
 public void OnClientDisconnect(int client)
 {
 	delete Toss_Sentries[client];
@@ -401,6 +524,7 @@ public void OnEntityDestroyed(int entity)
 		}
 		
 		b_IsTossedSentry[entity] = false;
+		b_SentryBlocksCollisions[entity] = false;
 	}
 }
 
@@ -485,4 +609,9 @@ public bool Toss_Trace(entity, contentsMask)
 	}
 	
 	return entity == 0;
+}
+
+public bool Toss_OnlyHitOwner(entity, contentsMask)
+{
+	return entity == Toss_CurrentDistanceChecker;
 }
