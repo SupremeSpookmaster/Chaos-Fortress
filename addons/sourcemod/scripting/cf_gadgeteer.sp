@@ -266,12 +266,40 @@ public MRESReturn Toss_Explode(int toolbox)
 		b_IsTossedSentry[sentry] = true;
 		
 		if (Toss_IsOwnerTooCloseToSentry(owner, sentry))
+		{
 			b_SentryBlocksCollisions[sentry] = true;
+			SetEntityCollisionGroup(sentry, 1);
+			RequestFrame(Toss_CollisionThink, EntIndexToEntRef(sentry));
+		}
 	}
 	
 	RemoveEntity(toolbox);
 	
 	return MRES_Supercede;
+}
+
+public void Toss_CollisionThink(int ref)
+{
+	int sentry = EntRefToEntIndex(ref);
+	if (!IsValidEntity(sentry))
+		return;
+		
+	int owner = GetEntPropEnt(sentry, Prop_Send, "m_hOwnerEntity");
+	if (!IsValidClient(owner))
+		return;
+		
+	if (Toss_IsOwnerTooCloseToSentry(owner, sentry))
+	{
+		SetEntityCollisionGroup(sentry, 1);
+		RequestFrame(Toss_CollisionThink, ref);
+		CPrintToChatAll("Too close");
+	}
+	else
+	{
+		SetEntityCollisionGroup(sentry, 22);
+		b_SentryBlocksCollisions[sentry] = false;
+		CPrintToChatAll("Far Away");
+	}
 }
 
 int Toss_CurrentDistanceChecker = -1;
@@ -294,7 +322,7 @@ bool Toss_IsOwnerTooCloseToSentry(int owner, int sentry)
 	
 	Toss_CurrentDistanceChecker = owner;
 	TR_TraceHullFilter(pos, pos, mins, maxs, MASK_SHOT, Toss_OnlyHitOwner);
-	bool result = TR_DidHit();
+	bool result = TR_GetEntityIndex() == owner;
 				
 	return result;
 }
