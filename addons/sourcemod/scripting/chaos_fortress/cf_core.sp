@@ -5,6 +5,7 @@
 
 #include <cf_stocks>
 #include <cf_include>
+#include <SteamWorks>
 
 #include "chaos_fortress/cf_killstreak.sp"
 #include "chaos_fortress/cf_damage.sp"
@@ -27,6 +28,8 @@ ConVar g_WeaponDropLifespan;
 Handle g_ChatMessages;
 Handle g_ChatIntervals;
 Handle g_ChatTimes;
+
+#define GAME_DESCRIPTION	"Chaos Fortress: Open Beta"
 
 /**
  * Creates all of Chaos Fortress' natives.
@@ -68,6 +71,8 @@ public void CF_OnPluginStart()
 	g_ChatTimes = CreateArray(255);
 
 	CreateTimer(1.0, Timer_ChatMessages, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+	
+	SteamWorks_SetGameDescription(GAME_DESCRIPTION);
 }
 
 public Action Timer_ChatMessages(Handle messages)

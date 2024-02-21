@@ -70,6 +70,7 @@
 //	- TODO: Finalize the wiki by updating each page with all of the changes. This will take several days at the bare minimum.
 //	- TODO: Add support for translations. This will be a huge pain in the ass, but does not need to be done until public release.
 //	- TODO: Make sure plugin variables automatically get reset on map change. I imagine this will not be a problem, but if it's like ZR and variables don't get reset automatically, it's going to be a nightmare to deal with.
+//	- TODO: cf_killstreak is not on the GitHub, so the plugin can't be compiled. Fix that when we get home.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
