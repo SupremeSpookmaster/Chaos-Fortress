@@ -17,6 +17,13 @@
 //			- Make a custom fake particle model for High Time's radius:
 //				- Optimally this should end up being something time-themed. Maybe a giant clock?
 //				- The aura itself should be a sphere.
+//		- Gadgeteer:
+//			- Replace the sentries spawned by Toolbox Toss with idle drones which mimic sentry behaviors. It will look better and function better as well.
+//			- Probably rewrite most of Toolbox Toss from the ground up.
+//			- Write a custom attribute for his rescue ranger which makes the bolts heal friendly prop_physics entities, so that they work with the custom "sentries" used by Toolbox Toss.
+//			- Write a custom attribute for his pistol which marks enemies for sentry targeting.
+//			- Write a custom attribute for his rescue ranger which buffs friendly sentries when it heals them.
+//			- Write the code for Automation Annihilation. This should be done with a generic_ability ability which just sets all of the user's cooldowns/ability costs to a certain value for a given time, like BvB Conductor's frenzy.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////
