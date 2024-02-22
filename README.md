@@ -20,6 +20,12 @@
 - **[TF2Attributes 1.7.0+](https://github.com/FlaminSarge/tf2attributes)**
 - **[TF2Items](https://github.com/asherkin/TF2Items)**
 - **[TF2 Econ Data](https://github.com/nosoop/SM-TFEconData)**
+- **[TF2 Econ Dynamic](https://github.com/nosoop/SMExt-TFEconDynamic)**
+- **[TF2 Utils](https://github.com/nosoop/SM-TFUtils)**
+- **[CollisionHook](https://forums.alliedmods.net/showthread.php?t=197815)**
+- **[SteamWorks](https://forums.alliedmods.net/showthread.php?t=229556)**
+- **[TF2 Custom Attributes](https://forums.alliedmods.net/showthread.php?p=2703773)**
+- **[Fake Particle System](https://github.com/SupremeSpookmaster/Fake-Particle-System)** - Note that you will need to use the version of `data/fake_particle_system/fakeparticles.cfg` which comes packaged with ***Chaos Fortress***, and not the version included in the release build of the Fake Particle System.
 - **RECOMMENDED: [TF2 Weaponmodel Override](https://github.com/Zabaniya001/TF2CA-weaponmodel_override)** - Not required to function, but is used by many default characters.
 - **RECOMMENDED: [TF2 Move Speed Unlocker](https://forums.alliedmods.net/showthread.php?p=2659562)** - Not required to function, but makes certain character techniques more fun.
 
