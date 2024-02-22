@@ -77,7 +77,10 @@
 //	- TODO: Finalize the wiki by updating each page with all of the changes. This will take several days at the bare minimum.
 //	- TODO: Add support for translations. This will be a huge pain in the ass, but does not need to be done until public release.
 //	- TODO: Make sure plugin variables automatically get reset on map change. I imagine this will not be a problem, but if it's like ZR and variables don't get reset automatically, it's going to be a nightmare to deal with.
-//	- TODO: cf_killstreak is not on the GitHub, so the plugin can't be compiled. Fix that when we get home.
+//	- TODO: The following plugins are mandatory for CF to run, and need to be added to the GitHub's prerequisites:
+//		- None, currently.
+//	- TODO: The current development branch has the following fatal issues which break the plugin, and will need to be fixed in the release branch:
+//		- Doktor Medick (and likely more characters in the future) needs the Fake Particle System, which in turn needs a config or else it will fail to boot. This does not break CF itself, but it does inhibit several important visual indicators used by many of the characters.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".

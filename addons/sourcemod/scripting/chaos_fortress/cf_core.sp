@@ -29,7 +29,7 @@ Handle g_ChatMessages;
 Handle g_ChatIntervals;
 Handle g_ChatTimes;
 
-#define GAME_DESCRIPTION	"Chaos Fortress: Open Beta"
+#define GAME_DESCRIPTION	"Chaos Fortress: Closed Alpha"
 
 /**
  * Creates all of Chaos Fortress' natives.
