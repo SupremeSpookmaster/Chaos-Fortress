@@ -13,7 +13,7 @@
 //		- Christian Brutal Sniper:
 //			- Implement Badass' team-colored model and add him to the credits.
 //		- Doktor Medick:
-//			- Port model to Chaos Fortress.
+//			- Make new "younger DokMed" model.
 //			- Make a custom fake particle model for High Time's radius:
 //				- Optimally this should end up being something time-themed. Maybe a giant clock?
 //				- The aura itself should be a sphere.
@@ -72,8 +72,6 @@
 //		- [ ] Payload Race
 //		- [ ] Control Points
 //		- [ ] King of the Hill
-//	- TODO: Everything that happens on client disconnect (possibly already covered, not sure).
-//	- TODO: Check includes to see if I will need to add anything to the prerequisites section of the readme before launch.
 //	- TODO: Finalize the wiki by updating each page with all of the changes. This will take several days at the bare minimum.
 //	- TODO: Add support for translations. This will be a huge pain in the ass, but does not need to be done until public release.
 //	- TODO: Make sure plugin variables automatically get reset on map change. I imagine this will not be a problem, but if it's like ZR and variables don't get reset automatically, it's going to be a nightmare to deal with.
@@ -95,8 +93,6 @@
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This feature may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //			- Scrap this feature entirely and remove all mentions of it from the code. This will be a giant pain in the ass but does not need to be done until public release.
-//	- GADGETEER: For some fucking reason, his sentries blot out the sun??????????????? If even one of his sentries is on the map, the lighting gets really buggy in certain areas. It is very disorienting.
-//			- This seems to MAYBE be linked to sentry gibs???
 //
 //	- PRESUMED UNFIXABLE (major bugs which I don't believe can be fixed with my current SourceMod expertise. The best thing you can do is classify these as exploits and punish them as such):
 //	- DEMOPAN: Enemies can get stuck in his shield if they walk into it while it is held. Demopans can abuse this to intentionally get enemies stuck for free kills. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.
