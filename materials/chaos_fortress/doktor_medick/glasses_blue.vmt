@@ -1,0 +1,68 @@
+"UnlitGeneric"
+{
+	"$basetexture"		"models/workshop/player/items/all_class/tomb_readers/tomb_readers_color"
+	"$lightwarptexture"		"models/player/pyro/pyro_lightwarp"
+	"$phong"		"1"
+	"$phongexponent"		"10.000000"
+	"$phongboost"		"0.500000"
+	"$phongfresnelranges"		"[.25 .5 1]"
+	"$basemapalphaphongmask"		"1"
+	"$rimlight"		"1"
+	"$rimlightexponent"		"4"
+	"$rimlightboost"		"1.000000"
+	"$blendtintbybasealpha"		"0"
+	"$blendtintcoloroverbase"		"0"
+	"$colortint_base"		"{ 0 255 200 }"
+	"$color2"		"{ 0 255 200 }"
+	"$colortint_tmp"		"[0 0 0]"
+	"$bumpmapalphaphongmask"		"1"
+	"$basealphaenvmapmask"		"1"
+	"$normalmapalphaenvmapmask"		"0"
+	"$cloakPassEnabled"		"1"
+	"$detailscale"		"5"
+	"$detailblendfactor"		"0"
+	"$detailblendmode"		"6"
+	"$yellow"		"0"
+	">=DX90"
+	{
+		"$selfillum"		"0"
+		"$envmaptint"		"[0.078431 0.078431 0.078431]"
+		"$envmap"		"env_cubemap"
+	}
+	"proxies"
+	{
+		"invis"
+		{
+		}
+		"AnimatedTexture"
+		{
+			"animatedtexturevar"		"$detail"
+			"animatedtextureframenumvar"		"$detailframe"
+			"animatedtextureframerate"		"30"
+		}
+		"BurnLevel"
+		{
+			"resultVar"		"$detailblendfactor"
+		}
+		"ItemTintColor"
+		{
+			"resultVar"		"$colortint_tmp"
+		}
+		"SelectFirstIfNonZero"
+		{
+			"srcVar1"		"$colortint_tmp"
+			"srcVar2"		"$colortint_base"
+			"resultVar"		"$color2"
+		}
+		"YellowLevel"
+		{
+			"resultVar"		"$yellow"
+		}
+		"Multiply"
+		{
+			"srcVar1"		"$color2"
+			"srcVar2"		"$yellow"
+			"resultVar"		"$color2"
+		}
+	}
+}
