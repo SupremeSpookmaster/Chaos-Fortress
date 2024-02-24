@@ -92,6 +92,7 @@ float f_KillValue;
 float f_DeathValue;
 float f_KDA_Angry;
 float f_KDA_Happy;
+float f_HealValue;
 
 bool b_AnnounceKillstreaks = false;
 
@@ -110,12 +111,13 @@ public void CFKS_MakeForwards()
 	g_OnKillstreakChanged = new GlobalForward("CF_OnKillstreakChanged", ET_Ignore, Param_Cell, Param_Cell);
 }
 
-public void CFKS_ApplyKDARules(float KillValue, float DeathValue, float KDA_Angry, float KDA_Happy)
+public void CFKS_ApplyKDARules(float KillValue, float DeathValue, float KDA_Angry, float KDA_Happy, float HealValue)
 {
 	f_KillValue = KillValue;
 	f_DeathValue = DeathValue;
 	f_KDA_Angry = KDA_Angry;
 	f_KDA_Happy = KDA_Happy;
+	f_HealValue = HealValue;
 }
 
 /**
@@ -308,6 +310,8 @@ public any Native_CF_GetKD(Handle plugin, int numParams)
 		
 	float kills = float(GetEntProp(client, Prop_Data, "m_iFrags")) * f_KillValue;
 	float deaths = float(GetEntProp(client, Prop_Data, "m_iDeaths")) * f_DeathValue;
+	float healPoints = float(GetEntProp(client, Prop_Send, "m_iHealPoints")) / f_HealValue;
+	kills += healPoints;
 	
 	return kills / deaths;
 }

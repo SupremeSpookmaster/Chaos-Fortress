@@ -144,10 +144,11 @@ public Action Timer_ChatMessages(Handle messages)
 	    
 	    float KillValue = GetFloatFromConfigMap(subsection, "value_kills", 1.0);
 	    float DeathValue = GetFloatFromConfigMap(subsection, "value_deaths", 1.0);
+	    float HealValue = GetFloatFromConfigMap(subsection, "value_healing", 1000.0);
 	    float KDA_Angry = GetFloatFromConfigMap(subsection, "kd_angry", 0.33);
 	    float KDA_Happy = GetFloatFromConfigMap(subsection, "kd_happy", 2.33);
 	    
-	    CFKS_ApplyKDARules(KillValue, DeathValue, KDA_Angry, KDA_Happy);
+	    CFKS_ApplyKDARules(KillValue, DeathValue, KDA_Angry, KDA_Happy, HealValue);
 	    
 	    if (IsValidClient(admin))
 	    {

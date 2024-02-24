@@ -61,7 +61,6 @@
 //			- None! (Pending public opinion during beta)
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
-//	- TODO: Make the K/D ratio used for spawn sounds factor in healing as well, that way healers don't always end up using spawn_angry by the end of the round even if they're winning.
 //	- TODO: Make Demopan's fancy ult delay an officially supported feature that you can enable or disable by setting "warning_delay" in the ultimate stats section.
 //	- TODO: Disable random crits on the beta test server (melee characters like Spookmaster and Demopan are utterly busted with random crits).
 //	- TODO: Test all game modes (except for CTF which won't be officially supported):
@@ -76,6 +75,7 @@
 //		- None, currently.
 //	- TODO: The current development branch has the following fatal issues which break the plugin, and will need to be fixed in the release branch:
 //		- Doktor Medick (and likely more characters in the future) needs the Fake Particle System, which in turn needs a config or else it will fail to boot. This does not break CF itself, but it does inhibit several important visual indicators used by many of the characters.
+//		- generic_abilities has a gamedata issue.
 //	- TODO: CBS' new model does not have a valid attachment point for Blast Bolt's particle, fix it.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
