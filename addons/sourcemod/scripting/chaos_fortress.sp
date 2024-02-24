@@ -10,10 +10,7 @@
 
 //
 //	- IMMEDIATE PLANS:
-//		- Christian Brutal Sniper:
-//			- Implement Badass' team-colored model and add him to the credits.
 //		- Doktor Medick:
-//			- Make new "younger DokMed" model.
 //			- Make a custom fake particle model for High Time's radius:
 //				- Optimally this should end up being something time-themed. Maybe a giant clock?
 //				- The aura itself should be a sphere.
@@ -79,6 +76,7 @@
 //		- None, currently.
 //	- TODO: The current development branch has the following fatal issues which break the plugin, and will need to be fixed in the release branch:
 //		- Doktor Medick (and likely more characters in the future) needs the Fake Particle System, which in turn needs a config or else it will fail to boot. This does not break CF itself, but it does inhibit several important visual indicators used by many of the characters.
+//	- TODO: CBS' new model does not have a valid attachment point for Blast Bolt's particle, fix it.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
