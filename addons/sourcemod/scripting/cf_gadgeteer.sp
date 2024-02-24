@@ -10,6 +10,7 @@
 #define MODEL_HOOK		"models/props_mining/cranehook001.mdl"
 #define MODEL_ROPE_RED	"materials/cable/cable_red.vmt"
 #define MODEL_ROPE_BLUE	"materials/cable/cable_blue.vmt"
+#define MODEL_DRG		"models/weapons/w_models/w_drg_ball.mdl"
 
 #define SOUND_TOSS_BUILD_1	"weapons/sentry_upgrading1.wav"
 #define SOUND_TOSS_BUILD_2	"weapons/sentry_upgrading2.wav"
@@ -28,6 +29,7 @@ public void OnMapStart()
 	PrecacheModel(MODEL_HOOK);
 	PrecacheModel(MODEL_ROPE_RED);
 	PrecacheModel(MODEL_ROPE_BLUE);
+	PrecacheModel(MODEL_DRG);
 	
 	PrecacheSound(SOUND_TOSS_BUILD_1);
 	PrecacheSound(SOUND_TOSS_BUILD_2);
@@ -97,11 +99,8 @@ public void Toss_Activate(int client, char abilityName[255])
 		Toss_FacingAng[toolbox][0] = 0.0;
 		Toss_FacingAng[toolbox][2] = 0.0;
 		
-		SetEntityModel(toolbox, MODEL_TOSS);
-		DispatchKeyValue(toolbox, "skin", TF2_GetClientTeam(client) == TFTeam_Red ? "0" : "1");
-		
-		//We make the toolbox 33% smaller because otherwise it instantly collides with things most of the time, which looks bad.
-		SetEntPropFloat(toolbox, Prop_Send, "m_flModelScale", 0.66); 
+		SetEntityModel(toolbox, MODEL_DRG);
+		AttachModelToEntity(MODEL_TOSS, "", toolbox, _, TF2_GetClientTeam(client) == TFTeam_Red ? "0" : "1");
 		
 		float randAng[3];
 		for (int i = 0; i < 3; i++)
@@ -133,9 +132,34 @@ public MRESReturn Toss_Explode(int toolbox)
 	EmitSoundToAll(Toss_BuildSFX[chosen], toolbox, SNDCHAN_STATIC, 120, _, _, GetRandomInt(90, 110));
 	SpawnParticle(pos, PARTICLE_TOSS_BUILD, 2.0);
 	
-	int sentry = CreateEntityByName("prop_physics_override");
-	if (IsValidEntity(sentry))
+	int prop = CreateEntityByName("prop_physics_override");
+	if (IsValidEntity(prop))
 	{
+		DispatchKeyValue(prop, "targetname", "droneparent"); 
+		DispatchKeyValue(prop, "model", MODEL_DRONE_PARENT);
+		
+		DispatchSpawn(prop);
+		
+		ActivateEntity(prop);
+		
+		if (IsValidClient(owner))
+		{
+			SetEntPropEnt(prop, Prop_Data, "m_hOwnerEntity", owner);
+			SetEntProp(prop, Prop_Send, "m_iTeamNum", GetClientTeam(owner));
+		}
+		
+		DispatchKeyValue(prop, "skin", skin);
+		char healthChar[16];
+		Format(healthChar, sizeof(healthChar), "%i", RoundFloat(health));
+		DispatchKeyValue(prop, "Health", healthChar);
+		SetEntityHealth(prop, RoundFloat(health));
+		
+		char scalechar[16];
+		Format(scalechar, sizeof(scalechar), "%f", scale);
+		DispatchKeyValue(prop, "modelscale", scalechar);
+		
+		SetEntityGravity(prop, 0.0);
+		
 		//TODO: Spawn the prop_physics, make it float above the ground if spawned on the ground, if it spawns too close to a wall it should face away from the wall.
 		//The prop_physics should be invisible, with a prop_dynamic parented to it to handle the visuals and animations.
 		//The prop_physics needs to be added to the user's queue of sentries.
