@@ -74,4 +74,9 @@ No matter how good you are at programming, you're not going to get very far in g
 ### Spookmaster Bones
  - **[Vargskelethor, AKA Vinesauce Joel](https://www.twitch.tv/vargskelethor)** (Voice)
  - **[The 14th Doctor](https://gamebanana.com/members/1448519)** (Creator of the **[Vinesauce Joel Over Soldier Voice Pack](https://gamebanana.com/sounds/46534)** mod which I took specific sound clips from for dialogue)
+### Christian Brutal Sniper
+ - **Kekas vas Normandy** (Character Creator, link missing due to channel takedown)
+ - **[Badass]()** (Created the team-colored skins)
+### Demopan
+ - **[ichbinpwnzilla](https://www.reddit.com/r/tf2/comments/ensgh/the_new_face_of_tf2/)** (Character Creator)
 </details>
