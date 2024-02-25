@@ -11,6 +11,8 @@
 #define MODEL_ROPE_RED	"materials/cable/cable_red.vmt"
 #define MODEL_ROPE_BLUE	"materials/cable/cable_blue.vmt"
 #define MODEL_DRG		"models/weapons/w_models/w_drg_ball.mdl"
+#define MODEL_DRONE_PARENT	"models/props_c17/cashregister01a.mdl"
+#define MODEL_DRONE_VISUAL	"models/player/items/all_class/pet_robro.mdl"
 
 #define SOUND_TOSS_BUILD_1	"weapons/sentry_upgrading1.wav"
 #define SOUND_TOSS_BUILD_2	"weapons/sentry_upgrading2.wav"
@@ -30,6 +32,8 @@ public void OnMapStart()
 	PrecacheModel(MODEL_ROPE_RED);
 	PrecacheModel(MODEL_ROPE_BLUE);
 	PrecacheModel(MODEL_DRG);
+	PrecacheModel(MODEL_DRONE_PARENT);
+	PrecacheModel(MODEL_DRONE_VISUAL);
 	
 	PrecacheSound(SOUND_TOSS_BUILD_1);
 	PrecacheSound(SOUND_TOSS_BUILD_2);
@@ -71,6 +75,78 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 		Toss_Activate(client, abilityName);
 }
 
+enum struct CustomSentry
+{
+	int owner;
+	int entity;
+	int dummy;
+	
+	float hoverHeight;
+	float scale;
+	float radiusDetection;
+	float radiusFire;
+	float turnRate;
+	float fireRate;
+	float damage;
+	float maxHealth;
+
+	void CreateFromArgs(int client, char abilityName[255], int entity)
+	{
+		this.owner = GetClientUserId(client);
+		this.entity = EntIndexToEntRef(entity);
+		
+		this.hoverHeight = CF_GetArgF(client, GADGETEER, abilityName, "height");
+		this.scale = CF_GetArgF(client, GADGETEER, abilityName, "scale");
+		this.radiusDetection = CF_GetArgF(client, GADGETEER, abilityName, "radius_detect");
+		this.radiusFire = CF_GetArgF(client, GADGETEER, abilityName, "radius_fire");
+		this.turnRate = CF_GetArgF(client, GADGETEER, abilityName, "rotation");
+		this.fireRate = CF_GetArgF(client, GADGETEER, abilityName, "rate");
+		this.damage = CF_GetArgF(client, GADGETEER, abilityName, "damage");
+		this.maxHealth = CF_GetArgF(client, GADGETEER, abilityName, "max_health");
+	}
+	
+	void CopyFromOther(CustomSentry other, int entity)
+	{
+		this.owner = other.owner;
+		this.entity = EntIndexToEntRef(entity);
+		
+		this.hoverHeight = other.hoverHeight;
+		this.scale = other.scale;
+		this.radiusDetection = other.radiusDetection;
+		this.radiusFire = other.radiusFire;
+		this.turnRate = other.turnRate;
+		this.fireRate = other.fireRate;
+		this.damage = other.damage;
+		this.maxHealth = other.maxHealth;
+	}
+	
+	void Activate()
+	{
+		int prop = EntRefToEntIndex(this.entity);
+		if (!IsValidEntity(prop))
+			return;
+			
+		SetEntProp(prop, Prop_Send, "m_fEffects", 32);
+		TFTeam team = view_as<TFTeam>(GetEntProp(prop, Prop_Send, "m_iTeamNum"));
+		int model = AttachModelToEntity(MODEL_DRONE_VISUAL, "", prop, _, team == TFTeam_Red ? "0" : "1");
+		if (IsValidEntity(model))
+		{
+			this.dummy = EntIndexToEntRef(model);
+			char scalechar[16];
+			Format(scalechar, sizeof(scalechar), "%f", this.scale);
+			DispatchKeyValue(model, "modelscale", scalechar);
+			SetEntityGravity(model, 0.0);
+		}
+		
+		SetEntityGravity(prop, 0.0);
+	}
+	
+	void Destroy()
+	{
+		
+	}
+}
+
 int Toss_Owner[2049] = { -1, ... };
 int Toss_Max[MAXPLAYERS + 1] = { 0, ... };
 
@@ -79,6 +155,8 @@ float Toss_KB[2049] = { 0.0, ... };
 float Toss_FacingAng[2049][3];
 
 Queue Toss_Sentries[MAXPLAYERS + 1] = { null, ... };
+
+CustomSentry Toss_SentryStats[2049];
 
 public void Toss_Activate(int client, char abilityName[255])
 {
@@ -94,6 +172,8 @@ public void Toss_Activate(int client, char abilityName[255])
 		
 		Toss_DMG[toolbox] = CF_GetArgF(client, GADGETEER, abilityName, "damage");
 		Toss_KB[toolbox] = CF_GetArgF(client, GADGETEER, abilityName, "knockback");
+		
+		Toss_SentryStats[toolbox].CreateFromArgs(client, abilityName, toolbox);
 		
 		GetClientEyeAngles(client, Toss_FacingAng[toolbox]);
 		Toss_FacingAng[toolbox][0] = 0.0;
@@ -135,6 +215,8 @@ public MRESReturn Toss_Explode(int toolbox)
 	int prop = CreateEntityByName("prop_physics_override");
 	if (IsValidEntity(prop))
 	{
+		Toss_SentryStats[prop].CopyFromOther(Toss_SentryStats[toolbox], prop);
+		
 		DispatchKeyValue(prop, "targetname", "droneparent"); 
 		DispatchKeyValue(prop, "model", MODEL_DRONE_PARENT);
 		
@@ -145,20 +227,24 @@ public MRESReturn Toss_Explode(int toolbox)
 		if (IsValidClient(owner))
 		{
 			SetEntPropEnt(prop, Prop_Data, "m_hOwnerEntity", owner);
-			SetEntProp(prop, Prop_Send, "m_iTeamNum", GetClientTeam(owner));
+			SetEntProp(prop, Prop_Send, "m_iTeamNum", team);
 		}
 		
-		DispatchKeyValue(prop, "skin", skin);
+		DispatchKeyValue(prop, "skin", TF2_GetClientTeam(owner) == TFTeam_Red ? "0" : "1");
+		float health = Toss_SentryStats[prop].maxHealth;
 		char healthChar[16];
 		Format(healthChar, sizeof(healthChar), "%i", RoundFloat(health));
 		DispatchKeyValue(prop, "Health", healthChar);
 		SetEntityHealth(prop, RoundFloat(health));
 		
 		char scalechar[16];
-		Format(scalechar, sizeof(scalechar), "%f", scale);
+		Format(scalechar, sizeof(scalechar), "%f", Toss_SentryStats[prop].scale);
 		DispatchKeyValue(prop, "modelscale", scalechar);
 		
 		SetEntityGravity(prop, 0.0);
+		
+		Toss_SentryStats[prop].Activate();
+		TeleportEntity(prop, pos);
 		
 		//TODO: Spawn the prop_physics, make it float above the ground if spawned on the ground, if it spawns too close to a wall it should face away from the wall.
 		//The prop_physics should be invisible, with a prop_dynamic parented to it to handle the visuals and animations.
