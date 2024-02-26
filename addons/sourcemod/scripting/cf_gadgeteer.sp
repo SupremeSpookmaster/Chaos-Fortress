@@ -143,6 +143,7 @@ enum struct CustomSentry
 		
 		SetEntityGravity(prop, 0.0);
 		SetEntityCollisionGroup(prop, 23);
+		SetEntityMoveType(prop, MOVETYPE_FLY);
 		
 		Toss_AddToQueue(owner, prop);
 		
@@ -271,6 +272,8 @@ public MRESReturn Toss_Explode(int toolbox)
 		• If it spawns too close to a wall it should face away from the wall.
 		• The prop_physics needs custom sentry logic (turns to face targets, shoots them, etc). This logic can also handle the levitation effect.
 		• Figure out why the custom model scale doesn't work for the prop_dynamic.
+		• If a player switches from Gadgeteer to a different character, their sentries do not get destroyed. This is abusable and needs to be fixed.
+			○ Add a "CF_OnCharacterSwitched" forward which gets called when a player spawns as a new character.
 		• Need to make a custom-rigged and animated version of the Drone for animations. This model needs to have working physics.
 			○ This should be done last so that we don't waste the effort if something makes the ability unsalvageable.
 		*/
@@ -363,6 +366,21 @@ public void CF_OnCharacterRemoved(int client)
 
 public void OnClientDisconnect(int client)
 {
+	Toss_DeleteSentries(client);
+}
+
+public void Toss_DeleteSentries(int client)
+{
+	if (Toss_Sentries[client] != null)
+	{
+		while (!Toss_Sentries[client].Empty)
+		{
+			int ent = EntRefToEntIndex(Toss_Sentries[client].Pop());
+			if (IsValidEntity(ent))
+				RemoveEntity(ent);
+		}
+	}
+	
 	delete Toss_Sentries[client];
 }
 
