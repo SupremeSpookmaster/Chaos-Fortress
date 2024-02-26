@@ -89,6 +89,8 @@ enum struct CustomSentry
 	float fireRate;
 	float damage;
 	float maxHealth;
+	
+	bool exists;
 
 	void CreateFromArgs(int client, char abilityName[255], int entity)
 	{
@@ -123,7 +125,8 @@ enum struct CustomSentry
 	void Activate()
 	{
 		int prop = EntRefToEntIndex(this.entity);
-		if (!IsValidEntity(prop))
+		int owner = GetClientOfUserId(this.owner);
+		if (!IsValidEntity(prop) || !IsValidClient(owner))
 			return;
 			
 		SetEntProp(prop, Prop_Send, "m_fEffects", 32);
@@ -139,12 +142,28 @@ enum struct CustomSentry
 		}
 		
 		SetEntityGravity(prop, 0.0);
+		
+		Toss_AddToQueue(owner, prop);
+		
+		RequestFrame(Toss_CustomSentryLogic, this.entity);
+		
+		this.exists = true;
 	}
 	
 	void Destroy()
 	{
-		
+		//TODO: Play sounds, fancy explosion effects, etc
+		this.exists = false;
 	}
+}
+
+public void Toss_CustomSentryLogic(int ref)
+{
+	int entity = EntRefToEntIndex(ref);
+	if (!IsValidEntity(entity))
+		return;
+		
+	
 }
 
 int Toss_Owner[2049] = { -1, ... };
@@ -244,7 +263,7 @@ public MRESReturn Toss_Explode(int toolbox)
 		SetEntityGravity(prop, 0.0);
 		
 		Toss_SentryStats[prop].Activate();
-		TeleportEntity(prop, pos);
+		TeleportEntity(prop, pos, Toss_FacingAng[toolbox]);
 		
 		//TODO: Spawn the prop_physics, make it float above the ground if spawned on the ground, if it spawns too close to a wall it should face away from the wall.
 		//The prop_physics should be invisible, with a prop_dynamic parented to it to handle the visuals and animations.
@@ -355,6 +374,11 @@ public void OnEntityDestroyed(int entity)
 			}
 			
 			Toss_Owner[entity] = -1;
+		}
+		
+		if (Toss_SentryStats[entity].exists)
+		{
+			Toss_SentryStats[entity].Destroy();
 		}
 	}
 }
