@@ -142,6 +142,7 @@ enum struct CustomSentry
 		}
 		
 		SetEntityGravity(prop, 0.0);
+		SetEntityCollisionGroup(prop, 23);
 		
 		Toss_AddToQueue(owner, prop);
 		
@@ -265,10 +266,14 @@ public MRESReturn Toss_Explode(int toolbox)
 		Toss_SentryStats[prop].Activate();
 		TeleportEntity(prop, pos, Toss_FacingAng[toolbox]);
 		
-		//TODO: Spawn the prop_physics, make it float above the ground if spawned on the ground, if it spawns too close to a wall it should face away from the wall.
-		//The prop_physics should be invisible, with a prop_dynamic parented to it to handle the visuals and animations.
-		//The prop_physics needs to be added to the user's queue of sentries.
-		//The prop_physics needs custom sentry logic (turns to face targets, shoots them, etc).
+		/*
+		TODO: 
+		• If it spawns too close to a wall it should face away from the wall.
+		• The prop_physics needs custom sentry logic (turns to face targets, shoots them, etc). This logic can also handle the levitation effect.
+		• Figure out why the custom model scale doesn't work for the prop_dynamic.
+		• Need to make a custom-rigged and animated version of the Drone for animations. This model needs to have working physics.
+			○ This should be done last so that we don't waste the effort if something makes the ability unsalvageable.
+		*/
 	}
 	
 	RemoveEntity(toolbox);
