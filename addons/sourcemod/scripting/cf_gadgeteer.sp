@@ -75,11 +75,23 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 		Toss_Activate(client, abilityName);
 }
 
+int Toss_Owner[2049] = { -1, ... };
+int Toss_Max[MAXPLAYERS + 1] = { 0, ... };
+
+float Toss_DMG[2049] = { 0.0, ... };
+float Toss_KB[2049] = { 0.0, ... };
+float Toss_FacingAng[2049][3];
+
+Queue Toss_Sentries[MAXPLAYERS + 1] = { null, ... };
+
+CustomSentry Toss_SentryStats[2049];
+
 enum struct CustomSentry
 {
 	int owner;
 	int entity;
 	int dummy;
+	int target;
 	
 	float hoverHeight;
 	float scale;
@@ -89,8 +101,12 @@ enum struct CustomSentry
 	float fireRate;
 	float damage;
 	float maxHealth;
+	float turnDirection;
+	float startingYaw;
+	float yawOffset;
 	
 	bool exists;
+	bool shooting;
 
 	void CreateFromArgs(int client, char abilityName[255], int entity)
 	{
@@ -129,7 +145,11 @@ enum struct CustomSentry
 		if (!IsValidEntity(prop) || !IsValidClient(owner))
 			return;
 			
-		SetEntProp(prop, Prop_Send, "m_fEffects", 32);
+			
+		float angles[3];
+		GetEntPropVector(prop, Prop_Send, "m_angRotation", angles);
+		
+		//SetEntProp(prop, Prop_Send, "m_fEffects", 32);
 		TFTeam team = view_as<TFTeam>(GetEntProp(prop, Prop_Send, "m_iTeamNum"));
 		int model = AttachModelToEntity(MODEL_DRONE_VISUAL, "", prop, _, team == TFTeam_Red ? "0" : "1");
 		if (IsValidEntity(model))
@@ -139,6 +159,7 @@ enum struct CustomSentry
 			Format(scalechar, sizeof(scalechar), "%f", this.scale);
 			DispatchKeyValue(model, "modelscale", scalechar);
 			SetEntityGravity(model, 0.0);
+			TeleportEntity(model, NULL_VECTOR, angles);
 		}
 		
 		SetEntityGravity(prop, 0.0);
@@ -146,6 +167,11 @@ enum struct CustomSentry
 		SetEntityMoveType(prop, MOVETYPE_FLY);
 		
 		Toss_AddToQueue(owner, prop);
+		
+		this.startingYaw = angles[1];
+		CPrintToChatAll("Starting yaw: %f", this.startingYaw);
+		this.turnDirection = 1.0;
+		this.yawOffset = 0.0
 		
 		RequestFrame(Toss_CustomSentryLogic, this.entity);
 		
@@ -156,6 +182,7 @@ enum struct CustomSentry
 	{
 		//TODO: Play sounds, fancy explosion effects, etc
 		this.exists = false;
+		this.shooting = false;
 	}
 }
 
@@ -165,19 +192,130 @@ public void Toss_CustomSentryLogic(int ref)
 	if (!IsValidEntity(entity))
 		return;
 		
+	int dummy = EntRefToEntIndex(Toss_SentryStats[entity].dummy);
+	if (!IsValidEntity(dummy))
+		return;
+		
+	TFTeam team = view_as<TFTeam>(GetEntProp(entity, Prop_Send, "m_iTeamNum"));
+	int owner = GetClientOfUserId(Toss_SentryStats[entity].owner);
+	int target = GetClientOfUserId(Toss_SentryStats[entity].target);
+	float turnSpeed = Toss_SentryStats[entity].turnRate;
 	
+	float distance;
+	float angles[3];
+	GetEntPropVector(entity, Prop_Send, "m_angRotation", angles);
+	
+	//We do not currently have a target, find one:
+	if (!IsValidMulti(target))
+	{
+		target = Toss_GetClosestTarget(entity, team == TFTeam_Red ? TFTeam_Blue : TFTeam_Red, distance);
+		if (distance > Toss_SentryStats[entity].radiusDetection)
+			target = -1;
+		//TODO: Emit targeting sound
+	}
+	
+	if (IsValidMulti(target))	//We have a target, rotate to face them and fire if we are able.
+	{
+		CPrintToChatAll("Found target %N", target);
+		float pos[3], otherPos[3];
+		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+		GetClientAbsOrigin(target, otherPos);
+		
+		//The target has escaped our firing radius, un-lock.
+		if (GetVectorDistance(pos, otherPos) > Toss_SentryStats[entity].radiusFire)
+		{
+			target = -1;
+			CPrintToChatAll("Target is too far away to shoot");
+		}
+		else	//The target is still in our firing radius, turn to face them and fire if able.
+		{
+			CPrintToChatAll("Attempting to attack %N", target);
+		}
+	}
+	else	//We did not find a target, keep rotating normally.
+	{
+		turnSpeed *= 0.5;
+		
+		if (angles[0] != 0.0)
+		{
+			if (angles[0] < 0.0)
+			{
+				angles[0] += turnSpeed;
+				if (angles[0] > 0.0)
+					angles[0] = 0.0;
+			}
+			else
+			{
+				angles[0] -= turnSpeed;
+				if (angles[0] < 0.0)
+					angles[0] = 0.0;
+			}
+		}
+		
+		float yawOffset = Toss_SentryStats[entity].yawOffset;
+		float turnDir = Toss_SentryStats[entity].turnDirection;
+		if (turnDir < 0.0)
+		{
+			yawOffset -= turnSpeed;
+			if (yawOffset <= -45.0)
+			{	
+				yawOffset = -45.0;
+				Toss_SentryStats[entity].turnDirection *= -1.0;
+			}
+		}
+		else
+		{
+			yawOffset += turnSpeed;
+			if (yawOffset >= 45.0)
+			{	
+				yawOffset = 45.0;
+				Toss_SentryStats[entity].turnDirection *= -1.0;
+			}
+		}
+		
+		Toss_SentryStats[entity].yawOffset = yawOffset;
+		
+		angles[1] = Toss_SentryStats[entity].startingYaw + yawOffset;
+		
+		if (angles[2] != 0.0)
+			angles[2] = 0.0;
+			
+		TeleportEntity(entity, NULL_VECTOR, angles);
+		//TeleportEntity(dummy, NULL_VECTOR, angles);
+	}
+		
+	RequestFrame(Toss_CustomSentryLogic, ref);
 }
 
-int Toss_Owner[2049] = { -1, ... };
-int Toss_Max[MAXPLAYERS + 1] = { 0, ... };
-
-float Toss_DMG[2049] = { 0.0, ... };
-float Toss_KB[2049] = { 0.0, ... };
-float Toss_FacingAng[2049][3];
-
-Queue Toss_Sentries[MAXPLAYERS + 1] = { null, ... };
-
-CustomSentry Toss_SentryStats[2049];
+//TODO: Convert this to a Chaos Fortress native with the ability to pass a function to filter out targets. 
+//This native should cycle through all entities, not just players.
+public int Toss_GetClosestTarget(int entity, TFTeam targetTeam, float &distance)
+{
+	int closest = -1;
+	float closestDist = 999999.0;
+	
+	float pos[3];
+	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+	
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (!IsValidMulti(i, true, true, true, targetTeam))
+			continue;
+			
+		float otherPos[3];
+		GetClientAbsOrigin(i, otherPos);
+		float dist = GetVectorDistance(pos, otherPos);
+		
+		if (dist < closestDist/* && Toss_HasLineOfSight(entity, i)TODO LOS CHECK*/)
+		{
+			closest = i;
+			closestDist = dist;
+			distance = closestDist;
+		}
+	}
+	
+	return closest;
+}
 
 public void Toss_Activate(int client, char abilityName[255])
 {
@@ -264,18 +402,23 @@ public MRESReturn Toss_Explode(int toolbox)
 		
 		SetEntityGravity(prop, 0.0);
 		
-		Toss_SentryStats[prop].Activate();
 		TeleportEntity(prop, pos, Toss_FacingAng[toolbox]);
+		Toss_SentryStats[prop].Activate();
 		
 		/*
 		TODO: 
 		• If it spawns too close to a wall it should face away from the wall.
 		• The prop_physics needs custom sentry logic (turns to face targets, shoots them, etc). This logic can also handle the levitation effect.
+			○ Don't forget: the sentry needs to have visuals indicating it is damaged, as well as a sound which is played to the owner.
+			○ Detect if the owner is aiming at the sentry and display a worldtext entity showing its current HP if they are.
+			○ Rotation works as intended (minus aiming at targets, that is not yet implemented).
 		• Figure out why the custom model scale doesn't work for the prop_dynamic.
 		• If a player switches from Gadgeteer to a different character, their sentries do not get destroyed. This is abusable and needs to be fixed.
 			○ Add a "CF_OnCharacterSwitched" forward which gets called when a player spawns as a new character.
 		• Need to make a custom-rigged and animated version of the Drone for animations. This model needs to have working physics.
 			○ This should be done last so that we don't waste the effort if something makes the ability unsalvageable.
+		• Since the model is small and doesn't have a lot of obvious team color which can be seen from a distance, attach a team-colored particle to it.
+			○ The Payload cart lights would be perfect for this.
 		*/
 	}
 	
