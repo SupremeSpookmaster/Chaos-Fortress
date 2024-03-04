@@ -2,6 +2,7 @@
 #include <sdkhooks>
 #include <tf2_stocks>
 #include <cf_stocks>
+#include <math>
 
 #define GADGETEER		"cf_gadgeteer"
 #define TOSS			"gadgeteer_sentry_toss"
@@ -104,6 +105,7 @@ enum struct CustomSentry
 	float turnDirection;
 	float startingYaw;
 	float yawOffset;
+	float NextShot;
 	
 	bool exists;
 	bool shooting;
@@ -186,6 +188,9 @@ enum struct CustomSentry
 	}
 }
 
+//TODO: Modify lerp logic into a custom function so that the sentries don't flip around wildly.
+//Also, add a minimum turn speed so that lerping doesn't make them turn super slow.
+
 public void Toss_CustomSentryLogic(int ref)
 {
 	int entity = EntRefToEntIndex(ref);
@@ -216,7 +221,6 @@ public void Toss_CustomSentryLogic(int ref)
 	
 	if (IsValidMulti(target))	//We have a target, rotate to face them and fire if we are able.
 	{
-		CPrintToChatAll("Found target %N", target);
 		float pos[3], otherPos[3];
 		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
 		GetClientAbsOrigin(target, otherPos);
@@ -224,40 +228,65 @@ public void Toss_CustomSentryLogic(int ref)
 		//The target has escaped our firing radius, un-lock.
 		if (GetVectorDistance(pos, otherPos) > Toss_SentryStats[entity].radiusFire)
 		{
+			CPrintToChatAll("Disengaging target as they have escaped our range");
 			target = -1;
-			CPrintToChatAll("Target is too far away to shoot");
+			Toss_SentryStats[entity].target = -1;
 		}
 		else	//The target is still in our firing radius, turn to face them and fire if able.
 		{
-			CPrintToChatAll("Attempting to attack %N", target);
+			otherPos[2] += 40.0 * (CF_GetCharacterScale(target));
+			float dummyAng[3], targAng[3];
+			GetAngleToPoint(entity, otherPos, dummyAng, targAng);
+			//TODO: This needs to be changed to something else, it causes the sentry to just randomly spin if the angle is too great.
+			for (int i = 0; i < 2; i++)
+			{
+				angles[i] = LerpFloat(turnSpeed, angles[i], targAng[i]);
+				
+				//If we're close enough, snap onto the target so we can fire instead of lerping into eternity:
+				float test1 = angles[i] < 0.0 ? -angles[i] : angles[i];
+				float test2 = targAng[i] < 0.0 ? -targAng[i] : targAng[i];
+				
+				if (test2 > test1)
+				{
+					if (test2 - test1 < 1.0)
+						angles[i] = targAng[i];
+				}
+				else
+				{
+					if (test1 - test2 < 1.0)
+						angles[i] = targAng[i];
+				}
+			}
+			
+			TeleportEntity(entity, NULL_VECTOR, angles);
+			
+			float gt = GetGameTime();
+			if (gt >= Toss_SentryStats[entity].NextShot && (angles[0] == targAng[0] && angles[1] == targAng[1]))
+			{
+				//TODO: VFX and SFX. Play sound, spawn muzzle flash, spawn laser beam. Also animations.
+				Toss_SentryStats[entity].NextShot = gt + Toss_SentryStats[entity].fireRate;
+				SDKHooks_TakeDamage(target, entity, owner, Toss_SentryStats[entity].damage, DMG_BULLET);
+				CPrintToChatAll("FIRED AT %N", target);
+			}
+			
+			Toss_SentryStats[entity].target = GetClientUserId(target);
 		}
 	}
 	else	//We did not find a target, keep rotating normally.
 	{
-		turnSpeed *= 0.5;
-		
 		if (angles[0] != 0.0)
 		{
-			if (angles[0] < 0.0)
-			{
-				angles[0] += turnSpeed;
-				if (angles[0] > 0.0)
-					angles[0] = 0.0;
-			}
-			else
-			{
-				angles[0] -= turnSpeed;
-				if (angles[0] < 0.0)
-					angles[0] = 0.0;
-			}
+			angles[0] = LerpFloat(turnSpeed, angles[0], 0.0);
 		}
 		
 		float yawOffset = Toss_SentryStats[entity].yawOffset;
 		float turnDir = Toss_SentryStats[entity].turnDirection;
+		float startYaw = Toss_SentryStats[entity].startingYaw;
 		if (turnDir < 0.0)
 		{
-			yawOffset -= turnSpeed;
-			if (yawOffset <= -45.0)
+			yawOffset = LerpFloat(turnSpeed, yawOffset, startYaw - 45.0);
+
+			if (45.0 + yawOffset <= 1.0)
 			{	
 				yawOffset = -45.0;
 				Toss_SentryStats[entity].turnDirection *= -1.0;
@@ -265,8 +294,9 @@ public void Toss_CustomSentryLogic(int ref)
 		}
 		else
 		{
-			yawOffset += turnSpeed;
-			if (yawOffset >= 45.0)
+			yawOffset = LerpFloat(turnSpeed, yawOffset, startYaw + 45.0);
+
+			if (45.0 - yawOffset <= 1.0)
 			{	
 				yawOffset = 45.0;
 				Toss_SentryStats[entity].turnDirection *= -1.0;
@@ -278,7 +308,9 @@ public void Toss_CustomSentryLogic(int ref)
 		angles[1] = Toss_SentryStats[entity].startingYaw + yawOffset;
 		
 		if (angles[2] != 0.0)
-			angles[2] = 0.0;
+		{
+			angles[2] = LerpFloat(turnSpeed, angles[2], 0.0);
+		}
 			
 		TeleportEntity(entity, NULL_VECTOR, angles);
 		//TeleportEntity(dummy, NULL_VECTOR, angles);
