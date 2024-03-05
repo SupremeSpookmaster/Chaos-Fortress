@@ -237,25 +237,35 @@ public void Toss_CustomSentryLogic(int ref)
 			otherPos[2] += 40.0 * (CF_GetCharacterScale(target));
 			float dummyAng[3], targAng[3];
 			GetAngleToPoint(entity, otherPos, dummyAng, targAng);
-			//TODO: This needs to be changed to something else, it causes the sentry to just randomly spin if the angle is too great.
+			
+			//TODO: If the target pitch is negative, the sentry does a full flip before aiming, figure out a fix.
 			for (int i = 0; i < 2; i++)
 			{
-				angles[i] = LerpFloat(turnSpeed, angles[i], targAng[i]);
+				float test = targAng[i];
+				float test2 = angles[i];
+				if (test < 0.0)
+					test *= -1.0;
+				if (test2 < 0.0)
+					test2 *= -1.0;
 				
-				//If we're close enough, snap onto the target so we can fire instead of lerping into eternity:
-				float test1 = angles[i] < 0.0 ? -angles[i] : angles[i];
-				float test2 = targAng[i] < 0.0 ? -targAng[i] : targAng[i];
-				
-				if (test2 > test1)
-				{
-					if (test2 - test1 < 1.0)
-						angles[i] = targAng[i];
-				}
+				//float diff;
+				if (test > test2)
+					angles[i] = ClampFloat(test2 + turnSpeed, test2, test);
 				else
+					angles[i] = ClampFloat(test2 - turnSpeed, test, test2);
+					
+				/*if (diff == 0.0)
+					continue;
+					
+				
+				if (test[i] > angles[i])
 				{
-					if (test1 - test2 < 1.0)
-						angles[i] = targAng[i];
+					angles[i] = ClampFloat(angles[i] + turnSpeed, angles[i], targAng[i]);
 				}
+				else if (angles[i] > targAng[i])
+				{
+					angles[i] = ClampFloat(angles[i] - turnSpeed, targAng[i], angles[i]);
+				}*/
 			}
 			
 			TeleportEntity(entity, NULL_VECTOR, angles);
@@ -274,43 +284,34 @@ public void Toss_CustomSentryLogic(int ref)
 	}
 	else	//We did not find a target, keep rotating normally.
 	{
+		turnSpeed *= 0.5;
+		
 		if (angles[0] != 0.0)
 		{
-			angles[0] = LerpFloat(turnSpeed, angles[0], 0.0);
+			if (angles[0] < 0.0)
+				angles[0] = ClampFloat(angles[0] + turnSpeed, -99999.0, 0.0);
+			else if (angles[0] > 0.0)
+				angles[0] = ClampFloat(angles[0] - turnSpeed, 0.0, 999999.0);
+		}
+		
+		if (angles[2] != 0.0)
+		{
+			if (angles[2] < 0.0)
+				angles[2] = ClampFloat(angles[2] + turnSpeed, -99999.0, 0.0);
+			else if (angles[2] > 0.0)
+				angles[2] = ClampFloat(angles[2] - turnSpeed, 0.0, 999999.0);
 		}
 		
 		float yawOffset = Toss_SentryStats[entity].yawOffset;
 		float turnDir = Toss_SentryStats[entity].turnDirection;
-		float startYaw = Toss_SentryStats[entity].startingYaw;
-		if (turnDir < 0.0)
-		{
-			yawOffset = LerpFloat(turnSpeed, yawOffset, startYaw - 45.0);
-
-			if (45.0 + yawOffset <= 1.0)
-			{	
-				yawOffset = -45.0;
-				Toss_SentryStats[entity].turnDirection *= -1.0;
-			}
-		}
-		else
-		{
-			yawOffset = LerpFloat(turnSpeed, yawOffset, startYaw + 45.0);
-
-			if (45.0 - yawOffset <= 1.0)
-			{	
-				yawOffset = 45.0;
-				Toss_SentryStats[entity].turnDirection *= -1.0;
-			}
-		}
+		
+		yawOffset = ClampFloat(yawOffset + (turnSpeed * turnDir), -45.0, 45.0);
+		if (yawOffset <= -45.0 || yawOffset >= 45.0)
+			Toss_SentryStats[entity].turnDirection *= -1.0;
 		
 		Toss_SentryStats[entity].yawOffset = yawOffset;
 		
 		angles[1] = Toss_SentryStats[entity].startingYaw + yawOffset;
-		
-		if (angles[2] != 0.0)
-		{
-			angles[2] = LerpFloat(turnSpeed, angles[2], 0.0);
-		}
 			
 		TeleportEntity(entity, NULL_VECTOR, angles);
 		//TeleportEntity(dummy, NULL_VECTOR, angles);
