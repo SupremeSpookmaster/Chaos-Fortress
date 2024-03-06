@@ -188,8 +188,20 @@ enum struct CustomSentry
 	}
 }
 
-//TODO: Modify lerp logic into a custom function so that the sentries don't flip around wildly.
-//Also, add a minimum turn speed so that lerping doesn't make them turn super slow.
+int Toss_TraceTarget = -1;
+int Toss_TraceTeam = -1;
+
+public bool Toss_IgnoreAllButTarget(entity, contentsMask)
+{
+	return entity == Toss_TraceTarget;
+}
+
+public bool Toss_OnlyHitEnemies(entity, contentsMask)
+{
+	TFTeam otherTeam = view_as<TFTeam>(GetEntProp(entity, Prop_Send, "m_iTeamNum"));
+	TFTeam thisTeam = view_as<TFTeam>(Toss_TraceTeam);
+	return (otherTeam == TFTeam_Blue && thisTeam == TFTeam_Red) || (otherTeam == TFTeam_Red && thisTeam == TFTeam_Blue);
+}
 
 public void Toss_CustomSentryLogic(int ref)
 {
@@ -216,6 +228,7 @@ public void Toss_CustomSentryLogic(int ref)
 		target = Toss_GetClosestTarget(entity, team == TFTeam_Red ? TFTeam_Blue : TFTeam_Red, distance);
 		if (distance > Toss_SentryStats[entity].radiusDetection)
 			target = -1;
+			
 		//TODO: Emit targeting sound
 	}
 	
@@ -237,46 +250,35 @@ public void Toss_CustomSentryLogic(int ref)
 			otherPos[2] += 40.0 * (CF_GetCharacterScale(target));
 			float dummyAng[3], targAng[3];
 			GetAngleToPoint(entity, otherPos, dummyAng, targAng);
-			
-			//TODO: If the target pitch is negative, the sentry does a full flip before aiming, figure out a fix.
+		
 			for (int i = 0; i < 2; i++)
 			{
-				float test = targAng[i];
-				float test2 = angles[i];
-				if (test < 0.0)
-					test *= -1.0;
-				if (test2 < 0.0)
-					test2 *= -1.0;
-				
-				//float diff;
-				if (test > test2)
-					angles[i] = ClampFloat(test2 + turnSpeed, test2, test);
-				else
-					angles[i] = ClampFloat(test2 - turnSpeed, test, test2);
-					
-				/*if (diff == 0.0)
-					continue;
-					
-				
-				if (test[i] > angles[i])
-				{
-					angles[i] = ClampFloat(angles[i] + turnSpeed, angles[i], targAng[i]);
-				}
-				else if (angles[i] > targAng[i])
-				{
-					angles[i] = ClampFloat(angles[i] - turnSpeed, targAng[i], angles[i]);
-				}*/
+				angles[i] = ApproachAngle(targAng[i], angles[i], turnSpeed);
 			}
 			
 			TeleportEntity(entity, NULL_VECTOR, angles);
+			SpawnBeam_Vectors(pos, otherPos, 0.1, 255, 255, 255, 255, PrecacheModel("materials/sprites/laserbeam.vmt"), _, _, _, 0.0);
 			
 			float gt = GetGameTime();
-			if (gt >= Toss_SentryStats[entity].NextShot && (angles[0] == targAng[0] && angles[1] == targAng[1]))
+			if (gt >= Toss_SentryStats[entity].NextShot && Toss_CanFireAtTarget(entity, target))
 			{
 				//TODO: VFX and SFX. Play sound, spawn muzzle flash, spawn laser beam. Also animations.
 				Toss_SentryStats[entity].NextShot = gt + Toss_SentryStats[entity].fireRate;
-				SDKHooks_TakeDamage(target, entity, owner, Toss_SentryStats[entity].damage, DMG_BULLET);
-				CPrintToChatAll("FIRED AT %N", target);
+				
+				//TODO: Instead of just directly dealing damage, call a trace which hits ALL enemies and damage the first thing that gets hit.
+				//The sentry still will not fire unless it is aiming at the intended target, but the shot can still be bodyblocked by others.
+				
+				float endPos[3];
+				int victim = target;
+				Toss_TraceTeam = GetEntProp(entity, Prop_Send, "m_iTeamNum");
+				TR_TraceRayFilter(pos, angles, MASK_SHOT, RayType_Infinite, Toss_OnlyHitEnemies);
+				victim = TR_GetEntityIndex();
+				TR_GetEndPosition(endPos);
+				
+				SpawnBeam_Vectors(pos, otherPos, 0.33, 255, 0, 0, 255, PrecacheModel("materials/sprites/laserbeam.vmt"), 8.0, 8.0, _, 0.0);
+				
+				if (IsValidEntity(victim))
+					SDKHooks_TakeDamage(victim, entity, owner, Toss_SentryStats[entity].damage, DMG_BULLET);
 			}
 			
 			Toss_SentryStats[entity].target = GetClientUserId(target);
@@ -288,36 +290,41 @@ public void Toss_CustomSentryLogic(int ref)
 		
 		if (angles[0] != 0.0)
 		{
-			if (angles[0] < 0.0)
-				angles[0] = ClampFloat(angles[0] + turnSpeed, -99999.0, 0.0);
-			else if (angles[0] > 0.0)
-				angles[0] = ClampFloat(angles[0] - turnSpeed, 0.0, 999999.0);
+			angles[0] = ApproachAngle(0.0, angles[0], turnSpeed);
 		}
 		
 		if (angles[2] != 0.0)
 		{
-			if (angles[2] < 0.0)
-				angles[2] = ClampFloat(angles[2] + turnSpeed, -99999.0, 0.0);
-			else if (angles[2] > 0.0)
-				angles[2] = ClampFloat(angles[2] - turnSpeed, 0.0, 999999.0);
+			angles[2] = ApproachAngle(0.0, angles[2], turnSpeed);
 		}
 		
-		float yawOffset = Toss_SentryStats[entity].yawOffset;
 		float turnDir = Toss_SentryStats[entity].turnDirection;
+		angles[1] = ApproachAngle(Toss_SentryStats[entity].startingYaw + (turnDir * 45.0), angles[1], turnSpeed);
 		
-		yawOffset = ClampFloat(yawOffset + (turnSpeed * turnDir), -45.0, 45.0);
-		if (yawOffset <= -45.0 || yawOffset >= 45.0)
+		float diff = GetAngleDifference(angles[1], Toss_SentryStats[entity].startingYaw + (turnDir * 45.0));
+		
+		if (GetDifference(diff, turnSpeed) < turnSpeed)
 			Toss_SentryStats[entity].turnDirection *= -1.0;
-		
-		Toss_SentryStats[entity].yawOffset = yawOffset;
-		
-		angles[1] = Toss_SentryStats[entity].startingYaw + yawOffset;
 			
 		TeleportEntity(entity, NULL_VECTOR, angles);
-		//TeleportEntity(dummy, NULL_VECTOR, angles);
 	}
 		
 	RequestFrame(Toss_CustomSentryLogic, ref);
+}
+
+//This is used exclusively to see if the sentry is aiming at the target. It does not take line-of-sight or sentry range into account.
+bool Toss_CanFireAtTarget(int entity, int target)
+{
+	if (!IsValidEntity(entity) || !IsValidEntity(target))
+		return false;
+		
+	float ang[3], pos[3];
+	GetEntPropVector(entity, Prop_Send, "m_angRotation", ang);
+	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+	
+	Toss_TraceTarget = target;
+	TR_TraceRayFilter(pos, ang, MASK_SHOT, RayType_Infinite, Toss_IgnoreAllButTarget);
+	return TR_DidHit();
 }
 
 //TODO: Convert this to a Chaos Fortress native with the ability to pass a function to filter out targets. 
@@ -444,7 +451,6 @@ public MRESReturn Toss_Explode(int toolbox)
 		• The prop_physics needs custom sentry logic (turns to face targets, shoots them, etc). This logic can also handle the levitation effect.
 			○ Don't forget: the sentry needs to have visuals indicating it is damaged, as well as a sound which is played to the owner.
 			○ Detect if the owner is aiming at the sentry and display a worldtext entity showing its current HP if they are.
-			○ Rotation works as intended (minus aiming at targets, that is not yet implemented).
 		• Figure out why the custom model scale doesn't work for the prop_dynamic.
 		• If a player switches from Gadgeteer to a different character, their sentries do not get destroyed. This is abusable and needs to be fixed.
 			○ Add a "CF_OnCharacterSwitched" forward which gets called when a player spawns as a new character.

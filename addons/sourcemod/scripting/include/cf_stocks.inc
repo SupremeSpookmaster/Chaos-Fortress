@@ -50,6 +50,82 @@ enum ViewmodelSequence
 	VMS_Jarate_Throw
 };
 
+float ApproachAngle(float target, float value, float speed)
+{
+	target = anglemod(target);
+	value = anglemod(value);
+	
+	float delta = target - value;
+
+	// Speed is assumed to be positive
+	if (speed < 0)
+		speed = -speed;
+
+	if (delta < -180)
+		delta += 360;
+	else if (delta > 180)
+		delta -= 360;
+
+	if (delta > speed)
+		value += speed;
+	else if (delta < -speed)
+		value -= speed;
+	else 
+		value = target;
+
+	return value;
+}
+
+float anglemod(float angle)
+{
+	angle = fmodf(angle, 360.0);
+	
+	if (angle > 180) 
+	{
+		angle -= 360;
+	}
+	if (angle < -180)
+	{
+		angle += 360;
+	}
+	
+	return angle;
+}
+
+stock float fmodf(float num, float denom)
+{
+	return num - denom * RoundToFloor(num / denom);
+}
+
+float GetDifference(float a, float b)
+{
+	if (a < 0.0)
+		a *= -1.0;
+	if (b < 0.0)
+		b *= -1.0;
+		
+	float returnVal = a - b;
+	if (returnVal < 0.0)
+		returnVal *= -1.0;
+		
+	return returnVal;
+}
+
+float GetAngleDifference(float target, float value)
+{
+	target = anglemod(target);
+	value = anglemod(value);
+	
+	float delta = target - value;
+
+	if (delta < -180)
+		delta += 360;
+	else if (delta > 180)
+		delta -= 360;
+
+	return delta;
+}
+
 stock void Overlay_Apply(int client, const char[] overlay, int Methods = 0)
 {
 	if(Methods == 1 || Methods == 2)
