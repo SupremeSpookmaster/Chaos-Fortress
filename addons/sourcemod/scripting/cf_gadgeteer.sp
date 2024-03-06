@@ -171,7 +171,6 @@ enum struct CustomSentry
 		Toss_AddToQueue(owner, prop);
 		
 		this.startingYaw = angles[1];
-		CPrintToChatAll("Starting yaw: %f", this.startingYaw);
 		this.turnDirection = 1.0;
 		this.yawOffset = 0.0
 		
@@ -251,34 +250,45 @@ public void Toss_CustomSentryLogic(int ref)
 			float dummyAng[3], targAng[3];
 			GetAngleToPoint(entity, otherPos, dummyAng, targAng);
 		
+			bool CanShoot = true;
 			for (int i = 0; i < 2; i++)
 			{
 				angles[i] = ApproachAngle(targAng[i], angles[i], turnSpeed);
+				float test1 = NormalizeAngle(targAng[i]);
+				float diff = GetDifference(angles[i], test1);
+				//CPrintToChatAll("%sDIFF %i: %f", i == 0 ? "{red}" : "{blue}", i, diff);
+				if (diff > turnSpeed)
+					CanShoot = false;
+				else
+					angles[i] = targAng[i];
 			}
 			
 			TeleportEntity(entity, NULL_VECTOR, angles);
-			SpawnBeam_Vectors(pos, otherPos, 0.1, 255, 255, 255, 255, PrecacheModel("materials/sprites/laserbeam.vmt"), _, _, _, 0.0);
 			
 			float gt = GetGameTime();
-			if (gt >= Toss_SentryStats[entity].NextShot && Toss_CanFireAtTarget(entity, target))
+			if (gt >= Toss_SentryStats[entity].NextShot && CanShoot)
 			{
 				//TODO: VFX and SFX. Play sound, spawn muzzle flash, spawn laser beam. Also animations.
 				Toss_SentryStats[entity].NextShot = gt + Toss_SentryStats[entity].fireRate;
 				
 				//TODO: Instead of just directly dealing damage, call a trace which hits ALL enemies and damage the first thing that gets hit.
-				//The sentry still will not fire unless it is aiming at the intended target, but the shot can still be bodyblocked by others.
+				//The sentry still will not fire unless it is aiming at the intended target, but the shot can now be blocked by obstacles.
 				
 				float endPos[3];
 				int victim = target;
 				Toss_TraceTeam = GetEntProp(entity, Prop_Send, "m_iTeamNum");
-				TR_TraceRayFilter(pos, angles, MASK_SHOT, RayType_Infinite, Toss_OnlyHitEnemies);
+				TR_TraceRayFilter(pos, angles, MASK_SHOT, RayType_Infinite, Toss_OnlyHitEnemies, _, TRACE_ENTITIES_ONLY);
 				victim = TR_GetEntityIndex();
 				TR_GetEndPosition(endPos);
 				
 				SpawnBeam_Vectors(pos, otherPos, 0.33, 255, 0, 0, 255, PrecacheModel("materials/sprites/laserbeam.vmt"), 8.0, 8.0, _, 0.0);
 				
-				if (IsValidEntity(victim))
-					SDKHooks_TakeDamage(victim, entity, owner, Toss_SentryStats[entity].damage, DMG_BULLET);
+				Toss_TraceTarget = target;
+				GetPointFromAngles(pos, angles, 99999.0, otherPos, Toss_IgnoreAllButTarget, MASK_SHOT);
+				SpawnBeam_Vectors(pos, otherPos, 0.1, 255, 255, 255, 255, PrecacheModel("materials/sprites/laserbeam.vmt"), _, _, _, 0.0);
+				
+				//if (IsValidEntity(victim))
+				SDKHooks_TakeDamage(target, entity, owner, Toss_SentryStats[entity].damage, DMG_BULLET);
 			}
 			
 			Toss_SentryStats[entity].target = GetClientUserId(target);
@@ -310,21 +320,6 @@ public void Toss_CustomSentryLogic(int ref)
 	}
 		
 	RequestFrame(Toss_CustomSentryLogic, ref);
-}
-
-//This is used exclusively to see if the sentry is aiming at the target. It does not take line-of-sight or sentry range into account.
-bool Toss_CanFireAtTarget(int entity, int target)
-{
-	if (!IsValidEntity(entity) || !IsValidEntity(target))
-		return false;
-		
-	float ang[3], pos[3];
-	GetEntPropVector(entity, Prop_Send, "m_angRotation", ang);
-	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
-	
-	Toss_TraceTarget = target;
-	TR_TraceRayFilter(pos, ang, MASK_SHOT, RayType_Infinite, Toss_IgnoreAllButTarget);
-	return TR_DidHit();
 }
 
 //TODO: Convert this to a Chaos Fortress native with the ability to pass a function to filter out targets. 

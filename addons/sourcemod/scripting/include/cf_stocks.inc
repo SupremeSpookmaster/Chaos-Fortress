@@ -1789,6 +1789,15 @@ stock Handle GetPluginHandle(char plugin[255])
 	return INVALID_HANDLE;
 }
 
+stock void GetPointFromAngles(float startLoc[3], float angles[3], float distance, float output[3], TraceEntityFilter filter, int traceFlags)
+{
+	float endLoc[3];
+	
+	TR_TraceRayFilter(startLoc, angles, traceFlags, RayType_Infinite, filter);
+	TR_GetEndPosition(endLoc);
+	output = ConstrainDistance(startLoc, endLoc, distance);
+}
+
 stock float[] ConstrainDistance(float startPos[3], float endPos[3], float distance)
 {	
 	if (GetVectorDistance(startPos, endPos, true) >= Pow(distance, 2.0))
