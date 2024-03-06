@@ -256,11 +256,8 @@ public void Toss_CustomSentryLogic(int ref)
 				angles[i] = ApproachAngle(targAng[i], angles[i], turnSpeed);
 				float test1 = NormalizeAngle(targAng[i]);
 				float diff = GetDifference(angles[i], test1);
-				//CPrintToChatAll("%sDIFF %i: %f", i == 0 ? "{red}" : "{blue}", i, diff);
-				if (diff > turnSpeed)
+				if (diff > 0.5)
 					CanShoot = false;
-				else
-					angles[i] = targAng[i];
 			}
 			
 			TeleportEntity(entity, NULL_VECTOR, angles);
@@ -442,14 +439,18 @@ public MRESReturn Toss_Explode(int toolbox)
 		
 		/*
 		TODO: 
-		• If it spawns too close to a wall it should face away from the wall.
-		• The prop_physics needs custom sentry logic (turns to face targets, shoots them, etc). This logic can also handle the levitation effect.
-			○ Don't forget: the sentry needs to have visuals indicating it is damaged, as well as a sound which is played to the owner.
-			○ Detect if the owner is aiming at the sentry and display a worldtext entity showing its current HP if they are.
-		• Figure out why the custom model scale doesn't work for the prop_dynamic.
+		• If it spawns too close to a wall it should face backwards, away from the wall.
+		• The prop_physics needs the following custom sentry logic:
+			○ Visuals indicating different states of damage, as well as a sound which is played to the owner when they are heavily damaged.
+			○ A worldtext entity which is ONLY visible to the sentry's owner, displaying its HP.
+			○ Levitation if the sentry spawns on the ground.
+			○ Line-of-sight check for detecting targets.
+			○ Rescue ranger bolts should be able to collide with these sentries and heal them.
+			○ When destroyed, sentries explode into scrap metal.
+			○ When sentries fire, they need a custom firing animation, the star shooter's laser attack sound, and a team-colored plasma beam indicating where they fired.
 		• If a player switches from Gadgeteer to a different character, their sentries do not get destroyed. This is abusable and needs to be fixed.
 			○ Add a "CF_OnCharacterSwitched" forward which gets called when a player spawns as a new character.
-		• Need to make a custom-rigged and animated version of the Drone for animations. This model needs to have working physics.
+		• Need to make a custom-rigged and animated version of the Drone for animations. This model needs to have working physics, as well as a particle point for the muzzle flash.
 			○ This should be done last so that we don't waste the effort if something makes the ability unsalvageable.
 		• Since the model is small and doesn't have a lot of obvious team color which can be seen from a distance, attach a team-colored particle to it.
 			○ The Payload cart lights would be perfect for this.
