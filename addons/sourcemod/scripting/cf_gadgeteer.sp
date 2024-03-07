@@ -14,6 +14,11 @@
 #define MODEL_DRG		"models/weapons/w_models/w_drg_ball.mdl"
 #define MODEL_DRONE_PARENT	"models/props_c17/cashregister01a.mdl"
 #define MODEL_DRONE_VISUAL	"models/player/items/all_class/pet_robro.mdl"
+#define MODEL_TOSS_GIB_1	"models/player/gibs/gibs_gear2.mdl"
+#define MODEL_TOSS_GIB_2	"models/player/gibs/gibs_gear3.mdl"
+#define MODEL_TOSS_GIB_3	"models/player/gibs/gibs_gear4.mdl"
+#define MODEL_TOSS_GIB_4	"models/player/gibs/gibs_spring1.mdl"
+#define MODEL_TOSS_GIB_5	"models/player/gibs/gibs_spring2.mdl"
 
 #define SOUND_TOSS_BUILD_1	"weapons/sentry_upgrading1.wav"
 #define SOUND_TOSS_BUILD_2	"weapons/sentry_upgrading2.wav"
@@ -23,8 +28,13 @@
 #define SOUND_TOSS_BUILD_6	"weapons/sentry_upgrading6.wav"
 #define SOUND_TOSS_BUILD_7	"weapons/sentry_upgrading7.wav"
 #define SOUND_TOSS_BUILD_8	"weapons/sentry_upgrading8.wav"
+#define SOUND_TOSS_DESTROYED	"weapons/teleporter_explode.wav"
+#define SOUND_TOSS_TARGETLOCKED	"weapons/sentry_spot.wav"
+#define SOUND_TOSS_TARGETWARNING	"weapons/sentry_spot_client.wav"
+#define SOUND_TOSS_TOOLBOX_HIT_PLAYER	"misc/doomsday_cap_open_start.wav"
 
-#define PARTICLE_TOSS_BUILD		"rd_robot_explosion"//"kart_impact_sparks"
+#define PARTICLE_TOSS_BUILD		"kart_impact_sparks"
+#define PARTICLE_TOSS_DESTROYED	"rd_robot_explosion"
 
 public void OnMapStart()
 {
@@ -35,6 +45,11 @@ public void OnMapStart()
 	PrecacheModel(MODEL_DRG);
 	PrecacheModel(MODEL_DRONE_PARENT);
 	PrecacheModel(MODEL_DRONE_VISUAL);
+	PrecacheModel(MODEL_TOSS_GIB_1);
+	PrecacheModel(MODEL_TOSS_GIB_2);
+	PrecacheModel(MODEL_TOSS_GIB_3);
+	PrecacheModel(MODEL_TOSS_GIB_4);
+	PrecacheModel(MODEL_TOSS_GIB_5);
 	
 	PrecacheSound(SOUND_TOSS_BUILD_1);
 	PrecacheSound(SOUND_TOSS_BUILD_2);
@@ -44,6 +59,10 @@ public void OnMapStart()
 	PrecacheSound(SOUND_TOSS_BUILD_6);
 	PrecacheSound(SOUND_TOSS_BUILD_7);
 	PrecacheSound(SOUND_TOSS_BUILD_8);
+	PrecacheSound(SOUND_TOSS_DESTROYED);
+	PrecacheSound(SOUND_TOSS_TARGETLOCKED);
+	PrecacheSound(SOUND_TOSS_TARGETWARNING);
+	PrecacheSound(SOUND_TOSS_TOOLBOX_HIT_PLAYER);
 }
 
 public const char Toss_BuildSFX[][] =
@@ -56,6 +75,15 @@ public const char Toss_BuildSFX[][] =
 	SOUND_TOSS_BUILD_6,
 	SOUND_TOSS_BUILD_7,
 	SOUND_TOSS_BUILD_8
+};
+
+public const char Model_Gears[][255] =
+{
+	MODEL_TOSS_GIB_1,
+	MODEL_TOSS_GIB_2,
+	MODEL_TOSS_GIB_3,
+	MODEL_TOSS_GIB_4,
+	MODEL_TOSS_GIB_5
 };
 
 DynamicHook g_DHookRocketExplode;
@@ -147,7 +175,6 @@ enum struct CustomSentry
 		if (!IsValidEntity(prop) || !IsValidClient(owner))
 			return;
 			
-			
 		float angles[3];
 		GetEntPropVector(prop, Prop_Send, "m_angRotation", angles);
 		
@@ -181,9 +208,60 @@ enum struct CustomSentry
 	
 	void Destroy()
 	{
-		//TODO: Play sounds, fancy explosion effects, etc
+		int prop = EntRefToEntIndex(this.entity);
+		if (IsValidEntity(prop))
+		{
+			float pos[3];
+			GetEntPropVector(prop, Prop_Send, "m_vecOrigin", pos);
+			
+			SpawnParticle(pos, PARTICLE_TOSS_DESTROYED, 3.0);
+			
+			EmitSoundToAll(SOUND_TOSS_DESTROYED, prop, _, _, _, _, GetRandomInt(80, 110), -1);
+			
+			for (int i = 0; i < GetRandomInt(4, 6); i++)
+			{
+				float randAng[3], randVel[3];
+				for (int vec = 0; vec < 3; vec++)
+				{
+					randAng[vec] = GetRandomFloat(0.0, 360.0);
+					
+					if (vec < 2)
+						randVel[vec] = GetRandomFloat(0.0, 360.0);
+					else
+						randVel[vec] = GetRandomFloat(200.0, 800.0);
+				}
+				
+				int gear = SpawnPhysicsProp(Model_Gears[GetRandomInt(0, sizeof(Model_Gears) - 1)], GetClientOfUserId(this.owner), "0", 99999.0, true, 1.0, pos, randAng, randVel, 5.0);
+				
+				if (IsValidEntity(gear))
+				{
+					SetEntityCollisionGroup(gear, 1);
+					SetEntityRenderMode(gear, RENDER_TRANSALPHA);
+					RequestFrame(Toss_FadeOutGib, EntIndexToEntRef(gear));
+				}
+			}
+		}
+		
 		this.exists = false;
 		this.shooting = false;
+	}
+}
+
+public void Toss_FadeOutGib(int ref)
+{
+	int gear = EntRefToEntIndex(ref);
+	if (!IsValidEntity(gear))
+		return;
+		
+	int r, g, b, a;
+	GetEntityRenderColor(gear, r, g, b, a);
+	a -= 1;
+	if (a < 1)
+		RemoveEntity(gear);
+	else
+	{
+		SetEntityRenderColor(gear, r, g, b, a);
+		RequestFrame(Toss_FadeOutGib, ref);
 	}
 }
 
@@ -225,10 +303,17 @@ public void Toss_CustomSentryLogic(int ref)
 	if (!IsValidMulti(target))
 	{
 		target = Toss_GetClosestTarget(entity, team == TFTeam_Red ? TFTeam_Blue : TFTeam_Red, distance);
-		if (distance > Toss_SentryStats[entity].radiusDetection)
-			target = -1;
-			
-		//TODO: Emit targeting sound
+		if (IsValidEntity(target))
+		{
+			if (distance > Toss_SentryStats[entity].radiusDetection)
+				target = -1;
+			else
+			{
+				//TODO: Lock-on should not play globally... why does it play globally...
+				EmitSoundToAll(SOUND_TOSS_TARGETLOCKED, entity, _, _, _, _, _, -1);
+				EmitSoundToClient(target, SOUND_TOSS_TARGETWARNING, _, _, 110);
+			}
+		}
 	}
 	
 	if (IsValidMulti(target))	//We have a target, rotate to face them and fire if we are able.
@@ -399,8 +484,7 @@ public MRESReturn Toss_Explode(int toolbox)
 	GetEntPropVector(toolbox, Prop_Send, "m_vecOrigin", pos);
 	
 	int chosen = GetRandomInt(0, sizeof(Toss_BuildSFX) - 1);
-	EmitSoundToAll(Toss_BuildSFX[chosen], toolbox, SNDCHAN_STATIC, 120, _, _, GetRandomInt(90, 110));
-	EmitSoundToAll(Toss_BuildSFX[chosen], toolbox, SNDCHAN_STATIC, 120, _, _, GetRandomInt(90, 110));
+	EmitSoundToAll(Toss_BuildSFX[chosen], toolbox, _, _, _, _, GetRandomInt(90, 110), -1);
 	SpawnParticle(pos, PARTICLE_TOSS_BUILD, 2.0);
 	
 	int prop = CreateEntityByName("prop_physics_override");
@@ -446,7 +530,6 @@ public MRESReturn Toss_Explode(int toolbox)
 			○ Levitation if the sentry spawns on the ground.
 			○ Line-of-sight check for detecting targets.
 			○ Rescue ranger bolts should be able to collide with these sentries and heal them.
-			○ When destroyed, sentries explode into scrap metal.
 			○ When sentries fire, they need a custom firing animation, the star shooter's laser attack sound, and a team-colored plasma beam indicating where they fired.
 		• If a player switches from Gadgeteer to a different character, their sentries do not get destroyed. This is abusable and needs to be fixed.
 			○ Add a "CF_OnCharacterSwitched" forward which gets called when a player spawns as a new character.
@@ -454,6 +537,7 @@ public MRESReturn Toss_Explode(int toolbox)
 			○ This should be done last so that we don't waste the effort if something makes the ability unsalvageable.
 		• Since the model is small and doesn't have a lot of obvious team color which can be seen from a distance, attach a team-colored particle to it.
 			○ The Payload cart lights would be perfect for this.
+		• Sentries can block the payload cart, this needs to be fixed.
 		*/
 	}
 	

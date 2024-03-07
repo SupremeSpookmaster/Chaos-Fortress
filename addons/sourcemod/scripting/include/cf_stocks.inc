@@ -2098,6 +2098,54 @@ stock void SpawnSpriteExplosion(float pos[3], int sound = 0)
 	RequestFrame(Stock_MakeExplosionFrameLater, pack_boom);
 }
 
+stock int SpawnPhysicsProp(char model[255], int owner, char skin[16], float health, bool invincible, float scale, float pos[3], float ang[3], float vel[3], float lifespan = 0.0)
+{
+	int prop = CreateEntityByName("prop_physics_override");
+	if (IsValidEntity(prop))
+	{
+		DispatchKeyValue(prop, "targetname", "phys"); 
+		PrecacheModel(model);
+		DispatchKeyValue(prop, "model", model);
+		
+		DispatchSpawn(prop);
+		
+		ActivateEntity(prop);
+		
+		if (IsValidClient(owner))
+		{
+			SetEntPropEnt(prop, Prop_Data, "m_hOwnerEntity", owner);
+			SetEntProp(prop, Prop_Send, "m_iTeamNum", GetClientTeam(owner));
+		}
+		
+		DispatchKeyValue(prop, "skin", skin);
+		
+		if (invincible)
+		{
+			SetEntProp(prop, Prop_Data, "m_takedamage", 0, 1);
+		}
+		else
+		{
+			char healthChar[16];
+			Format(healthChar, sizeof(healthChar), "%i", RoundFloat(health));
+			DispatchKeyValue(prop, "Health", healthChar);
+			SetEntityHealth(prop, RoundFloat(health));
+		}
+		
+		char scalechar[16];
+		Format(scalechar, sizeof(scalechar), "%f", scale);
+		DispatchKeyValue(prop, "modelscale", scalechar);
+		
+		if (lifespan > 0.0)
+		{
+			CreateTimer(lifespan, Timer_RemoveEntity, EntIndexToEntRef(prop), TIMER_FLAG_NO_MAPCHANGE);
+		}
+		
+		TeleportEntity(prop, pos, ang, vel);
+	}
+	
+	return prop;
+}
+
 public void Stock_MakeExplosionFrameLater(DataPack pack)
 {
 	pack.Reset();
