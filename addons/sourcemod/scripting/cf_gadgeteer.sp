@@ -108,6 +108,7 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 
 int Toss_Owner[2049] = { -1, ... };
 int Toss_Max[MAXPLAYERS + 1] = { 0, ... };
+int Toss_ToolboxOwner[2049] = { -1, ... };
 
 float Toss_DMG[2049] = { 0.0, ... };
 float Toss_KB[2049] = { 0.0, ... };
@@ -506,6 +507,11 @@ public void Toss_Activate(int client, char abilityName[255])
 	Toss_Max[client] = CF_GetArgI(client, GADGETEER, abilityName, "sentry_max");
 	float velocity = CF_GetArgF(client, GADGETEER, abilityName, "velocity");
 	
+	float pos[3], ang[3], vel[3];
+	GetClientEyePosition(client, pos);
+	GetClientEyeAngles(client, ang);
+	GetVelocityInDirection(ang, velocity, vel);
+	
 	int toolbox = CF_FireGenericRocket(client, 0.0, velocity, false);
 	if (IsValidEntity(toolbox))
 	{
@@ -523,17 +529,40 @@ public void Toss_Activate(int client, char abilityName[255])
 		Toss_FacingAng[toolbox][2] = 0.0;
 		
 		SetEntityModel(toolbox, MODEL_DRG);
-		AttachModelToEntity(MODEL_TOSS, "", toolbox, _, TF2_GetClientTeam(client) == TFTeam_Red ? "0" : "1");
+		int phys = AttachPhysModelToEntity(MODEL_TOSS, "", toolbox, false, 99999.0, _, TF2_GetClientTeam(client) == TFTeam_Red ? "0" : "1");
+		SDKHook(phys, SDKHook_OnTakeDamage, Toss_ToolboxDamaged);
+		SDKHook(phys, SDKHook_OnTakeDamagePost, Toss_ToolboxDamaged);
+		Toss_ToolboxOwner[phys] = EntIndexToEntRef(toolbox);
+		SetEntityCollisionGroup(phys, 23);
 		
 		float randAng[3];
 		for (int i = 0; i < 3; i++)
 			randAng[i] = GetRandomFloat(0.0, 360.0);
 			
-		TeleportEntity(toolbox, NULL_VECTOR, randAng);
 		RequestFrame(Toss_Spin, EntIndexToEntRef(toolbox));
 		
 		g_DHookRocketExplode.HookEntity(Hook_Pre, toolbox, Toss_Explode);
 	}
+}
+
+public Action Toss_ToolboxDamaged(int prop, int &attacker, int &inflictor, float &damage, int &damagetype) 
+{
+	damage = 0.0;
+	
+	CPrintToChatAll("A TOOLBOX WAS SHOT");
+	
+	int owner = EntRefToEntIndex(Toss_ToolboxOwner[prop]);
+	if (!IsValidEntity(owner))
+		return Plugin_Changed;
+		
+	int client = GetEntPropEnt(owner, Prop_Send, "m_hOwnerEntity");
+	if (!IsValidClient(client))
+		return Plugin_Changed;
+		
+	if (attacker == client)
+		Toss_Explode(owner);
+	
+	return Plugin_Changed;
 }
 
 public MRESReturn Toss_Explode(int toolbox)
@@ -742,5 +771,7 @@ public void OnEntityDestroyed(int entity)
 		{
 			Toss_SentryStats[entity].Destroy();
 		}
+		
+		Toss_ToolboxOwner[entity] = -1;
 	}
 }

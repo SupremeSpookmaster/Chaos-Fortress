@@ -672,6 +672,77 @@ stock int AttachModelToEntity(char model[255], char point[255], int parent, floa
 	return ReturnValue;
 }
 
+stock int AttachPhysModelToEntity(char model[255], char point[255], int parent, bool invincible, float health, float life = 0.0, char skin[255] = "0", float xOff = 0.0, float yOff = 0.0, float zOff = 0.0, float xRot = 0.0, float yRot = 0.0, float zRot = 0.0)
+{
+	int ReturnValue = -1;
+	
+	ReturnValue = CreateEntityByName("prop_physics_override");
+	
+	if(IsValidEntity(ReturnValue))
+	{
+		float pos[3], ang[3];
+		if (HasEntProp(parent, Prop_Data, "m_vecAbsOrigin"))
+		{
+			GetEntPropVector(parent, Prop_Data, "m_vecAbsOrigin", pos);
+		}
+		else if (HasEntProp(parent, Prop_Send, "m_vecOrigin"))
+		{
+			GetEntPropVector(parent, Prop_Send, "m_vecOrigin", pos);
+		}
+		
+		TeleportEntity(ReturnValue, pos, NULL_VECTOR, NULL_VECTOR);
+	
+		DispatchKeyValue(ReturnValue, "skin", skin);
+		DispatchKeyValue(ReturnValue, "model", model);	
+		
+		SetVariantString("!activator");
+		AcceptEntityInput(ReturnValue, "SetParent", parent, ReturnValue);
+		SetVariantString(point);
+		AcceptEntityInput(ReturnValue, "SetParentAttachmentMaintainOffset", ReturnValue, ReturnValue);
+		DispatchKeyValue(ReturnValue, "targetname", "present");
+		
+		DispatchSpawn(ReturnValue);
+		ActivateEntity(ReturnValue);
+		
+		GetEntPropVector(ReturnValue, Prop_Send, "m_vecOrigin", pos);
+		
+		if (invincible)
+		{
+			SetEntProp(ReturnValue, Prop_Data, "m_takedamage", 0, 1);
+		}
+		else
+		{
+			char healthChar[16];
+			Format(healthChar, sizeof(healthChar), "%i", RoundFloat(health));
+			DispatchKeyValue(ReturnValue, "Health", healthChar);
+			SetEntityHealth(ReturnValue, RoundFloat(health));
+		}
+		
+		pos[0] += xOff;
+		pos[1] += yOff;
+		pos[2] += zOff;
+		
+		GetEntPropVector(ReturnValue, Prop_Send, "m_angRotation", ang);
+		
+		ang[0] += xRot;
+		ang[1] += yRot;
+		ang[2] += zRot;
+		
+		TeleportEntity(ReturnValue, pos, ang, NULL_VECTOR);
+		
+		if (life > 0.0)
+		{
+			CreateTimer(life, Timer_RemoveEntity, EntIndexToEntRef(ReturnValue), TIMER_FLAG_NO_MAPCHANGE);
+		}
+	}
+	else
+	{
+		ReturnValue = -1;
+	}
+	
+	return ReturnValue;
+}
+
 public void PhysProp_MoveToTargetPosition(int ent, float targPos[3], float angOverride[3])
 {
 	if (ent < MaxClients + 1 || ent > 2048)
