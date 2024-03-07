@@ -129,7 +129,7 @@
 //		- Cool and/or Frequently-Used Netprops:
 //			- m_flNextPrimaryAttack
 //			- m_hOwnerEntity, m_iTeamNum
-//			- m_vecOrigin, m_angRotation, m_vecAbsVelocity
+//			- m_vecOrigin, m_angRotation, m_vecVelocity
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 

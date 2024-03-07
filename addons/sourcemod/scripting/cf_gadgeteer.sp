@@ -195,7 +195,7 @@ enum struct CustomSentry
 		
 		SetEntityGravity(prop, 0.0);
 		SetEntityCollisionGroup(prop, 23);
-		SetEntityMoveType(prop, MOVETYPE_FLY);
+		SetEntityMoveType(prop, MOVETYPE_VPHYSICS);
 		
 		Toss_AddToQueue(owner, prop);
 		
@@ -303,11 +303,29 @@ public void Toss_CustomSentryLogic(int ref)
 	float turnSpeed = Toss_SentryStats[entity].turnRate;
 	
 	float distance;
-	float angles[3];
+	float angles[3], pos[3], vel[3];
 	GetEntPropVector(entity, Prop_Send, "m_angRotation", angles);
+	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+	GetEntPropVector(entity, Prop_Data, "m_vecVelocity", vel);
 	
-	//We do not currently have a target, find one:
-	if (!IsValidMulti(target))
+	float groundDist = Toss_GetDistanceToSurface(entity, 90.0, 0.0, 0.0);
+	if (groundDist < Toss_SentryStats[entity].hoverHeight)
+	{
+		vel[2] = LerpFloat(0.01, vel[2], 100.0);
+		TeleportEntity(entity, NULL_VECTOR, NULL_VECTOR, vel);
+	}
+	else if (vel[2] != 0.0)
+	{
+		if (vel[2] > 0.0)
+			vel[2] = ClampFloat(vel[2] - 1.0, 0.0, 9999.0);
+		else
+			vel[2] = ClampFloat(vel[2] + 1.0, -9999.0, 0.0);
+			
+		TeleportEntity(entity, NULL_VECTOR, NULL_VECTOR, vel);
+	}
+	
+	//We do not currently have a target or our target is hiding behind something, find a new target:
+	if (!IsValidMulti(target) || !Toss_HasLineOfSight(entity, target))
 	{
 		target = Toss_GetClosestTarget(entity, team == TFTeam_Red ? TFTeam_Blue : TFTeam_Red, distance);
 		if (IsValidEntity(target))
@@ -325,14 +343,12 @@ public void Toss_CustomSentryLogic(int ref)
 	
 	if (IsValidMulti(target))	//We have a target, rotate to face them and fire if we are able.
 	{
-		float pos[3], otherPos[3];
-		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+		float otherPos[3];
 		GetClientAbsOrigin(target, otherPos);
 		
 		//The target has escaped our firing radius, un-lock.
 		if (GetVectorDistance(pos, otherPos) > Toss_SentryStats[entity].radiusFire)
 		{
-			CPrintToChatAll("Disengaging target as they have escaped our range");
 			target = -1;
 			Toss_SentryStats[entity].target = -1;
 		}
@@ -352,6 +368,11 @@ public void Toss_CustomSentryLogic(int ref)
 					CanShoot = false;
 			}
 			
+			if (angles[2] != 0.0)
+			{
+				angles[2] = ApproachAngle(0.0, angles[2], turnSpeed);
+			}
+			
 			TeleportEntity(entity, NULL_VECTOR, angles);
 			
 			float gt = GetGameTime();
@@ -360,13 +381,10 @@ public void Toss_CustomSentryLogic(int ref)
 				//TODO: VFX and SFX. Spawn muzzle flash, spawn laser beam. Also animations.
 				Toss_SentryStats[entity].NextShot = gt + Toss_SentryStats[entity].fireRate;
 				
-				//TODO: Instead of just directly dealing damage, call a trace which hits ALL enemies and damage the first thing that gets hit.
-				//The sentry still will not fire unless it is aiming at the intended target, but the shot can now be blocked by obstacles.
-				
 				float endPos[3];
 				int victim = target;
 				Toss_TraceTeam = GetEntProp(entity, Prop_Send, "m_iTeamNum");
-				TR_TraceRayFilter(pos, angles, MASK_SHOT, RayType_Infinite, Toss_OnlyHitEnemies, _, TRACE_ENTITIES_ONLY);
+				TR_TraceRayFilter(pos, angles, MASK_SHOT, RayType_Infinite, Toss_OnlyHitEnemies);
 				victim = TR_GetEntityIndex();
 				TR_GetEndPosition(endPos);
 				
@@ -376,8 +394,8 @@ public void Toss_CustomSentryLogic(int ref)
 				GetPointFromAngles(pos, angles, 99999.0, otherPos, Toss_IgnoreAllButTarget, MASK_SHOT);
 				SpawnBeam_Vectors(pos, otherPos, 0.1, 255, 255, 255, 255, PrecacheModel("materials/sprites/laserbeam.vmt"), _, _, _, 0.0);
 				
-				//if (IsValidEntity(victim))
-				SDKHooks_TakeDamage(target, entity, owner, Toss_SentryStats[entity].damage, DMG_BULLET);
+				if (IsValidEntity(victim))
+					SDKHooks_TakeDamage(victim, entity, owner, Toss_SentryStats[entity].damage, DMG_BULLET);
 				
 				EmitSoundToAll(SOUND_TOSS_SHOOT, entity, _, _, _, _, _, -1);
 			}
@@ -441,6 +459,28 @@ public int Toss_GetClosestTarget(int entity, TFTeam targetTeam, float &distance)
 	}
 	
 	return closest;
+}
+
+public float Toss_GetDistanceToSurface(int entity, float pitchMod, float yawMod, float rollMod)
+{
+	if (!IsValidEntity(entity))
+		return 0.0;
+		
+	float pos[3], ang[3], endPos[3];
+	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+	ang[0] = pitchMod;
+	ang[1] = yawMod;
+	ang[2] = rollMod;
+	
+	TR_TraceRayFilter(pos, ang, MASK_SHOT, RayType_Infinite, Toss_IgnoreDrones);
+	
+	if (TR_DidHit())
+	{
+		TR_GetEndPosition(endPos);
+		return GetVectorDistance(pos, endPos);
+	}
+	
+	return 0.0;
 }
 
 public bool Toss_HasLineOfSight(int entity, int target)
@@ -546,25 +586,37 @@ public MRESReturn Toss_Explode(int toolbox)
 		SetEntityGravity(prop, 0.0);
 		
 		TeleportEntity(prop, pos, Toss_FacingAng[toolbox]);
+		
+		if (Toss_GetDistanceToSurface(prop, 90.0, 0.0, 0.0) < 20.0)
+		{
+			pos[2] += 20.0;
+			TeleportEntity(prop, pos);
+		}
+		if (Toss_GetDistanceToSurface(prop, 0.0, Toss_FacingAng[toolbox][1], 0.0) < 20.0)
+		{
+			Toss_FacingAng[toolbox][1] += 180.0;
+			TeleportEntity(prop, _, Toss_FacingAng[toolbox]);
+		}
+		
 		Toss_SentryStats[prop].Activate();
 		
 		/*
 		TODO: 
-		• If it spawns too close to a wall it should face backwards, away from the wall.
+		• The toolbox still has not been modified to collide with enemies and deal damage to them.
+		• Shooting your own toolbox with your pistol should supercharge the resulting sentry for a few seconds.
 		• The prop_physics needs the following custom sentry logic:
 			○ Visuals indicating different states of damage, as well as a sound which is played to the owner when they are heavily damaged.
 			○ A worldtext entity which is ONLY visible to the sentry's owner, displaying its HP.
-			○ Levitation if the sentry spawns on the ground.
-			○ Line-of-sight check for detecting targets.
+			○ Levitation if the sentry spawns on the ground (99% done, just need to figure out why wall sentries don't float properly)
 			○ Rescue ranger bolts should be able to collide with these sentries and heal them.
-			○ When sentries fire, they need a custom firing animation, the star shooter's laser attack sound, and a team-colored plasma beam indicating where they fired.
+			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired.
+			○ If a sentry gets hit by ANYTHING, it starts spinning out wildly which makes it effectively useless since it isn't able to track its targets. This needs to be fixed so that physics can still apply knockback, but not affect rotation.
 		• If a player switches from Gadgeteer to a different character, their sentries do not get destroyed. This is abusable and needs to be fixed.
 			○ Add a "CF_OnCharacterSwitched" forward which gets called when a player spawns as a new character.
 		• Need to make a custom-rigged and animated version of the Drone for animations. This model needs to have working physics, as well as a particle point for the muzzle flash.
 			○ This should be done last so that we don't waste the effort if something makes the ability unsalvageable.
 		• Since the model is small and doesn't have a lot of obvious team color which can be seen from a distance, attach a team-colored particle to it.
 			○ The Payload cart lights would be perfect for this.
-		• Sentries can block the payload cart, this needs to be fixed.
 		*/
 	}
 	
