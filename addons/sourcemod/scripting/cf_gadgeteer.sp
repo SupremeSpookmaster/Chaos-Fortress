@@ -275,6 +275,11 @@ public bool Toss_IgnoreAllButTarget(entity, contentsMask)
 	return entity == Toss_TraceTarget;
 }
 
+public bool Toss_IgnoreDrones(entity, contentsMask)
+{
+	return !Toss_SentryStats[entity].exists && entity > MaxClients;
+}
+
 public bool Toss_OnlyHitEnemies(entity, contentsMask)
 {
 	TFTeam otherTeam = view_as<TFTeam>(GetEntProp(entity, Prop_Send, "m_iTeamNum"));
@@ -427,7 +432,7 @@ public int Toss_GetClosestTarget(int entity, TFTeam targetTeam, float &distance)
 		GetClientAbsOrigin(i, otherPos);
 		float dist = GetVectorDistance(pos, otherPos);
 		
-		if (dist < closestDist/* && Toss_HasLineOfSight(entity, i)TODO LOS CHECK*/)
+		if (dist < closestDist && Toss_HasLineOfSight(entity, i))
 		{
 			closest = i;
 			closestDist = dist;
@@ -436,6 +441,24 @@ public int Toss_GetClosestTarget(int entity, TFTeam targetTeam, float &distance)
 	}
 	
 	return closest;
+}
+
+public bool Toss_HasLineOfSight(int entity, int target)
+{
+	if (!IsValidEntity(entity) || !IsValidEntity(target))
+		return false;
+		
+	float pos[3], otherPos[3];
+	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+	GetEntPropVector(target, Prop_Send, "m_vecOrigin", otherPos);
+	
+	if (IsValidClient(target))
+		otherPos[2] += 40.0 * CF_GetCharacterScale(target);
+		
+	Handle trace = TR_TraceRayFilterEx(pos, otherPos, MASK_SHOT, RayType_EndPoint, Toss_IgnoreDrones);
+	bool DidHit = TR_DidHit(trace);
+	delete trace;
+	return !DidHit;
 }
 
 public void Toss_Activate(int client, char abilityName[255])
