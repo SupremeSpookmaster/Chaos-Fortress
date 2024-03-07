@@ -2169,9 +2169,33 @@ stock void SpawnSpriteExplosion(float pos[3], int sound = 0)
 	RequestFrame(Stock_MakeExplosionFrameLater, pack_boom);
 }
 
+//Thank you CookieCat!
+public void ScaleHitboxSize(int entity, float multiplier)
+{
+	float mins[3], maxs[3];
+	GetEntPropVector(entity, Prop_Send, "m_vecMins", mins);
+	GetEntPropVector(entity, Prop_Send, "m_vecMaxs", maxs);
+	ScaleVector(mins, multiplier);
+	ScaleVector(maxs, multiplier);
+	
+	SetHitboxSize(entity, mins, maxs);
+}
+
+public void SetHitboxSize(int entity, const float mins[3], const float maxs[3])
+{
+	SetEntPropVector(entity, Prop_Send, "m_vecMins", mins);
+	SetEntPropVector(entity, Prop_Send, "m_vecMaxs", maxs);
+	SetEntPropVector(entity, Prop_Send, "m_vecMinsPreScaled", mins);
+	SetEntPropVector(entity, Prop_Send, "m_vecMaxsPreScaled", maxs);
+	SetEntPropVector(entity, Prop_Send, "m_vecSpecifiedSurroundingMins", mins);
+	SetEntPropVector(entity, Prop_Send, "m_vecSpecifiedSurroundingMaxs", maxs);
+	SetEntPropVector(entity, Prop_Send, "m_vecSpecifiedSurroundingMinsPreScaled", mins);
+	SetEntPropVector(entity, Prop_Send, "m_vecSpecifiedSurroundingMaxsPreScaled", maxs);
+}
+
 stock int SpawnPhysicsProp(char model[255], int owner, char skin[16], float health, bool invincible, float scale, float pos[3], float ang[3], float vel[3], float lifespan = 0.0)
 {
-	int prop = CreateEntityByName("prop_physics_override");
+	int prop = CreateEntityByName("prop_physics");
 	if (IsValidEntity(prop))
 	{
 		DispatchKeyValue(prop, "targetname", "phys"); 

@@ -137,6 +137,10 @@ enum struct CustomSentry
 	float startingYaw;
 	float yawOffset;
 	float NextShot;
+	float superchargeDuration;
+	float superchargeFire;
+	float superchargeTurn;
+	float superchargeEndTime;
 	
 	bool exists;
 	bool shooting;
@@ -154,6 +158,9 @@ enum struct CustomSentry
 		this.fireRate = CF_GetArgF(client, GADGETEER, abilityName, "rate");
 		this.damage = CF_GetArgF(client, GADGETEER, abilityName, "damage");
 		this.maxHealth = CF_GetArgF(client, GADGETEER, abilityName, "max_health");
+		this.superchargeDuration = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_duration");
+		this.superchargeFire = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_fire");
+		this.superchargeTurn = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_turn");
 	}
 	
 	void CopyFromOther(CustomSentry other, int entity)
@@ -169,9 +176,12 @@ enum struct CustomSentry
 		this.fireRate = other.fireRate;
 		this.damage = other.damage;
 		this.maxHealth = other.maxHealth;
+		this.superchargeDuration = other.superchargeDuration;
+		this.superchargeFire = other.superchargeFire;
+		this.superchargeTurn = other.superchargeTurn;
 	}
 	
-	void Activate()
+	void Activate(bool supercharged)
 	{
 		int prop = EntRefToEntIndex(this.entity);
 		int owner = GetClientOfUserId(this.owner);
@@ -205,6 +215,12 @@ enum struct CustomSentry
 		this.yawOffset = 0.0
 		
 		RequestFrame(Toss_CustomSentryLogic, this.entity);
+		
+		if (supercharged)
+		{
+			this.superchargeEndTime = GetGameTime() + this.superchargeDuration;
+			//TODO: PARTICLE, SOUND
+		}
 		
 		this.exists = true;
 	}
@@ -298,10 +314,15 @@ public void Toss_CustomSentryLogic(int ref)
 	if (!IsValidEntity(dummy))
 		return;
 		
+	float gt = GetGameTime();
+		
 	TFTeam team = view_as<TFTeam>(GetEntProp(entity, Prop_Send, "m_iTeamNum"));
 	int owner = GetClientOfUserId(Toss_SentryStats[entity].owner);
 	int target = GetClientOfUserId(Toss_SentryStats[entity].target);
 	float turnSpeed = Toss_SentryStats[entity].turnRate;
+	
+	if (gt <= Toss_SentryStats[entity].superchargeEndTime)
+		turnSpeed *= Toss_SentryStats[entity].superchargeTurn;
 	
 	float distance;
 	float angles[3], pos[3], vel[3];
@@ -376,11 +397,10 @@ public void Toss_CustomSentryLogic(int ref)
 			
 			TeleportEntity(entity, NULL_VECTOR, angles);
 			
-			float gt = GetGameTime();
 			if (gt >= Toss_SentryStats[entity].NextShot && CanShoot)
 			{
 				//TODO: VFX and SFX. Spawn muzzle flash, spawn laser beam. Also animations.
-				Toss_SentryStats[entity].NextShot = gt + Toss_SentryStats[entity].fireRate;
+				Toss_SentryStats[entity].NextShot = gt + (Toss_SentryStats[entity].fireRate / (gt <= Toss_SentryStats[entity].superchargeEndTime ? Toss_SentryStats[entity].superchargeFire : 1.0));
 				
 				float endPos[3];
 				int victim = target;
@@ -521,6 +541,7 @@ public void Toss_Activate(int client, char abilityName[255])
 		
 		Toss_DMG[toolbox] = CF_GetArgF(client, GADGETEER, abilityName, "damage");
 		Toss_KB[toolbox] = CF_GetArgF(client, GADGETEER, abilityName, "knockback");
+		float CoolMult = CF_GetArgF(client, GADGETEER, abilityName, "trickshot_mult");
 		
 		Toss_SentryStats[toolbox].CreateFromArgs(client, abilityName, toolbox);
 		
@@ -529,11 +550,19 @@ public void Toss_Activate(int client, char abilityName[255])
 		Toss_FacingAng[toolbox][2] = 0.0;
 		
 		SetEntityModel(toolbox, MODEL_DRG);
-		int phys = AttachPhysModelToEntity(MODEL_TOSS, "", toolbox, false, 99999.0, _, TF2_GetClientTeam(client) == TFTeam_Red ? "0" : "1");
-		SDKHook(phys, SDKHook_OnTakeDamage, Toss_ToolboxDamaged);
-		SDKHook(phys, SDKHook_OnTakeDamagePost, Toss_ToolboxDamaged);
+		DispatchKeyValue(toolbox, "modelscale", "0.00001");
+		
+		int phys = AttachPhysModelToEntity(MODEL_TOSS, "", toolbox, false, 999.0, _, TF2_GetClientTeam(client) == TFTeam_Red ? "0" : "1");
+		
 		Toss_ToolboxOwner[phys] = EntIndexToEntRef(toolbox);
-		SetEntityCollisionGroup(phys, 23);
+		ScaleHitboxSize(phys, CoolMult);
+		SDKHook(phys, SDKHook_OnTakeDamage, Toss_ToolboxDamaged);
+		
+		//SetEntProp(phys, Prop_Data, "m_usSolidFlags", 28);
+		SetEntProp(phys, Prop_Data, "m_nSolidType", 2);
+		
+		SetEntityCollisionGroup(phys, 13); //23 is TFCOLLISION_GROUP_COMBATOBJECT, it is solid to everything but players.
+		SetEntProp(phys, Prop_Send, "m_iTeamNum", 0);
 		
 		float randAng[3];
 		for (int i = 0; i < 3; i++)
@@ -549,8 +578,6 @@ public Action Toss_ToolboxDamaged(int prop, int &attacker, int &inflictor, float
 {
 	damage = 0.0;
 	
-	CPrintToChatAll("A TOOLBOX WAS SHOT");
-	
 	int owner = EntRefToEntIndex(Toss_ToolboxOwner[prop]);
 	if (!IsValidEntity(owner))
 		return Plugin_Changed;
@@ -560,12 +587,18 @@ public Action Toss_ToolboxDamaged(int prop, int &attacker, int &inflictor, float
 		return Plugin_Changed;
 		
 	if (attacker == client)
-		Toss_Explode(owner);
+		Toss_SpawnSentry(owner, true);
 	
 	return Plugin_Changed;
 }
 
 public MRESReturn Toss_Explode(int toolbox)
+{
+	Toss_SpawnSentry(toolbox, false);
+	return MRES_Supercede;
+}
+
+public void Toss_SpawnSentry(int toolbox, bool supercharged)
 {
 	int owner = GetEntPropEnt(toolbox, Prop_Send, "m_hOwnerEntity");
 	int team = GetEntProp(toolbox, Prop_Send, "m_iTeamNum");
@@ -573,7 +606,7 @@ public MRESReturn Toss_Explode(int toolbox)
 	if (!IsValidClient(owner))
 	{
 		RemoveEntity(toolbox);
-		return MRES_Supercede;
+		return;
 	}
 
 	float pos[3];
@@ -627,7 +660,7 @@ public MRESReturn Toss_Explode(int toolbox)
 			TeleportEntity(prop, _, Toss_FacingAng[toolbox]);
 		}
 		
-		Toss_SentryStats[prop].Activate();
+		Toss_SentryStats[prop].Activate(supercharged);
 		
 		/*
 		TODO: 
@@ -648,8 +681,6 @@ public MRESReturn Toss_Explode(int toolbox)
 	}
 	
 	RemoveEntity(toolbox);
-	
-	return MRES_Supercede;
 }
 
 public void Toss_AddToQueue(int client, int sentry)
