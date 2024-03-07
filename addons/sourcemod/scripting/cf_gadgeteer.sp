@@ -317,9 +317,9 @@ public void Toss_CustomSentryLogic(int ref)
 	else if (vel[2] != 0.0)
 	{
 		if (vel[2] > 0.0)
-			vel[2] = ClampFloat(vel[2] - 1.0, 0.0, 9999.0);
+			vel[2] = ClampFloat(vel[2] - 4.0, 0.0, 9999.0);
 		else
-			vel[2] = ClampFloat(vel[2] + 1.0, -9999.0, 0.0);
+			vel[2] = ClampFloat(vel[2] + 4.0, -9999.0, 0.0);
 			
 		TeleportEntity(entity, NULL_VECTOR, NULL_VECTOR, vel);
 	}
@@ -602,21 +602,19 @@ public MRESReturn Toss_Explode(int toolbox)
 		
 		/*
 		TODO: 
+		• The following things MUST be done, but cannot be done until we have the custom model:
+			○ Visuals indicating different states of damage, as well as a sound which is played to the owner when they are heavily damaged.
+			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired.
+			○ Attach payload cart light particles so these sentries are easier to spot and know which team they're on at a glance.
 		• The toolbox still has not been modified to collide with enemies and deal damage to them.
 		• Shooting your own toolbox with your pistol should supercharge the resulting sentry for a few seconds.
 		• The prop_physics needs the following custom sentry logic:
-			○ Visuals indicating different states of damage, as well as a sound which is played to the owner when they are heavily damaged.
 			○ A worldtext entity which is ONLY visible to the sentry's owner, displaying its HP.
 			○ Levitation if the sentry spawns on the ground (99% done, just need to figure out why wall sentries don't float properly)
 			○ Rescue ranger bolts should be able to collide with these sentries and heal them.
-			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired.
 			○ If a sentry gets hit by ANYTHING, it starts spinning out wildly which makes it effectively useless since it isn't able to track its targets. This needs to be fixed so that physics can still apply knockback, but not affect rotation.
 		• If a player switches from Gadgeteer to a different character, their sentries do not get destroyed. This is abusable and needs to be fixed.
 			○ Add a "CF_OnCharacterSwitched" forward which gets called when a player spawns as a new character.
-		• Need to make a custom-rigged and animated version of the Drone for animations. This model needs to have working physics, as well as a particle point for the muzzle flash.
-			○ This should be done last so that we don't waste the effort if something makes the ability unsalvageable.
-		• Since the model is small and doesn't have a lot of obvious team color which can be seen from a distance, attach a team-colored particle to it.
-			○ The Payload cart lights would be perfect for this.
 		*/
 	}
 	
