@@ -32,6 +32,7 @@
 #define SOUND_TOSS_TARGETLOCKED	"weapons/sentry_spot.wav"
 #define SOUND_TOSS_TARGETWARNING	"weapons/sentry_spot_client.wav"
 #define SOUND_TOSS_TOOLBOX_HIT_PLAYER	"misc/doomsday_cap_open_start.wav"
+#define SOUND_TOSS_SHOOT			"weapons/shooting_star_shoot.wav"
 
 #define PARTICLE_TOSS_BUILD		"kart_impact_sparks"
 #define PARTICLE_TOSS_DESTROYED	"rd_robot_explosion"
@@ -63,6 +64,7 @@ public void OnMapStart()
 	PrecacheSound(SOUND_TOSS_TARGETLOCKED);
 	PrecacheSound(SOUND_TOSS_TARGETWARNING);
 	PrecacheSound(SOUND_TOSS_TOOLBOX_HIT_PLAYER);
+	PrecacheSound(SOUND_TOSS_SHOOT);
 }
 
 public const char Toss_BuildSFX[][] =
@@ -350,7 +352,7 @@ public void Toss_CustomSentryLogic(int ref)
 			float gt = GetGameTime();
 			if (gt >= Toss_SentryStats[entity].NextShot && CanShoot)
 			{
-				//TODO: VFX and SFX. Play sound, spawn muzzle flash, spawn laser beam. Also animations.
+				//TODO: VFX and SFX. Spawn muzzle flash, spawn laser beam. Also animations.
 				Toss_SentryStats[entity].NextShot = gt + Toss_SentryStats[entity].fireRate;
 				
 				//TODO: Instead of just directly dealing damage, call a trace which hits ALL enemies and damage the first thing that gets hit.
@@ -371,6 +373,8 @@ public void Toss_CustomSentryLogic(int ref)
 				
 				//if (IsValidEntity(victim))
 				SDKHooks_TakeDamage(target, entity, owner, Toss_SentryStats[entity].damage, DMG_BULLET);
+				
+				EmitSoundToAll(SOUND_TOSS_SHOOT, entity, _, _, _, _, _, -1);
 			}
 			
 			Toss_SentryStats[entity].target = GetClientUserId(target);
