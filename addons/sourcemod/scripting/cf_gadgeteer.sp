@@ -557,11 +557,12 @@ public void Toss_Activate(int client, char abilityName[255])
 		Toss_ToolboxOwner[phys] = EntIndexToEntRef(toolbox);
 		ScaleHitboxSize(phys, CoolMult);
 		SDKHook(phys, SDKHook_OnTakeDamage, Toss_ToolboxDamaged);
+		SDKHook(phys, SDKHook_Touch, Toss_ToolboxTouch);
 		
 		//SetEntProp(phys, Prop_Data, "m_usSolidFlags", 28);
 		SetEntProp(phys, Prop_Data, "m_nSolidType", 2);
 		
-		SetEntityCollisionGroup(phys, 13); //23 is TFCOLLISION_GROUP_COMBATOBJECT, it is solid to everything but players.
+		SetEntityCollisionGroup(phys, 23); //23 is TFCOLLISION_GROUP_COMBATOBJECT, it is solid to everything but players.
 		SetEntProp(phys, Prop_Send, "m_iTeamNum", 0);
 		
 		float randAng[3];
@@ -572,6 +573,35 @@ public void Toss_Activate(int client, char abilityName[255])
 		
 		g_DHookRocketExplode.HookEntity(Hook_Pre, toolbox, Toss_Explode);
 	}
+}
+
+public Action Toss_ToolboxTouch(int prop, int other)
+{
+	int owner = EntRefToEntIndex(Toss_ToolboxOwner[prop]);
+	if (!IsValidEntity(owner))
+		return Plugin_Continue;
+		
+	int client = GetEntPropEnt(owner, Prop_Send, "m_hOwnerEntity");
+	if (!IsValidClient(client))
+		return Plugin_Continue;
+
+	//Check to see if the toolbox collided with an enemy:
+	if (IsValidMulti(other, true, true, true, grabEnemyTeam(client)))
+	{
+		CPrintToChatAll("A toolbox collided with an enemy!");
+		//TODO: Bounce off of enemy players
+	}
+	else if (HasEntProp(other, Prop_Send, "m_hOwnerEntity"))
+	{
+		//The toolbox did not collide with an enemy, check to see if it collided with one of the owner's projectiles:
+		int otherOwner = GetEntPropEnt(other, Prop_Send, "m_hOwnerEntity");
+		char classname[255];
+		GetEntityClassname(other, classname, sizeof(classname));
+		if (StrContains(classname, "tf_projectile_") != -1 && otherOwner == client)
+			Toss_SpawnSentry(owner, true);
+	}
+	
+	return Plugin_Continue;
 }
 
 public Action Toss_ToolboxDamaged(int prop, int &attacker, int &inflictor, float &damage, int &damagetype) 
