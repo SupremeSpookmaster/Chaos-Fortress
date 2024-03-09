@@ -30,6 +30,9 @@
 #define SOUND_TOSS_TOOLBOX_HIT_PLAYER_1	"weapons/metal_gloves_hit_flesh1.wav"
 #define SOUND_TOSS_TOOLBOX_HIT_PLAYER_2	"weapons/bumper_car_hit_ball.wav"
 #define SOUND_TOSS_SHOOT			"weapons/shooting_star_shoot.wav"
+#define SOUND_TOSS_SHOOT_SUPERCHARGE			"weapons/shooting_star_shoot_crit.wav"
+#define SOUND_SUPERCHARGE	"items/powerup_pickup_reflect.wav"
+#define SOUND_SUPERCHARGE_HITSCAN			"items/powerup_pickup_agility.wav"
 
 #define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
 #define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
@@ -38,6 +41,10 @@
 #define PARTICLE_TOSS_HIT_PLAYER_2	"kart_impact_sparks"
 #define PARTICLE_TOSS_DRONE_RED		"cart_flashinglight_red"
 #define PARTICLE_TOSS_DRONE_BLUE	"cart_flashinglight"
+#define PARTICLE_TOSS_SUPERCHARGE_RED	"eyeboss_vortex_red"
+#define PARTICLE_TOSS_SUPERCHARGE_HITSCAN_RED		"medic_healradius_red_buffed"
+#define PARTICLE_TOSS_SUPERCHARGE_BLUE	"eyeboss_vortex_blue"
+#define PARTICLE_TOSS_SUPERCHARGE_HITSCAN_BLUE		"medic_healradius_blue_buffed"
 
 public void OnMapStart()
 {
@@ -64,6 +71,9 @@ public void OnMapStart()
 	PrecacheSound(SOUND_TOSS_TOOLBOX_HIT_PLAYER_1);
 	PrecacheSound(SOUND_TOSS_TOOLBOX_HIT_PLAYER_2);
 	PrecacheSound(SOUND_TOSS_SHOOT);
+	PrecacheSound(SOUND_TOSS_SHOOT_SUPERCHARGE);
+	PrecacheSound(SOUND_SUPERCHARGE_HITSCAN);
+	PrecacheSound(SOUND_SUPERCHARGE);
 }
 
 public const char Toss_BuildSFX[][] =
@@ -225,9 +235,20 @@ enum struct CustomSentry
 		if (supercharged)
 		{
 			this.superchargedType = superchargeType;
-			this.superchargeEndTime = GetGameTime() + (superchargeType == 1 ? this.superchargeDuration_Hitscan : this.superchargeDuration);
-			//TODO: PARTICLE, SOUND
+			float duration = (superchargeType == 1 ? this.superchargeDuration_Hitscan : this.superchargeDuration);
+			this.superchargeEndTime = GetGameTime() + duration;
+			
+			char sound[255];
+			sound = (superchargeType == 1 ? SOUND_SUPERCHARGE_HITSCAN : SOUND_SUPERCHARGE);
+			//EmitSoundToAll(sound, prop, _, 120, _, _, 90, -1);
+			EmitSoundToClient(owner, sound, _, _, 120, _, _, GetRandomInt(70, 90));
+			EmitSoundToClient(owner, sound, _, _, 120, _, _, GetRandomInt(70, 90));
+			AttachParticleToEntity(prop, team == TFTeam_Red ? PARTICLE_TOSS_SUPERCHARGE_HITSCAN_RED : PARTICLE_TOSS_SUPERCHARGE_HITSCAN_BLUE, "", duration);
+			if (superchargeType == 2)
+				AttachParticleToEntity(prop, team == TFTeam_Red ? PARTICLE_TOSS_SUPERCHARGE_RED : PARTICLE_TOSS_SUPERCHARGE_BLUE, "", duration);
 		}
+		
+		AttachParticleToEntity(prop, team == TFTeam_Red ? PARTICLE_TOSS_DRONE_RED : PARTICLE_TOSS_DRONE_BLUE, "");
 		
 		this.exists = true;
 	}
@@ -425,7 +446,7 @@ public void Toss_CustomSentryLogic(int ref)
 				if (IsValidEntity(victim))
 					SDKHooks_TakeDamage(victim, entity, owner, Toss_SentryStats[entity].damage, DMG_BULLET);
 				
-				EmitSoundToAll(SOUND_TOSS_SHOOT, entity, _, _, _, _, _, -1);
+				EmitSoundToAll(gt <= Toss_SentryStats[entity].superchargeEndTime ? SOUND_TOSS_SHOOT_SUPERCHARGE : SOUND_TOSS_SHOOT, entity, _, _, _, _, _, -1);
 			}
 			
 			Toss_SentryStats[entity].target = GetClientUserId(target);
@@ -745,6 +766,7 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired.
 			○ Attach payload cart light particles so these sentries are easier to spot and know which team they're on at a glance.
 		• The prop_physics needs the following custom sentry logic:
+			○ Shooting logic needs to be updated to include buildings and prop_physics entities.
 			○ A worldtext entity which is ONLY visible to the sentry's owner, displaying its HP.
 			○ Levitation if the sentry spawns on the ground (99% done, just need to figure out why wall sentries don't float properly)
 			○ Rescue ranger bolts should be able to collide with these sentries and heal them.
@@ -754,6 +776,9 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 			○ Sentries don't seem to actually lose health when shot? Easy fix by just simulating the HP ourselves, like with the fake medigun shields. Still annoying though.
 		• If a player switches from Gadgeteer to a different character, their sentries do not get destroyed. This is abusable and needs to be fixed.
 			○ Add a "CF_OnCharacterSwitched" forward which gets called when a player spawns as a new character.
+		• Add the spellcasting first-person animation when the ability is activated.
+		• The toolbox needs to be updated so that it changes its team if it is reflected. The drone spawned by reflected toolboxes should also have their team changed.
+		• You can toss toolboxes (and therefore sentries) into enemy spawns...
 		*/
 	}
 	
