@@ -124,6 +124,7 @@ enum struct CustomSentry
 	int entity;
 	int dummy;
 	int target;
+	int superchargedType;
 	
 	float hoverHeight;
 	float scale;
@@ -140,6 +141,9 @@ enum struct CustomSentry
 	float superchargeDuration;
 	float superchargeFire;
 	float superchargeTurn;
+	float superchargeDuration_Hitscan;
+	float superchargeFire_Hitscan;
+	float superchargeTurn_Hitscan;
 	float superchargeEndTime;
 	
 	bool exists;
@@ -161,6 +165,9 @@ enum struct CustomSentry
 		this.superchargeDuration = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_duration");
 		this.superchargeFire = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_fire");
 		this.superchargeTurn = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_turn");
+		this.superchargeDuration_Hitscan = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_duration_hitscan");
+		this.superchargeFire_Hitscan = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_fire_hitscan");
+		this.superchargeTurn_Hitscan = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_turn_hitscan");
 	}
 	
 	void CopyFromOther(CustomSentry other, int entity)
@@ -179,9 +186,12 @@ enum struct CustomSentry
 		this.superchargeDuration = other.superchargeDuration;
 		this.superchargeFire = other.superchargeFire;
 		this.superchargeTurn = other.superchargeTurn;
+		this.superchargeDuration_Hitscan = other.superchargeDuration_Hitscan;
+		this.superchargeFire_Hitscan = other.superchargeFire_Hitscan;
+		this.superchargeTurn_Hitscan = other.superchargeTurn_Hitscan;
 	}
 	
-	void Activate(bool supercharged)
+	void Activate(bool supercharged, int superchargeType)
 	{
 		int prop = EntRefToEntIndex(this.entity);
 		int owner = GetClientOfUserId(this.owner);
@@ -218,7 +228,8 @@ enum struct CustomSentry
 		
 		if (supercharged)
 		{
-			this.superchargeEndTime = GetGameTime() + this.superchargeDuration;
+			this.superchargedType = superchargeType;
+			this.superchargeEndTime = GetGameTime() + (superchargeType == 1 ? this.superchargeDuration_Hitscan : this.superchargeDuration);
 			//TODO: PARTICLE, SOUND
 		}
 		
@@ -322,7 +333,7 @@ public void Toss_CustomSentryLogic(int ref)
 	float turnSpeed = Toss_SentryStats[entity].turnRate;
 	
 	if (gt <= Toss_SentryStats[entity].superchargeEndTime)
-		turnSpeed *= Toss_SentryStats[entity].superchargeTurn;
+		turnSpeed *= (Toss_SentryStats[entity].superchargedType == 1 ? Toss_SentryStats[entity].superchargeTurn_Hitscan : Toss_SentryStats[entity].superchargeTurn);
 	
 	float distance;
 	float angles[3], pos[3], vel[3];
@@ -400,7 +411,7 @@ public void Toss_CustomSentryLogic(int ref)
 			if (gt >= Toss_SentryStats[entity].NextShot && CanShoot)
 			{
 				//TODO: VFX and SFX. Spawn muzzle flash, spawn laser beam. Also animations.
-				Toss_SentryStats[entity].NextShot = gt + (Toss_SentryStats[entity].fireRate / (gt <= Toss_SentryStats[entity].superchargeEndTime ? Toss_SentryStats[entity].superchargeFire : 1.0));
+				Toss_SentryStats[entity].NextShot = gt + (Toss_SentryStats[entity].fireRate / (gt <= Toss_SentryStats[entity].superchargeEndTime ? (Toss_SentryStats[entity].superchargedType == 1 ? Toss_SentryStats[entity].superchargeFire_Hitscan : Toss_SentryStats[entity].superchargeFire) : 1.0));
 				
 				float endPos[3];
 				int victim = target;
@@ -598,7 +609,7 @@ public Action Toss_ToolboxTouch(int prop, int other)
 		char classname[255];
 		GetEntityClassname(other, classname, sizeof(classname));
 		if (StrContains(classname, "tf_projectile_") != -1 && otherOwner == client)
-			Toss_SpawnSentry(owner, true);
+			Toss_SpawnSentry(owner, true, 2);
 	}
 	
 	return Plugin_Continue;
@@ -617,18 +628,18 @@ public Action Toss_ToolboxDamaged(int prop, int &attacker, int &inflictor, float
 		return Plugin_Changed;
 		
 	if (attacker == client)
-		Toss_SpawnSentry(owner, true);
+		Toss_SpawnSentry(owner, true, 1);
 	
 	return Plugin_Changed;
 }
 
 public MRESReturn Toss_Explode(int toolbox)
 {
-	Toss_SpawnSentry(toolbox, false);
+	Toss_SpawnSentry(toolbox, false, 0);
 	return MRES_Supercede;
 }
 
-public void Toss_SpawnSentry(int toolbox, bool supercharged)
+public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType)
 {
 	int owner = GetEntPropEnt(toolbox, Prop_Send, "m_hOwnerEntity");
 	int team = GetEntProp(toolbox, Prop_Send, "m_iTeamNum");
@@ -690,7 +701,7 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged)
 			TeleportEntity(prop, _, Toss_FacingAng[toolbox]);
 		}
 		
-		Toss_SentryStats[prop].Activate(supercharged);
+		Toss_SentryStats[prop].Activate(supercharged, superchargeType);
 		
 		/*
 		TODO: 
