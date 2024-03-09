@@ -20,22 +20,24 @@
 #define MODEL_TOSS_GIB_4	"models/player/gibs/gibs_spring1.mdl"
 #define MODEL_TOSS_GIB_5	"models/player/gibs/gibs_spring2.mdl"
 
-#define SOUND_TOSS_BUILD_1	"weapons/sentry_upgrading1.wav"
-#define SOUND_TOSS_BUILD_2	"weapons/sentry_upgrading2.wav"
-#define SOUND_TOSS_BUILD_3	"weapons/sentry_upgrading3.wav"
-#define SOUND_TOSS_BUILD_4	"weapons/sentry_upgrading4.wav"
-#define SOUND_TOSS_BUILD_5	"weapons/sentry_upgrading5.wav"
-#define SOUND_TOSS_BUILD_6	"weapons/sentry_upgrading6.wav"
-#define SOUND_TOSS_BUILD_7	"weapons/sentry_upgrading7.wav"
-#define SOUND_TOSS_BUILD_8	"weapons/sentry_upgrading8.wav"
+#define SOUND_TOSS_BUILD_1	"weapons/neon_sign_hit_01.wav"
+#define SOUND_TOSS_BUILD_2	"weapons/neon_sign_hit_02.wav"
+#define SOUND_TOSS_BUILD_3	"weapons/neon_sign_hit_03.wav"
+#define SOUND_TOSS_BUILD_4	"weapons/neon_sign_hit_04.wav"
 #define SOUND_TOSS_DESTROYED	"weapons/teleporter_explode.wav"
 #define SOUND_TOSS_TARGETLOCKED	"weapons/sentry_spot.wav"
 #define SOUND_TOSS_TARGETWARNING	"weapons/sentry_spot_client.wav"
-#define SOUND_TOSS_TOOLBOX_HIT_PLAYER	"misc/doomsday_cap_open_start.wav"
+#define SOUND_TOSS_TOOLBOX_HIT_PLAYER_1	"weapons/metal_gloves_hit_flesh1.wav"
+#define SOUND_TOSS_TOOLBOX_HIT_PLAYER_2	"weapons/bumper_car_hit_ball.wav"
 #define SOUND_TOSS_SHOOT			"weapons/shooting_star_shoot.wav"
 
-#define PARTICLE_TOSS_BUILD		"kart_impact_sparks"
+#define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
+#define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
 #define PARTICLE_TOSS_DESTROYED	"rd_robot_explosion"
+#define PARTICLE_TOSS_HIT_PLAYER_1	"duck_pickup_ring"
+#define PARTICLE_TOSS_HIT_PLAYER_2	"kart_impact_sparks"
+#define PARTICLE_TOSS_DRONE_RED		"cart_flashinglight_red"
+#define PARTICLE_TOSS_DRONE_BLUE	"cart_flashinglight"
 
 public void OnMapStart()
 {
@@ -56,14 +58,11 @@ public void OnMapStart()
 	PrecacheSound(SOUND_TOSS_BUILD_2);
 	PrecacheSound(SOUND_TOSS_BUILD_3);
 	PrecacheSound(SOUND_TOSS_BUILD_4);
-	PrecacheSound(SOUND_TOSS_BUILD_5);
-	PrecacheSound(SOUND_TOSS_BUILD_6);
-	PrecacheSound(SOUND_TOSS_BUILD_7);
-	PrecacheSound(SOUND_TOSS_BUILD_8);
 	PrecacheSound(SOUND_TOSS_DESTROYED);
 	PrecacheSound(SOUND_TOSS_TARGETLOCKED);
 	PrecacheSound(SOUND_TOSS_TARGETWARNING);
-	PrecacheSound(SOUND_TOSS_TOOLBOX_HIT_PLAYER);
+	PrecacheSound(SOUND_TOSS_TOOLBOX_HIT_PLAYER_1);
+	PrecacheSound(SOUND_TOSS_TOOLBOX_HIT_PLAYER_2);
 	PrecacheSound(SOUND_TOSS_SHOOT);
 }
 
@@ -72,11 +71,7 @@ public const char Toss_BuildSFX[][] =
 	SOUND_TOSS_BUILD_1,
 	SOUND_TOSS_BUILD_2,
 	SOUND_TOSS_BUILD_3,
-	SOUND_TOSS_BUILD_4,
-	SOUND_TOSS_BUILD_5,
-	SOUND_TOSS_BUILD_6,
-	SOUND_TOSS_BUILD_7,
-	SOUND_TOSS_BUILD_8
+	SOUND_TOSS_BUILD_4
 };
 
 public const char Model_Gears[][255] =
@@ -112,6 +107,7 @@ int Toss_ToolboxOwner[2049] = { -1, ... };
 
 float Toss_DMG[2049] = { 0.0, ... };
 float Toss_KB[2049] = { 0.0, ... };
+float Toss_UpVel[2049] = { 0.0, ... };
 float Toss_FacingAng[2049][3];
 
 Queue Toss_Sentries[MAXPLAYERS + 1] = { null, ... };
@@ -160,7 +156,7 @@ enum struct CustomSentry
 		this.radiusFire = CF_GetArgF(client, GADGETEER, abilityName, "radius_fire");
 		this.turnRate = CF_GetArgF(client, GADGETEER, abilityName, "rotation");
 		this.fireRate = CF_GetArgF(client, GADGETEER, abilityName, "rate");
-		this.damage = CF_GetArgF(client, GADGETEER, abilityName, "damage");
+		this.damage = CF_GetArgF(client, GADGETEER, abilityName, "damage_sentry");
 		this.maxHealth = CF_GetArgF(client, GADGETEER, abilityName, "max_health");
 		this.superchargeDuration = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_duration");
 		this.superchargeFire = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_fire");
@@ -552,6 +548,7 @@ public void Toss_Activate(int client, char abilityName[255])
 		
 		Toss_DMG[toolbox] = CF_GetArgF(client, GADGETEER, abilityName, "damage");
 		Toss_KB[toolbox] = CF_GetArgF(client, GADGETEER, abilityName, "knockback");
+		Toss_UpVel[toolbox] = CF_GetArgF(client, GADGETEER, abilityName, "up_vel");
 		float CoolMult = CF_GetArgF(client, GADGETEER, abilityName, "trickshot_mult");
 		
 		Toss_SentryStats[toolbox].CreateFromArgs(client, abilityName, toolbox);
@@ -569,6 +566,7 @@ public void Toss_Activate(int client, char abilityName[255])
 		ScaleHitboxSize(phys, CoolMult);
 		SDKHook(phys, SDKHook_OnTakeDamage, Toss_ToolboxDamaged);
 		SDKHook(phys, SDKHook_Touch, Toss_ToolboxTouch);
+		SDKHook(toolbox, SDKHook_Touch, Toss_RocketTouch);
 		
 		//SetEntProp(phys, Prop_Data, "m_usSolidFlags", 28);
 		SetEntProp(phys, Prop_Data, "m_nSolidType", 2);
@@ -586,6 +584,48 @@ public void Toss_Activate(int client, char abilityName[255])
 	}
 }
 
+public Action Toss_RocketTouch(int prop, int other)
+{	
+	int client = GetEntPropEnt(prop, Prop_Send, "m_hOwnerEntity");
+	if (!IsValidClient(client))
+		return Plugin_Continue;
+
+	//Check to see if the toolbox collided with an enemy:
+	if (IsValidMulti(other, true, true, true, grabEnemyTeam(client)))
+	{
+		float vel[3], pos[3];
+		GetVelocityInDirection(Toss_FacingAng[prop], Toss_KB[prop], vel);
+		vel[2] += Toss_KB[prop];
+		TeleportEntity(other, _, _, vel);
+		vel[0] = 0.0;
+		vel[1] = 0.0;
+		vel[2] = Toss_UpVel[prop];
+		TeleportEntity(prop, _, _, vel);
+		
+		SDKHooks_TakeDamage(other, prop, client, Toss_DMG[prop]);
+		
+		GetEntPropVector(prop, Prop_Send, "m_vecOrigin", pos);
+		SpawnParticle(pos, PARTICLE_TOSS_HIT_PLAYER_1, 3.0);
+		SpawnParticle(pos, PARTICLE_TOSS_HIT_PLAYER_2, 3.0);
+		
+		EmitSoundToAll(SOUND_TOSS_TOOLBOX_HIT_PLAYER_1, prop, _, 110, _, _, GetRandomInt(90, 110), -1);
+		EmitSoundToAll(SOUND_TOSS_TOOLBOX_HIT_PLAYER_2, prop, _, _, _, _, GetRandomInt(90, 110), -1);
+		
+		EmitSoundToClient(client, SOUND_TOSS_TOOLBOX_HIT_PLAYER_1);
+		EmitSoundToClient(client, SOUND_TOSS_TOOLBOX_HIT_PLAYER_2);
+		EmitSoundToClient(other, SOUND_TOSS_TOOLBOX_HIT_PLAYER_1);
+		EmitSoundToClient(other, SOUND_TOSS_TOOLBOX_HIT_PLAYER_2);
+		
+		//Unhook the touch event so the toolbox doesn't bounce off of multiple enemies, or the same enemy several times.
+		//Granted, that WOULD be funny as hell, but it would be too strong.
+		SDKUnhook(prop, SDKHook_Touch, Toss_RocketTouch);
+		
+		return Plugin_Handled;
+	}
+	
+	return Plugin_Continue;
+}
+
 public Action Toss_ToolboxTouch(int prop, int other)
 {
 	int owner = EntRefToEntIndex(Toss_ToolboxOwner[prop]);
@@ -596,15 +636,9 @@ public Action Toss_ToolboxTouch(int prop, int other)
 	if (!IsValidClient(client))
 		return Plugin_Continue;
 
-	//Check to see if the toolbox collided with an enemy:
-	if (IsValidMulti(other, true, true, true, grabEnemyTeam(client)))
+	//If the toolbox collided with an allied projectile: trigger the supercharge, using projectile stats.
+	if (HasEntProp(other, Prop_Send, "m_hOwnerEntity"))
 	{
-		CPrintToChatAll("A toolbox collided with an enemy!");
-		//TODO: Bounce off of enemy players
-	}
-	else if (HasEntProp(other, Prop_Send, "m_hOwnerEntity"))
-	{
-		//The toolbox did not collide with an enemy, check to see if it collided with one of the owner's projectiles:
 		int otherOwner = GetEntPropEnt(other, Prop_Send, "m_hOwnerEntity");
 		char classname[255];
 		GetEntityClassname(other, classname, sizeof(classname));
@@ -655,7 +689,8 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 	
 	int chosen = GetRandomInt(0, sizeof(Toss_BuildSFX) - 1);
 	EmitSoundToAll(Toss_BuildSFX[chosen], toolbox, _, _, _, _, GetRandomInt(90, 110), -1);
-	SpawnParticle(pos, PARTICLE_TOSS_BUILD, 2.0);
+	SpawnParticle(pos, PARTICLE_TOSS_BUILD_1, 2.0);
+	SpawnParticle(pos, PARTICLE_TOSS_BUILD_2, 2.0);
 	
 	int prop = CreateEntityByName("prop_physics_override");
 	if (IsValidEntity(prop))
@@ -709,13 +744,14 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 			○ Visuals indicating different states of damage, as well as a sound which is played to the owner when they are heavily damaged.
 			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired.
 			○ Attach payload cart light particles so these sentries are easier to spot and know which team they're on at a glance.
-		• The toolbox still has not been modified to collide with enemies and deal damage to them.
-		• Shooting your own toolbox with your pistol should supercharge the resulting sentry for a few seconds.
 		• The prop_physics needs the following custom sentry logic:
 			○ A worldtext entity which is ONLY visible to the sentry's owner, displaying its HP.
 			○ Levitation if the sentry spawns on the ground (99% done, just need to figure out why wall sentries don't float properly)
 			○ Rescue ranger bolts should be able to collide with these sentries and heal them.
 			○ If a sentry gets hit by ANYTHING, it starts spinning out wildly which makes it effectively useless since it isn't able to track its targets. This needs to be fixed so that physics can still apply knockback, but not affect rotation.
+			○ Because the sentry is a prop_physics entity, it does not trigger hitsounds or damage numbers for attackers. Simulate these manually.
+			○ Figure out how to change kill icons and make drones use the mini-sentry icon.
+			○ Sentries don't seem to actually lose health when shot? Easy fix by just simulating the HP ourselves, like with the fake medigun shields. Still annoying though.
 		• If a player switches from Gadgeteer to a different character, their sentries do not get destroyed. This is abusable and needs to be fixed.
 			○ Add a "CF_OnCharacterSwitched" forward which gets called when a player spawns as a new character.
 		*/
