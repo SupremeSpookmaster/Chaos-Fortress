@@ -233,7 +233,7 @@ public void Absorb_HealOnDelay(DataPack pack)
 	CF_HealPlayer(client, client, RoundFloat(amt), 1.0);
 }
 
-public void CF_OnCharacterRemoved(int client)
+public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
 	Discard_Bonus[client] = 0.0;
 	Absorb_Uses[client] = 0;

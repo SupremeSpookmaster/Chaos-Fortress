@@ -385,7 +385,7 @@ public void CF_OnCharacterCreated(int client)
 		Gravity_Disable(client, true);
 }
 
-public void CF_OnCharacterRemoved(int client)
+public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
 	if (Gravity_Active[client])
 		Gravity_Disable(client, true);

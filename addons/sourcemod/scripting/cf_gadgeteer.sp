@@ -240,9 +240,8 @@ enum struct CustomSentry
 			
 			char sound[255];
 			sound = (superchargeType == 1 ? SOUND_SUPERCHARGE_HITSCAN : SOUND_SUPERCHARGE);
-			//EmitSoundToAll(sound, prop, _, 120, _, _, 90, -1);
-			EmitSoundToClient(owner, sound, _, _, 120, _, _, GetRandomInt(70, 90));
-			EmitSoundToClient(owner, sound, _, _, 120, _, _, GetRandomInt(70, 90));
+			EmitSoundToClient(owner, sound, _, _, 120, _, _, GetRandomInt(80, 100));
+			EmitSoundToClient(owner, sound, _, _, 120, _, _, GetRandomInt(80, 100));
 			AttachParticleToEntity(prop, team == TFTeam_Red ? PARTICLE_TOSS_SUPERCHARGE_HITSCAN_RED : PARTICLE_TOSS_SUPERCHARGE_HITSCAN_BLUE, "", duration);
 			if (superchargeType == 2)
 				AttachParticleToEntity(prop, team == TFTeam_Red ? PARTICLE_TOSS_SUPERCHARGE_RED : PARTICLE_TOSS_SUPERCHARGE_BLUE, "", duration);
@@ -763,9 +762,8 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 		• The following things MUST be done, but cannot be done until we have the custom model:
 			○ Visuals indicating different states of damage, as well as a sound which is played to the owner when they are heavily damaged.
 			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired.
-			○ Attach payload cart light particles so these sentries are easier to spot and know which team they're on at a glance.
 		• The prop_physics needs the following custom sentry logic:
-			○ Shooting logic needs to be updated to include buildings and prop_physics entities.
+			○ Shooting logic needs to be updated to include buildings and prop_physics entities. Currently they can HIT these entities but they can't actually target them.
 			○ A worldtext entity which is ONLY visible to the sentry's owner, displaying its HP.
 			○ Levitation if the sentry spawns on the ground (99% done, just need to figure out why wall sentries don't float properly)
 			○ Rescue ranger bolts should be able to collide with these sentries and heal them.
@@ -773,11 +771,10 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 			○ Because the sentry is a prop_physics entity, it does not trigger hitsounds or damage numbers for attackers. Simulate these manually.
 			○ Figure out how to change kill icons and make drones use the mini-sentry icon.
 			○ Sentries don't seem to actually lose health when shot? Easy fix by just simulating the HP ourselves, like with the fake medigun shields. Still annoying though.
-		• If a player switches from Gadgeteer to a different character, their sentries do not get destroyed. This is abusable and needs to be fixed.
-			○ Add a "CF_OnCharacterSwitched" forward which gets called when a player spawns as a new character.
 		• Add the spellcasting first-person animation when the ability is activated.
 		• The toolbox needs to be updated so that it changes its team if it is reflected. The drone spawned by reflected toolboxes should also have their team changed.
-		• You can toss toolboxes (and therefore sentries) into enemy spawns...
+		• You can toss toolboxes, and therefore sentries, into enemy spawns. This is bad for obvious reasons. Add a check to sentry spawns so that if they spawn in a spawn brush, they are instantly destroyed.
+		• Toolboxes still do not always explode when shot by hitscan. Look into the DHook detour for changing the bounding box so this is fixed.
 		*/
 	}
 	
@@ -859,14 +856,10 @@ public void CF_OnCharacterCreated(int client)
 	
 }
 
-public void CF_OnCharacterRemoved(int client)
+public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
-	
-}
-
-public void OnClientDisconnect(int client)
-{
-	Toss_DeleteSentries(client);
+	if (reason == CF_CRR_SWITCHED_CHARACTER || reason == CF_CRR_DISCONNECT || reason == CF_CRR_ROUNDSTATE_CHANGED)
+		Toss_DeleteSentries(client);
 }
 
 public void Toss_DeleteSentries(int client)

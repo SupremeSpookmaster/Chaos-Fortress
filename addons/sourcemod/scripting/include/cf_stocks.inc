@@ -50,7 +50,7 @@ enum ViewmodelSequence
 	VMS_Jarate_Throw
 };
 
-float ApproachAngle(float target, float value, float speed)
+stock float ApproachAngle(float target, float value, float speed)
 {
 	target = anglemod(target);
 	value = anglemod(value);
@@ -76,7 +76,7 @@ float ApproachAngle(float target, float value, float speed)
 	return value;
 }
 
-float anglemod(float angle)
+stock float anglemod(float angle)
 {
 	angle = fmodf(angle, 360.0);
 	
@@ -97,7 +97,7 @@ stock float fmodf(float num, float denom)
 	return num - denom * RoundToFloor(num / denom);
 }
 
-float GetDifference(float a, float b)
+stock float GetDifference(float a, float b)
 {
 	if (a < 0.0)
 		a *= -1.0;
@@ -111,7 +111,7 @@ float GetDifference(float a, float b)
 	return returnVal;
 }
 
-float GetAngleDifference(float target, float value)
+stock float GetAngleDifference(float target, float value)
 {
 	target = anglemod(target);
 	value = anglemod(value);

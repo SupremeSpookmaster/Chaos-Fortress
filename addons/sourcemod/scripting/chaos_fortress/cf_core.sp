@@ -282,7 +282,7 @@ public Action Timer_ChatMessages(Handle messages)
  	int victim = GetClientOfUserId(id);
  	if (IsValidClient(victim))
  	{
- 		CF_UnmakeCharacter(victim, false);
+ 		CF_UnmakeCharacter(victim, false, CF_CRR_DEATH);
  	}
  }
  

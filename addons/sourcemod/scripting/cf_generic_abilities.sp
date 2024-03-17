@@ -852,7 +852,7 @@ public void Wearable_Activate(int client, char abilityName[255])
 	CF_AttachWearable(client, index, classname, visible, paint, style, preserve, atts, lifespan);
 }
 
-public void CF_OnCharacterRemoved(int client)
+public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
 	Weapon_ClearAllOldWeapons(client);
 	for (int i = 0; i < 4; i++)

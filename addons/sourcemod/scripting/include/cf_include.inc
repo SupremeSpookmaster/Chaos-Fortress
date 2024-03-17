@@ -59,6 +59,16 @@ enum CF_StuckMethod
 	CF_StuckMethod_Respawn
 };
 
+enum CF_CharacterRemovalReason
+{
+	CF_CRR_GENERIC = 0,
+	CF_CRR_DEATH,
+	CF_CRR_DISCONNECT,
+	CF_CRR_SWITCHED_CHARACTER,
+	CF_CRR_ROUNDSTATE_CHANGED,
+	CF_CRR_RESPAWNED
+}
+
 //TODO: This will need to be expanded upon to include things like medigun shields
 public bool CF_DefaultTrace(entity, contentsMask)
 {
@@ -395,12 +405,13 @@ forward void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255
 forward void CF_OnCharacterCreated(int client);
 
 /**
- * Called when a player's character is removed, or they are made to no longer be a character. This occurs when the player dies or becomes a new character, and whenever the round state changes.
+ * Called when a player's character is removed for any reason.
  *
  * @param client			The client whose character was removed.
+ * @param reason			Represents the reason the player's character was removed.
  *
  */
-forward void CF_OnCharacterRemoved(int client);
+forward void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason);
 
 /**
  * Called when Chaos Fortress' internal sound hook gets called. Useful so you don't need to make your own sound hooks for every plugin that needs one.

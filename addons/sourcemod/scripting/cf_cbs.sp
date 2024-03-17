@@ -647,7 +647,7 @@ public void CF_OnCharacterCreated(int client)
 {
 }
 
-public void CF_OnCharacterRemoved(int client)
+public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
 	if (b_DrawActive[client])
 	{

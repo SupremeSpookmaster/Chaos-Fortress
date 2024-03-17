@@ -386,7 +386,7 @@ public Action CF_SoundHook(char strSound[PLATFORM_MAX_PATH], int &entity, int &c
 	return Plugin_Changed;
 }
 
-public void CF_OnCharacterRemoved(int client)
+public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
 	if (f_MegaEndTime[client] > GetGameTime())
 	{

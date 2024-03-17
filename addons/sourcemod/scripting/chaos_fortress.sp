@@ -389,7 +389,7 @@ public void CF_ForceCharacterOnGroup(char character[255], TFTeam group, char mes
 
 public void OnClientDisconnect(int client)
 {
-	CF_UnmakeCharacter(client, false);
+	CF_UnmakeCharacter(client, false, CF_CRR_DISCONNECT);
 	CFC_Disconnect(client);
 	CFA_Disconnect(client);
 }

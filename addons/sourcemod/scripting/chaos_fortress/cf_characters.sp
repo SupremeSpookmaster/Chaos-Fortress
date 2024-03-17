@@ -284,7 +284,7 @@ public void CFC_MakeForwards()
 	#endif
 	
 	g_OnCharacterCreated = new GlobalForward("CF_OnCharacterCreated", ET_Ignore, Param_Cell);
-	g_OnCharacterRemoved = new GlobalForward("CF_OnCharacterRemoved", ET_Ignore, Param_Cell);
+	g_OnCharacterRemoved = new GlobalForward("CF_OnCharacterRemoved", ET_Ignore, Param_Cell, Param_Cell);
 }
 
 public void CFC_OnEntityDestroyed(int entity)
@@ -1184,9 +1184,10 @@ public void CF_ResetMadeStatus(int client)
 	if (map == null)
 		return;
 		
-	bool IsNewCharacter = !StrEqual(conf, s_PreviousCharacter[client]) || b_IsDead[client] || b_FirstSpawn[client] || ForceNewCharStatus;
+	bool ConfigsAreDifferent = !StrEqual(conf, s_PreviousCharacter[client]);
+	bool IsNewCharacter = ConfigsAreDifferent || b_IsDead[client] || b_FirstSpawn[client] || ForceNewCharStatus;
 	if (IsNewCharacter)
-		CF_UnmakeCharacter(client, true);
+		CF_UnmakeCharacter(client, true, ConfigsAreDifferent ? CF_CRR_SWITCHED_CHARACTER : CF_CRR_RESPAWNED);
 		
 	CF_SetPlayerConfig(client, conf);
 	SetClientCookie(client, c_DesiredCharacter, conf);
@@ -1759,12 +1760,14 @@ public void CF_ResetMadeStatus(int client)
  *
  * @param client			The client to disable.
  * @param isCharacterChange			Is this just a character change? If true: reduce ultimate charge instead of completely removing it.
+ * @param reason			The reason the player's character is being unmade.
  */
- public void CF_UnmakeCharacter(int client, bool isCharacterChange)
+ void CF_UnmakeCharacter(int client, bool isCharacterChange, CF_CharacterRemovalReason reason = CF_CRR_GENERIC)
  {
  	Call_StartForward(g_OnCharacterRemoved);
  	
  	Call_PushCell(client);
+ 	Call_PushCell(reason);
  	
  	Call_Finish();
  	
@@ -2064,7 +2067,7 @@ public any Native_CF_MakeClientCharacter(Handle plugin, int numParams)
 	
 	//CF_MakeCharacter(client, true, true, character);
 	//CF_MakeCharacter(client, true, true, character);
-	CF_UnmakeCharacter(client, true);
+	CF_UnmakeCharacter(client, true, CF_CRR_SWITCHED_CHARACTER);
 	CF_MakeCharacter(client, false, _, character);
 	CF_MakeCharacter(client, _, _, character, message);
 	

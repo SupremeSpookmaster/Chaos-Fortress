@@ -1280,7 +1280,7 @@ public void CF_OnCharacterCreated(int client)
 	Medigun_Detach(client, Medigun_GetTarget(client));
 }
 
-public void CF_OnCharacterRemoved(int client)
+public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
 	delete Medigun_Healers[client];
 	

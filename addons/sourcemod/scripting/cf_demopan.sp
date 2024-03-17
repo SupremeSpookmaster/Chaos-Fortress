@@ -1160,7 +1160,7 @@ public void OnEntityDestroyed(int entity)
 	}
 }
 
-public void CF_OnCharacterRemoved(int client)
+public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
 	Passives_RemoveAllRefProps(client);
 	i_HeldBomb[client] = -1;
