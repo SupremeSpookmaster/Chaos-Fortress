@@ -25,7 +25,7 @@
 #define SOUND_TOSS_BUILD_3	"weapons/neon_sign_hit_03.wav"
 #define SOUND_TOSS_BUILD_4	"weapons/neon_sign_hit_04.wav"
 #define SOUND_TOSS_DESTROYED	"weapons/teleporter_explode.wav"
-#define SOUND_TOSS_TARGETLOCKED	"weapons/sentry_spot.wav"
+#define SOUND_TOSS_TARGETLOCKED	"@weapons/sentry_spot.wav"
 #define SOUND_TOSS_TARGETWARNING	"weapons/sentry_spot_client.wav"
 #define SOUND_TOSS_TOOLBOX_HIT_PLAYER_1	"weapons/metal_gloves_hit_flesh1.wav"
 #define SOUND_TOSS_TOOLBOX_HIT_PLAYER_2	"weapons/bumper_car_hit_ball.wav"
@@ -384,7 +384,6 @@ public void Toss_CustomSentryLogic(int ref)
 				target = -1;
 			else
 			{
-				//TODO: Lock-on should not play globally... why does it play globally...
 				EmitSoundToAll(SOUND_TOSS_TARGETLOCKED, entity, _, _, _, _, _, -1);
 				EmitSoundToClient(target, SOUND_TOSS_TARGETWARNING, _, _, 110);
 			}
