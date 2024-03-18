@@ -164,6 +164,7 @@ public void OnPluginStart()
 	HookEvent("post_inventory_application", PlayerReset);
 	//HookEvent("player_spawn", PlayerReset);
 	HookEvent("player_death", PlayerKilled);
+	HookEvent("player_death", PlayerKilled_Pre, EventHookMode_Pre);
 	HookEvent("teamplay_waiting_begins", Waiting);
 	HookEvent("teamplay_round_start", Waiting);
 	HookEvent("teamplay_setup_finished", RoundStart);
@@ -206,6 +207,35 @@ public Action PlayerKilled(Event hEvent, const char[] sEvName, bool bDontBroadca
 	}
 	
 	return Plugin_Continue;
+}
+
+public Action PlayerKilled_Pre(Event hEvent, const char[] sEvName, bool bDontBroadcast)
+{
+	int victim = GetClientOfUserId(hEvent.GetInt("userid"));
+	int inflictor = hEvent.GetInt("inflictor_entindex");
+	int attacker = GetClientOfUserId(hEvent.GetInt("attacker"));
+	char weapon[255];
+	hEvent.GetString("weapon", weapon, sizeof(weapon), "Generic");
+	
+	bool ringer = false; 
+	if (GetEventInt(hEvent, "death_flags") & TF_DEATHFLAG_DEADRINGER)
+	{
+		ringer = true;
+	}
+	
+	Action result = Plugin_Continue;
+	
+	if (IsValidClient(victim))
+	{
+		result = CF_PlayerKilled_Pre(victim, inflictor, attacker, weapon, ringer);
+		
+		hEvent.SetInt("userid", GetClientUserId(victim));
+		hEvent.SetInt("inflictor_entindex", inflictor);
+		hEvent.SetInt("attacker", GetClientUserId(attacker));
+		hEvent.SetString("weapon", weapon);
+	}
+	
+	return result;
 }
 
 public Action PlayerHealed(Event hEvent, const char[] sEvName, bool bDontBroadcast)

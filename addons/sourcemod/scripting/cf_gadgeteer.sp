@@ -784,9 +784,10 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 			○ Rescue ranger bolts should be able to collide with these sentries and heal them.
 			○ If a sentry gets hit by ANYTHING, it starts spinning out wildly which makes it effectively useless since it isn't able to track its targets. This needs to be fixed so that physics can still apply knockback, but not affect rotation.
 			○ Because the sentry is a prop_physics entity, it does not trigger hitsounds or damage numbers for attackers. Simulate these manually.
-			○ Figure out how to change kill icons and make drones use the mini-sentry icon.
+			○ The toolbox needs to use the toolbox icon for its kill icon. Also, if we can find the mini-sentry icon instead of just the regular sentry icon, we should use that for Drones.
 			○ Sentries don't seem to actually lose health when shot? Easy fix by just simulating the HP ourselves, like with the fake medigun shields. Still annoying though.
 		• Add the spellcasting first-person animation when the ability is activated.
+			○ Alternatively, give the user an actual toolbox for half a second then remove it and throw the toolbox? Would be easier and probably look better.
 		• Toolboxes still do not always explode when shot by hitscan. Look into the DHook detour for changing the bounding box so this is fixed.
 		*/
 	}
@@ -913,4 +914,23 @@ public void OnEntityDestroyed(int entity)
 		Toss_ToolboxOwner[entity] = -1;
 		Toss_IsToolbox[entity] = false;
 	}
+}
+
+public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], int deadRinger)
+{
+	if (!IsValidEntity(inflictor))
+		return Plugin_Continue;
+		
+	if (Toss_SentryStats[inflictor].exists)
+	{
+		Format(weapon, sizeof(weapon), "obj_sentrygun");
+		return Plugin_Changed;
+	}
+	else if (Toss_IsToolbox[inflictor])
+	{
+		Format(weapon, sizeof(weapon), "tf_weapon_builder");
+		return Plugin_Changed;
+	}
+		
+	return Plugin_Continue;
 }

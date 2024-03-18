@@ -304,6 +304,7 @@ forward void CF_OnFakeMediShieldCollision(int shield, int collider, int owner);
 forward void CF_OnKillstreakChanged(int client, int kills);
 
 /**
+ * DEPRECATED! Use CF_OnPlayerKilled_Pre instead, it does all of this but with added features.
  * Called when a character is killed.
  *
  * @param victim			The player who was killed.
@@ -312,6 +313,19 @@ forward void CF_OnKillstreakChanged(int client, int kills);
  * @param deadRinger		0 if the kill was real, 1 if it was a dead ringer.
  */
 forward void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int deadRinger);
+
+/**
+ * Called when a player is killed, using EventHookMode_Pre. Change any of the following variables (excluding deadRinger) to modify the event.
+ *
+ * @param victim			The client who was killed.
+ * @param inflictor			The entity index of whatever inflicted the killing blow.
+ * @param attacker			The player who dealt the damage.
+ * @param weapon			The weapon used to kill the target. Changing this will modify the kill icon as well as the name of the weapon displayed in the console.
+ * @param deadRinger		Was this a fake death caused by the Dead Ringer?
+ *
+ * @return	Plugin_Changed to apply your changes if you changed any variables, Plugin_Stop or Plugin_Handled to prevent the event from being fired, or Plugin_Continue to proceed as normal.
+ */
+forward Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], int deadRinger);
 
 /**
  * Called when the Chaos Fortress round state is changed.
