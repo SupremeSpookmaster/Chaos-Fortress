@@ -213,6 +213,7 @@ public Action PlayerKilled_Pre(Event hEvent, const char[] sEvName, bool bDontBro
 {
 	int victim = GetClientOfUserId(hEvent.GetInt("userid"));
 	int inflictor = hEvent.GetInt("inflictor_entindex");
+	int custom = hEvent.GetInt("customkill");
 	int attacker = GetClientOfUserId(hEvent.GetInt("attacker"));
 	char weapon[255];
 	hEvent.GetString("weapon", weapon, sizeof(weapon), "Generic");
@@ -227,12 +228,14 @@ public Action PlayerKilled_Pre(Event hEvent, const char[] sEvName, bool bDontBro
 	
 	if (IsValidClient(victim))
 	{
-		result = CF_PlayerKilled_Pre(victim, inflictor, attacker, weapon, ringer);
+		result = CF_PlayerKilled_Pre(victim, inflictor, attacker, weapon, custom, ringer);
 		
 		hEvent.SetInt("userid", GetClientUserId(victim));
 		hEvent.SetInt("inflictor_entindex", inflictor);
+		hEvent.SetInt("customkill", custom);
 		hEvent.SetInt("attacker", GetClientUserId(attacker));
 		hEvent.SetString("weapon", weapon);
+		hEvent.SetString("weapon_logclassname", weapon);
 	}
 	
 	return result;

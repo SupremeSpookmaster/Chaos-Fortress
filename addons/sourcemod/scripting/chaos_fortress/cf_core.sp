@@ -66,7 +66,7 @@ public void CF_OnPluginStart()
 	CFW_MakeForwards();
 	
 	g_OnPlayerKilled = new GlobalForward("CF_OnPlayerKilled", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
-	g_OnPlayerKilled_Pre = new GlobalForward("CF_OnPlayerKilled_Pre", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_String, Param_Cell);
+	g_OnPlayerKilled_Pre = new GlobalForward("CF_OnPlayerKilled_Pre", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_String, Param_CellByRef, Param_Cell);
 	g_OnRoundStateChanged = new GlobalForward("CF_OnRoundStateChanged", ET_Ignore, Param_Cell);
 	
 	g_WeaponDropLifespan = FindConVar("tf_dropped_weapon_lifetime");
@@ -290,11 +290,12 @@ public void CF_PlayerKilled(int victim, int inflictor, int attacker, bool deadRi
  * @param inflictor			The entity index of whatever inflicted the killing blow.
  * @param attacker			The player who dealt the damage.
  * @param weapon			The weapon used to kill the target. Changing this will modify the kill icon as well as the name of the weapon displayed in the console.
+ * @param custom			Certain kill icons require you to set this, as they cannot be achieved by simply setting the weapon string.
  * @param deadRinger		Was this a fake death caused by the Dead Ringer?
  *
  * @return	Plugin_Changed to apply your changes if you changed any variables, Plugin_Stop or Plugin_Handled to prevent the event from being fired, or Plugin_Continue to proceed as normal.
  */
-public Action CF_PlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], bool deadRinger)
+public Action CF_PlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], int &custom, bool deadRinger)
 {
 	Action result;
 	
@@ -304,6 +305,7 @@ public Action CF_PlayerKilled_Pre(int &victim, int &inflictor, int &attacker, ch
 	Call_PushCellRef(inflictor);
 	Call_PushCellRef(attacker);
 	Call_PushStringEx(weapon, sizeof(weapon), SM_PARAM_STRING_UTF8 | SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
+	Call_PushCellRef(custom);
 	Call_PushCell(view_as<int>(deadRinger));
 	
 	Call_Finish(result);

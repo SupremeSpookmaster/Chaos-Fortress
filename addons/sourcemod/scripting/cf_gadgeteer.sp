@@ -791,7 +791,7 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 		• Toolboxes still do not always explode when shot by hitscan. Look into the DHook detour for changing the bounding box so this is fixed.
 		*/
 	}
-	
+
 	RemoveEntity(toolbox);
 }
 
@@ -916,7 +916,7 @@ public void OnEntityDestroyed(int entity)
 	}
 }
 
-public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], int deadRinger)
+public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], int &custom, int deadRinger)
 {
 	if (!IsValidEntity(inflictor))
 		return Plugin_Continue;
@@ -929,6 +929,7 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 	else if (Toss_IsToolbox[inflictor])
 	{
 		Format(weapon, sizeof(weapon), "tf_weapon_builder");
+		custom = TF_CUSTOM_CARRIED_BUILDING;
 		return Plugin_Changed;
 	}
 		
