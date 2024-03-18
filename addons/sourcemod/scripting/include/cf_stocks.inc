@@ -2170,7 +2170,7 @@ stock void SpawnSpriteExplosion(float pos[3], int sound = 0)
 }
 
 //Thank you CookieCat!
-public void ScaleHitboxSize(int entity, float multiplier)
+stock void ScaleHitboxSize(int entity, float multiplier)
 {
 	float mins[3], maxs[3];
 	GetEntPropVector(entity, Prop_Send, "m_vecMins", mins);
@@ -2181,7 +2181,7 @@ public void ScaleHitboxSize(int entity, float multiplier)
 	SetHitboxSize(entity, mins, maxs);
 }
 
-public void SetHitboxSize(int entity, const float mins[3], const float maxs[3])
+stock void SetHitboxSize(int entity, const float mins[3], const float maxs[3])
 {
 	SetEntPropVector(entity, Prop_Send, "m_vecMins", mins);
 	SetEntPropVector(entity, Prop_Send, "m_vecMaxs", maxs);

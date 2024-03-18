@@ -120,6 +120,8 @@ float Toss_KB[2049] = { 0.0, ... };
 float Toss_UpVel[2049] = { 0.0, ... };
 float Toss_FacingAng[2049][3];
 
+bool Toss_IsToolbox[2049] = { false, ... };
+
 Queue Toss_Sentries[MAXPLAYERS + 1] = { null, ... };
 
 CustomSentry Toss_SentryStats[2049];
@@ -344,6 +346,12 @@ public void Toss_CustomSentryLogic(int ref)
 	float gt = GetGameTime();
 		
 	TFTeam team = view_as<TFTeam>(GetEntProp(entity, Prop_Send, "m_iTeamNum"));
+	if (CF_IsEntityInSpawn(entity, team == TFTeam_Red ? TFTeam_Blue : TFTeam_Red))
+	{
+		RemoveEntity(entity);
+		return;
+	}
+	
 	int owner = GetClientOfUserId(Toss_SentryStats[entity].owner);
 	int target = GetClientOfUserId(Toss_SentryStats[entity].target);
 	float turnSpeed = Toss_SentryStats[entity].turnRate;
@@ -548,6 +556,12 @@ public bool Toss_HasLineOfSight(int entity, int target)
 	return !DidHit;
 }
 
+public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
+{
+	if (Toss_IsToolbox[entity])
+		SetEntData(entity, FindSendPropInfo("CTFProjectile_Rocket", "m_nSkin"), view_as<int>(newTeam) - 2, 1, true);
+}
+
 public void Toss_Activate(int client, char abilityName[255])
 {
 	Toss_Max[client] = CF_GetArgI(client, GADGETEER, abilityName, "sentry_max");
@@ -598,6 +612,7 @@ public void Toss_Activate(int client, char abilityName[255])
 			randAng[i] = GetRandomFloat(0.0, 360.0);
 			
 		RequestFrame(Toss_Spin, EntIndexToEntRef(toolbox));
+		Toss_IsToolbox[toolbox] = true;
 		
 		g_DHookRocketExplode.HookEntity(Hook_Pre, toolbox, Toss_Explode);
 	}
@@ -772,8 +787,6 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 			○ Figure out how to change kill icons and make drones use the mini-sentry icon.
 			○ Sentries don't seem to actually lose health when shot? Easy fix by just simulating the HP ourselves, like with the fake medigun shields. Still annoying though.
 		• Add the spellcasting first-person animation when the ability is activated.
-		• The toolbox needs to be updated so that it changes its team if it is reflected. The drone spawned by reflected toolboxes should also have their team changed.
-		• You can toss toolboxes, and therefore sentries, into enemy spawns. This is bad for obvious reasons. Add a check to sentry spawns so that if they spawn in a spawn brush, they are instantly destroyed.
 		• Toolboxes still do not always explode when shot by hitscan. Look into the DHook detour for changing the bounding box so this is fixed.
 		*/
 	}
@@ -898,5 +911,6 @@ public void OnEntityDestroyed(int entity)
 		}
 		
 		Toss_ToolboxOwner[entity] = -1;
+		Toss_IsToolbox[entity] = false;
 	}
 }

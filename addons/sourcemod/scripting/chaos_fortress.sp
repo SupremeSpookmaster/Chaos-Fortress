@@ -92,6 +92,7 @@
 //	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This feature may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //			- Scrap this feature entirely and remove all mentions of it from the code. This will be a giant pain in the ass but does not need to be done until public release.
 //	- GADGETEER: Enemies can get stuck in his sentries, change the collision group to fix it.
+//	- ALL: All projectiles are affected by every instance of CF_OnGenericProjectileTeamChanged (excluding Gadgeteer) because I forgot to add a filter. Oops.
 //
 //	- PRESUMED UNFIXABLE (major bugs which I don't believe can be fixed with my current SourceMod expertise. The best thing you can do is classify these as exploits and punish them as such):
 //	- DEMOPAN: Enemies can get stuck in his shield if they walk into it while it is held. Demopans can abuse this to intentionally get enemies stuck for free kills. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.
@@ -510,4 +511,5 @@ public void OnEntityDestroyed(int entity)
 	CFW_OnEntityDestroyed(entity);
 	CFC_OnEntityDestroyed(entity);
 	CFA_OnEntityDestroyed(entity);
+	Core_OnEntityDestroyed(entity);
 }

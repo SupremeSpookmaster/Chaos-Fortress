@@ -18,6 +18,8 @@
 
 int i_CFRoundState = 0;						//The current round state.
 
+bool b_InSpawn[2049][4];
+
 GlobalForward g_OnPlayerKilled;
 GlobalForward g_OnRoundStateChanged;
 
@@ -44,6 +46,8 @@ public void CF_MakeNatives()
 	CFW_MakeNatives();
 	CFA_MakeNatives();
 	CFS_MakeNatives();
+	
+	CreateNative("CF_IsEntityInSpawn", Native_CF_IsEntityInSpawn);
 }
 
 /**
@@ -362,4 +366,43 @@ public void OnEntityCreated(int entity, const char[] classname)
 	{
 		RemoveEntity(entity);
 	}
+	
+	if (StrContains(classname, "func_respawnroom") != -1)
+	{
+		SDKHook(entity, SDKHook_StartTouch, EnterSpawn);
+		SDKHook(entity, SDKHook_EndTouch, ExitSpawn);
+	}
+}
+
+public Action EnterSpawn(int spawn, int entity)
+{
+	int team = GetEntProp(spawn, Prop_Send, "m_iTeamNum");
+	b_InSpawn[entity][team] = true;
+    
+	return Plugin_Continue;
+}
+
+public Action ExitSpawn(int spawn, int entity)
+{
+	int team = GetEntProp(spawn, Prop_Send, "m_iTeamNum");
+	b_InSpawn[entity][team] = false;
+    
+	return Plugin_Continue;
+}
+
+public void Core_OnEntityDestroyed(int entity)
+{
+	if (entity >= 0 && entity < 2049)
+	{
+		for (int i = 0; i < 4; i++)
+			b_InSpawn[entity][i] = false;
+	}
+}
+
+public Native_CF_IsEntityInSpawn(Handle plugin, int numParams)
+{
+	int entity = GetNativeCell(1);
+	int team = GetNativeCell(2);
+	
+	return b_InSpawn[entity][team];
 }

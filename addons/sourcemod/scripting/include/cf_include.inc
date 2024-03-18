@@ -1364,6 +1364,16 @@ native CF_GetSpecialResourceTitle(int client, char output[255], char output_plur
 native bool CF_CheckTeleport(int client, float distance, bool directional, float output[3] = NULL_VECTOR, float PositionOverride[3] = NULL_VECTOR, bool UseOverride = false)
 
 /**
+ * Checks if an entity is in any of the spawn rooms associated with the given TFTeam.
+ *
+ * @param entity			The entity to check.
+ * @param team				The team to check.
+ *
+ * @return	True if the entity is in a spawn room belonging to the given team, false otherwise.
+ */
+native bool CF_IsEntityInSpawn(int entity, TFTeam team)
+
+/**
  * Makes a client teleport in the direction they are aiming, up to a certain distance away. If they are holding crouch, they will "flip" to view the location they were at before the teleport.
  * ALL FUNCTIONALITY PROVIDED BY THIS NATIVE AND CF_CheckTeleport WERE WRITTEN BY SARYSA! 
  * All I did was port them and add the "directional" and "flip" features.
