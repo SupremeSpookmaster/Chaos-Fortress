@@ -153,6 +153,9 @@ enum struct CustomSentry
 	float superchargeFire_Hitscan;
 	float superchargeTurn_Hitscan;
 	float superchargeEndTime;
+	float previousPitch;
+	float previousYaw;
+	float previousRoll;
 	
 	bool exists;
 	bool shooting;
@@ -208,6 +211,9 @@ enum struct CustomSentry
 			
 		float angles[3];
 		GetEntPropVector(prop, Prop_Send, "m_angRotation", angles);
+		this.previousPitch = angles[0];
+		this.previousYaw = angles[1];
+		this.previousRoll = angles[2];
 		
 		//SetEntProp(prop, Prop_Send, "m_fEffects", 32);
 		TFTeam team = view_as<TFTeam>(GetEntProp(prop, Prop_Send, "m_iTeamNum"));
@@ -361,7 +367,10 @@ public void Toss_CustomSentryLogic(int ref)
 	
 	float distance;
 	float angles[3], pos[3], vel[3];
-	GetEntPropVector(entity, Prop_Send, "m_angRotation", angles);
+	//GetEntPropVector(entity, Prop_Send, "m_angRotation", angles);
+	angles[0] = Toss_SentryStats[entity].previousPitch;
+	angles[1] = Toss_SentryStats[entity].previousYaw;
+	angles[2] = Toss_SentryStats[entity].previousRoll;
 	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
 	GetEntPropVector(entity, Prop_Data, "m_vecVelocity", vel);
 	
@@ -482,6 +491,10 @@ public void Toss_CustomSentryLogic(int ref)
 			
 		TeleportEntity(entity, NULL_VECTOR, angles);
 	}
+	
+	Toss_SentryStats[entity].previousPitch = angles[0];
+	Toss_SentryStats[entity].previousYaw = angles[1];
+	Toss_SentryStats[entity].previousRoll = angles[2];
 		
 	RequestFrame(Toss_CustomSentryLogic, ref);
 }
@@ -782,9 +795,7 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 			○ A worldtext entity which is ONLY visible to the sentry's owner, displaying its HP.
 			○ Levitation if the sentry spawns on the ground (99% done, just need to figure out why wall sentries don't float properly)
 			○ Rescue ranger bolts should be able to collide with these sentries and heal them.
-			○ If a sentry gets hit by ANYTHING, it starts spinning out wildly which makes it effectively useless since it isn't able to track its targets. This needs to be fixed so that physics can still apply knockback, but not affect rotation.
 			○ Because the sentry is a prop_physics entity, it does not trigger hitsounds or damage numbers for attackers. Simulate these manually.
-			○ The toolbox needs to use the toolbox icon for its kill icon. Also, if we can find the mini-sentry icon instead of just the regular sentry icon, we should use that for Drones.
 			○ Sentries don't seem to actually lose health when shot? Easy fix by just simulating the HP ourselves, like with the fake medigun shields. Still annoying though.
 		• Add the spellcasting first-person animation when the ability is activated.
 			○ Alternatively, give the user an actual toolbox for half a second then remove it and throw the toolbox? Would be easier and probably look better.
