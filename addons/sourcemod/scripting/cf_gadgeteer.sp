@@ -916,19 +916,21 @@ public void OnEntityDestroyed(int entity)
 	}
 }
 
-public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], int &custom, int deadRinger)
+public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], char console[255], int &custom, int deadRinger)
 {
 	if (!IsValidEntity(inflictor))
 		return Plugin_Continue;
 		
 	if (Toss_SentryStats[inflictor].exists)
 	{
-		Format(weapon, sizeof(weapon), "obj_sentrygun");
+		Format(weapon, sizeof(weapon), "obj_minisentry");
+		Format(console, sizeof(console), "Drone");
 		return Plugin_Changed;
 	}
 	else if (Toss_IsToolbox[inflictor])
 	{
-		Format(weapon, sizeof(weapon), "tf_weapon_builder");
+		Format(weapon, sizeof(weapon), "building_carried_destroyed");
+		Format(console, sizeof(console), "Toolbox Toss");
 		custom = TF_CUSTOM_CARRIED_BUILDING;
 		return Plugin_Changed;
 	}
