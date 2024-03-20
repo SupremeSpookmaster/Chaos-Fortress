@@ -114,6 +114,7 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 int Toss_Owner[2049] = { -1, ... };
 int Toss_Max[MAXPLAYERS + 1] = { 0, ... };
 int Toss_ToolboxOwner[2049] = { -1, ... };
+int Text_Owner[2049] = { -1, ... };
 
 float Toss_DMG[2049] = { 0.0, ... };
 float Toss_KB[2049] = { 0.0, ... };
@@ -132,6 +133,7 @@ enum struct CustomSentry
 	int entity;
 	int dummy;
 	int target;
+	int text;
 	int superchargedType;
 	
 	float hoverHeight;
@@ -142,6 +144,7 @@ enum struct CustomSentry
 	float fireRate;
 	float damage;
 	float maxHealth;
+	float currentHealth;
 	float turnDirection;
 	float startingYaw;
 	float yawOffset;
@@ -257,7 +260,54 @@ enum struct CustomSentry
 		
 		AttachParticleToEntity(prop, team == TFTeam_Red ? PARTICLE_TOSS_DRONE_RED : PARTICLE_TOSS_DRONE_BLUE, "");
 		
+		this.currentHealth = this.maxHealth;
+		this.UpdateHP(0.0);
+		
+		SDKHook(prop, SDKHook_OnTakeDamage, Drone_Damaged);
+		
 		this.exists = true;
+	}
+	
+	void UpdateHP(float mod)
+	{
+		int prop = EntRefToEntIndex(this.entity);
+		if (!IsValidEntity(prop))
+			return;
+			
+		this.currentHealth += mod;
+		if (this.currentHealth <= 0.0)
+		{
+			RemoveEntity(prop);
+			return;
+		}
+		else if (this.currentHealth > this.maxHealth)
+			this.currentHealth = this.maxHealth;
+			
+		char hpText[255];
+		Format(hpText, sizeof(hpText), "HP: %i", RoundToCeil(this.currentHealth));
+			
+		int textEnt = EntRefToEntIndex(this.text);
+		if (!IsValidEntity(textEnt) || this.text == 0)
+		{
+			textEnt = AttachWorldTextToEntity(prop, hpText, "", _, _, _, 20.0 * this.scale);
+			if (IsValidEntity(textEnt))
+			{
+				this.text = EntIndexToEntRef(textEnt);
+				Text_Owner[textEnt] = this.owner;
+				SDKHook(textEnt, SDKHook_SetTransmit, Text_Transmit);
+			}
+		}
+
+		DispatchKeyValue(textEnt, "message", hpText);
+		
+		int r = 255, g = 255, b = 255;
+		float multiplier = this.currentHealth / this.maxHealth;
+		g = RoundFloat(multiplier * 255.0);
+		b = RoundFloat(multiplier * 255.0);
+		Format(hpText, sizeof(hpText), "%i %i %i 255", r, g, b);
+		DispatchKeyValue(textEnt, "color", hpText);
+		
+		//TODO: Different particles for different stages of damage
 	}
 	
 	void Destroy()
@@ -298,7 +348,19 @@ enum struct CustomSentry
 		
 		this.exists = false;
 		this.shooting = false;
+		this.text = 0;
 	}
+}
+
+public Action Text_Transmit(int entity, int client)
+{
+	SetEdictFlags(entity, GetEdictFlags(entity)&(~FL_EDICT_ALWAYS));
+	if (client != GetClientOfUserId(Text_Owner[entity]))
+ 	{
+ 		return Plugin_Handled;
+	}
+ 		
+	return Plugin_Continue;
 }
 
 public void Toss_FadeOutGib(int ref)
@@ -714,6 +776,21 @@ public Action Toss_ToolboxDamaged(int prop, int &attacker, int &inflictor, float
 	return Plugin_Changed;
 }
 
+public Action Drone_Damaged(int prop, int &attacker, int &inflictor, float &damage, int &damagetype) 
+{
+	float originalDamage = damage;
+	damage = 0.0;
+	
+	if (!Toss_SentryStats[prop].exists)
+		return Plugin_Changed;
+		
+	Toss_SentryStats[prop].UpdateHP(-originalDamage);
+	
+	//TODO: Play hitsound, mimic damage numbers using worldtext
+	
+	return Plugin_Changed;
+}
+
 public MRESReturn Toss_Explode(int toolbox)
 {
 	Toss_SpawnSentry(toolbox, false, 0);
@@ -792,11 +869,9 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired.
 		• The prop_physics needs the following custom sentry logic:
 			○ Shooting logic needs to be updated to include buildings and prop_physics entities. Currently they can HIT these entities but they can't actually target them.
-			○ A worldtext entity which is ONLY visible to the sentry's owner, displaying its HP.
 			○ Levitation if the sentry spawns on the ground (99% done, just need to figure out why wall sentries don't float properly)
 			○ Rescue ranger bolts should be able to collide with these sentries and heal them.
 			○ Because the sentry is a prop_physics entity, it does not trigger hitsounds or damage numbers for attackers. Simulate these manually.
-			○ Sentries don't seem to actually lose health when shot? Easy fix by just simulating the HP ourselves, like with the fake medigun shields. Still annoying though.
 		• Add the spellcasting first-person animation when the ability is activated.
 			○ Alternatively, give the user an actual toolbox for half a second then remove it and throw the toolbox? Would be easier and probably look better.
 		• Toolboxes still do not always explode when shot by hitscan. Look into the DHook detour for changing the bounding box so this is fixed.

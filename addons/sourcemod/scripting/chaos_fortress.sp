@@ -15,12 +15,8 @@
 //				- Optimally this should end up being something time-themed. Maybe a giant clock?
 //				- The aura itself should be a sphere.
 //		- Gadgeteer:
-//			- Replace the sentries spawned by Toolbox Toss with idle drones which mimic sentry behaviors. It will look better and function better as well.
-//			- Probably rewrite most of Toolbox Toss from the ground up.
-//			- Write a custom attribute for his rescue ranger which makes the bolts heal friendly prop_physics entities, so that they work with the custom "sentries" used by Toolbox Toss.
-//			- Write a custom attribute for his pistol which marks enemies for sentry targeting.
-//			- Write a custom attribute for his rescue ranger which buffs friendly sentries when it heals them.
-//			- Write the code for Automation Annihilation. This should be done with a generic_ability ability which just sets all of the user's cooldowns/ability costs to a certain value for a given time, like BvB Conductor's frenzy.
+//			- Write a worldtext helper plugin with natives and such to make worldtext easier to work with, then implement it for drone HP.
+//			- Write the code for Automation Annihilation. 
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////
@@ -94,6 +90,7 @@
 //	- GADGETEER: Enemies can get stuck in his sentries, change the collision group to fix it.
 //	- ALL: All projectiles are affected by every instance of CF_OnGenericProjectileTeamChanged (excluding Gadgeteer) because I forgot to add a filter. Oops.
 //	- The x64 update might kill Chaos Fortress before it's even released. Look into leaning away from DHooks.
+//	- DEVELOPMENT: Something is leaking edicts again...................................
 //
 //	- PRESUMED UNFIXABLE (major bugs which I don't believe can be fixed with my current SourceMod expertise. The best thing you can do is classify these as exploits and punish them as such):
 //	- DEMOPAN: Enemies can get stuck in his shield if they walk into it while it is held. Demopans can abuse this to intentionally get enemies stuck for free kills. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.

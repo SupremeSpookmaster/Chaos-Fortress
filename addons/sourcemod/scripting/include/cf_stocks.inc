@@ -583,7 +583,7 @@ stock int AttachWorldTextToEntity(int entity, char message[255], char point[255]
 			
 			TeleportEntity(part1, pos, NULL_VECTOR, NULL_VECTOR);
 			
-			DispatchKeyValue(part1, "message", "Character Preview");
+			DispatchKeyValue(part1, "message", message);
 	
 			static char sColor[32];
 			FormatEx(sColor, sizeof(sColor), "255 255 255 255"); //TODO: make this customizable
@@ -591,8 +591,8 @@ stock int AttachWorldTextToEntity(int entity, char message[255], char point[255]
 			DispatchSpawn(part1);
 			SetEdictFlags(part1, (GetEdictFlags(part1) & ~FL_EDICT_ALWAYS));  
 			DispatchKeyValue(part1, "targetname", "parented_text");
-			DispatchKeyValue(part1, "orientation", "1");
-			DispatchKeyValue(part1, "textsize", "10");
+			DispatchKeyValue(part1, "orientation", "1");	//TODO: Make this customizable
+			DispatchKeyValue(part1, "textsize", "10");	//TODO: Make this customizable	
 			
 			SetVariantString("!activator");
 			AcceptEntityInput(part1, "SetParent", entity, part1);
