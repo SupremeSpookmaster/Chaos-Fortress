@@ -437,17 +437,18 @@ public void Toss_CustomSentryLogic(int ref)
 	GetEntPropVector(entity, Prop_Data, "m_vecVelocity", vel);
 	
 	float groundDist = Toss_GetDistanceToSurface(entity, 90.0, 0.0, 0.0);
+	float TARGET_UPVEL = 11.875;	//Due to what is presumably Source engine shenanigans, we can't just lock the velocity to 0.0 and have it hover properly. It needs to be higher or else it will gradually fall to the ground, but not too high or else it will ascend to the heavens. This is VERY annoying.
 	if (groundDist < Toss_SentryStats[entity].hoverHeight)
 	{
 		vel[2] = LerpFloat(0.01, vel[2], 100.0);
 		TeleportEntity(entity, NULL_VECTOR, NULL_VECTOR, vel);
 	}
-	else if (vel[2] != 0.0)
+	else if (vel[2] != TARGET_UPVEL)
 	{
-		if (vel[2] > 0.0)
-			vel[2] = ClampFloat(vel[2] - 4.0, 0.0, 9999.0);
+		if (vel[2] > TARGET_UPVEL)
+			vel[2] = ClampFloat(vel[2] - 4.0, TARGET_UPVEL, 9999.0);
 		else
-			vel[2] = ClampFloat(vel[2] + 4.0, -9999.0, 0.0);
+			vel[2] = ClampFloat(vel[2] + 4.0, -9999.0, TARGET_UPVEL);
 			
 		TeleportEntity(entity, NULL_VECTOR, NULL_VECTOR, vel);
 	}
@@ -500,7 +501,7 @@ public void Toss_CustomSentryLogic(int ref)
 				angles[2] = ApproachAngle(0.0, angles[2], turnSpeed);
 			}
 			
-			TeleportEntity(entity, NULL_VECTOR, angles);
+			TeleportEntity(entity, NULL_VECTOR, angles, vel);
 			
 			if (gt >= Toss_SentryStats[entity].NextShot && CanShoot)
 			{
@@ -551,7 +552,7 @@ public void Toss_CustomSentryLogic(int ref)
 		if (GetDifference(diff, turnSpeed) < turnSpeed)
 			Toss_SentryStats[entity].turnDirection *= -1.0;
 			
-		TeleportEntity(entity, NULL_VECTOR, angles);
+		TeleportEntity(entity, NULL_VECTOR, angles, vel);
 	}
 	
 	Toss_SentryStats[entity].previousPitch = angles[0];
@@ -869,7 +870,6 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired.
 		• The prop_physics needs the following custom sentry logic:
 			○ Shooting logic needs to be updated to include buildings and prop_physics entities. Currently they can HIT these entities but they can't actually target them.
-			○ Levitation if the sentry spawns on the ground (99% done, just need to figure out why wall sentries don't float properly)
 			○ Rescue ranger bolts should be able to collide with these sentries and heal them.
 			○ Because the sentry is a prop_physics entity, it does not trigger hitsounds or damage numbers for attackers. Simulate these manually.
 		• Add the spellcasting first-person animation when the ability is activated.
