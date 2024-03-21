@@ -405,6 +405,11 @@ public void OnEntityCreated(int entity, const char[] classname)
 		SDKHook(entity, SDKHook_StartTouch, EnterSpawn);
 		SDKHook(entity, SDKHook_EndTouch, ExitSpawn);
 	}
+	
+	if (StrContains(classname, "prop_physics") != -1)
+	{
+		SDKHook(entity, SDKHook_TouchPost, PhysTouch);
+	}
 }
 
 public Action EnterSpawn(int spawn, int entity)
@@ -439,3 +444,32 @@ public Native_CF_IsEntityInSpawn(Handle plugin, int numParams)
 	
 	return b_InSpawn[entity][team];
 } 
+
+//TODO: Add forwards for friendly and enemy collisions. Neutral collisions should be treated as enemy collisions.
+//Enemy collisions should allow the user to change the damage. Friendly collisions don't need to do anything special.
+//Both need to pass the entity indices of the prop_physics and projectile, as well as their teams and owners, and the projectile's launcher and damage.
+public Action PhysTouch(int prop, int entity)
+{
+	if (!TF2_IsDamageProjectileWithoutImpactExplosion(entity))
+		return Plugin_Continue;
+		
+	int team1 = GetEntProp(prop, Prop_Send, "m_iTeamNum");
+	int team2 = GetEntProp(entity, Prop_Send, "m_iTeamNum");
+	int owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
+	int launcher = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
+	float damage = 100.0;	//TODO: Figure out how to get the projectile's damage.
+	CPrintToChatAll("Damage: %i", RoundToCeil(damage));
+		
+	float pos[3];
+	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+	
+	if (team1 != team2)
+	{	
+		SDKHooks_TakeDamage(prop, entity, (IsValidClient(owner) ? owner : 0), damage, _, (IsValidEntity(launcher) ? launcher : -1), _, pos, false);
+		
+		//TODO: Impact sounds, obviously these are different based on the projectile. Should play at the projectile's location if possible, and also to the attacker. 
+		//TODO: pills need to explode. We won't bother getting the exact blast radius, we can just guesstimate. We DO need the damage though.
+	}
+		
+	return Plugin_Continue;
+}

@@ -778,16 +778,25 @@ public Action Toss_ToolboxDamaged(int prop, int &attacker, int &inflictor, float
 }
 
 public Action Drone_Damaged(int prop, int &attacker, int &inflictor, float &damage, int &damagetype) 
-{
+{	
 	float originalDamage = damage;
 	damage = 0.0;
 	
 	if (!Toss_SentryStats[prop].exists)
 		return Plugin_Changed;
-		
-	Toss_SentryStats[prop].UpdateHP(-originalDamage);
 	
-	//TODO: Play hitsound, mimic damage numbers using worldtext
+	if (IsValidClient(attacker))
+	{
+		if (originalDamage >= Toss_SentryStats[prop].currentHealth)
+			ClientCommand(attacker, "playgamesound ui/killsound.wav");
+		else
+			ClientCommand(attacker, "playgamesound ui/hitsound.wav");
+			
+		//TODO: This should be worldtext and not a centertext message
+		PrintCenterText(attacker, "%i", RoundToCeil(originalDamage));
+	}
+	
+	Toss_SentryStats[prop].UpdateHP(-originalDamage);
 	
 	return Plugin_Changed;
 }
@@ -870,8 +879,8 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired.
 		• The prop_physics needs the following custom sentry logic:
 			○ Shooting logic needs to be updated to include buildings and prop_physics entities. Currently they can HIT these entities but they can't actually target them.
-			○ Rescue ranger bolts should be able to collide with these sentries and heal them.
-			○ Because the sentry is a prop_physics entity, it does not trigger hitsounds or damage numbers for attackers. Simulate these manually.
+			○ Friendly rescue ranger bolts should be able to collide with these sentries and heal them.
+			○ Use worldtext for the simulated damage numbers instead of centertext.
 		• Add the spellcasting first-person animation when the ability is activated.
 			○ Alternatively, give the user an actual toolbox for half a second then remove it and throw the toolbox? Would be easier and probably look better.
 		• Toolboxes still do not always explode when shot by hitscan. Look into the DHook detour for changing the bounding box so this is fixed.
