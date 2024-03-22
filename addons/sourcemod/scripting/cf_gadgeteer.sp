@@ -1015,7 +1015,7 @@ public void OnEntityDestroyed(int entity)
 	}
 }
 
-public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], char console[255], int &custom, int deadRinger)
+public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], char console[255], int &custom, int deadRinger, int &critType, int &damagebits)
 {
 	if (!IsValidEntity(inflictor))
 		return Plugin_Continue;
@@ -1024,6 +1024,18 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 	{
 		Format(weapon, sizeof(weapon), "obj_minisentry");
 		Format(console, sizeof(console), "Drone");
+		if (GetGameTime() <= Toss_SentryStats[inflictor].superchargeEndTime)
+		{
+			int type = Toss_SentryStats[inflictor].superchargedType;
+			
+			critType = type;
+			
+			if (type == 2)
+				Format(console, sizeof(console), "Drone (Supercharged by Projectile)");
+			else
+				Format(console, sizeof(console), "Drone (Supercharged by Hitscan)");
+		}
+			
 		return Plugin_Changed;
 	}
 	else if (Toss_IsToolbox[inflictor])

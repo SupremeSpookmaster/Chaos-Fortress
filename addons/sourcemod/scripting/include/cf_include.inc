@@ -324,10 +324,12 @@ forward void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int dead
  * @param console			The name of the weapon, as stated in the console (EX: if this is Cool Gun, the console will read "Played 1 killed Player 2 with Cool Gun").
  * @param custom			Certain kill icons require you to set this, as they cannot be achieved by simply setting the weapon string.
  * @param deadRinger		Was this a fake death caused by the Dead Ringer?
+ * @param critType			The type of crit which killed the victim. Set to 0 for no crit, 1 for it to appear as a mini-crit, and 2 for it to appear as a normal crit.
+ * @param damagebits		Can be used to modify the type of damage which inflicted the kill.
  *
  * @return	Plugin_Changed to apply your changes if you changed any variables, Plugin_Stop or Plugin_Handled to prevent the event from being fired, or Plugin_Continue to proceed as normal.
  */
-forward Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], char console[255], int &custom, int deadRinger);
+forward Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], char console[255], int &custom, int deadRinger, int &critType, int &damagebits);
 
 /**
  * Called when the Chaos Fortress round state is changed.

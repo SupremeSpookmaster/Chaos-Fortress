@@ -67,6 +67,7 @@
 //				- Turns at a rate of 2 degrees per frame (126 per second).
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
+//	- TODO: Write the worldtext helper plugin and use it for Gadgeteer's Drones and MAYBE medigun shields.
 //	- TODO: Make Demopan's fancy ult delay an officially supported feature that you can enable or disable by setting "warning_delay" in the ultimate stats section.
 //	- TODO: Disable random crits on the beta test server (melee characters like Spookmaster and Demopan are utterly busted with random crits).
 //	- TODO: Test all game modes (except for CTF which won't be officially supported):
@@ -221,6 +222,8 @@ public Action PlayerKilled_Pre(Event hEvent, const char[] sEvName, bool bDontBro
 	int victim = GetClientOfUserId(hEvent.GetInt("userid"));
 	int inflictor = hEvent.GetInt("inflictor_entindex");
 	int custom = hEvent.GetInt("customkill");
+	int critType = hEvent.GetInt("crit_type");
+	int bits = hEvent.GetInt("damagebits");
 	int attacker = GetClientOfUserId(hEvent.GetInt("attacker"));
 	char weapon[255], console[255];
 	hEvent.GetString("weapon", weapon, sizeof(weapon), "Generic");
@@ -236,11 +239,17 @@ public Action PlayerKilled_Pre(Event hEvent, const char[] sEvName, bool bDontBro
 	
 	if (IsValidClient(victim))
 	{
-		result = CF_PlayerKilled_Pre(victim, inflictor, attacker, weapon, console, custom, ringer);
+		result = CF_PlayerKilled_Pre(victim, inflictor, attacker, weapon, console, custom, ringer, critType, bits);
 		
 		hEvent.SetInt("userid", GetClientUserId(victim));
 		hEvent.SetInt("inflictor_entindex", inflictor);
 		hEvent.SetInt("customkill", custom);
+		hEvent.SetInt("crit_type", critType);
+		
+		if (critType > 0 && critType < 3 && ((bits & DMG_CRIT) == 0))
+			bits |= DMG_CRIT;
+		hEvent.SetInt("damagebits", bits);
+		
 		hEvent.SetInt("attacker", GetClientUserId(attacker));
 		hEvent.SetString("weapon", weapon);
 		hEvent.SetString("weapon_logclassname", console);
