@@ -48,13 +48,23 @@
 //				- Maybe make Chow cost two Sandviches, then increase Sandvich base regen rate?
 //		////////////////////////////////////////////
 //		- Demopan:
-//			- Using Profit Blast to blast jump *might* give him too much mobility for a tank.
+//			- Using Profit Blast to blast jump *might* give him too much mobility for a tank. At the same time, though, he's a melee character with a slow base speed, so I doubt this will be a huge issue.
 //		////////////////////////////////////////////
 //		- Christian Brutal Sniper:
 //			- If multiple CBSs use Thousand Volley at the same time, the server will more than likely crash due to too many edicts (unconfirmed, cannot test with bots).
 //		////////////////////////////////////////////
 //		- Doktor Medick:
 //			- None! (Pending public opinion during beta)
+//		////////////////////////////////////////////
+//		- Gadgeteer:
+//			- He's meant to be support, but his kit encourages roaming and solo play way too much. He's too far into development to change how Toolbox Toss works, so that's not an option.
+//				- This may not be a REAL issue and instead just a false concern, as Gadgeteer doesn't have a lot of firepower and will likely die in a real fight before he can get 3 Drones out. Still something to watch out for during the public beta.
+//			- Notes regarding Drone stats:
+//				- Can fire twice per second.
+//				- Deals 15 damage per shot, for a total DPS of 30 per Drone, not counting Supercharge.
+//				- 100 HP per Drone.
+//				- Can detect targets within 800 HU, and will not stop firing as long as that target is within 1100 HU and maintains line-of-sight.
+//				- Turns at a rate of 2 degrees per frame (126 per second).
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Make Demopan's fancy ult delay an officially supported feature that you can enable or disable by setting "warning_delay" in the ultimate stats section.

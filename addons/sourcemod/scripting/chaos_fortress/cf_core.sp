@@ -23,6 +23,7 @@ bool b_InSpawn[2049][4];
 GlobalForward g_OnPlayerKilled;
 GlobalForward g_OnRoundStateChanged;
 GlobalForward g_OnPlayerKilled_Pre;
+GlobalForward g_PhysTouch;
 
 public ConfigMap GameRules;
 
@@ -68,6 +69,7 @@ public void CF_OnPluginStart()
 	g_OnPlayerKilled = new GlobalForward("CF_OnPlayerKilled", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	g_OnPlayerKilled_Pre = new GlobalForward("CF_OnPlayerKilled_Pre", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_String, Param_String, Param_CellByRef, Param_Cell);
 	g_OnRoundStateChanged = new GlobalForward("CF_OnRoundStateChanged", ET_Ignore, Param_Cell);
+	g_PhysTouch = new GlobalForward("CF_OnPhysPropHitByProjectile", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_String, Param_Cell, Param_Float, Param_Array);
 	
 	g_WeaponDropLifespan = FindConVar("tf_dropped_weapon_lifetime");
 	g_WeaponDropLifespan.IntValue = 0;
@@ -105,6 +107,9 @@ public Action Timer_ChatMessages(Handle messages)
 	return Plugin_Continue;
 }
 
+#define SOUND_PHYSTOUCH_HIT		"@weapons/fx/rics/arrow_impact_metal2.wav"
+#define SOUND_PHYSTOUCH_BLAST	"@weapons/explode1.wav"
+
 /**
  * Called when the map starts.
  */
@@ -119,6 +124,9 @@ public void CF_MapStart()
 	CFW_MapStart();
 	
 	CFA_MapStart();
+	
+	PrecacheSound(SOUND_PHYSTOUCH_HIT);
+	PrecacheSound(SOUND_PHYSTOUCH_BLAST);
 }
 
 /**
@@ -445,31 +453,53 @@ public Native_CF_IsEntityInSpawn(Handle plugin, int numParams)
 	return b_InSpawn[entity][team];
 } 
 
-//TODO: Add forwards for friendly and enemy collisions. Neutral collisions should be treated as enemy collisions.
-//Enemy collisions should allow the user to change the damage. Friendly collisions don't need to do anything special.
-//Both need to pass the entity indices of the prop_physics and projectile, as well as their teams and owners, and the projectile's launcher and damage.
 public Action PhysTouch(int prop, int entity)
 {
-	if (!TF2_IsDamageProjectileWithoutImpactExplosion(entity))
+	char classname[255];
+	if (!TF2_IsDamageProjectileWithoutImpactExplosion(entity, classname))
+		return Plugin_Continue;
+		
+	if (StrContains(classname, "remote") != -1)
 		return Plugin_Continue;
 		
 	int team1 = GetEntProp(prop, Prop_Send, "m_iTeamNum");
 	int team2 = GetEntProp(entity, Prop_Send, "m_iTeamNum");
 	int owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
 	int launcher = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
+	
 	float damage = 100.0;	//TODO: Figure out how to get the projectile's damage.
 	CPrintToChatAll("Damage: %i", RoundToCeil(damage));
 		
 	float pos[3];
 	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
 	
-	if (team1 != team2)
+	Action result = Plugin_Continue;
+	
+	Call_StartForward(g_PhysTouch);
+	
+	Call_PushCell(prop);
+	Call_PushCell(entity);
+	Call_PushCell(view_as<TFTeam>(team1));
+	Call_PushCell(view_as<TFTeam>(team2));
+	Call_PushCell(GetEntPropEnt(prop, Prop_Send, "m_hOwnerEntity"));
+	Call_PushCell(owner);
+	Call_PushString(classname);
+	Call_PushCell(launcher);
+	Call_PushFloat(damage);
+	Call_PushArray(pos, sizeof(pos));
+	
+	Call_Finish(result);
+	
+	if (team1 != team2 && result != Plugin_Stop && result != Plugin_Handled)
 	{	
-		SDKHooks_TakeDamage(prop, entity, (IsValidClient(owner) ? owner : 0), damage, _, (IsValidEntity(launcher) ? launcher : -1), _, pos, false);
-		
-		//TODO: Impact sounds, obviously these are different based on the projectile. Should play at the projectile's location if possible, and also to the attacker. 
-		//TODO: pills need to explode. We won't bother getting the exact blast radius, we can just guesstimate. We DO need the damage though.
+		if (result != Plugin_Stop && result != Plugin_Handled)
+		{
+			SDKHooks_TakeDamage(prop, entity, (IsValidClient(owner) ? owner : 0), damage, _, (IsValidEntity(launcher) ? launcher : -1), _, pos, false);
+		}
 	}
+	
+	if (IsValidClient(owner) && result != Plugin_Stop && result != Plugin_Handled)
+		EmitSoundToClient(owner, SOUND_PHYSTOUCH_HIT, _, _, 110, _, _, GetRandomInt(80, 110));
 		
-	return Plugin_Continue;
+	return result;
 }

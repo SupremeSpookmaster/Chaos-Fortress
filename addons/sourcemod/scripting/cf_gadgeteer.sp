@@ -33,6 +33,7 @@
 #define SOUND_TOSS_SHOOT_SUPERCHARGE			"weapons/shooting_star_shoot_crit.wav"
 #define SOUND_SUPERCHARGE	"items/powerup_pickup_reflect.wav"
 #define SOUND_SUPERCHARGE_HITSCAN			"items/powerup_pickup_agility.wav"
+#define SOUND_TOSS_HEAL		"weapons/rescue_ranger_charge_01.wav"
 
 #define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
 #define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
@@ -45,6 +46,8 @@
 #define PARTICLE_TOSS_SUPERCHARGE_HITSCAN_RED		"medic_healradius_red_buffed"
 #define PARTICLE_TOSS_SUPERCHARGE_BLUE	"eyeboss_vortex_blue"
 #define PARTICLE_TOSS_SUPERCHARGE_HITSCAN_BLUE		"medic_healradius_blue_buffed"
+#define PARTICLE_TOSS_HEAL_RED		"healthgained_red"
+#define PARTICLE_TOSS_HEAL_BLUE		"healthgained_blu"
 
 public void OnMapStart()
 {
@@ -74,6 +77,7 @@ public void OnMapStart()
 	PrecacheSound(SOUND_TOSS_SHOOT_SUPERCHARGE);
 	PrecacheSound(SOUND_SUPERCHARGE_HITSCAN);
 	PrecacheSound(SOUND_SUPERCHARGE);
+	PrecacheSound(SOUND_TOSS_HEAL);
 }
 
 public const char Toss_BuildSFX[][] =
@@ -878,9 +882,9 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 			○ Visuals indicating different states of damage, as well as a sound which is played to the owner when they are heavily damaged.
 			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired.
 		• The prop_physics needs the following custom sentry logic:
-			○ Shooting logic needs to be updated to include buildings and prop_physics entities. Currently they can HIT these entities but they can't actually target them.
-			○ Friendly rescue ranger bolts should be able to collide with these sentries and heal them.
+			○ Targeting logic needs to be updated to include buildings and prop_physics entities. Currently they can HIT these entities but they can't actually target them.
 			○ Use worldtext for the simulated damage numbers instead of centertext.
+			○ Use worldext to indicate the amount of HP healed by friendly rescue ranger bolts.
 		• Add the spellcasting first-person animation when the ability is activated.
 			○ Alternatively, give the user an actual toolbox for half a second then remove it and throw the toolbox? Would be easier and probably look better.
 		• Toolboxes still do not always explode when shot by hitscan. Look into the DHook detour for changing the bounding box so this is fixed.
@@ -1030,5 +1034,52 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 		return Plugin_Changed;
 	}
 		
+	return Plugin_Continue;
+}
+
+public Action CF_OnPhysPropHitByProjectile(int prop, int entity, TFTeam propTeam, TFTeam entityTeam, int propOwner, int entityOwner, char classname[255], int launcher, float damage, float pos[3])
+{
+	if (propTeam != entityTeam || !IsValidEntity(launcher) || !IsValidClient(entityOwner) || !Toss_SentryStats[prop].exists)
+		return Plugin_Continue;
+	
+	if (Toss_SentryStats[prop].currentHealth >= Toss_SentryStats[prop].maxHealth)
+		return Plugin_Continue;
+
+	float healPerScrap = TF2CustAttr_GetFloat(launcher, "toolbox drone heal per scrap", 0.0);
+	float healCost = TF2CustAttr_GetFloat(launcher, "toolbox drone heal cost", 0.0);
+	float totalHealing = 60.0;
+	
+	if (healPerScrap > 0.0 && healCost > 0.0)
+	{
+		float resources = CF_GetSpecialResource(entityOwner);
+		if (resources < healCost)
+			return Plugin_Continue;
+			
+		if (healCost > resources)
+			healCost = resources;
+			
+		float current = Toss_SentryStats[prop].currentHealth; 
+		float maxHP = Toss_SentryStats[prop].maxHealth;
+		
+		totalHealing = healPerScrap * healCost;
+		float afterHeals = current + totalHealing;
+		if (afterHeals > maxHP)
+		{
+			totalHealing -= (afterHeals - maxHP);
+		}
+		
+		Toss_SentryStats[prop].UpdateHP(totalHealing);
+		float finalCost = totalHealing / healPerScrap;
+		
+		CF_GiveSpecialResource(entityOwner, -finalCost);
+	}
+	else
+		return Plugin_Continue;
+		
+	SpawnParticle(pos, propTeam == TFTeam_Red ? PARTICLE_TOSS_HEAL_RED : PARTICLE_TOSS_HEAL_BLUE, 3.0);
+	EmitSoundToClient(entityOwner, SOUND_TOSS_HEAL);
+		
+	//TODO: Worldtext
+	
 	return Plugin_Continue;
 }

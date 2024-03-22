@@ -548,6 +548,24 @@ forward Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char abilit
  */
 forward Action CF_OnCalcAttackInterval(int client, int weapon, int slot, char classname[255], float &rate);
 
+/**
+ * Called when a prop_physics or prop_physics_override collides with a NON-EXPLOSIVE (huntsman arrow, rescue ranger bolt, etc) tf_projectile.
+ *
+ * @param prop			The prop_physics.
+ * @param entity		The projectile which collided with prop.
+ * @param propTeam		The TFTeam of the prop_physics.
+ * @param entityTeam 	The TFTeam of the projectile.
+ * @param propOwner		The owner of the prop_physics.
+ * @param entityOwner	The owner of the projectile.
+ * @param classname		The projectile's classname.
+ * @param launcher		The weapon which originally launched the projectile.
+ * @param damage		The damage the projectile should inflict. Only applies if propTeam and entityTeam are different. Can be changed to alter the damage.
+ * @param pos			The position of the projectile.
+ *
+ * @return Change "damage" and return Plugin_Changed to modify the damage if the teams are different, otherwise return Plugin_Continue.
+ */
+forward Action CF_OnPhysPropHitByProjectile(int prop, int entity, TFTeam propTeam, TFTeam entityTeam, int propOwner, int entityOwner, char classname[255], int launcher, float damage, float pos[3]);
+
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
 ///////////////////////////////////////
