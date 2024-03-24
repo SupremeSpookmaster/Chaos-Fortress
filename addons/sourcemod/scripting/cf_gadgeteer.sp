@@ -3,6 +3,7 @@
 #include <tf2_stocks>
 #include <cf_stocks>
 #include <math>
+#include <worldtext>
 
 #define GADGETEER		"cf_gadgeteer"
 #define TOSS			"gadgeteer_sentry_toss"
@@ -293,9 +294,10 @@ enum struct CustomSentry
 		int textEnt = EntRefToEntIndex(this.text);
 		if (!IsValidEntity(textEnt) || this.text == 0)
 		{
-			textEnt = AttachWorldTextToEntity(prop, hpText, "", _, _, _, 20.0 * this.scale);
+			textEnt = WorldText_Create(NULL_VECTOR, NULL_VECTOR, hpText, 10.0, _, _, FONT_TF2_BULKY);
 			if (IsValidEntity(textEnt))
 			{
+				WorldText_AttachToEntity(textEnt, prop, "", _, _, 20.0 * this.scale);
 				this.text = EntIndexToEntRef(textEnt);
 				Text_Owner[textEnt] = this.owner;
 				SDKHook(textEnt, SDKHook_SetTransmit, Text_Transmit);
@@ -308,8 +310,7 @@ enum struct CustomSentry
 		float multiplier = this.currentHealth / this.maxHealth;
 		g = RoundFloat(multiplier * 255.0);
 		b = RoundFloat(multiplier * 255.0);
-		Format(hpText, sizeof(hpText), "%i %i %i 255", r, g, b);
-		DispatchKeyValue(textEnt, "color", hpText);
+		WorldText_SetColor(textEnt, r, g, b);
 		
 		//TODO: Different particles for different stages of damage
 	}
@@ -781,12 +782,12 @@ public Action Toss_ToolboxDamaged(int prop, int &attacker, int &inflictor, float
 	return Plugin_Changed;
 }
 
-public Action Drone_Damaged(int prop, int &attacker, int &inflictor, float &damage, int &damagetype) 
+public Action Drone_Damaged(int prop, int &attacker, int &inflictor, float &damage, int &damagetype)
 {	
 	float originalDamage = damage;
 	damage = 0.0;
 	
-	if (!Toss_SentryStats[prop].exists)
+	if (!Toss_SentryStats[prop].exists || GetEntProp(prop, Prop_Send, "m_iTeamNum") == GetEntProp(attacker, Prop_Send, "m_iTeamNum"))
 		return Plugin_Changed;
 	
 	if (IsValidClient(attacker))
@@ -796,8 +797,20 @@ public Action Drone_Damaged(int prop, int &attacker, int &inflictor, float &dama
 		else
 			ClientCommand(attacker, "playgamesound ui/hitsound.wav");
 			
-		//TODO: This should be worldtext and not a centertext message
-		PrintCenterText(attacker, "%i", RoundToCeil(originalDamage));
+		float pos[3];
+		GetEntPropVector(prop, Prop_Send, "m_vecOrigin", pos);
+		pos[2] += 20.0 * Toss_SentryStats[prop].scale;
+		
+		char damageDealt[16];
+		Format(damageDealt, sizeof(damageDealt), "-%i", RoundToCeil(originalDamage));
+		int text = WorldText_Create(pos, NULL_VECTOR, damageDealt, 15.0, _, _, _, 255, 120, 120, 255);
+		if (IsValidEntity(text))
+		{
+			Text_Owner[text] = GetClientUserId(attacker);
+			SDKHook(text, SDKHook_SetTransmit, Text_Transmit);
+			
+			WorldText_MimicHitNumbers(text);
+		}
 	}
 	
 	Toss_SentryStats[prop].UpdateHP(-originalDamage);
@@ -883,8 +896,7 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired.
 		• The prop_physics needs the following custom sentry logic:
 			○ Targeting logic needs to be updated to include buildings and prop_physics entities. Currently they can HIT these entities but they can't actually target them.
-			○ Use worldtext for the simulated damage numbers instead of centertext.
-			○ Use worldext to indicate the amount of HP healed by friendly rescue ranger bolts.
+			○ prop_physics_override entities in general seem to be very 50/50 as to whether or not hitscan will actually damage them, though it can still apply force for some reason???? Figure out why and fix it
 		• Add the spellcasting first-person animation when the ability is activated.
 			○ Alternatively, give the user an actual toolbox for half a second then remove it and throw the toolbox? Would be easier and probably look better.
 		• Toolboxes still do not always explode when shot by hitscan. Look into the DHook detour for changing the bounding box so this is fixed.
@@ -1091,7 +1103,16 @@ public Action CF_OnPhysPropHitByProjectile(int prop, int entity, TFTeam propTeam
 	SpawnParticle(pos, propTeam == TFTeam_Red ? PARTICLE_TOSS_HEAL_RED : PARTICLE_TOSS_HEAL_BLUE, 3.0);
 	EmitSoundToClient(entityOwner, SOUND_TOSS_HEAL);
 		
-	//TODO: Worldtext
+	char amountHealed[16];
+	Format(amountHealed, sizeof(amountHealed), "+%i", RoundToCeil(totalHealing));
+	int text = WorldText_Create(pos, NULL_VECTOR, amountHealed, 15.0, _, _, _, 120, 255, 120, 255);
+	if (IsValidEntity(text))
+	{
+		Text_Owner[text] = GetClientUserId(entityOwner);
+		SDKHook(text, SDKHook_SetTransmit, Text_Transmit);
+			
+		WorldText_MimicHitNumbers(text);
+	}
 	
 	return Plugin_Continue;
 }

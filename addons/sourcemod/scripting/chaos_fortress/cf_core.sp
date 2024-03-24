@@ -470,7 +470,6 @@ public Action PhysTouch(int prop, int entity)
 	int launcher = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
 	
 	float damage = 100.0;	//TODO: Figure out how to get the projectile's damage.
-	CPrintToChatAll("Damage: %i", RoundToCeil(damage));
 		
 	float pos[3];
 	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);

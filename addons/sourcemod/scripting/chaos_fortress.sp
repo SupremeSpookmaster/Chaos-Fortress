@@ -15,7 +15,6 @@
 //				- Optimally this should end up being something time-themed. Maybe a giant clock?
 //				- The aura itself should be a sphere.
 //		- Gadgeteer:
-//			- Write a worldtext helper plugin with natives and such to make worldtext easier to work with, then implement it for drone HP.
 //			- Write the code for Automation Annihilation. 
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
