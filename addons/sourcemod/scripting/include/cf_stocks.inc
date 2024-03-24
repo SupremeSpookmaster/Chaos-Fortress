@@ -676,7 +676,7 @@ stock int AttachPhysModelToEntity(char model[255], char point[255], int parent, 
 {
 	int ReturnValue = -1;
 	
-	ReturnValue = CreateEntityByName("prop_physics_override");
+	ReturnValue = CreateEntityByName("prop_physics_multiplayer");
 	
 	if(IsValidEntity(ReturnValue))
 	{
@@ -2195,7 +2195,7 @@ stock void SetHitboxSize(int entity, const float mins[3], const float maxs[3])
 
 stock int SpawnPhysicsProp(char model[255], int owner, char skin[16], float health, bool invincible, float scale, float pos[3], float ang[3], float vel[3], float lifespan = 0.0)
 {
-	int prop = CreateEntityByName("prop_physics");
+	int prop = CreateEntityByName("prop_physics_multiplayer");
 	if (IsValidEntity(prop))
 	{
 		DispatchKeyValue(prop, "targetname", "phys"); 

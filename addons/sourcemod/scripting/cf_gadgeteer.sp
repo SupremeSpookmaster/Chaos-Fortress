@@ -35,6 +35,11 @@
 #define SOUND_SUPERCHARGE	"items/powerup_pickup_reflect.wav"
 #define SOUND_SUPERCHARGE_HITSCAN			"items/powerup_pickup_agility.wav"
 #define SOUND_TOSS_HEAL		"weapons/rescue_ranger_charge_01.wav"
+#define SOUND_DRONE_DAMAGED_1	"@weapons/sentry_damage1.wav"
+#define SOUND_DRONE_DAMAGED_2	"@weapons/sentry_damage2.wav"
+#define SOUND_DRONE_DAMAGED_3	"@weapons/sentry_damage3.wav"
+#define SOUND_DRONE_DAMAGED_4	"@weapons/sentry_damage4.wav"
+#define SOUND_DRONE_DAMAGED_ALERT	"misc/hud_warning.wav"
 
 #define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
 #define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
@@ -49,6 +54,7 @@
 #define PARTICLE_TOSS_SUPERCHARGE_HITSCAN_BLUE		"medic_healradius_blue_buffed"
 #define PARTICLE_TOSS_HEAL_RED		"healthgained_red"
 #define PARTICLE_TOSS_HEAL_BLUE		"healthgained_blu"
+#define PARTICLE_DRONE_DAMAGED		"superrare_burning1"
 
 public void OnMapStart()
 {
@@ -79,6 +85,11 @@ public void OnMapStart()
 	PrecacheSound(SOUND_SUPERCHARGE_HITSCAN);
 	PrecacheSound(SOUND_SUPERCHARGE);
 	PrecacheSound(SOUND_TOSS_HEAL);
+	PrecacheSound(SOUND_DRONE_DAMAGED_1);
+	PrecacheSound(SOUND_DRONE_DAMAGED_2);
+	PrecacheSound(SOUND_DRONE_DAMAGED_3);
+	PrecacheSound(SOUND_DRONE_DAMAGED_4);
+	PrecacheSound(SOUND_DRONE_DAMAGED_ALERT);
 }
 
 public const char Toss_BuildSFX[][] =
@@ -96,6 +107,14 @@ public const char Model_Gears[][255] =
 	MODEL_TOSS_GIB_3,
 	MODEL_TOSS_GIB_4,
 	MODEL_TOSS_GIB_5
+};
+
+public const char Drone_DamageSFX[][255] =
+{
+	SOUND_DRONE_DAMAGED_1,
+	SOUND_DRONE_DAMAGED_2,
+	SOUND_DRONE_DAMAGED_3,
+	SOUND_DRONE_DAMAGED_4
 };
 
 DynamicHook g_DHookRocketExplode;
@@ -140,6 +159,7 @@ enum struct CustomSentry
 	int target;
 	int text;
 	int superchargedType;
+	int damageEffect;
 	
 	float hoverHeight;
 	float scale;
@@ -225,7 +245,7 @@ enum struct CustomSentry
 		
 		//SetEntProp(prop, Prop_Send, "m_fEffects", 32);
 		TFTeam team = view_as<TFTeam>(GetEntProp(prop, Prop_Send, "m_iTeamNum"));
-		int model = AttachModelToEntity(MODEL_DRONE_VISUAL, "", prop, _, team == TFTeam_Red ? "0" : "1");
+		/*int model = AttachModelToEntity(MODEL_DRONE_VISUAL, "", prop, _, team == TFTeam_Red ? "0" : "1");
 		if (IsValidEntity(model))
 		{
 			this.dummy = EntIndexToEntRef(model);
@@ -234,7 +254,7 @@ enum struct CustomSentry
 			DispatchKeyValue(model, "modelscale", scalechar);
 			SetEntityGravity(model, 0.0);
 			TeleportEntity(model, NULL_VECTOR, angles);
-		}
+		}*/
 		
 		SetEntityGravity(prop, 0.0);
 		SetEntityCollisionGroup(prop, 23);
@@ -267,6 +287,7 @@ enum struct CustomSentry
 		
 		this.currentHealth = this.maxHealth;
 		this.UpdateHP(0.0);
+		ScaleHitboxSize(prop, this.scale + 0.33);
 		
 		SDKHook(prop, SDKHook_OnTakeDamage, Drone_Damaged);
 		
@@ -287,6 +308,14 @@ enum struct CustomSentry
 		}
 		else if (this.currentHealth > this.maxHealth)
 			this.currentHealth = this.maxHealth;
+			
+		if (mod < 0.0)
+		{
+			int chosen = GetRandomInt(0, sizeof(Drone_DamageSFX) - 1);
+			int pitch = GetRandomInt(90, 110);
+			EmitSoundToAll(Drone_DamageSFX[chosen], prop, _, _, _, _, pitch, -1);
+			EmitSoundToAll(Drone_DamageSFX[chosen], prop, _, _, _, _, pitch, -1);
+		}
 			
 		char hpText[255];
 		Format(hpText, sizeof(hpText), "HP: %i", RoundToCeil(this.currentHealth));
@@ -312,7 +341,24 @@ enum struct CustomSentry
 		b = RoundFloat(multiplier * 255.0);
 		WorldText_SetColor(textEnt, r, g, b);
 		
-		//TODO: Different particles for different stages of damage
+		int client = GetClientOfUserId(this.owner);
+		int damageParticle = EntRefToEntIndex(this.damageEffect);
+		if (multiplier <= 0.5)
+		{
+			if (IsValidClient(client))
+				EmitSoundToClient(client, SOUND_DRONE_DAMAGED_ALERT);
+				
+			if (!IsValidEntity(damageParticle) || damageParticle == 0)
+			{
+				damageParticle = AttachParticleToEntity(prop, PARTICLE_DRONE_DAMAGED, "");
+				this.damageEffect = EntIndexToEntRef(damageParticle);
+			}
+		}
+		else if (IsValidEntity(damageParticle) && damageParticle != 0)
+		{
+			RemoveEntity(damageParticle);
+			this.damageEffect = -1;
+		}
 	}
 	
 	void Destroy()
@@ -674,19 +720,15 @@ public void Toss_Activate(int client, char abilityName[255])
 		SetEntityModel(toolbox, MODEL_DRG);
 		DispatchKeyValue(toolbox, "modelscale", "0.00001");
 		
-		int phys = AttachPhysModelToEntity(MODEL_TOSS, "", toolbox, false, 999.0, _, TF2_GetClientTeam(client) == TFTeam_Red ? "0" : "1");
+		int phys = AttachPhysModelToEntity(MODEL_TOSS, "", toolbox, false, 1.0, _, TF2_GetClientTeam(client) == TFTeam_Red ? "0" : "1");
+		RequestFrame(Toss_ApplyHooksAfterTossing, EntIndexToEntRef(phys))
 		
 		Toss_ToolboxOwner[phys] = EntIndexToEntRef(toolbox);
-		ScaleHitboxSize(phys, CoolMult);
-		SDKHook(phys, SDKHook_OnTakeDamage, Toss_ToolboxDamaged);
-		SDKHook(phys, SDKHook_Touch, Toss_ToolboxTouch);
+		ScaleHitboxSize(phys, CoolMult)
+		
 		SDKHook(toolbox, SDKHook_Touch, Toss_RocketTouch);
 		
 		//SetEntProp(phys, Prop_Data, "m_usSolidFlags", 28);
-		SetEntProp(phys, Prop_Data, "m_nSolidType", 2);
-		
-		SetEntityCollisionGroup(phys, 23); //23 is TFCOLLISION_GROUP_COMBATOBJECT, it is solid to everything but players.
-		SetEntProp(phys, Prop_Send, "m_iTeamNum", 0);
 		
 		float randAng[3];
 		for (int i = 0; i < 3; i++)
@@ -695,10 +737,26 @@ public void Toss_Activate(int client, char abilityName[255])
 		RequestFrame(Toss_Spin, EntIndexToEntRef(toolbox));
 		Toss_IsToolbox[toolbox] = true;
 		
+		TeleportEntity(toolbox, pos, randAng, vel);
+		
 		g_DHookRocketExplode.HookEntity(Hook_Pre, toolbox, Toss_Explode);
 	}
 }
 
+
+public void Toss_ApplyHooksAfterTossing(int ref)
+{
+	int phys = EntRefToEntIndex(ref);
+	if (!IsValidEntity(phys))
+		return;
+		
+	SetEntProp(phys, Prop_Data, "m_takedamage", 1, 1);
+	SDKHook(phys, SDKHook_OnTakeDamage, Toss_ToolboxDamaged);
+	SDKHook(phys, SDKHook_Touch, Toss_ToolboxTouch);
+	SetEntProp(phys, Prop_Data, "m_nSolidType", 2);
+	SetEntityCollisionGroup(phys, 23); //23 is TFCOLLISION_GROUP_COMBATOBJECT, it is solid to everything but players.
+	SetEntProp(phys, Prop_Send, "m_iTeamNum", 0);
+}
 public Action Toss_RocketTouch(int prop, int other)
 {	
 	int client = GetEntPropEnt(prop, Prop_Send, "m_hOwnerEntity");
@@ -843,7 +901,7 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 	SpawnParticle(pos, PARTICLE_TOSS_BUILD_1, 2.0);
 	SpawnParticle(pos, PARTICLE_TOSS_BUILD_2, 2.0);
 	
-	int prop = CreateEntityByName("prop_physics_override");
+	int prop = CreateEntityByName("prop_physics_multiplayer");
 	if (IsValidEntity(prop))
 	{
 		Toss_SentryStats[prop].CopyFromOther(Toss_SentryStats[toolbox], prop);
@@ -858,10 +916,11 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 		if (IsValidClient(owner))
 		{
 			SetEntPropEnt(prop, Prop_Data, "m_hOwnerEntity", owner);
-			SetEntProp(prop, Prop_Send, "m_iTeamNum", team);
 		}
 		
-		DispatchKeyValue(prop, "skin", TF2_GetClientTeam(owner) == TFTeam_Red ? "0" : "1");
+		SetEntProp(prop, Prop_Send, "m_iTeamNum", team);
+		
+		DispatchKeyValue(prop, "skin", view_as<TFTeam>(team) == TFTeam_Red ? "0" : "1");
 		float health = Toss_SentryStats[prop].maxHealth;
 		char healthChar[16];
 		Format(healthChar, sizeof(healthChar), "%i", RoundFloat(health));
@@ -875,6 +934,7 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 		SetEntityGravity(prop, 0.0);
 		
 		TeleportEntity(prop, pos, Toss_FacingAng[toolbox]);
+		SetEntProp(prop, Prop_Data, "m_takedamage", 1, 1);
 		
 		if (Toss_GetDistanceToSurface(prop, 90.0, 0.0, 0.0) < 20.0)
 		{
@@ -896,7 +956,9 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired.
 		• The prop_physics needs the following custom sentry logic:
 			○ Targeting logic needs to be updated to include buildings and prop_physics entities. Currently they can HIT these entities but they can't actually target them.
-			○ prop_physics_override entities in general seem to be very 50/50 as to whether or not hitscan will actually damage them, though it can still apply force for some reason???? Figure out why and fix it
+			○ prop_physics_override entities in general seem to be very 50/50 as to whether or not hitscan will actually damage them, though it can still apply force and VFX for some reason???? Figure out why and fix it
+			○ Players can attack their own team's Drones. It doesn't deal any damage, but it does apply force. This will be exploited for griefing if it is not fixed.
+			○ When they are destroyed, they should use CF_PlayRandomSound to trigger dialogue from their owner. This can wait until Gadgeteer's sounds are ready.
 		• Add the spellcasting first-person animation when the ability is activated.
 			○ Alternatively, give the user an actual toolbox for half a second then remove it and throw the toolbox? Would be easier and probably look better.
 		• Toolboxes still do not always explode when shot by hitscan. Look into the DHook detour for changing the bounding box so this is fixed.

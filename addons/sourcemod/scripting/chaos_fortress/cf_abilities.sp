@@ -2725,7 +2725,7 @@ public Native_CF_CreateShieldWall(Handle plugin, int numParams)
 	GetNativeArray(7, ang, sizeof(ang));
 	float lifespan = GetNativeCell(8);
 	
-	int prop = CreateEntityByName("prop_physics_override");
+	int prop = CreateEntityByName("prop_physics_multiplayer");
 	if (IsValidEntity(prop))
 	{
 		DispatchKeyValue(prop, "targetname", "shield"); 
