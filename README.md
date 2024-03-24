@@ -29,6 +29,7 @@
 - **[TF2 World Text Helper](https://github.com/SupremeSpookmaster/TF2-World-Text-Helper)**
 - **RECOMMENDED: [TF2 Weaponmodel Override](https://github.com/Zabaniya001/TF2CA-weaponmodel_override)** - Not required to function, but is used by many default characters.
 - **RECOMMENDED: [TF2 Move Speed Unlocker](https://forums.alliedmods.net/showthread.php?p=2659562)** - Not required to function, but makes certain character techniques more fun.
+- **RECOMMENDED: Enable Halloween Mode.** You can do this however you want, be it through a plugin or just setting the cvar, but I highly recommend you enable Halloween mode so that your characters can take full advantage of the built-in wearables system.
 
 ## *Making Custom Characters*
 ***Chaos Fortress*** comes with a number of pre-made custom characters, but what if that's not enough? What if you want *more*? Don't worry, because Chaos Fortress has you covered: ***if you know how to make a Freak Fortress boss, you'll know how to make a Chaos Fortress character!*** And even if you don't, don't worry; it's not very difficult to figure out if you're experienced with SourceMod development. Most of my experience as a SourceMod developer comes from making Freak Fortress bosses, and I knew most of the developers who might take an interest in this game mode would be similar, so I was very careful to keep the development process for ***Chaos Fortress*** characters as close to that of ***Freak Fortress*** characters as possible.
