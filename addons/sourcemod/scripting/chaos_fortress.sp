@@ -83,6 +83,8 @@
 //		- Doktor Medick (and likely more characters in the future) needs the Fake Particle System, which in turn needs a config or else it will fail to boot. This does not break CF itself, but it does inhibit several important visual indicators used by many of the characters.
 //		- generic_abilities has a gamedata issue.
 //	- TODO: CBS' new model does not have a valid attachment point for Blast Bolt's particle, fix it.
+//	- TODO: Add a character stat called "weight". Any and all knockback applied to characters should be reduced by their weight.
+//	- TODO: Building on the "weight" stat, add the following natives: CF_GetCharacterWeight, CF_SetCharacterWeight, CF_ApplyKnockback. CF_ApplyKnockback should come with the option to ignore weight entirely.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
