@@ -900,25 +900,6 @@ public void Toss_CheckForCollision(int ref)
 	RequestFrame(Toss_CheckForCollision, ref);
 }
 
-public void Toss_ApplyHooksAfterTossing(int ref)
-{
-	int phys = EntRefToEntIndex(ref);
-	if (!IsValidEntity(phys))
-		return;
-		
-	SetEntProp(phys, Prop_Data, "m_takedamage", 1, 1);
-	SDKHook(phys, SDKHook_OnTakeDamage, Toss_ToolboxDamaged);
-	SDKHook(phys, SDKHook_Touch, Toss_ToolboxTouch);
-	SetEntProp(phys, Prop_Data, "m_nSolidType", 2);
-	SetEntityCollisionGroup(phys, 23); //23 is TFCOLLISION_GROUP_COMBATOBJECT, it is solid to everything but players.
-	SetEntProp(phys, Prop_Send, "m_iTeamNum", 0);
-	
-	DispatchKeyValue(phys, "solid", "6");
-	DispatchKeyValue(phys, "spawnflags", "12288");
-	SetEntProp(phys, Prop_Send, "m_usSolidFlags", 8);
-	DispatchSpawn(phys);
-	ActivateEntity(phys);
-}
 public Action Toss_RocketTouch(int prop, int other)
 {	
 	int client = GetEntPropEnt(prop, Prop_Send, "m_hOwnerEntity");
@@ -1094,6 +1075,12 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 		DispatchKeyValue(prop, "targetname", "droneparent"); 
 		DispatchKeyValue(prop, "model", MODEL_DRONE_PARENT);
 		
+		DispatchKeyValue(prop, "solid", "6");
+		DispatchKeyValue(prop, "spawnflags", "12288");
+		SetEntProp(prop, Prop_Send, "m_usSolidFlags", 8);
+		SetEntProp(prop, Prop_Data, "m_nSolidType", 2);
+		SetEntityCollisionGroup(prop, 23);
+		
 		DispatchSpawn(prop);
 		
 		ActivateEntity(prop);
@@ -1141,7 +1128,6 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 		• The prop_physics needs the following custom sentry logic:
 			○ Targeting logic needs to be updated to include buildings and prop_physics entities. Currently they can HIT these entities but they can't actually target them.
 				○ Probably figure out how ZR's WorldSpaceCenter thing works and use that to target center mass
-			○ Players can attack their own team's Drones. It doesn't deal any damage, but it does apply force. This will be exploited for griefing if it is not fixed.
 		• Add the spellcasting first-person animation when the ability is activated.
 			○ Alternatively, give the user an actual toolbox for half a second then remove it and throw the toolbox? Would be easier and probably look better.
 		• We need to figure out how to get the specific damage of every tf_projectile entity and use that for projectile damage on Drones.
@@ -1149,6 +1135,37 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 	}
 
 	RemoveEntity(toolbox);
+}
+
+public Action CF_OnPassFilter(int ent1, int ent2, bool &result)
+{
+	if (Toss_SentryStats[ent1].exists)
+	{
+		int owner = GetClientOfUserId(Toss_SentryStats[ent1].owner);
+		if (IsValidClient(owner))
+		{
+			if (IsValidMulti(ent2, false, _, true, TF2_GetClientTeam(owner)))
+			{
+				result = false;
+				return Plugin_Changed;
+			}
+		}
+	}
+	
+	if (Toss_SentryStats[ent2].exists)
+	{
+		int owner = GetClientOfUserId(Toss_SentryStats[ent2].owner);
+		if (IsValidClient(owner))
+		{
+			if (IsValidMulti(ent1, false, _, true, TF2_GetClientTeam(owner)))
+			{
+				result = false;
+				return Plugin_Changed;
+			}
+		}
+	}
+	
+	return Plugin_Continue;
 }
 
 public void Toss_AddToQueue(int client, int sentry)
