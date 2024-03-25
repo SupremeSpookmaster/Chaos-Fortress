@@ -157,6 +157,7 @@ float Toss_KB[2049] = { 0.0, ... };
 float Toss_UpVel[2049] = { 0.0, ... };
 float Toss_NextBounce[2049] = { 0.0, ... };
 float Toss_AutoDetTime[2049] = { 0.0, ... };
+float Toss_MinVel[2049] = { 0.0, ... };
 float Toss_FacingAng[2049][3];
 
 bool Toss_IsToolbox[2049] = { false, ... };
@@ -744,6 +745,7 @@ public void Toss_Activate(int client, char abilityName[255])
 		float intertiaScale = CF_GetArgF(client, GADGETEER, abilityName, "intertia_scale");
 		float autoDet = CF_GetArgF(client, GADGETEER, abilityName, "auto_deploy");
 		Toss_AutoDetTime[toolbox] = GetGameTime() + autoDet;
+		Toss_MinVel[toolbox] = CF_GetArgF(client, GADGETEER, abilityName, "minimum_speed");
 		
 		Toss_SentryStats[toolbox].CreateFromArgs(client, abilityName, toolbox);
 		
@@ -805,10 +807,21 @@ public void Toss_CheckForCollision(int ref)
 	if (!IsValidClient(client))
 		return;
 		
-	float pos[3], mins[3], maxs[3];
+	float pos[3], mins[3], maxs[3], vel[3];
 	GetEntPropVector(prop, Prop_Send, "m_vecOrigin", pos);
 	GetEntPropVector(prop, Prop_Send, "m_vecMins", mins);
 	GetEntPropVector(prop, Prop_Send, "m_vecMaxs", maxs);
+	GetEntPropVector(prop, Prop_Data, "m_vecVelocity", vel);
+	
+	bool CanHit = false;
+	for (int i = 0; i < 3 && !CanHit; i++)
+	{
+		if (vel[i] < 0.0)
+			vel[i] *= -1.0;
+			
+		if (vel[i] >= Toss_MinVel[prop])
+			CanHit = true;
+	}
 		
 	//We go a tiny bit bigger so that we aren't interfering with normal collisions:
 	ScaleVector(mins, 1.1);
@@ -820,7 +833,7 @@ public void Toss_CheckForCollision(int ref)
 		Toss_SpawnSentry(prop, false, 0);
 		return;
 	}
-	else if (gt >= Toss_NextBounce[prop])
+	else if (gt >= Toss_NextBounce[prop] && CanHit)
 	{	
 		Toss_TraceTeam = GetEntProp(prop, Prop_Send, "m_iTeamNum");
 		TR_TraceHullFilter(pos, pos, mins, maxs, MASK_SHOT, Toss_OnlyHitEnemies);
@@ -830,8 +843,10 @@ public void Toss_CheckForCollision(int ref)
 			
 			if (IsValidMulti(other, true, true, true, grabEnemyTeam(client)))	//TODO: Make a CF native called "CF_IsValidEnemy" that checks for prop_physics entities, buildings, and players with the opposite team
 			{
-				float vel[3], ang[3];
+				float ang[3];
 				GetEntPropVector(prop, Prop_Send, "m_angRotation", ang);
+				ang[0] = 0.0;
+				ang[2] = 0.0;
 				GetVelocityInDirection(ang, Toss_KB[prop], vel);
 				vel[2] += Toss_KB[prop];
 				TeleportEntity(other, _, _, vel);
@@ -865,7 +880,7 @@ public void Toss_CheckForCollision(int ref)
 	ScaleVector(mins, 1.15);
 	ScaleVector(maxs, 1.15);
 	ToolboxToIgnore = prop;
-	TR_TraceHullFilter(dpos, pos, mins, maxs, MASK_SHOT, Toss_IgnoreThisToolbox);
+	TR_TraceHullFilter(pos, pos, mins, maxs, MASK_SHOT, Toss_IgnoreThisToolbox);
 	if (TR_DidHit())
 	{
 		if (!Toss_WasHittingSomething[prop])
