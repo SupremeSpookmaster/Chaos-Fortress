@@ -411,6 +411,10 @@ enum struct CustomSentry
 					RequestFrame(Toss_FadeOutGib, EntIndexToEntRef(gear));
 				}
 			}
+			
+			int owner = GetClientOfUserId(this.owner);
+			if (IsValidMulti(owner))
+				CF_PlayRandomSound(owner, "", "sound_toolbox_drone_destroyed");
 		}
 		
 		this.exists = false;
@@ -1138,9 +1142,9 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 			○ Targeting logic needs to be updated to include buildings and prop_physics entities. Currently they can HIT these entities but they can't actually target them.
 				○ Probably figure out how ZR's WorldSpaceCenter thing works and use that to target center mass
 			○ Players can attack their own team's Drones. It doesn't deal any damage, but it does apply force. This will be exploited for griefing if it is not fixed.
-			○ When they are destroyed, they should use CF_PlayRandomSound to trigger dialogue from their owner. This can wait until Gadgeteer's sounds are ready.
 		• Add the spellcasting first-person animation when the ability is activated.
 			○ Alternatively, give the user an actual toolbox for half a second then remove it and throw the toolbox? Would be easier and probably look better.
+		• We need to figure out how to get the specific damage of every tf_projectile entity and use that for projectile damage on Drones.
 		*/
 	}
 
