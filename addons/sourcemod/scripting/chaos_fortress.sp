@@ -60,7 +60,7 @@
 //				- This may not be a REAL issue and instead just a false concern, as Gadgeteer doesn't have a lot of firepower and will likely die in a real fight before he can get 3 Drones out. Still something to watch out for during the public beta.
 //			- Notes regarding Drone stats:
 //				- Can fire twice per second.
-//				- Deals 15 damage per shot, for a total DPS of 30 per Drone, not counting Supercharge.
+//				- Deals 20 damage per shot, for a total DPS of 40 per Drone, not counting Supercharge.
 //				- 100 HP per Drone.
 //				- Can detect targets within 800 HU, and will not stop firing as long as that target is within 1100 HU and maintains line-of-sight.
 //				- Turns at a rate of 2 degrees per frame (126 per second).
@@ -97,7 +97,6 @@
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This feature may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //			- Scrap this feature entirely and remove all mentions of it from the code. This will be a giant pain in the ass but does not need to be done until public release.
-//	- GADGETEER: Enemies can get stuck in his sentries, change the collision group to fix it.
 //	- ALL: All projectiles are affected by every instance of CF_OnGenericProjectileTeamChanged (excluding Gadgeteer) because I forgot to add a filter. Oops.
 //	- The x64 update might kill Chaos Fortress before it's even released. Look into leaning away from DHooks.
 //	- DEVELOPMENT: Something is leaking edicts again...................................

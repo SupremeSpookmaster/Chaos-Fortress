@@ -25,6 +25,7 @@
 #define SOUND_TOSS_BUILD_2	"weapons/neon_sign_hit_02.wav"
 #define SOUND_TOSS_BUILD_3	"weapons/neon_sign_hit_03.wav"
 #define SOUND_TOSS_BUILD_4	"weapons/neon_sign_hit_04.wav"
+#define SOUND_TOSS_BUILD_EXTRA "@ui/itemcrate_smash_rare.wav"
 #define SOUND_TOSS_DESTROYED	"weapons/teleporter_explode.wav"
 #define SOUND_TOSS_TARGETLOCKED	"@weapons/sentry_spot.wav"
 #define SOUND_TOSS_TARGETWARNING	"weapons/sentry_spot_client.wav"
@@ -40,6 +41,9 @@
 #define SOUND_DRONE_DAMAGED_3	"@weapons/sentry_damage3.wav"
 #define SOUND_DRONE_DAMAGED_4	"@weapons/sentry_damage4.wav"
 #define SOUND_DRONE_DAMAGED_ALERT	"misc/hud_warning.wav"
+#define SOUND_DEBUG_HIT_TOOLBOX		"vo/spy_yes01.mp3"
+#define SOUND_TOOLBOX_FIZZING		"@misc/halloween/hwn_bomb_fuse.wav"
+#define SOUND_TOSS_HIT_WORLD		"@weapons/metal_gloves_hit.wav"
 
 #define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
 #define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
@@ -55,6 +59,10 @@
 #define PARTICLE_TOSS_HEAL_RED		"healthgained_red"
 #define PARTICLE_TOSS_HEAL_BLUE		"healthgained_blu"
 #define PARTICLE_DRONE_DAMAGED		"superrare_burning1"
+#define PARTICLE_SUPERCHARGE_IMPACT_BLUE	"drg_cow_explosioncore_charged_blue"
+#define PARTICLE_SUPERCHARGE_IMPACT_RED		"drg_cow_explosioncore_charged"
+#define PARTICLE_TOOLBOX_TRAIL_RED		"flaregun_trail_red"
+#define PARTICLE_TOOLBOX_TRAIL_BLUE		"flaregun_trail_blue"
 
 public void OnMapStart()
 {
@@ -90,6 +98,10 @@ public void OnMapStart()
 	PrecacheSound(SOUND_DRONE_DAMAGED_3);
 	PrecacheSound(SOUND_DRONE_DAMAGED_4);
 	PrecacheSound(SOUND_DRONE_DAMAGED_ALERT);
+	PrecacheSound(SOUND_DEBUG_HIT_TOOLBOX);
+	PrecacheSound(SOUND_TOOLBOX_FIZZING);
+	PrecacheSound(SOUND_TOSS_BUILD_EXTRA);
+	PrecacheSound(SOUND_TOSS_HIT_WORLD);
 }
 
 public const char Toss_BuildSFX[][] =
@@ -143,9 +155,12 @@ int Text_Owner[2049] = { -1, ... };
 float Toss_DMG[2049] = { 0.0, ... };
 float Toss_KB[2049] = { 0.0, ... };
 float Toss_UpVel[2049] = { 0.0, ... };
+float Toss_NextBounce[2049] = { 0.0, ... };
+float Toss_AutoDetTime[2049] = { 0.0, ... };
 float Toss_FacingAng[2049][3];
 
 bool Toss_IsToolbox[2049] = { false, ... };
+bool Toss_WasHittingSomething[2049] = { false, ... };
 
 Queue Toss_Sentries[MAXPLAYERS + 1] = { null, ... };
 
@@ -452,6 +467,13 @@ public bool Toss_OnlyHitEnemies(entity, contentsMask)
 	return (otherTeam == TFTeam_Blue && thisTeam == TFTeam_Red) || (otherTeam == TFTeam_Red && thisTeam == TFTeam_Blue);
 }
 
+int ToolboxToIgnore;
+
+public bool Toss_IgnoreThisToolbox(entity, contentsMask)
+{
+	return (entity == 0 || entity > MaxClients) && entity != ToolboxToIgnore;
+}
+
 public void Toss_CustomSentryLogic(int ref)
 {
 	int entity = EntRefToEntIndex(ref);
@@ -699,7 +721,15 @@ public void Toss_Activate(int client, char abilityName[255])
 	GetClientEyeAngles(client, ang);
 	GetVelocityInDirection(ang, velocity, vel);
 	
-	int toolbox = CF_FireGenericRocket(client, 0.0, velocity, false);
+	TFTeam team = TF2_GetClientTeam(client);
+	
+	float throwOffset = 45.0;
+	float fLen = throwOffset * Sine( DegToRad( ang[0] + 90.0 ) );
+	pos[0] = pos[0] + fLen * Cosine( DegToRad( ang[1] + 0.0) );
+	pos[1] = pos[1] + fLen * Sine( DegToRad( ang[1] + 0.0) );
+	pos[2] = pos[2] + throwOffset * Sine( DegToRad( -1 * (ang[0] + 0.0)) );
+	
+	int toolbox = CreateEntityByName("prop_physics_override");
 	if (IsValidEntity(toolbox))
 	{
 		float gravity = CF_GetArgF(client, GADGETEER, abilityName, "gravity");
@@ -710,6 +740,10 @@ public void Toss_Activate(int client, char abilityName[255])
 		Toss_KB[toolbox] = CF_GetArgF(client, GADGETEER, abilityName, "knockback");
 		Toss_UpVel[toolbox] = CF_GetArgF(client, GADGETEER, abilityName, "up_vel");
 		float CoolMult = CF_GetArgF(client, GADGETEER, abilityName, "trickshot_mult");
+		float massScale = CF_GetArgF(client, GADGETEER, abilityName, "mass_scale");
+		float intertiaScale = CF_GetArgF(client, GADGETEER, abilityName, "intertia_scale");
+		float autoDet = CF_GetArgF(client, GADGETEER, abilityName, "auto_deploy");
+		Toss_AutoDetTime[toolbox] = GetGameTime() + autoDet;
 		
 		Toss_SentryStats[toolbox].CreateFromArgs(client, abilityName, toolbox);
 		
@@ -717,32 +751,135 @@ public void Toss_Activate(int client, char abilityName[255])
 		Toss_FacingAng[toolbox][0] = 0.0;
 		Toss_FacingAng[toolbox][2] = 0.0;
 		
-		SetEntityModel(toolbox, MODEL_DRG);
-		DispatchKeyValue(toolbox, "modelscale", "0.00001");
+		//SET MODEL:
+		SetEntityModel(toolbox, MODEL_TOSS);
+		DispatchKeyValue(toolbox, "skin", team == TFTeam_Red ? "0" : "1");
 		
-		int phys = AttachPhysModelToEntity(MODEL_TOSS, "", toolbox, false, 1.0, _, TF2_GetClientTeam(client) == TFTeam_Red ? "0" : "1");
-		RequestFrame(Toss_ApplyHooksAfterTossing, EntIndexToEntRef(phys))
+		//SET SCALE:
+		char scale[255];
+		Format(scale, sizeof(scale), "%f", CoolMult);
+		DispatchKeyValue(toolbox, "modelscale", scale);
 		
-		Toss_ToolboxOwner[phys] = EntIndexToEntRef(toolbox);
-		ScaleHitboxSize(phys, CoolMult)
+		//COLLISION RULES:
+		DispatchKeyValue(toolbox, "solid", "6");
+		DispatchKeyValue(toolbox, "spawnflags", "12288");
+		SetEntProp(toolbox, Prop_Send, "m_usSolidFlags", 8);
+		SetEntProp(toolbox, Prop_Data, "m_nSolidType", 2);
+		SetEntityCollisionGroup(toolbox, 23);
 		
-		SDKHook(toolbox, SDKHook_Touch, Toss_RocketTouch);
+		//ACTIVATION:
+		DispatchKeyValueFloat(toolbox, "massScale", massScale);
+		DispatchKeyValueFloat(toolbox, "intertiascale", intertiaScale);
+		DispatchSpawn(toolbox);
+		ActivateEntity(toolbox);
 		
-		//SetEntProp(phys, Prop_Data, "m_usSolidFlags", 28);
+		//DAMAGE AND TEAM:
+		SetEntProp(toolbox, Prop_Data, "m_takedamage", 1, 1);
+		SetEntProp(toolbox, Prop_Send, "m_iTeamNum", view_as<int>(team));
 		
-		float randAng[3];
-		for (int i = 0; i < 3; i++)
-			randAng[i] = GetRandomFloat(0.0, 360.0);
-			
-		RequestFrame(Toss_Spin, EntIndexToEntRef(toolbox));
+		//HOOKS:
+		SDKHook(toolbox, SDKHook_OnTakeDamage, Toss_ToolboxDamaged);
+		SDKHook(toolbox, SDKHook_Touch, Toss_ToolboxTouch);
+		RequestFrame(Toss_CheckForCollision, EntIndexToEntRef(toolbox));
+
 		Toss_IsToolbox[toolbox] = true;
+		Toss_ToolboxOwner[toolbox] = GetClientUserId(client);
+	
+		TeleportEntity(toolbox, pos, ang, vel);
 		
-		TeleportEntity(toolbox, pos, randAng, vel);
-		
-		g_DHookRocketExplode.HookEntity(Hook_Pre, toolbox, Toss_Explode);
+		AttachParticleToEntity(toolbox, team == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, "", autoDet);
+		//EmitSoundToAll(SOUND_TOOLBOX_FIZZING, toolbox);
 	}
 }
 
+//Checks each frame to see if the toolbox is ready to auto-detonate. If it is, it automatically spawns a sentry.
+//Otherwise, it performs a manual hull trace every frame to detect when the toolbox collides with an enemy.
+//If it does (once per 0.2s), it will damage them, apply knockback, and cause the toolbox to bounce upward.
+public void Toss_CheckForCollision(int ref)
+{
+	int prop = EntRefToEntIndex(ref);
+	if (!IsValidEntity(prop))
+		return;
+		
+	int client = GetClientOfUserId(Toss_ToolboxOwner[prop]);
+	if (!IsValidClient(client))
+		return;
+		
+	float pos[3], mins[3], maxs[3];
+	GetEntPropVector(prop, Prop_Send, "m_vecOrigin", pos);
+	GetEntPropVector(prop, Prop_Send, "m_vecMins", mins);
+	GetEntPropVector(prop, Prop_Send, "m_vecMaxs", maxs);
+		
+	//We go a tiny bit bigger so that we aren't interfering with normal collisions:
+	ScaleVector(mins, 1.1);
+	ScaleVector(maxs, 1.1);
+		
+	float gt = GetGameTime();
+	if (gt >= Toss_AutoDetTime[prop])
+	{
+		Toss_SpawnSentry(prop, false, 0);
+		return;
+	}
+	else if (gt >= Toss_NextBounce[prop])
+	{	
+		Toss_TraceTeam = GetEntProp(prop, Prop_Send, "m_iTeamNum");
+		TR_TraceHullFilter(pos, pos, mins, maxs, MASK_SHOT, Toss_OnlyHitEnemies);
+		if (TR_DidHit())
+		{
+			int other = TR_GetEntityIndex();
+			
+			if (IsValidMulti(other, true, true, true, grabEnemyTeam(client)))	//TODO: Make a CF native called "CF_IsValidEnemy" that checks for prop_physics entities, buildings, and players with the opposite team
+			{
+				float vel[3], ang[3];
+				GetEntPropVector(prop, Prop_Send, "m_angRotation", ang);
+				GetVelocityInDirection(ang, Toss_KB[prop], vel);
+				vel[2] += Toss_KB[prop];
+				TeleportEntity(other, _, _, vel);
+				vel[0] = 0.0;
+				vel[1] = 0.0;
+				vel[2] = Toss_UpVel[prop];
+				TeleportEntity(prop, _, _, vel);
+				
+				SDKHooks_TakeDamage(other, prop, client, Toss_DMG[prop]);
+				
+				SpawnParticle(pos, PARTICLE_TOSS_HIT_PLAYER_1, 3.0);
+				SpawnParticle(pos, PARTICLE_TOSS_HIT_PLAYER_2, 3.0);
+				
+				EmitSoundToAll(SOUND_TOSS_TOOLBOX_HIT_PLAYER_1, prop, _, 110, _, _, GetRandomInt(90, 110), -1);
+				EmitSoundToAll(SOUND_TOSS_TOOLBOX_HIT_PLAYER_2, prop, _, _, _, _, GetRandomInt(90, 110), -1);
+				
+				EmitSoundToClient(client, SOUND_TOSS_TOOLBOX_HIT_PLAYER_1);
+				EmitSoundToClient(client, SOUND_TOSS_TOOLBOX_HIT_PLAYER_2);
+				
+				if (IsValidClient(other))
+				{
+					EmitSoundToClient(other, SOUND_TOSS_TOOLBOX_HIT_PLAYER_1);
+					EmitSoundToClient(other, SOUND_TOSS_TOOLBOX_HIT_PLAYER_2);
+				}
+				
+				Toss_NextBounce[prop] = gt + 0.2;
+			}
+		}
+	}
+	
+	ScaleVector(mins, 1.15);
+	ScaleVector(maxs, 1.15);
+	ToolboxToIgnore = prop;
+	TR_TraceHullFilter(dpos, pos, mins, maxs, MASK_SHOT, Toss_IgnoreThisToolbox);
+	if (TR_DidHit())
+	{
+		if (!Toss_WasHittingSomething[prop])
+			EmitSoundToAll(SOUND_TOSS_HIT_WORLD, prop, _, _, _, _, GetRandomInt(80, 110));
+		
+		Toss_WasHittingSomething[prop] = true;
+	}
+	else
+	{
+		Toss_WasHittingSomething[prop] = false;
+	}
+	
+	RequestFrame(Toss_CheckForCollision, ref);
+}
 
 public void Toss_ApplyHooksAfterTossing(int ref)
 {
@@ -756,6 +893,12 @@ public void Toss_ApplyHooksAfterTossing(int ref)
 	SetEntProp(phys, Prop_Data, "m_nSolidType", 2);
 	SetEntityCollisionGroup(phys, 23); //23 is TFCOLLISION_GROUP_COMBATOBJECT, it is solid to everything but players.
 	SetEntProp(phys, Prop_Send, "m_iTeamNum", 0);
+	
+	DispatchKeyValue(phys, "solid", "6");
+	DispatchKeyValue(phys, "spawnflags", "12288");
+	SetEntProp(phys, Prop_Send, "m_usSolidFlags", 8);
+	DispatchSpawn(phys);
+	ActivateEntity(phys);
 }
 public Action Toss_RocketTouch(int prop, int other)
 {	
@@ -799,24 +942,38 @@ public Action Toss_RocketTouch(int prop, int other)
 	return Plugin_Continue;
 }
 
+//Detects when the toolbox collides with one of the owner's projectiles.
 public Action Toss_ToolboxTouch(int prop, int other)
 {
-	int owner = EntRefToEntIndex(Toss_ToolboxOwner[prop]);
-	if (!IsValidEntity(owner))
-		return Plugin_Continue;
-		
-	int client = GetEntPropEnt(owner, Prop_Send, "m_hOwnerEntity");
+	int client = GetClientOfUserId(Toss_ToolboxOwner[prop]);
 	if (!IsValidClient(client))
 		return Plugin_Continue;
-
-	//If the toolbox collided with an allied projectile: trigger the supercharge, using projectile stats.
+		
+	//If the toolbox collided with one of the owner's projectiles, trigger the supercharge using projectile stats.
 	if (HasEntProp(other, Prop_Send, "m_hOwnerEntity"))
 	{
 		int otherOwner = GetEntPropEnt(other, Prop_Send, "m_hOwnerEntity");
 		char classname[255];
 		GetEntityClassname(other, classname, sizeof(classname));
 		if (StrContains(classname, "tf_projectile_") != -1 && otherOwner == client)
-			Toss_SpawnSentry(owner, true, 2);
+		{
+			float pos[3];
+			GetEntPropVector(other, Prop_Send, "m_vecOrigin", pos);
+			SpawnParticle(pos, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_SUPERCHARGE_IMPACT_RED : PARTICLE_SUPERCHARGE_IMPACT_BLUE);
+			
+			GetEntPropVector(prop, Prop_Send, "m_vecOrigin", pos);
+			pos[2] += 20.0 * Toss_SentryStats[prop].scale;
+			int text = WorldText_Create(pos, NULL_VECTOR, "ULTRA-CHARGED!", 15.0);
+			if (IsValidEntity(text))
+			{
+				WorldText_MimicHitNumbers(text, 2.0, 3.0, 0.5);
+				WorldText_SetRainbow(text, true);
+			}
+
+			RemoveEntity(other);
+			
+			Toss_SpawnSentry(prop, true, 2);
+		}
 	}
 	
 	return Plugin_Continue;
@@ -825,17 +982,24 @@ public Action Toss_ToolboxTouch(int prop, int other)
 public Action Toss_ToolboxDamaged(int prop, int &attacker, int &inflictor, float &damage, int &damagetype) 
 {
 	damage = 0.0;
-	
-	int owner = EntRefToEntIndex(Toss_ToolboxOwner[prop]);
-	if (!IsValidEntity(owner))
+		
+	int owner = GetClientOfUserId(Toss_ToolboxOwner[prop]);
+	if (!IsValidClient(owner))
 		return Plugin_Changed;
 		
-	int client = GetEntPropEnt(owner, Prop_Send, "m_hOwnerEntity");
-	if (!IsValidClient(client))
-		return Plugin_Changed;
+	if (attacker == owner)
+	{
+		float pos[3];
+		GetEntPropVector(prop, Prop_Send, "m_vecOrigin", pos);
+		pos[2] += 20.0 * Toss_SentryStats[prop].scale;
+		int text = WorldText_Create(pos, NULL_VECTOR, "SUPERCHARGED!", 10.0);
+		if (IsValidEntity(text))
+			WorldText_MimicHitNumbers(text, 2.0, 3.0, 0.5);
+			
+		SpawnParticle(pos, TF2_GetClientTeam(owner) == TFTeam_Red ? PARTICLE_SUPERCHARGE_IMPACT_RED : PARTICLE_SUPERCHARGE_IMPACT_BLUE);
 		
-	if (attacker == client)
-		Toss_SpawnSentry(owner, true, 1);
+		Toss_SpawnSentry(prop, true, 1);
+	}
 	
 	return Plugin_Changed;
 }
@@ -884,7 +1048,7 @@ public MRESReturn Toss_Explode(int toolbox)
 
 public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType)
 {
-	int owner = GetEntPropEnt(toolbox, Prop_Send, "m_hOwnerEntity");
+	int owner = GetClientOfUserId(Toss_ToolboxOwner[toolbox]); //GetEntPropEnt(toolbox, Prop_Send, "m_hOwnerEntity");
 	int team = GetEntProp(toolbox, Prop_Send, "m_iTeamNum");
 	
 	if (!IsValidClient(owner))
@@ -898,6 +1062,8 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 	
 	int chosen = GetRandomInt(0, sizeof(Toss_BuildSFX) - 1);
 	EmitSoundToAll(Toss_BuildSFX[chosen], toolbox, _, _, _, _, GetRandomInt(90, 110), -1);
+	EmitSoundToAll(Toss_BuildSFX[chosen], toolbox, _, _, _, _, GetRandomInt(90, 110), -1);
+	EmitSoundToAll(SOUND_TOSS_BUILD_EXTRA, toolbox, _, _, _, _, GetRandomInt(90, 110), -1);
 	SpawnParticle(pos, PARTICLE_TOSS_BUILD_1, 2.0);
 	SpawnParticle(pos, PARTICLE_TOSS_BUILD_2, 2.0);
 	
@@ -952,16 +1118,14 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 		/*
 		TODO: 
 		• The following things MUST be done, but cannot be done until we have the custom model:
-			○ Visuals indicating different states of damage, as well as a sound which is played to the owner when they are heavily damaged.
 			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired.
 		• The prop_physics needs the following custom sentry logic:
 			○ Targeting logic needs to be updated to include buildings and prop_physics entities. Currently they can HIT these entities but they can't actually target them.
-			○ prop_physics_override entities in general seem to be very 50/50 as to whether or not hitscan will actually damage them, though it can still apply force and VFX for some reason???? Figure out why and fix it
+				○ Probably figure out how ZR's WorldSpaceCenter thing works and use that to target center mass
 			○ Players can attack their own team's Drones. It doesn't deal any damage, but it does apply force. This will be exploited for griefing if it is not fixed.
 			○ When they are destroyed, they should use CF_PlayRandomSound to trigger dialogue from their owner. This can wait until Gadgeteer's sounds are ready.
 		• Add the spellcasting first-person animation when the ability is activated.
 			○ Alternatively, give the user an actual toolbox for half a second then remove it and throw the toolbox? Would be easier and probably look better.
-		• Toolboxes still do not always explode when shot by hitscan. Look into the DHook detour for changing the bounding box so this is fixed.
 		*/
 	}
 
