@@ -129,13 +129,8 @@ public const char Drone_DamageSFX[][255] =
 	SOUND_DRONE_DAMAGED_4
 };
 
-DynamicHook g_DHookRocketExplode;
-
 public void OnPluginStart()
 {
-	GameData gamedata = LoadGameConfigFile("chaos_fortress");
-	g_DHookRocketExplode = DHook_CreateVirtual(gamedata, "CTFBaseRocket::Explode");
-	delete gamedata;
 }
 
 public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
@@ -205,6 +200,7 @@ enum struct CustomSentry
 	bool exists;
 	bool shooting;
 
+	//Stores the ability's args in a toolbox to be copied into that toolbox's Drone by CopyFromOther.
 	void CreateFromArgs(int client, char abilityName[255], int entity)
 	{
 		this.owner = GetClientUserId(client);
@@ -226,6 +222,7 @@ enum struct CustomSentry
 		this.superchargeTurn_Hitscan = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_turn_hitscan");
 	}
 	
+	//Copies a toolbox's stats into this Drone.
 	void CopyFromOther(CustomSentry other, int entity)
 	{
 		this.owner = other.owner;
@@ -247,6 +244,7 @@ enum struct CustomSentry
 		this.superchargeTurn_Hitscan = other.superchargeTurn_Hitscan;
 	}
 	
+	//Activates the Drone's custom sentry logic and sets its VFX.
 	void Activate(bool supercharged, int superchargeType)
 	{
 		int prop = EntRefToEntIndex(this.entity);
@@ -311,6 +309,7 @@ enum struct CustomSentry
 		this.exists = true;
 	}
 	
+	//Adds "mod" to the Drone's current HP, automatically updating its health display text and damage indication particle if its health is above 0 or destroying it otherwise.
 	void UpdateHP(float mod)
 	{
 		int prop = EntRefToEntIndex(this.entity);
@@ -378,6 +377,7 @@ enum struct CustomSentry
 		}
 	}
 	
+	//Clears all important variables and triggers the Drone destruction VFX/SFX.
 	void Destroy()
 	{
 		int prop = EntRefToEntIndex(this.entity);
@@ -426,6 +426,7 @@ enum struct CustomSentry
 	}
 }
 
+//Prevents a point_worldtext entity from being seen by anyone other than its owner.
 public Action Text_Transmit(int entity, int client)
 {
 	SetEdictFlags(entity, GetEdictFlags(entity)&(~FL_EDICT_ALWAYS));
@@ -437,6 +438,7 @@ public Action Text_Transmit(int entity, int client)
 	return Plugin_Continue;
 }
 
+//Fades the alpha of a given entity and removes it if the alpha falls below 1.
 public void Toss_FadeOutGib(int ref)
 {
 	int gear = EntRefToEntIndex(ref);
@@ -458,16 +460,19 @@ public void Toss_FadeOutGib(int ref)
 int Toss_TraceTarget = -1;
 int Toss_TraceTeam = -1;
 
+//A trace which returns true as long as the entity is not a specified target (Toss_TraceTarget).
 public bool Toss_IgnoreAllButTarget(entity, contentsMask)
 {
 	return entity == Toss_TraceTarget;
 }
 
+//A trace which returns true as long as the entity is not a Drone or a client.
 public bool Toss_IgnoreDrones(entity, contentsMask)
 {
 	return !Toss_SentryStats[entity].exists && entity > MaxClients;
 }
 
+//A trace which returns true as long as the entity can be shot and is on the opposite of a specified team (Toss_TraceTeam).
 public bool Toss_OnlyHitEnemies(entity, contentsMask)
 {
 	if (!Entity_Can_Be_Shot(entity))
@@ -479,7 +484,7 @@ public bool Toss_OnlyHitEnemies(entity, contentsMask)
 }
 
 int ToolboxToIgnore;
-
+//A trace which returns true as long as the entity is not a client or a specified toolbox (ToolboxToIgnore).
 public bool Toss_IgnoreThisToolbox(entity, contentsMask)
 {
 	return (entity == 0 || entity > MaxClients) && entity != ToolboxToIgnore;
@@ -487,6 +492,12 @@ public bool Toss_IgnoreThisToolbox(entity, contentsMask)
 
 int SentryBeingChecked;
 
+//Controls ALL of the Drone's custom logic. This includes the following:
+//	• Finding a target.
+//	• Aiming at the target.
+//	• Shooting at the target.
+//	• Turning left and right as it scans for targets, if it cannot find a target.
+//	• Hovering.
 public void Toss_CustomSentryLogic(int ref)
 {
 	int entity = EntRefToEntIndex(ref);
@@ -654,6 +665,7 @@ public void Toss_CustomSentryLogic(int ref)
 	RequestFrame(Toss_CustomSentryLogic, ref);
 }
 
+//Gets the closest target for a Drone to shoot at.
 public int Toss_GetClosestTarget(int entity, TFTeam targetTeam, float &distance)
 {
 	float pos[3];
@@ -662,32 +674,16 @@ public int Toss_GetClosestTarget(int entity, TFTeam targetTeam, float &distance)
 	SentryBeingChecked = entity;
 	int closest = CF_GetClosestTarget(pos, true, distance, Toss_SentryStats[entity].radiusDetection, targetTeam, GADGETEER, Toss_IsValidTarget);
 	
-	/*for (int i = 1; i <= MaxClients; i++)
-	{
-		if (!IsValidMulti(i, true, true, true, targetTeam))
-			continue;
-			
-		float otherPos[3];
-		CF_WorldSpaceCenter(i, otherPos);
-		//GetClientAbsOrigin(i, otherPos);
-		float dist = GetVectorDistance(pos, otherPos);
-		
-		if (dist < closestDist && Toss_HasLineOfSight(entity, i))
-		{
-			closest = i;
-			closestDist = dist;
-			distance = closestDist;
-		}
-	}*/
-	
 	return closest;
 }
 
+//Used to determine if a given entity is a valid target for a Drone to shoot at.
 public bool Toss_IsValidTarget(int entity)
 {
 	return Toss_HasLineOfSight(SentryBeingChecked, entity) && Entity_Can_Be_Shot(entity);
 }
 
+//Gets the distance from a given position to the nearest surface in a direction, using the mods for the angle.
 public float Toss_GetDistanceToSurface(int entity, float pitchMod, float yawMod, float rollMod)
 {
 	if (!IsValidEntity(entity))
@@ -710,6 +706,7 @@ public float Toss_GetDistanceToSurface(int entity, float pitchMod, float yawMod,
 	return 0.0;
 }
 
+//Used to determine if a Drone has line-of-sight to a given target.
 public bool Toss_HasLineOfSight(int entity, int target)
 {
 	if (!IsValidEntity(entity) || !IsValidEntity(target))
@@ -725,12 +722,15 @@ public bool Toss_HasLineOfSight(int entity, int target)
 	return !DidHit;
 }
 
+//Used by Toolbox Toss to change the toolbox's skin and particle when it is reflected.
+//TODO: Change particle, change owner
 public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
 {
 	if (Toss_IsToolbox[entity])
 		SetEntData(entity, FindSendPropInfo("CTFProjectile_Rocket", "m_nSkin"), view_as<int>(newTeam) - 2, 1, true);
 }
 
+//Activates Toolbox Toss by throwing the toolbox.
 public void Toss_Activate(int client, char abilityName[255])
 {
 	Toss_Max[client] = CF_GetArgI(client, GADGETEER, abilityName, "sentry_max");
@@ -916,49 +916,7 @@ public void Toss_CheckForCollision(int ref)
 	RequestFrame(Toss_CheckForCollision, ref);
 }
 
-public Action Toss_RocketTouch(int prop, int other)
-{	
-	int client = GetEntPropEnt(prop, Prop_Send, "m_hOwnerEntity");
-	if (!IsValidClient(client))
-		return Plugin_Continue;
-
-	//Check to see if the toolbox collided with an enemy:
-	if (IsValidMulti(other, true, true, true, grabEnemyTeam(client)))
-	{
-		float vel[3], pos[3];
-		GetVelocityInDirection(Toss_FacingAng[prop], Toss_KB[prop], vel);
-		vel[2] += Toss_KB[prop];
-		TeleportEntity(other, _, _, vel);
-		vel[0] = 0.0;
-		vel[1] = 0.0;
-		vel[2] = Toss_UpVel[prop];
-		TeleportEntity(prop, _, _, vel);
-		
-		SDKHooks_TakeDamage(other, prop, client, Toss_DMG[prop]);
-		
-		GetEntPropVector(prop, Prop_Send, "m_vecOrigin", pos);
-		SpawnParticle(pos, PARTICLE_TOSS_HIT_PLAYER_1, 3.0);
-		SpawnParticle(pos, PARTICLE_TOSS_HIT_PLAYER_2, 3.0);
-		
-		EmitSoundToAll(SOUND_TOSS_TOOLBOX_HIT_PLAYER_1, prop, _, 110, _, _, GetRandomInt(90, 110), -1);
-		EmitSoundToAll(SOUND_TOSS_TOOLBOX_HIT_PLAYER_2, prop, _, _, _, _, GetRandomInt(90, 110), -1);
-		
-		EmitSoundToClient(client, SOUND_TOSS_TOOLBOX_HIT_PLAYER_1);
-		EmitSoundToClient(client, SOUND_TOSS_TOOLBOX_HIT_PLAYER_2);
-		EmitSoundToClient(other, SOUND_TOSS_TOOLBOX_HIT_PLAYER_1);
-		EmitSoundToClient(other, SOUND_TOSS_TOOLBOX_HIT_PLAYER_2);
-		
-		//Unhook the touch event so the toolbox doesn't bounce off of multiple enemies, or the same enemy several times.
-		//Granted, that WOULD be funny as hell, but it would be too strong.
-		SDKUnhook(prop, SDKHook_Touch, Toss_RocketTouch);
-		
-		return Plugin_Handled;
-	}
-	
-	return Plugin_Continue;
-}
-
-//Detects when the toolbox collides with one of the owner's projectiles.
+//Detects when the toolbox collides with one of the owner's projectiles, and ultra-charges it if it does.
 public Action Toss_ToolboxTouch(int prop, int other)
 {
 	int client = GetClientOfUserId(Toss_ToolboxOwner[prop]);
@@ -995,6 +953,7 @@ public Action Toss_ToolboxTouch(int prop, int other)
 	return Plugin_Continue;
 }
 
+//Used to detect when a toolbox is shot by hitscan. When this happens: spawn the Drone immediately and supercharge it.
 public Action Toss_ToolboxDamaged(int prop, int &attacker, int &inflictor, float &damage, int &damagetype) 
 {
 	damage = 0.0;
@@ -1020,6 +979,7 @@ public Action Toss_ToolboxDamaged(int prop, int &attacker, int &inflictor, float
 	return Plugin_Changed;
 }
 
+//Updates a Drone's HP when it takes damage, and simulates hitsounds and damage numbers for the attacker.
 public Action Drone_Damaged(int prop, int &attacker, int &inflictor, float &damage, int &damagetype)
 {	
 	float originalDamage = damage;
@@ -1056,15 +1016,11 @@ public Action Drone_Damaged(int prop, int &attacker, int &inflictor, float &dama
 	return Plugin_Changed;
 }
 
-public MRESReturn Toss_Explode(int toolbox)
-{
-	Toss_SpawnSentry(toolbox, false, 0);
-	return MRES_Supercede;
-}
-
+//Spawns a Drone from a given toolbox. If supercharged is true, superchargeType is used to determine which supercharge stats to use.
+//1: Hitscan, 2: Projectile
 public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType)
 {
-	int owner = GetClientOfUserId(Toss_ToolboxOwner[toolbox]); //GetEntPropEnt(toolbox, Prop_Send, "m_hOwnerEntity");
+	int owner = GetClientOfUserId(Toss_ToolboxOwner[toolbox]);
 	int team = GetEntProp(toolbox, Prop_Send, "m_iTeamNum");
 	
 	if (!IsValidClient(owner))
@@ -1155,8 +1111,10 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 	RemoveEntity(toolbox);
 }
 
+//Used to change hitscan interaction rules for Drones and toolboxes.
 public Action CF_OnPassFilter(int ent1, int ent2, bool &result)
 {
+	//Check 1: Don't let Drones be shot by allies.
 	if (Toss_SentryStats[ent1].exists)
 	{
 		int owner = GetClientOfUserId(Toss_SentryStats[ent1].owner);
@@ -1183,9 +1141,31 @@ public Action CF_OnPassFilter(int ent1, int ent2, bool &result)
 		}
 	}
 	
+	//Check 2: Only let toolboxes be shot by their owners.
+	if (Toss_IsToolbox[ent1] && IsValidClient(ent2))
+	{
+		int owner = GetClientOfUserId(Toss_ToolboxOwner[ent1]);
+		if (owner != ent2)
+		{
+			result = false;
+			return Plugin_Changed;
+		}
+	}
+	
+	if (Toss_IsToolbox[ent2] && IsValidClient(ent1))
+	{
+		int owner = GetClientOfUserId(Toss_ToolboxOwner[ent2]);
+		if (owner != ent1)
+		{
+			result = false;
+			return Plugin_Changed;
+		}
+	}
+	
 	return Plugin_Continue;
 }
 
+//Adds a newly-created Drone to the owner's collection of Drones, and deletes the oldest Drone if they go above the max.
 public void Toss_AddToQueue(int client, int sentry)
 {
 	if (!IsValidClient(client) || !IsValidEntity(sentry))
@@ -1213,6 +1193,7 @@ public void Toss_AddToQueue(int client, int sentry)
 	}
 }
 
+//Removes a Drone from the client's collection and automatically destroys it.
 public void Toss_RemoveFromQueue(int client, int sentry)
 {
 	if (!IsValidClient(client) || !IsValidEntity(sentry))
@@ -1238,35 +1219,19 @@ public void Toss_RemoveFromQueue(int client, int sentry)
 	delete clone;
 }
 
-public void Toss_Spin(int ref)
-{
-	int toolbox = EntRefToEntIndex(ref);
-	if (!IsValidEntity(toolbox))
-		return;
-		
-	float currentAng[3];
-	GetEntPropVector(toolbox, Prop_Send, "m_angRotation", currentAng);
-
-	for (int i = 0; i < 2; i++)
-	{
-		currentAng[i] += 2.0;
-	}
-		
-	TeleportEntity(toolbox, NULL_VECTOR, currentAng, NULL_VECTOR);
-	RequestFrame(Toss_Spin, ref);
-}
-
 public void CF_OnCharacterCreated(int client)
 {
 	
 }
 
+//Make sure we destroy all of the client's Drones if they disconnect, change their character, or the round state changes.
 public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
 	if (reason == CF_CRR_SWITCHED_CHARACTER || reason == CF_CRR_DISCONNECT || reason == CF_CRR_ROUNDSTATE_CHANGED)
 		Toss_DeleteSentries(client);
 }
 
+//Destroys all of the client's Drones and deletes their collection.
 public void Toss_DeleteSentries(int client)
 {
 	if (Toss_Sentries[client] != null)
@@ -1282,6 +1247,8 @@ public void Toss_DeleteSentries(int client)
 	delete Toss_Sentries[client];
 }
 
+//Resets global variables associated with given entities when they are destroyed.
+//Also triggers Drone destruction effects if the entity is a Drone.
 public void OnEntityDestroyed(int entity)
 {
 	if (entity > 0 && entity < 2049)
@@ -1307,6 +1274,7 @@ public void OnEntityDestroyed(int entity)
 	}
 }
 
+//Used purely to set kill icons for Drones and Toolbox Toss.
 public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], char console[255], int &custom, int deadRinger, int &critType, int &damagebits)
 {
 	if (!IsValidEntity(inflictor))
@@ -1341,6 +1309,8 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 	return Plugin_Continue;
 }
 
+//Used by Drones to detect when they collide with a friendly non-explosive projectile.
+//If the weapon which fired that projectile has our custom Rescue Ranger attribute, we heal the Drone.
 public Action CF_OnPhysPropHitByProjectile(int prop, int entity, TFTeam propTeam, TFTeam entityTeam, int propOwner, int entityOwner, char classname[255], int launcher, float damage, float pos[3])
 {
 	if (propTeam != entityTeam || !IsValidEntity(launcher) || !IsValidClient(entityOwner) || !Toss_SentryStats[prop].exists)
