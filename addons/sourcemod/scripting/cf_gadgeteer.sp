@@ -485,6 +485,8 @@ public bool Toss_IgnoreThisToolbox(entity, contentsMask)
 	return (entity == 0 || entity > MaxClients) && entity != ToolboxToIgnore;
 }
 
+int SentryBeingChecked;
+
 public void Toss_CustomSentryLogic(int ref)
 {
 	int entity = EntRefToEntIndex(ref);
@@ -537,8 +539,9 @@ public void Toss_CustomSentryLogic(int ref)
 		TeleportEntity(entity, NULL_VECTOR, NULL_VECTOR, vel);
 	}
 	
+	SentryBeingChecked = entity;
 	//We do not currently have a target or our target is hiding behind something, find a new target:
-	if ((!IsValidEntity(target) || !Toss_HasLineOfSight(entity, target)) && gt >= Toss_SentryStats[entity].nextTargetTime)
+	if (!Toss_IsValidTarget(target) && gt >= Toss_SentryStats[entity].nextTargetTime)
 	{
 		target = Toss_GetClosestTarget(entity, team == TFTeam_Red ? TFTeam_Blue : TFTeam_Red, distance);
 		if (IsValidEntity(target))
@@ -557,13 +560,13 @@ public void Toss_CustomSentryLogic(int ref)
 		Toss_SentryStats[entity].nextTargetTime = gt + 0.2;
 	}
 	
-	if (IsValidEntity(target) && Entity_Can_Be_Shot(target))	//We have a target, rotate to face them and fire if we are able.
+	if (Toss_IsValidTarget(target))	//We have a target, rotate to face them and fire if we are able.
 	{
 		float otherPos[3];
 		CF_WorldSpaceCenter(target, otherPos);
 		//GetClientAbsOrigin(target, otherPos);
 		
-		//The target has escaped our firing radius, un-lock.
+		//The target has escaped our firing radius, unlock.
 		if (GetVectorDistance(pos, otherPos) > Toss_SentryStats[entity].radiusFire)
 		{
 			target = -1;
@@ -597,14 +600,11 @@ public void Toss_CustomSentryLogic(int ref)
 				//TODO: VFX and SFX. Spawn muzzle flash, spawn laser beam. Also animations.
 				Toss_SentryStats[entity].NextShot = gt + (Toss_SentryStats[entity].fireRate / (gt <= Toss_SentryStats[entity].superchargeEndTime ? (Toss_SentryStats[entity].superchargedType == 1 ? Toss_SentryStats[entity].superchargeFire_Hitscan : Toss_SentryStats[entity].superchargeFire) : 1.0));
 				
-				//Run a traceray to see if our shot, will hit the target, or any other target on their team for that matter.
-				//TODO: This seems to fail pretty regularly for reasons I am unsure of. Figure out a fix.
-				float endPos[3];
+				//Run a traceray to see if our shot will hit the target, or any other target on their team for that matter.
 				int victim = target;
 				Toss_TraceTeam = GetEntProp(entity, Prop_Send, "m_iTeamNum");
 				TR_TraceRayFilter(pos, angles, MASK_SHOT, RayType_Infinite, Toss_OnlyHitEnemies);
 				victim = TR_GetEntityIndex();
-				TR_GetEndPosition(endPos);
 				
 				//This just gets the location where the beam should be fired.
 				SpawnBeam_Vectors(pos, otherPos, 0.33, 255, 0, 0, 255, PrecacheModel("materials/sprites/laserbeam.vmt"), 8.0, 8.0, _, 0.0);
@@ -654,7 +654,6 @@ public void Toss_CustomSentryLogic(int ref)
 	RequestFrame(Toss_CustomSentryLogic, ref);
 }
 
-int SentryBeingChecked;
 public int Toss_GetClosestTarget(int entity, TFTeam targetTeam, float &distance)
 {
 	float pos[3];
@@ -862,7 +861,7 @@ public void Toss_CheckForCollision(int ref)
 		{
 			int other = TR_GetEntityIndex();
 			
-			if (CF_IsValidTarget(other, targetTeam)/*IsValidMulti(other, true, true, true, grabEnemyTeam(client))*/)	//TODO: Make a CF native called "CF_IsValidEnemy" that checks for prop_physics entities, buildings, and players with the opposite team
+			if (CF_IsValidTarget(other, targetTeam))
 			{
 				float ang[3];
 				GetEntPropVector(prop, Prop_Send, "m_angRotation", ang);
@@ -1144,8 +1143,9 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired.
 		• The prop_physics needs the following custom sentry logic:
 			○ Targeting logic can now target entities, but this has caused the following issues:
-				○ For some reason, Drones can now randomly start firing at literally nothing??? This seems to be linked directly to the Drone's target dying.
-				○ Sometimes a Drone can fire directly at their target but they just... don't get hit???
+				○ Sometimes a Drone can fire directly at its target but they just don't get hit. This is likely caused by invisible clips assigned to the enemy team. Filter these out of the trace.
+				○ Drones will frequently not lock onto a target which *should* have line-of-sight and be within range. This is likely caused by invisible clips assigned to the enemy team. Filter them out of the line-of-sight trace.
+				○ Somewhat rarely, a Drone will fire at its own team, usually its owner. It doesn't deal damage, but it does make that Drone useless. Maybe delay setting the Drone's team by one frame?
 		• Add the spellcasting first-person animation when the ability is activated.
 			○ Alternatively, give the user an actual toolbox for half a second then remove it and throw the toolbox? Would be easier and probably look better.
 		• We need to figure out how to get the specific damage of every tf_projectile entity and use that for projectile damage on Drones.
