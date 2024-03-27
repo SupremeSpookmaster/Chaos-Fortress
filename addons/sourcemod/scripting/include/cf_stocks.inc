@@ -2671,3 +2671,19 @@ stock bool TF2_IsDamageProjectileWithoutImpactExplosion(int entity, char classna
 	return (StrContains(classname, "tf_projectile") != -1 && StrContains(classname, "spell") == -1 && 
 	StrContains(classname, "jar") == -1 && StrContains(classname, "rocket") == -1);
 }
+
+//Returns true if the entity is capable of taking damage (prop_physics, base_boss, living player, buildings)
+stock bool Entity_Can_Be_Shot(int entity)
+{
+	if (!IsValidEntity(entity))
+		return false;
+		
+	if (IsValidClient(entity))
+		return IsPlayerAlive(entity);
+		
+	char classname[255];
+	GetEntityClassname(entity, classname, sizeof(classname));
+	
+	return (StrContains(classname, "prop_physics") != -1) || (StrContains(classname, "base_boss") != -1) || (StrContains(classname, "obj_sentry") != -1)
+	|| (StrContains(classname, "obj_dispenser") != -1) || (StrContains(classname, "obj_teleporter") != -1);
+}

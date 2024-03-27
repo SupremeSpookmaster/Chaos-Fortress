@@ -153,7 +153,12 @@ public void CFA_MakeNatives()
 	CreateNative("CF_ChangeSpecialResourceTitle", Native_CF_ChangeSpecialResourceTitle);
 	CreateNative("CF_GetSpecialResourceTitle", Native_CF_GetSpecialResourceTitle);
 	CreateNative("CF_SetHUDColor", Native_CF_SetHUDColor);
+	CreateNative("CF_WorldSpaceCenter", Native_CF_WorldSpaceCenter);
+	CreateNative("CF_IsValidTarget", Native_CF_IsValidTarget);
+	CreateNative("CF_GetClosestTarget", Native_CF_GetClosestTarget);
 }
+
+Handle g_hSDKWorldSpaceCenter;
 
 public void CFA_MakeForwards()
 {
@@ -175,6 +180,14 @@ public void CFA_MakeForwards()
 	g_FakeMediShieldCollision = new GlobalForward("CF_OnFakeMediShieldCollision", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
 	g_FakeMediShieldDamaged = new GlobalForward("CF_OnFakeMediShieldDamaged", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_FloatByRef, Param_CellByRef, Param_Cell);
 	g_AttemptAbility = new GlobalForward("CF_OnAbilityCheckCanUse", ET_Event, Param_Cell, Param_String, Param_String, Param_Cell, Param_CellByRef);
+	
+	GameData gd = LoadGameConfigFile("chaos_fortress");
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(gd, SDKConf_Virtual, "CBaseEntity::WorldSpaceCenter");
+	PrepSDKCall_SetReturnInfo(SDKType_Vector, SDKPass_ByRef);
+	if ((g_hSDKWorldSpaceCenter = EndPrepSDKCall()) == null) SetFailState("Failed to create SDKCall for CBaseEntity::WorldSpaceCenter offset!");
+	
+	delete gd;
 }
 
 public void CFA_OGF()
@@ -3105,6 +3118,19 @@ public Native_CF_ToggleHUD(Handle plugin, int numParams)
 	CFA_ToggleHUD(client, toggle);
 }
 
+public Native_CF_WorldSpaceCenter(Handle plugin, int numParams)
+{
+	int entity = GetNativeCell(1);
+	float output[3];
+	GetNativeArray(2, output, sizeof(output));
+	
+	if (!IsValidEntity(entity))
+		return;
+		
+	SDKCall(g_hSDKWorldSpaceCenter, entity, output);
+	SetNativeArray(2, output, sizeof(output));
+}
+
 public Native_CF_CreateHealthPickup(Handle plugin, int numParams)
 {
 	int owner = GetNativeCell(1);
@@ -3112,11 +3138,11 @@ public Native_CF_CreateHealthPickup(Handle plugin, int numParams)
 	float radius = GetNativeCell(3);
 	int mode = GetNativeCell(4);
 	float lifespan = GetNativeCell(5);
-	char pluginName[255];
-	GetNativeString(6, pluginName, sizeof(pluginName));
-	Function filter = GetNativeFunction(7);
 	float pos[3];
-	GetNativeArray(8, pos, sizeof(pos));
+	GetNativeArray(6, pos, sizeof(pos));
+	char pluginName[255];
+	GetNativeString(7, pluginName, sizeof(pluginName));
+	Function filter = GetNativeFunction(8);
 	char model[255], sequence[255], sound[255], physModel[255], redPart[255], bluePart[255];
 	GetNativeString(9, model, sizeof(model));
 	GetNativeString(10, sequence, sizeof(sequence));
@@ -3243,7 +3269,7 @@ public void FakeHealthKit_Think(DataPack pack)
 			
 			bool result;
 			
-			if (FunctionPlugin == INVALID_HANDLE)
+			if (FunctionPlugin == INVALID_HANDLE || filter == INVALID_FUNCTION)
 			{
 				result = true;
 			}
@@ -3257,6 +3283,8 @@ public void FakeHealthKit_Think(DataPack pack)
 				
 				Call_Finish(result);
 			}
+			
+			delete FunctionPlugin;
 			
 			int maxHPCheck = RoundFloat(float(TF2Util_GetEntityMaxHealth(i)) * hpMult);
 			if (GetEntProp(i, Prop_Send, "m_iHealth") >= maxHPCheck)
@@ -3352,4 +3380,91 @@ float Medigun_CalculateHealRate(int medigun, int client)
 		BaseHealingRate *= 1.5;
 		
 	return BaseHealingRate;
+}
+
+public Native_CF_IsValidTarget(Handle plugin, int numParams)
+{
+	int entity = GetNativeCell(1);
+	TFTeam team = GetNativeCell(2);
+	char pluginName[255];
+	GetNativeString(3, pluginName, sizeof(pluginName));
+	Function filter = GetNativeFunction(4);
+	
+	if (!IsValidEntity(entity))
+		return false;
+		
+	if (team != TFTeam_Unassigned)
+	{
+		if (!HasEntProp(entity, Prop_Send, "m_iTeamNum"))
+			return false;
+			
+		TFTeam entTeam = view_as<TFTeam>(GetEntProp(entity, Prop_Send, "m_iTeamNum"));
+		if (team != entTeam)
+			return false;
+	}
+	
+	if (!StrEqual(pluginName, "") && filter != INVALID_FUNCTION)
+	{
+		Handle FunctionPlugin = GetPluginHandle(pluginName);
+	
+		bool result;
+			
+		if (FunctionPlugin == INVALID_HANDLE)
+		{
+			result = true;
+		}
+		else
+		{
+			Call_StartFunction(FunctionPlugin, filter);
+				
+			Call_PushCell(entity);
+				
+			Call_Finish(result);
+		}
+		
+		delete FunctionPlugin;
+		
+		return result;
+	}
+	
+	return true;
+}
+
+public Native_CF_GetClosestTarget(Handle plugin, int numParams)
+{
+	float pos[3];
+	GetNativeArray(1, pos, sizeof(pos));
+	
+	bool IncludeEntities = GetNativeCell(2);
+	
+	float closestDist = GetNativeCellRef(3);
+	float maxDist = GetNativeCell(4);
+	TFTeam team = GetNativeCell(5);
+	char pluginName[255];
+	GetNativeString(6, pluginName, sizeof(pluginName));
+	Function filter = GetNativeFunction(7);
+	
+	int closestEnt = -1;
+	
+	for (int i = 1; i <= (IncludeEntities ? 2048 : MaxClients); i++)
+	{
+		if (!CF_IsValidTarget(i, team, pluginName, filter))
+			continue;
+		
+		float otherPos[3];
+		CF_WorldSpaceCenter(i, otherPos);
+		
+		float dist = GetVectorDistance(pos, otherPos);
+		
+		if (maxDist > 0.0 && dist > maxDist)
+			continue;
+			
+		if (dist < closestDist || closestEnt == -1)
+		{
+			closestDist = dist;
+			closestEnt = i;
+		}
+	}
+	
+	return closestEnt;
 }

@@ -144,7 +144,7 @@ public void Share_TossSandvich(int client, int num, float delay, float velocity,
 	GetClientEyePosition(client, pos);
 	GetClientEyeAngles(client, ang);
 	
-	int sandvich = CF_CreateHealthPickup(client, amt, radius, type, lifespan, HEAVNICH, Share_Filter, pos, MODEL_SANDVICH, _, _, _, _, _, mult, MODEL_SANDVICH);
+	int sandvich = CF_CreateHealthPickup(client, amt, radius, type, lifespan, pos, HEAVNICH, Share_Filter, MODEL_SANDVICH, _, _, _, _, _, mult, MODEL_SANDVICH);
 	if (IsValidEntity(sandvich))
 	{
 		GetAngleVectors(ang, buffer, NULL_VECTOR, NULL_VECTOR);

@@ -1230,9 +1230,9 @@ native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit = f
  * @param radius				Distance from the health kit at which the health kit will be picked up.
  * @param mode					Mode in which the health provided by this kit should be given. 0: percentage-based, all other values: flat value.
  * @param lifespan				Duration the health kit should be active. 0.0 or below: infinite.
- * @param plugin				Name of the plugin which is calling this native.
- * @param filter				Function used to determine who should be able to pick up the health kit. The function must return a bool value, with the first parameter being the health kit's entity index, the second parameter as its owner, and the third paremeter as the client attempting to pick up the health kit.
  * @param pos					The position the health kit should be spawned at.
+ * @param plugin				Name of the plugin which is calling this native. Only necessary if "filter" is used.
+ * @param filter				Function used to determine who should be able to pick up the health kit. The function must return a bool value, with the first parameter being the health kit's entity index, the second parameter as its owner, and the third paremeter as the client attempting to pick up the health kit.
  * @param model					Optional model to be used for the health kit.
  * @param sequence				Optional animation sequence to be used for the health kit.
  * @param rate					Optional playback rate for the animation sequence.
@@ -1246,7 +1246,7 @@ native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit = f
  *
  * @return	The entity index of the health kit, or -1 if it fails to spawn.
  */
-native int CF_CreateHealthPickup(int owner, float amt, float radius, int mode, float lifespan, char plugin[255], Function filter, float pos[3], char model[255] = "models/items/medkit_medium.mdl", char sequence[255] = "idle", float rate = 1.0, float scale = 1.0, int skin = 0, char sound[255] = "items/smallmedkit1.wav", float hpMult = 1.0, char physModel[255] = "models/items/medkit_medium.mdl", char redParticle[255] = "healthgained_red_large", char blueParticle[255] = "healthgained_blu_large");
+native int CF_CreateHealthPickup(int owner, float amt, float radius, int mode, float lifespan, float pos[3], char plugin[255] = "", Function filter = INVALID_FUNCTION, char model[255] = "models/items/medkit_medium.mdl", char sequence[255] = "idle", float rate = 1.0, float scale = 1.0, int skin = 0, char sound[255] = "items/smallmedkit1.wav", float hpMult = 1.0, char physModel[255] = "models/items/medkit_medium.mdl", char redParticle[255] = "healthgained_red_large", char blueParticle[255] = "healthgained_blu_large");
 
 /**
  * Creates a simulated medigun shield by using a physics prop.
@@ -1436,3 +1436,40 @@ native void CF_Teleport(int client, float distance, bool directional, float outp
  *
  */
 native void CF_SetHUDColor(int client, int r = 255, int g = 255, int b = 255, int a = 255);
+
+/**
+ * Retrieves the coordinates of the center of the given entity based on its collision hull, stored in the output buffer.
+ *
+ * @param entity		The entity to get the center of.
+ * @param output		Output buffer to store the coordinates in.
+ *
+ * @return		The coordinates of the entity's center.
+ */
+native void CF_WorldSpaceCenter(int entity, float output[3]);
+
+/**
+ * Checks whether or not the given entity is valid and matches a set of given requirements.
+ *
+ * @param entity		The entity to check.
+ * @param team			The team the entity must be on, or TFTeam_Unassigned to ignore teams.
+ * @param plugin		Name of the plugin which is calling this native. Only necessary if "filter" is used.
+ * @param filter		Optional function for you to add your own extra requirements to. This function must take one int as a parameter, that being the entity's index.
+ *
+ * @return		True if the entity is both a valid entity and matches the given requirements, false otherwise.
+ */
+native bool CF_IsValidTarget(int entity, TFTeam team, char[] plugin = "", Function filter = INVALID_FUNCTION);
+
+/**
+ * Retrieves the entity nearest to the given point, with optional filters so that only certain entities are included.
+ *
+ * @param pos				The position to search from.
+ * @param IncludeEntities	If set to true, this native will cycle through ALL entities instead of just players, which is much more expensive. Only set to true if you absolutely need to.
+ * @param distance			Optional return parameter in which the distance from "pos" too the nearest entity will be stored.
+ * @param maxDistance		The maximum possible distance an entity can be from "pos" to be counted. <= 0.0: no limit.
+ * @param team				The team an entity must be on in order to be counted, or TFTeam_Unassigned to ignore teams.
+ * @param plugin			Name of the plugin which is calling this native. Only necessary if "filter" is used.
+ * @param filter			Optional function for you to add your own extra requirements to. This function must take one int as a parameter, that being the entity's index, and return a bool.
+ *
+ * @return		True if the entity is both a valid entity and matches the given requirements, false otherwise.
+ */
+native int CF_GetClosestTarget(float pos[3], bool IncludeEntities = false, float &distance = 0.0, float maxDistance = 0.0, TFTeam team = TFTeam_Unassigned, char[] plugin = "", Function filter = INVALID_FUNCTION);
