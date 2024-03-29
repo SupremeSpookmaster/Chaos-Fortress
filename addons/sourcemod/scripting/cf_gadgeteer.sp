@@ -1098,12 +1098,12 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 		• The following things MUST be done, but cannot be done until we have the custom model:
 			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired.
 		• The prop_physics needs the following custom sentry logic:
+			○ Don't forget the scanning sound effects which need to play when the Drone doesn't have a target!
 			○ Targeting logic can now target entities, but this has caused the following issues:
-				○ Sometimes a Drone can fire directly at its target but they just don't get hit. This is likely caused by invisible clips assigned to the enemy team. Filter these out of the trace.
+				○ Sometimes a Drone can fire directly at its target but they just don't get hit. This is likely caused by invisible clips assigned to the enemy team. Filter these out of the damage trace.
 				○ Drones will frequently not lock onto a target which *should* have line-of-sight and be within range. This is likely caused by invisible clips assigned to the enemy team. Filter them out of the line-of-sight trace.
 				○ Somewhat rarely, a Drone will fire at its own team, usually its owner. It doesn't deal damage, but it does make that Drone useless. Maybe delay setting the Drone's team by one frame?
-		• Add the spellcasting first-person animation when the ability is activated.
-			○ Alternatively, give the user an actual toolbox for half a second then remove it and throw the toolbox? Would be easier and probably look better.
+		• Add the spellcasting first-person animation when the ability is activated. Should probably make a Chaos Fortress native for this, then go back and add it to all the other characters who also have abilities where they throw things.
 		• We need to figure out how to get the specific damage of every tf_projectile entity and use that for projectile damage on Drones.
 		*/
 	}

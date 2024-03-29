@@ -2130,6 +2130,25 @@ public any Native_CF_SetCharacterScale(Handle plugin, int numParams)
 			
 			SetEntPropFloat(client, Prop_Send, "m_flModelScale", NewScale);
 			SetEntPropFloat(client, Prop_Send, "m_flStepSize", 18.0 * NewScale);
+			
+			float mins[3], maxs[3];
+			
+			mins[0] = -24.0 * NewScale;
+			mins[1] = -24.0 * NewScale;
+			mins[2] = 0.0;
+			maxs[0] = 24.0 * NewScale;
+			maxs[1] = 24.0 * NewScale;
+			maxs[2] = 82.0 * NewScale;
+			
+			SetEntPropVector(client, Prop_Send, "m_vecMins", mins);
+			SetEntPropVector(client, Prop_Send, "m_vecMaxs", maxs);
+			SetEntPropVector(client, Prop_Send, "m_vecMinsPreScaled", mins);
+			SetEntPropVector(client, Prop_Send, "m_vecMaxsPreScaled", maxs);
+			SetEntPropVector(client, Prop_Send, "m_vecSpecifiedSurroundingMins", mins);
+			SetEntPropVector(client, Prop_Send, "m_vecSpecifiedSurroundingMaxs", maxs);
+			SetEntPropVector(client, Prop_Send, "m_vecSpecifiedSurroundingMinsPreScaled", mins);
+			SetEntPropVector(client, Prop_Send, "m_vecSpecifiedSurroundingMaxsPreScaled", maxs);
+			
 			if (!StrEqual(message_success, ""))
 				CPrintToChat(client, message_success);
 		}
@@ -2157,6 +2176,24 @@ public void SetScale_DelayResize(DataPack pack)
 			
 		SetEntPropFloat(client, Prop_Send, "m_flModelScale", NewScale);
 		SetEntPropFloat(client, Prop_Send, "m_flStepSize", 18.0 * NewScale);
+		
+		float mins[3], maxs[3];
+			
+		mins[0] = -24.0 * NewScale;
+		mins[1] = -24.0 * NewScale;
+		mins[2] = 0.0;
+		maxs[0] = 24.0 * NewScale;
+		maxs[1] = 24.0 * NewScale;
+		maxs[2] = 82.0 * NewScale;
+			
+		SetEntPropVector(client, Prop_Send, "m_vecMins", mins);
+		SetEntPropVector(client, Prop_Send, "m_vecMaxs", maxs);
+		SetEntPropVector(client, Prop_Send, "m_vecMinsPreScaled", mins);
+		SetEntPropVector(client, Prop_Send, "m_vecMaxsPreScaled", maxs);
+		SetEntPropVector(client, Prop_Send, "m_vecSpecifiedSurroundingMins", mins);
+		SetEntPropVector(client, Prop_Send, "m_vecSpecifiedSurroundingMaxs", maxs);
+		SetEntPropVector(client, Prop_Send, "m_vecSpecifiedSurroundingMinsPreScaled", mins);
+		SetEntPropVector(client, Prop_Send, "m_vecSpecifiedSurroundingMaxsPreScaled", maxs);
 		
 		if (!StrEqual(message_success, ""))
 			CPrintToChat(client, message_success);
