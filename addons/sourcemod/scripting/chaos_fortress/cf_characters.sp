@@ -1470,7 +1470,6 @@ public void CF_ResetMadeStatus(int client)
  	{
  		TF2_RemoveWeaponSlot(client, i);
  	}
- 	
 		
 	int i = 1;
 	char secName[255];
@@ -1504,7 +1503,7 @@ public void CF_ResetMadeStatus(int client)
 		subsection.Get("fire_plugin", firePlugin, 255);
 		subsection.Get("fire_sound", fireSound, 255);	
 			
-		int weapon = CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, ForceClass, true, fireAbility, firePlugin, fireSound);
+		int weapon = CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, ForceClass, true, fireAbility, firePlugin, fireSound, false);
 		if (IsValidEntity(weapon))
 		{
 			ConfigMap custAtts = subsection.GetSection("custom_attributes");
@@ -1524,6 +1523,8 @@ public void CF_ResetMadeStatus(int client)
 				
 				delete snap;
 			}
+			
+			EquipPlayerWeapon(client, weapon);
 		}
 		
 		i++;

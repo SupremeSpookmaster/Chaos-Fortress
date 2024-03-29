@@ -141,12 +141,13 @@ public Native_CF_SpawnWeapon(Handle plugin, int numParams)
  	GetNativeString(15, fireAbility, sizeof(fireAbility));
  	GetNativeString(16, firePlugin, sizeof(firePlugin));
  	GetNativeString(17, fireSound, sizeof(fireSound));
+ 	bool autoEquip = GetNativeCell(18);
  	
- 	return SpawnWeapon_Special(client, name, index, level, qual, slot, reserve, clip, att, override, visible, unequip, ForceClass, spawn, fireAbility, firePlugin, fireSound);
+ 	return SpawnWeapon_Special(client, name, index, level, qual, slot, reserve, clip, att, override, visible, unequip, ForceClass, spawn, fireAbility, firePlugin, fireSound, autoEquip);
  }
 
 //Credit to Artvin and Batfoxkid for this, I just took it from Zombie Riot and modified some things.
-stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255], bool visible, bool unequip, int ForceClass, bool spawn, char fireAbility[255], char firePlugin[255], char fireSound[255])
+stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255], bool visible, bool unequip, int ForceClass, bool spawn, char fireAbility[255], char firePlugin[255], char fireSound[255], bool autoEquip)
 {
 	if(StrEqual(name, "saxxy", false))	// if "saxxy" is specified as the name, replace with appropiate name
 	{ 
@@ -210,7 +211,8 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 	if(entity == -1)
 		return -1;
 		
-	EquipPlayerWeapon(client, entity);
+	if (autoEquip)
+		EquipPlayerWeapon(client, entity);
 
 	if(visible)
 	{

@@ -797,10 +797,11 @@ native bool CF_IsPlayerCharacter(int client);
  * @param fireAbility	The ability to activate when this weapon fires, optional.
  * @param firePlugin	The plugin of the ability to activate when this weapon fires, optional.
  * @param fireSound		The sound slot to use when this weapon fires, optional.
+ * @param autoEquip		If set to false, the weapon is only *created*, not equipped. Useful if you need to run your own logic before equipping the weapon yourself.
  *
  * @return The entity index of the spawned weapon, -1 if not valid.
  */
-native int CF_SpawnWeapon(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255] = "", bool visible = true, bool unequip = true, int ForceClass = 0, bool spawn = false, char fireAbility[255] = "", char firePlugin[255] = "", char fireSound[255] = "");
+native int CF_SpawnWeapon(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255] = "", bool visible = true, bool unequip = true, int ForceClass = 0, bool spawn = false, char fireAbility[255] = "", char firePlugin[255] = "", char fireSound[255] = "", bool autoEquip = true);
 
 /**
  * Gets the ability name and plugin name of a given weapon.

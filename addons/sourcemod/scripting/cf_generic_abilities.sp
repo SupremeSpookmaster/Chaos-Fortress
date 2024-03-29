@@ -99,22 +99,27 @@ enum struct OldWeapon
 		
 		if (!StrEqual(this.classname, ""))
 		{
-			ReturnValue = CF_SpawnWeapon(client, this.classname, this.itemIndex, this.itemLevel, this.quality, this.slot, this.reserve, this.clip, this.atts, "", this.visible, true, -1, false, this.fireAbility, this.firePlugin, this.fireSound);
+			ReturnValue = CF_SpawnWeapon(client, this.classname, this.itemIndex, this.itemLevel, this.quality, this.slot, this.reserve, this.clip, this.atts, "", this.visible, true, -1, false, this.fireAbility, this.firePlugin, this.fireSound, false);
 			
-			if (IsValidEntity(ReturnValue) && this.CustAtts)
+			if (IsValidEntity(ReturnValue))
 			{
-				if (KvGotoFirstSubKey(this.CustAtts, false))
+				if (this.CustAtts)
 				{
-					do
-				    {
-						char key[255], value[255];
-						KvGetSectionName(this.CustAtts, key, sizeof(key));
-						KvGetString(this.CustAtts, NULL_STRING, value, sizeof(value));
-				        
-						TF2CustAttr_SetString(ReturnValue, key, value);
-						TF2Attrib_SetFromStringValue(ReturnValue, key, value);
-				    } while (KvGotoNextKey(this.CustAtts, false));
+					if (KvGotoFirstSubKey(this.CustAtts, false))
+					{
+						do
+					    {
+							char key[255], value[255];
+							KvGetSectionName(this.CustAtts, key, sizeof(key));
+							KvGetString(this.CustAtts, NULL_STRING, value, sizeof(value));
+					        
+							TF2CustAttr_SetString(ReturnValue, key, value);
+							TF2Attrib_SetFromStringValue(ReturnValue, key, value);
+					    } while (KvGotoNextKey(this.CustAtts, false));
+					}
 				}
+				
+				EquipPlayerWeapon(client, ReturnValue);
 			}
 		
 			this.Delete();
@@ -607,14 +612,17 @@ public void Weapon_Activate(int client, char abilityName[255])
 		}
 	}
 	
-	int weapon = CF_SpawnWeapon(client, classname, index, level, quality, weaponSlot, reserve, clip, atts, "", visible, unequip, -1, false, fireAbility, firePlugin, fireSound);
+	int weapon = CF_SpawnWeapon(client, classname, index, level, quality, weaponSlot, reserve, clip, atts, "", visible, unequip, -1, false, fireAbility, firePlugin, fireSound, false);
 	if (IsValidEntity(weapon))
 	{
 		char conf[255], path[255];
 		CF_GetPlayerConfig(client, conf, sizeof(conf));
 		ConfigMap map = new ConfigMap(conf);
 		if (map == null)
+		{
+			EquipPlayerWeapon(client, weapon);
 			return;
+		}
 			
 		CF_GetAbilityConfigMapPath(client, GENERIC, abilityName, "custom_attributes", path, sizeof(path));
 		ConfigMap custAtts = map.GetSection(path);
@@ -636,6 +644,8 @@ public void Weapon_Activate(int client, char abilityName[255])
 		}
 		
 		DeleteCfg(map);
+		
+		EquipPlayerWeapon(client, weapon);
 		
 		if (duration > 0.0)
 		{	
