@@ -44,6 +44,7 @@
 #define SOUND_DEBUG_HIT_TOOLBOX		"vo/spy_yes01.mp3"
 #define SOUND_TOOLBOX_FIZZING		"@misc/halloween/hwn_bomb_fuse.wav"
 #define SOUND_TOSS_HIT_WORLD		"@weapons/metal_gloves_hit.wav"
+#define SOUND_DRONE_SCANNING			")ui/cyoa_node_absent.wav"
 
 #define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
 #define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
@@ -102,6 +103,7 @@ public void OnMapStart()
 	PrecacheSound(SOUND_TOOLBOX_FIZZING);
 	PrecacheSound(SOUND_TOSS_BUILD_EXTRA);
 	PrecacheSound(SOUND_TOSS_HIT_WORLD);
+	PrecacheSound(SOUND_DRONE_SCANNING);
 }
 
 public const char Toss_BuildSFX[][] =
@@ -196,6 +198,7 @@ enum struct CustomSentry
 	float previousYaw;
 	float previousRoll;
 	float nextTargetTime;
+	float nextScanSound;
 	
 	bool exists;
 	bool shooting;
@@ -307,6 +310,7 @@ enum struct CustomSentry
 		SDKHook(prop, SDKHook_OnTakeDamage, Drone_Damaged);
 		
 		this.exists = true;
+		this.nextScanSound = GetGameTime() + 2.0;
 	}
 	
 	//Adds "mod" to the Drone's current HP, automatically updating its health display text and damage indication particle if its health is above 0 or destroying it otherwise.
@@ -582,6 +586,7 @@ public void Toss_CustomSentryLogic(int ref)
 		{
 			target = -1;
 			Toss_SentryStats[entity].target = -1;
+			Toss_SentryStats[entity].nextScanSound = gt + 2.0;
 		}
 		else	//The target is still in our firing radius, turn to face them and fire if able.
 		{
@@ -656,6 +661,17 @@ public void Toss_CustomSentryLogic(int ref)
 			Toss_SentryStats[entity].turnDirection *= -1.0;
 			
 		TeleportEntity(entity, NULL_VECTOR, angles, vel);
+		
+		if (gt >= Toss_SentryStats[entity].nextScanSound)
+		{
+			EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
+			EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
+			EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
+			EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
+			EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
+			EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
+			Toss_SentryStats[entity].nextScanSound = gt + 2.0;
+		}
 	}
 	
 	Toss_SentryStats[entity].previousPitch = angles[0];
@@ -1098,7 +1114,6 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 		• The following things MUST be done, but cannot be done until we have the custom model:
 			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired.
 		• The prop_physics needs the following custom sentry logic:
-			○ Don't forget the scanning sound effects which need to play when the Drone doesn't have a target!
 			○ Targeting logic can now target entities, but this has caused the following issues:
 				○ Sometimes a Drone can fire directly at its target but they just don't get hit. This is likely caused by invisible clips assigned to the enemy team. Filter these out of the damage trace.
 				○ Drones will frequently not lock onto a target which *should* have line-of-sight and be within range. This is likely caused by invisible clips assigned to the enemy team. Filter them out of the line-of-sight trace.
