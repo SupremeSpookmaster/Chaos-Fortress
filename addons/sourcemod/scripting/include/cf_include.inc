@@ -681,12 +681,46 @@ native CF_SetPlayerConfig(int client, char[] confName);
 native float CF_GetCharacterMaxHealth(int client);
 
 /**
- * Returns the max HP of the given client's character.
+ * Sets the max HP of the given client's character.
  *
  * @param client		The client whose max HP to set.
  * @param NewHP			The max HP to set.
  */
 native CF_SetCharacterMaxHealth(int client, float NewHP);
+
+/**
+ * Returns the weight of the given client's character.
+ *
+ * @param client		The client whose weight to get.
+ * 
+ * @return Returns a float value equal to the weight of the client's character, 0.0 if the client is invalid or their character has no specified weight.
+ *
+ */
+native float CF_GetCharacterWeight(int client);
+
+/**
+ * Sets the weight of the given client's character. 
+ * This is a custom stat which is used to modify all knockback inflicted to the character, provided said knockback is applied by using CF_ApplyKnockback.
+ *
+ * @param client		The client whose weight to set.
+ * @param NewWeight		The new weight.
+ *
+ */
+native float CF_SetCharacterWeight(int client, float NewWeight);
+
+/**
+ * Inflicts knockback upon a client.
+ *
+ * @param client					The client to knock back.
+ * @param force						The force of the knockback.
+ * @param angles					The angles of the knockback.
+ * @param IgnoreWeight				If set to true, the victim's "weight" stat does not affect the force of the knockback.
+ * @param IgnoreQuickFix			If set to true, TFCond_MegaHeal will not prevent the knockback.
+ * @param IgnoreInvuln				If set to true, invulnerability will not prevent the knockback.
+ * @param OverrideCurrentVelocity	If set to true, the knockback completely interrupts the user's current velocity. Otherwise, the knockback is simply added to their current velocity.
+ *
+ */
+native CF_ApplyKnockback(int client, float force, float angles[3], bool IgnoreWeight = false, bool IgnoreQuickFix = false, bool IgnoreInvuln = false, bool OverrideCurrentVelocity = false);
 
 /**
  * Retrieves the max speed, in hammer units per second, of the given client's current character.

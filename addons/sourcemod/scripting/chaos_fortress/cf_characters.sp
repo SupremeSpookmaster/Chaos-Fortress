@@ -72,6 +72,7 @@ enum struct CFCharacter
 	float MaxHP;
 	float Scale;
 	float BaseSpeed;
+	float Weight;
 	
 	char Model[255];
 	char Name[255];
@@ -86,7 +87,7 @@ enum struct CFCharacter
 	Handle Abilities_M3;
 	Handle Abilities_Reload;
 	
-	void Create(float newSpeed, float newMaxHP, TFClassType newClass, char newModel[255], char newName[255], float newScale, char newMapPath[255])
+	void Create(float newSpeed, float newMaxHP, TFClassType newClass, char newModel[255], char newName[255], float newScale, float newWeight, char newMapPath[255])
 	{
 		this.Speed = newSpeed;
 		this.MaxHP = newMaxHP;
@@ -95,6 +96,7 @@ enum struct CFCharacter
 		this.Name = newName;
 		this.Scale = newScale;
 		this.BaseSpeed = newSpeed;
+		this.Weight = newWeight;
 		
 		this.MapPath = newMapPath;
 		
@@ -249,6 +251,10 @@ public void CFC_MakeNatives()
 	
 	CreateNative("CF_GetCharacterSpeed", Native_CF_GetCharacterSpeed);
 	CreateNative("CF_SetCharacterSpeed", Native_CF_SetCharacterSpeed);
+	
+	CreateNative("CF_GetCharacterWeight", Native_CF_GetCharacterWeight);
+	CreateNative("CF_SetCharacterWeight", Native_CF_SetCharacterWeight);
+	CreateNative("CF_ApplyKnockback", Native_CF_ApplyKnockback);
 	
 	CreateNative("CF_GetCharacterScale", Native_CF_GetCharacterScale);
 	CreateNative("CF_SetCharacterScale", Native_CF_SetCharacterScale);
@@ -1198,11 +1204,12 @@ public void CF_ResetMadeStatus(int client)
 	//map.Get("character.animator_model", animator, sizeof(animator));
 	float speed = GetFloatFromConfigMap(map, "character.speed", 300.0);
 	float health = GetFloatFromConfigMap(map, "character.health", 250.0);
+	float weight = GetFloatFromConfigMap(map, "character.weight", 0.0);
 	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
 	i_DialogueReduction[client] = GetIntFromConfigMap(map, "character.be_quiet", 1);
 	float scale = GetFloatFromConfigMap(map, "character.scale", 1.0);
 	
-	g_Characters[client].Create(speed, health, Classes[class], model, name, scale, conf);
+	g_Characters[client].Create(speed, health, Classes[class], model, name, scale, weight, conf);
 		
 	ConfigMap GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 	
@@ -1753,6 +1760,65 @@ public void CF_ResetMadeStatus(int client)
  	{
  		g_Characters[client].MaxHP = NewMax;
  		CF_UpdateCharacterHP(client, g_Characters[client].Class, false);
+ 	}
+ }
+ 
+ public any Native_CF_GetCharacterWeight(Handle plugin, int numParams)
+ {
+ 	int client = GetNativeCell(1);
+ 	
+ 	if (!CF_IsPlayerCharacter(client))
+ 		return 0.0;
+ 		
+ 	return g_Characters[client].Weight;
+ }
+ 
+ public Native_CF_SetCharacterWeight(Handle plugin, int numParams)
+ {
+ 	int client = GetNativeCell(1);
+ 	float NewWeight = GetNativeCell(2);
+
+ 	if (CF_IsPlayerCharacter(client))
+ 		g_Characters[client].Weight = NewWeight;
+ }
+ 
+ public Native_CF_ApplyKnockback(Handle plugin, int numParams)
+ {
+ 	int client = GetNativeCell(1);
+ 	float force = GetNativeCell(2);
+ 	float angles[3];
+ 	GetNativeArray(3, angles, sizeof(angles));
+ 	bool IgnoreWeight = GetNativeCell(4);
+ 	bool IgnoreQuickFix = GetNativeCell(5);
+ 	bool IgnoreInvuln = GetNativeCell(6);
+ 	bool OverrideCurrentVelocity = GetNativeCell(7);
+ 	
+ 	if ((!IgnoreQuickFix && TF2_IsPlayerInCondition(client, TFCond_MegaHeal)) || (!IgnoreInvuln && IsInvuln(client)))
+ 		return;
+ 		
+ 	if (!IgnoreWeight)
+ 	{
+ 		force -= CF_GetCharacterWeight(client);
+ 		if (force <= 0.0)
+ 			return;
+ 	}
+ 	
+ 	float buffer[3], vel[3];
+ 	GetAngleVectors(angles, buffer, NULL_VECTOR, NULL_VECTOR);
+ 	for (int i = 0; i < 3; i++)
+ 		vel[i] = buffer[i] * force;
+ 		
+ 	if (OverrideCurrentVelocity)
+ 		TeleportEntity(client, _, _, vel);
+ 	else
+ 	{
+ 		float clientVel[3];
+ 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", clientVel);
+ 		
+ 		for (int i = 0; i < 3; i++)
+ 			clientVel[i] += vel[i];
+ 			
+ 		TeleportEntity(client, _, _, clientVel);
  	}
  }
  

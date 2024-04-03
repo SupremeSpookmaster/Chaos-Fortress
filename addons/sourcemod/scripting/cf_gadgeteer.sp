@@ -881,11 +881,14 @@ public void Toss_CheckForCollision(int ref)
 			{
 				float ang[3];
 				GetEntPropVector(prop, Prop_Send, "m_angRotation", ang);
-				ang[0] = 0.0;
+				ang[0] = -45.0;
 				ang[2] = 0.0;
-				GetVelocityInDirection(ang, Toss_KB[prop], vel);
+				
+				CF_ApplyKnockback(other, Toss_KB[prop], ang);
+				
+				/*GetVelocityInDirection(ang, Toss_KB[prop], vel);
 				vel[2] += Toss_KB[prop];
-				TeleportEntity(other, _, _, vel);
+				TeleportEntity(other, _, _, vel);*/
 				vel[0] = 0.0;
 				vel[1] = 0.0;
 				vel[2] = Toss_UpVel[prop];
@@ -1118,7 +1121,7 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 		/*
 		TODO: 
 		• The following things MUST be done, but cannot be done until we have the custom model:
-			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired.
+			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired. Also muzzle flash.
 		• Add the spellcasting first-person animation when the ability is activated. Should probably make a Chaos Fortress native for this, then go back and add it to all the other characters who also have abilities where they throw things.
 		• Implement the "weight" stat for CF characters and use it for toolbox knockback.
 		• We need to figure out how to get the specific damage of every tf_projectile entity and use that for projectile damage on Drones.
