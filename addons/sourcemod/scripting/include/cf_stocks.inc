@@ -2672,7 +2672,7 @@ stock bool TF2_IsDamageProjectileWithoutImpactExplosion(int entity, char classna
 	StrContains(classname, "jar") == -1 && StrContains(classname, "rocket") == -1);
 }
 
-//Returns true if the entity is capable of taking damage (prop_physics, base_boss, living player, buildings)
+//Returns true if the entity is capable of taking damage (prop_physics, base_boss, living player, buildings).
 stock bool Entity_Can_Be_Shot(int entity)
 {
 	if (!IsValidEntity(entity))
@@ -2686,4 +2686,30 @@ stock bool Entity_Can_Be_Shot(int entity)
 	
 	return (StrContains(classname, "prop_physics") != -1) || (StrContains(classname, "base_boss") != -1) || (StrContains(classname, "obj_sentry") != -1)
 	|| (StrContains(classname, "obj_dispenser") != -1) || (StrContains(classname, "obj_teleporter") != -1);
+}
+
+//Returns true if the entity is a solid brush. Primarily just filters out "info_" and "trigger_" entities, as well as MOST "func_" entities.
+//Returns true by default for entities that are not brushes.
+stock bool Brush_Is_Solid(int entity)
+{
+	char entname[255];
+	GetEntityClassname(entity, entname, sizeof(entname));
+	
+	if (StrContains(entname, "info_") != -1 || StrContains(entname, "trigger_") != -1)
+	{
+		return false;
+	}
+	
+	if (StrContains(entname, "func_") != -1)
+	{
+		if (!StrEqual("func_brush", entname)
+			&& !StrEqual("func_door", entname) && !StrEqual("func_detail", entname) && !StrEqual("func_wall", entname) && !StrEqual("func_rotating", entname)
+			&& !StrEqual("func_reflective_glass", entname) && !StrEqual("func_physbox", entname) && !StrEqual("func_movelinear", entname) && !StrEqual("func_door_rotating", entname)
+			&& !StrEqual("func_breakable", entname))
+		{
+			return false;
+		}
+	}
+	
+	return true;
 }

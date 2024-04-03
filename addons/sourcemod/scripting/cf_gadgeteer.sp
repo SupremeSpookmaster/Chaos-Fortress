@@ -472,14 +472,14 @@ public bool Toss_IgnoreAllButTarget(entity, contentsMask)
 
 //A trace which returns true as long as the entity is not a Drone or a client.
 public bool Toss_IgnoreDrones(entity, contentsMask)
-{
-	return !Toss_SentryStats[entity].exists && entity > MaxClients;
+{	
+	return !Toss_SentryStats[entity].exists && (entity == 0 || entity > MaxClients) && Brush_Is_Solid(entity);
 }
 
 //A trace which returns true as long as the entity can be shot and is on the opposite of a specified team (Toss_TraceTeam).
 public bool Toss_OnlyHitEnemies(entity, contentsMask)
 {
-	if (!Entity_Can_Be_Shot(entity))
+	if (!Entity_Can_Be_Shot(entity) || !Brush_Is_Solid(entity))
 		return false;
 		
 	TFTeam otherTeam = view_as<TFTeam>(GetEntProp(entity, Prop_Send, "m_iTeamNum"));
@@ -1109,21 +1109,39 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 		
 		Toss_SentryStats[prop].Activate(supercharged, superchargeType);
 		
+		DataPack pack = new DataPack();
+		WritePackCell(pack, EntIndexToEntRef(prop));
+		WritePackCell(pack, team);
+		WritePackCell(pack, IsValidClient(owner) ? GetClientUserId(owner) : -1);
+		RequestFrame(Toss_SetSentryTeamOnDelay, pack);
+
 		/*
 		TODO: 
 		• The following things MUST be done, but cannot be done until we have the custom model:
 			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired.
-		• The prop_physics needs the following custom sentry logic:
-			○ Targeting logic can now target entities, but this has caused the following issues:
-				○ Sometimes a Drone can fire directly at its target but they just don't get hit. This is likely caused by invisible clips assigned to the enemy team. Filter these out of the damage trace.
-				○ Drones will frequently not lock onto a target which *should* have line-of-sight and be within range. This is likely caused by invisible clips assigned to the enemy team. Filter them out of the line-of-sight trace.
-				○ Somewhat rarely, a Drone will fire at its own team, usually its owner. It doesn't deal damage, but it does make that Drone useless. Maybe delay setting the Drone's team by one frame?
 		• Add the spellcasting first-person animation when the ability is activated. Should probably make a Chaos Fortress native for this, then go back and add it to all the other characters who also have abilities where they throw things.
+		• Implement the "weight" stat for CF characters and use it for toolbox knockback.
 		• We need to figure out how to get the specific damage of every tf_projectile entity and use that for projectile damage on Drones.
 		*/
 	}
 
 	RemoveEntity(toolbox);
+}
+
+public void Toss_SetSentryTeamOnDelay(DataPack pack)
+{
+	ResetPack(pack);
+	int prop = EntRefToEntIndex(ReadPackCell(pack));
+	int team = ReadPackCell(pack);
+	int owner = GetClientOfUserId(ReadPackCell(pack));
+	delete pack;
+	
+	if (IsValidEntity(prop))
+	{
+		SetEntProp(prop, Prop_Send, "m_iTeamNum", team);
+		if (IsValidClient(owner))
+			SetEntPropEnt(prop, Prop_Data, "m_hOwnerEntity", owner);
+	}
 }
 
 //Used to change hitscan interaction rules for Drones and toolboxes.
