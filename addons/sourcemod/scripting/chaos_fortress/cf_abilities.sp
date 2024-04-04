@@ -91,6 +91,7 @@ GlobalForward g_ShouldCollide;
 GlobalForward g_FakeMediShieldCollision;
 GlobalForward g_FakeMediShieldDamaged;
 GlobalForward g_AttemptAbility;
+GlobalForward g_SimulatedSpellCast;
 
 int i_GenericProjectileOwner[2049] = { -1, ... };
 int i_HealingDone[MAXPLAYERS + 1] = { 0, ... };
@@ -156,6 +157,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_WorldSpaceCenter", Native_CF_WorldSpaceCenter);
 	CreateNative("CF_IsValidTarget", Native_CF_IsValidTarget);
 	CreateNative("CF_GetClosestTarget", Native_CF_GetClosestTarget);
+	CreateNative("CF_SimulateSpellbookCast", Native_CF_SimulateSpellbookCast);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -180,6 +182,7 @@ public void CFA_MakeForwards()
 	g_FakeMediShieldCollision = new GlobalForward("CF_OnFakeMediShieldCollision", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
 	g_FakeMediShieldDamaged = new GlobalForward("CF_OnFakeMediShieldDamaged", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_FloatByRef, Param_CellByRef, Param_Cell);
 	g_AttemptAbility = new GlobalForward("CF_OnAbilityCheckCanUse", ET_Event, Param_Cell, Param_String, Param_String, Param_Cell, Param_CellByRef);
+	g_SimulatedSpellCast = new GlobalForward("CF_OnSimulatedSpellUsed", ET_Ignore, Param_Cell);
 	
 	GameData gd = LoadGameConfigFile("chaos_fortress");
 	StartPrepSDKCall(SDKCall_Entity);
@@ -3467,4 +3470,17 @@ public Native_CF_GetClosestTarget(Handle plugin, int numParams)
 	}
 	
 	return closestEnt;
+}
+
+public Native_CF_SimulateSpellbookCast(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	char atts[255];
+	GetNativeString(2, atts, sizeof(atts));
+	int index = GetNativeCell(3);
+	bool instant = GetNativeCell(4);
+	if (instant)
+		Format(atts, sizeof(atts), "%s ; 178 ; 0.0", atts);
+	
+	//TODO: Fill this out, don't forget to call the forward!
 }

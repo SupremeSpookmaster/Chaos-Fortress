@@ -1123,7 +1123,6 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 		• The following things MUST be done, but cannot be done until we have the custom model:
 			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired. Also muzzle flash.
 		• Add the spellcasting first-person animation when the ability is activated. Should probably make a Chaos Fortress native for this, then go back and add it to all the other characters who also have abilities where they throw things.
-		• Implement the "weight" stat for CF characters and use it for toolbox knockback.
 		• We need to figure out how to get the specific damage of every tf_projectile entity and use that for projectile damage on Drones.
 		*/
 	}

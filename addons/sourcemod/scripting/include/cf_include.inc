@@ -568,6 +568,13 @@ forward Action CF_OnCalcAttackInterval(int client, int weapon, int slot, char cl
  */
 forward Action CF_OnPhysPropHitByProjectile(int prop, int entity, TFTeam propTeam, TFTeam entityTeam, int propOwner, int entityOwner, char classname[255], int launcher, float damage, float pos[3]);
 
+/**
+ * Called when a spell is cast using the "CF_SimulateSpellbookCast" native.
+ *
+ * @param client		The client who cast the spell.
+ */
+forward void CF_OnSimulatedSpellUsed(int client);
+
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
 ///////////////////////////////////////
@@ -1508,3 +1515,15 @@ native bool CF_IsValidTarget(int entity, TFTeam team, char[] plugin = "", Functi
  * @return		True if the entity is both a valid entity and matches the given requirements, false otherwise.
  */
 native int CF_GetClosestTarget(float pos[3], bool IncludeEntities = false, float &distance = 0.0, float maxDistance = 0.0, TFTeam team = TFTeam_Unassigned, char[] plugin = "", Function filter = INVALID_FUNCTION);
+
+/**
+ * Gives a client a spellbook and forces them to cast it, but does not actually cast a spell or create the spell VFX.
+ * Meant to be used in conjunction with abilities where the client "throws" something, to create a more convincing "throw" effect.
+ * Calls the "CF_OnSimulatedSpellUsed" forward at the moment when the spell would normally be cast.
+ *
+ * @param client			The client to do this with.
+ * @param attributes		Optional spellbook attributes.
+ * @param index				If set to a valid spell index (0-11), a spell WILL be cast by this, using this index for the spell. Otherwise, it will not.
+ * @param instant			If set to true, automatically adds "178 ; 0.0" to the given attributes for instant deploy time.
+ */
+native CF_SimulateSpellbookCast(int client, char[] attributes = "", int index = -1, bool instant = true);
