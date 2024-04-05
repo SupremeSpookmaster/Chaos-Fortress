@@ -12,9 +12,12 @@
 //	- IMMEDIATE PLANS:
 //		- Doktor Medick:
 //			- Make a custom fake particle model for High Time's radius:
-//				- Optimally this should end up being something time-themed. Maybe a giant clock?
-//				- The aura itself should be a sphere.
+//				- Team-colored clock icons swirl around the radius of the effect with team-colored arrow trails attached.
+//				- A team-colored base gradient surrounds the radius and "breathes", fading in and out of brightness.
 //		- Gadgeteer:
+//			- Finalize Toolbox Toss (finish Drone to-do list, fix CF_SimulateSpellCast bugs).
+//			- Write a custom attribute which allows the user to mark victims for Drone targeting.
+//			- MAYBE add an ability to M3 that makes Drones fly towards the user's cursor?
 //			- Write the code for Automation Annihilation. 
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
@@ -79,7 +82,6 @@
 //		- None, currently.
 //	- TODO: The current development branch has the following fatal issues which break the plugin, and will need to be fixed in the release branch:
 //		- Doktor Medick (and likely more characters in the future) needs the Fake Particle System, which in turn needs a config or else it will fail to boot. This does not break CF itself, but it does inhibit several important visual indicators used by many of the characters.
-//		- generic_abilities has a gamedata issue.
 //	- TODO: SB's Soul Absorption still uses attributes for its speed increase, change it to use the CF speed natives.
 //	- TODO: Figure out how to prevent "misc/halloween/spell_fireball_cast" from playing when using CF_SimulateSpellbookCast without actually casting anything.
 //		○ If it is even possible, try to also block the spellbook ring particle. I doubt this can be done but it would be neat.
