@@ -182,7 +182,7 @@ public void CFA_MakeForwards()
 	g_FakeMediShieldCollision = new GlobalForward("CF_OnFakeMediShieldCollision", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
 	g_FakeMediShieldDamaged = new GlobalForward("CF_OnFakeMediShieldDamaged", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_FloatByRef, Param_CellByRef, Param_Cell);
 	g_AttemptAbility = new GlobalForward("CF_OnAbilityCheckCanUse", ET_Event, Param_Cell, Param_String, Param_String, Param_Cell, Param_CellByRef);
-	g_SimulatedSpellCast = new GlobalForward("CF_OnSimulatedSpellUsed", ET_Ignore, Param_Cell);
+	g_SimulatedSpellCast = new GlobalForward("CF_OnSimulatedSpellUsed", ET_Ignore, Param_Cell, Param_Cell);
 	
 	GameData gd = LoadGameConfigFile("chaos_fortress");
 	StartPrepSDKCall(SDKCall_Entity);
@@ -244,15 +244,6 @@ public void CFA_OnEntityDestroyed(int entity)
 	f_FakeMediShieldHP[entity] = 0.0;
 	f_FakeMediShieldMaxHP[entity] = 0.0;
 	b_ProjectileCanCollideWithAllies[entity] = false;
-}
-
-public void CFA_OnEntityCreated(int entity, const char[] classname)
-{
-	if (StrContains(classname, "tf_projectile") != -1)
-	{
-		SDKHook(entity, SDKHook_SpawnPost, GetOwner);
-		b_ProjectileCanCollideWithAllies[entity] = StrEqual(classname, "tf_projectile_healing_bolt");
-	}
 }
 
 void CFA_UpdateMadeCharacter(int client)
@@ -3472,15 +3463,125 @@ public Native_CF_GetClosestTarget(Handle plugin, int numParams)
 	return closestEnt;
 }
 
+bool b_BlockFireballs[MAXPLAYERS + 1] = { false, ... };
+bool b_Casting[MAXPLAYERS + 1] = { false, ... };
+
 public Native_CF_SimulateSpellbookCast(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
 	char atts[255];
 	GetNativeString(2, atts, sizeof(atts));
-	int index = GetNativeCell(3);
+	CF_SpellIndex index = GetNativeCell(3);
 	bool instant = GetNativeCell(4);
 	if (instant)
-		Format(atts, sizeof(atts), "%s ; 178 ; 0.0", atts);
+	{
+		if (StrEqual(atts, ""))
+			Format(atts, sizeof(atts), "178 ; 0.0");
+		else
+			Format(atts, sizeof(atts), "%s ; 178 ; 0.0", atts);
+	}
 	
-	//TODO: Fill this out, don't forget to call the forward!
+	int weapon = TF2_GetActiveWeapon(client);
+	if (!IsValidEntity(weapon))
+		return;
+		
+	char classname[255];
+	GetEntityClassname(weapon, classname, sizeof(classname));
+	Format(classname, sizeof(classname), "use %s", classname);
+	
+	TF2_RemoveWeaponSlot(client, 5);
+	int spellbook = CF_SpawnWeapon(client, "tf_weapon_spellbook", 1070, 77, 7, 5, 0, 0, atts);
+	if (!IsValidEntity(spellbook))
+		return;
+		
+	FakeClientCommand(client, "use tf_weapon_spellbook");
+			
+	if (index == CF_Spell_None)
+	{
+		index = CF_Spell_Fireball;
+		b_BlockFireballs[client] = true;
+	}
+	b_Casting[client] = true;
+			
+	SetEntProp(spellbook, Prop_Send, "m_iSpellCharges", 1);
+	SetEntProp(spellbook, Prop_Send, "m_iSelectedSpellIndex", view_as<int>(index));
+	
+	DataPack pack = new DataPack();
+	CreateDataTimer(0.3, DeleteSimulatedSpellbook, pack, TIMER_FLAG_NO_MAPCHANGE);	//TODO: 0.3 is a magic number and will break shit if the user decides to mess with the spellbook's deploy time. Figure out a different way to remove the spellbook after it is done casting. Also need to prevent weapon switching during the cast.
+	WritePackCell(pack, GetClientUserId(client));
+	WritePackString(pack, classname);
 }
+
+public Action DeleteSimulatedSpellbook(Handle deletethebook, DataPack pack)
+{
+	ResetPack(pack);
+	
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	char command[255];
+	ReadPackString(pack, command, sizeof(command));
+	
+	if (!IsValidMulti(client))
+		return Plugin_Continue;
+		
+	FakeClientCommand(client, command);
+	TF2_RemoveWeaponSlot(client, 5);
+	
+	return Plugin_Continue;
+}
+
+public void CFA_OnEntityCreated(int entity, const char[] classname)
+{
+	if (StrContains(classname, "tf_projectile") != -1)
+	{
+		SDKHook(entity, SDKHook_SpawnPost, GetOwner);
+		b_ProjectileCanCollideWithAllies[entity] = StrEqual(classname, "tf_projectile_healing_bolt");
+	}
+	
+	if (StrContains(classname, "tf_projectile_spell") != -1)
+	{
+		SDKHook(entity, SDKHook_SpawnPost, OnSpellSpawn);
+	}
+}
+
+public Action OnSpellSpawn(int ent)
+{
+	if (!IsValidEntity(ent))
+		return Plugin_Continue;
+		
+	int owner = GetEntPropEnt(ent, Prop_Send, "m_hOwnerEntity");
+	if (!IsValidClient(owner))
+		return Plugin_Continue;
+	
+	if (!b_Casting[owner])
+		return Plugin_Continue;
+	
+	int entity = ent;
+	
+	if (b_BlockFireballs[owner])
+	{	
+		char classname[255];
+		GetEntityClassname(ent, classname, sizeof(classname));
+		
+		if (StrEqual(classname, "tf_projectile_spellfireball"))
+		{
+			StopSound(owner, SNDCHAN_AUTO, "misc/halloween/spell_fireball_cast.wav");
+			entity = -1;
+			RemoveEntity(ent);
+		}
+			
+		b_BlockFireballs[owner] = false;
+	}
+	
+	Call_StartForward(g_SimulatedSpellCast);
+	
+	Call_PushCell(owner);
+	Call_PushCell(entity);
+	
+	Call_Finish();
+	
+	b_Casting[owner] = false;
+	
+	return Plugin_Continue;
+}
+
+bool IsCasting(int client) { return b_Casting[client]; }

@@ -67,7 +67,24 @@ enum CF_CharacterRemovalReason
 	CF_CRR_SWITCHED_CHARACTER,
 	CF_CRR_ROUNDSTATE_CHANGED,
 	CF_CRR_RESPAWNED
-}
+};
+
+enum CF_SpellIndex
+{
+	CF_Spell_None = -1,
+	CF_Spell_Fireball,
+	CF_Spell_Bats,
+	CF_Spell_Ubercharge,
+	CF_Spell_PumpkinMirv,
+	CF_Spell_SuperJump,
+	CF_Spell_Invisibility,
+	CF_Spell_Teleport,
+	CF_Spell_LightningBall,
+	CF_Spell_Minify,
+	CF_Spell_Monoculus,
+	CF_Spell_MeteorShower,
+	CF_Spell_Skeletons
+};
 
 //TODO: This will need to be expanded upon to include things like medigun shields
 public bool CF_DefaultTrace(entity, contentsMask)
@@ -572,8 +589,9 @@ forward Action CF_OnPhysPropHitByProjectile(int prop, int entity, TFTeam propTea
  * Called when a spell is cast using the "CF_SimulateSpellbookCast" native.
  *
  * @param client		The client who cast the spell.
+ * @param entity		The projectile created by the spell (-1 if blocked).
  */
-forward void CF_OnSimulatedSpellUsed(int client);
+forward void CF_OnSimulatedSpellUsed(int client, int entity);
 
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
@@ -1523,7 +1541,7 @@ native int CF_GetClosestTarget(float pos[3], bool IncludeEntities = false, float
  *
  * @param client			The client to do this with.
  * @param attributes		Optional spellbook attributes.
- * @param index				If set to a valid spell index (0-11), a spell WILL be cast by this, using this index for the spell. Otherwise, it will not.
+ * @param index				If set to a CF_SpellIndex other than CF_Spell_None, the given spell will be cast. Otherwise, it will not.
  * @param instant			If set to true, automatically adds "178 ; 0.0" to the given attributes for instant deploy time.
  */
-native CF_SimulateSpellbookCast(int client, char[] attributes = "", int index = -1, bool instant = true);
+native CF_SimulateSpellbookCast(int client, char[] attributes = "", CF_SpellIndex index = CF_Spell_None, bool instant = true);

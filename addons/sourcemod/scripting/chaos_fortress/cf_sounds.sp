@@ -396,7 +396,7 @@ public Action NormalSoundHook(int clients[64],int &numClients,char strSound[PLAT
 	
 	Action result;
 	Call_Finish(result);
-	
+
 	if (result != Plugin_Stop && result != Plugin_Handled)
 	{
 		if (CF_IsPlayerCharacter(entity) && StrContains(strSound, "vo/") != -1)
@@ -404,6 +404,9 @@ public Action NormalSoundHook(int clients[64],int &numClients,char strSound[PLAT
 			float gameTime = GetGameTime();
 			if (gameTime >= f_LastSoundHook[entity] && gameTime >= f_Silenced[entity])
 			{
+				if (IsCasting(entity) && StrContains(strSound, "sf13_spell_") != -1)
+					return Plugin_Handled;
+					
 				char SoundA[255], SoundB[255];
 				Format(SoundB, sizeof(SoundB), "%s", strSound);
 				StringToLower(SoundB);

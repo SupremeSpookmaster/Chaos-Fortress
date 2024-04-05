@@ -825,6 +825,8 @@ public void Toss_Activate(int client, char abilityName[255])
 		TeleportEntity(toolbox, pos, ang, vel);
 		
 		AttachParticleToEntity(toolbox, team == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, "", autoDet);
+		
+		CF_SimulateSpellbookCast(client);
 		//EmitSoundToAll(SOUND_TOOLBOX_FIZZING, toolbox);
 	}
 }
@@ -1122,7 +1124,6 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 		TODO: 
 		• The following things MUST be done, but cannot be done until we have the custom model:
 			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired. Also muzzle flash.
-		• Add the spellcasting first-person animation when the ability is activated. Should probably make a Chaos Fortress native for this, then go back and add it to all the other characters who also have abilities where they throw things.
 		• We need to figure out how to get the specific damage of every tf_projectile entity and use that for projectile damage on Drones.
 		*/
 	}
