@@ -39,8 +39,6 @@
 //				- LOWEST: 149 (bodyshot, no height advantage bonus)
 //				- HIGHEST: 740 (headshot, max height advantage bonus)
 //				- This is not a balance issue, just a general note for future reference.
-//			- There's not a lot of viable counterplay against an Orbital hugging the skybox, besides having another Orbital counter-snipe them.
-//				- This will be solved with future characters who also have decent ranged choices (CBS's Heavy Draw is already a solid counter since Orbital can't move fast enough to avoid the arrow on instinct, and it will one-shot him at full charge).
 //		////////////////////////////////////////////
 //		- Count Heavnich:
 //			- "Chow Down" might be too strong compared to "Share Sandvich", resulting in players never using Share.
@@ -82,8 +80,7 @@
 //	- TODO: The current development branch has the following fatal issues which break the plugin, and will need to be fixed in the release branch:
 //		- Doktor Medick (and likely more characters in the future) needs the Fake Particle System, which in turn needs a config or else it will fail to boot. This does not break CF itself, but it does inhibit several important visual indicators used by many of the characters.
 //		- generic_abilities has a gamedata issue.
-//	- TODO: CBS' new model does not have a valid attachment point for Blast Bolt's particle, fix it.
-//	- TODO: SB's eye particles that he gets for absorbing souls aren't attaching properly, fix it.
+//	- TODO: SB's Soul Absorption still uses attributes for its speed increase, change it to use the CF speed natives.
 //	- TODO: Figure out how to prevent "misc/halloween/spell_fireball_cast" from playing when using CF_SimulateSpellbookCast without actually casting anything.
 //		○ If it is even possible, try to also block the spellbook ring particle. I doubt this can be done but it would be neat.
 //

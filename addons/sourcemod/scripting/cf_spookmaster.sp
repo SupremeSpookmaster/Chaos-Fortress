@@ -26,7 +26,7 @@
 
 #define SOUND_DISCARD_EXPLODE		"misc/halloween/spell_fireball_impact.wav"
 
-#define MODEL_DISCARD				"models/props_mvm/mvm_human_skull_collide.mdl"//"models/chaos_fortress/spookmaster/skullrocket.mdl"
+#define MODEL_DISCARD				"models/props_mvm/mvm_human_skull_collide.mdl"
 
 int lgtModel;
 int glowModel;
@@ -54,9 +54,6 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 {
 	if (!StrEqual(pluginName, SPOOKMASTER))
 		return;
-		
-	//if (StrContains(abilityName, HARVESTER) != -1)
-	//	Harvester_Activate(client, abilityName);
 		
 	if (StrEqual(abilityName, ABSORB))
 		Absorb_Activate(client, abilityName);
@@ -198,6 +195,15 @@ void Absorb_SetStats(int client, float NumTimes = 0.0)
 	
 	Absorb_DestroyEyeParticles(client);
 	
+	RequestFrame(Absorb_AttachEyeParticles, GetClientUserId(client));
+}
+
+public void Absorb_AttachEyeParticles(int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client))
+		return;
+		
 	char particle[255];
 	switch(Absorb_Uses[client])
 	{
@@ -220,7 +226,7 @@ void Absorb_SetStats(int client, float NumTimes = 0.0)
 	}
 	
 	Absorb_Left[client] = EntIndexToEntRef(CF_AttachParticle(client, particle, "lefteye", true));
-	Absorb_Right[client] = EntIndexToEntRef(CF_AttachParticle(client, particle, "righteye", true));
+	Absorb_Right[client] = EntIndexToEntRef(CF_AttachParticle(client, particle, "righteye", true));	
 }
 
 public void Absorb_HealOnDelay(DataPack pack)
@@ -290,8 +296,6 @@ public void Discard_Activate(int client, char abilityName[255])
 		Discard_Particle[skull] = EntIndexToEntRef(AttachParticleToEntity(skull, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_DISCARD_RED : PARTICLE_DISCARD_BLUE, "", _, _, _, 5.0));
 		SetEntityRenderColor(skull, TF2_GetClientTeam(client) == TFTeam_Red ? 255 : 0, 120, TF2_GetClientTeam(client) == TFTeam_Blue ? 255 : 0, 255);
 		SetEntityRenderFx(skull, RENDERFX_GLOWSHELL);
-		
-		ForceViewmodelAnimation(client, 18);
 		
 		g_DHookRocketExplode.HookEntity(Hook_Pre, skull, Discard_ExplodePre);
 		

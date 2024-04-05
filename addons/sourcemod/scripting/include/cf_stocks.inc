@@ -979,7 +979,11 @@ stock int AttachParticleToEntity(int entity, char type[255], char point[255], fl
 			ReturnValue = part1;
 			
 			float pos[3];
-			if (HasEntProp(entity, Prop_Data, "m_vecAbsOrigin"))
+			if (IsValidClient(entity))
+			{
+				GetClientAbsOrigin(entity, pos);
+			}
+			else if (HasEntProp(entity, Prop_Data, "m_vecAbsOrigin"))
 			{
 				GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", pos);
 			}
@@ -992,7 +996,7 @@ stock int AttachParticleToEntity(int entity, char type[255], char point[255], fl
 			pos[1] += yOff;
 			pos[2] += zOff;
 			
-			TeleportEntity(part1, pos, NULL_VECTOR, NULL_VECTOR);
+			//TeleportEntity(part1, pos, NULL_VECTOR, NULL_VECTOR);
 			
 			char name[16];
 			FormatEx(name, sizeof(name), "target%d", entity);
@@ -1001,15 +1005,26 @@ stock int AttachParticleToEntity(int entity, char type[255], char point[255], fl
 			DispatchKeyValue(part1, "parentname", name);
 			DispatchKeyValue(part1, "effect_name", type);
 			
-			/*
+			
+			/*SetVariantString("!activator");
+			AcceptEntityInput(part1, "SetParent", entity, part1);
+			SetVariantString(point);
+			AcceptEntityInput(part1, "SetParentAttachmentMaintainOffset", part1, part1);
+			DispatchKeyValue(part1, "targetname", "present");
+			DispatchSpawn(part1);
+			SetVariantString(name);
+			AcceptEntityInput(part1, "SetParent", part1, part1);
+			ActivateEntity(part1);
+			AcceptEntityInput(part1, "Start");*/
+			
+			TeleportEntity(part1, pos, NULL_VECTOR, NULL_VECTOR);
+			DispatchKeyValue(part1, "effect_name", type);
 			SetVariantString("!activator");
 			AcceptEntityInput(part1, "SetParent", entity, part1);
 			SetVariantString(point);
 			AcceptEntityInput(part1, "SetParentAttachmentMaintainOffset", part1, part1);
-			DispatchKeyValue(part1, "targetname", "present");*/
+			DispatchKeyValue(part1, "targetname", "present");
 			DispatchSpawn(part1);
-			SetVariantString(name);
-			AcceptEntityInput(part1, "SetParent", part1, part1);
 			ActivateEntity(part1);
 			AcceptEntityInput(part1, "Start");
 			
