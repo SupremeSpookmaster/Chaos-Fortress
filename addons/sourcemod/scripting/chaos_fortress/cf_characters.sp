@@ -77,17 +77,19 @@ enum struct CFCharacter
 	char Model[255];
 	char Name[255];
 	char MapPath[255];
+	char Arms[255];
 	
 	TFClassType Class;
 	
 	bool Exists;
+	bool HasCustomArms;
 	
 	Handle Abilities_Ult;
 	Handle Abilities_M2;
 	Handle Abilities_M3;
 	Handle Abilities_Reload;
 	
-	void Create(float newSpeed, float newMaxHP, TFClassType newClass, char newModel[255], char newName[255], float newScale, float newWeight, char newMapPath[255])
+	void Create(float newSpeed, float newMaxHP, TFClassType newClass, char newModel[255], char newName[255], float newScale, float newWeight, char newMapPath[255], char newArms[255])
 	{
 		this.Speed = newSpeed;
 		this.MaxHP = newMaxHP;
@@ -99,6 +101,8 @@ enum struct CFCharacter
 		this.Weight = newWeight;
 		
 		this.MapPath = newMapPath;
+		this.Arms = newArms;
+		this.HasCustomArms = CheckFile(this.Arms);
 		
 		delete this.Abilities_Ult;
 		delete this.Abilities_M2;
@@ -261,6 +265,9 @@ public void CFC_MakeNatives()
 	
 	CreateNative("CF_AttachParticle", Native_CF_AttachParticle);
 	CreateNative("CF_AttachWearable", Native_CF_AttachWearable);
+	
+	CreateNative("CF_GetCharacterArms", Native_CF_GetCharacterArms);
+	CreateNative("CF_SetCharacterArms", Native_CF_SetCharacterArms);
 	
 	CreateNative("CF_GetCharacterBaseSpeed", Native_CF_GetCharacterBaseSpeed);
 	
@@ -1150,6 +1157,21 @@ public void CF_ResetMadeStatus(int client)
 	}
 }
 
+void CFC_WeaponEquipped(int client, int weapon)
+{
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	if (!g_Characters[client].HasCustomArms)
+		return;
+		
+	int model = PrecacheModel(g_Characters[client].Arms);
+
+	SetEntityModel(weapon, g_Characters[client].Arms);
+	SetEntProp(weapon, Prop_Send, "m_nCustomViewmodelModelIndex", model);
+	SetEntProp(weapon, Prop_Send, "m_iViewModelIndex", model);
+}
+
 /**
  * Turns a player into their selected Chaos Fortress character, or the default specified in game_rules if they haven't chosen.
  *
@@ -1198,9 +1220,10 @@ public void CF_ResetMadeStatus(int client)
 	CF_SetPlayerConfig(client, conf);
 	SetClientCookie(client, c_DesiredCharacter, conf);
 		
-	char model[255], name[255]/*, animator[255]*/;
+	char model[255], name[255], arms[255]/*, animator[255]*/;
 	map.Get("character.model", model, sizeof(model));
 	map.Get("character.name", name, sizeof(name));
+	map.Get("character.arms", arms, sizeof(arms));
 	//map.Get("character.animator_model", animator, sizeof(animator));
 	float speed = GetFloatFromConfigMap(map, "character.speed", 300.0);
 	float health = GetFloatFromConfigMap(map, "character.health", 250.0);
@@ -1209,7 +1232,7 @@ public void CF_ResetMadeStatus(int client)
 	i_DialogueReduction[client] = GetIntFromConfigMap(map, "character.be_quiet", 1);
 	float scale = GetFloatFromConfigMap(map, "character.scale", 1.0);
 	
-	g_Characters[client].Create(speed, health, Classes[class], model, name, scale, weight, conf);
+	g_Characters[client].Create(speed, health, Classes[class], model, name, scale, weight, conf, arms);
 		
 	ConfigMap GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 	
@@ -2113,6 +2136,39 @@ public any Native_CF_SetCharacterSpeed(Handle plugin, int numParams)
 	}
 	
 	return 0.0;
+}
+
+public Native_CF_GetCharacterArms(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (CF_IsPlayerCharacter(client))
+	{
+		SetNativeString(2, g_Characters[client].Arms, 255);
+	}
+}
+
+public Native_CF_SetCharacterArms(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	char arms[255];
+	GetNativeString(2, arms, sizeof(arms));
+	
+	if (CF_IsPlayerCharacter(client) && CheckFile(arms))
+	{
+		g_Characters[client].Arms = arms;
+		g_Characters[client].HasCustomArms = true;
+		
+		int weapon = TF2_GetActiveWeapon(client);
+		if (IsValidEntity(weapon))
+		{
+			int model = PrecacheModel(arms);
+
+			SetEntityModel(weapon, arms);
+			SetEntProp(weapon, Prop_Send, "m_nCustomViewmodelModelIndex", model);
+			SetEntProp(weapon, Prop_Send, "m_iViewModelIndex", model);
+		}
+	}
 }
 
 public any Native_CF_MakeClientCharacter(Handle plugin, int numParams)

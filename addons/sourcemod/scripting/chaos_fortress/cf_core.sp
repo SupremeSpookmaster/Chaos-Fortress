@@ -107,6 +107,11 @@ public Action Timer_ChatMessages(Handle messages)
 	return Plugin_Continue;
 }
 
+public void OnClientPutInServer(int client)
+{
+	SDKHook(client, SDKHook_WeaponSwitch, CFC_WeaponEquipped);
+}
+
 #define SOUND_PHYSTOUCH_HIT		"@weapons/fx/rics/arrow_impact_metal2.wav"
 #define SOUND_PHYSTOUCH_BLAST	"@weapons/explode1.wav"
 

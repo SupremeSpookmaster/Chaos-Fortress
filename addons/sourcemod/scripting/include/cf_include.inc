@@ -809,6 +809,24 @@ native CF_GetCharacterName(int client, char output[255], int size);
 native CF_SetCharacterName(int client, char NewName[255]);
 
 /**
+ * Retrieves the model path of the given client's current character's viewmodel arms.
+ *
+ * @param client				The client whose character's arms to retrieve.
+ * @param output				Output buffer.
+ *
+ * @return	The model path for the client's viewmodel arms, stored in the output buffer, or an empty string if the client is not a character or does not have custom arms.
+ */
+native CF_GetCharacterArms(int client, char output[255]);
+
+/**
+ * Changes the model path of the given client's current character's viewmodel arms.
+ *
+ * @param client				The client whose arms to set.
+ * @param NewArms				The new model to be used for arms.
+ */
+native CF_SetCharacterArms(int client, char NewArms[255]);
+
+/**
  * Retrieves the model path of the given client's current character.
  *
  * @param client				The client whose character's model path to retrieve.

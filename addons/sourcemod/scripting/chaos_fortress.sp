@@ -84,8 +84,8 @@
 //		- generic_abilities has a gamedata issue.
 //	- TODO: CBS' new model does not have a valid attachment point for Blast Bolt's particle, fix it.
 //	- TODO: SB's eye particles that he gets for absorbing souls aren't attaching properly, fix it.
-//	- TODO: Add support for an "arms" entry in character CFGs so devs can give characters custom arms which work across all equipped weapons without needing to set attributes.
 //	- TODO: Figure out how to prevent "misc/halloween/spell_fireball_cast" from playing when using CF_SimulateSpellbookCast without actually casting anything.
+//		○ If it is even possible, try to also block the spellbook ring particle. I doubt this can be done but it would be neat.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
