@@ -13,7 +13,7 @@
 #define MODEL_ROPE_RED	"materials/cable/cable_red.vmt"
 #define MODEL_ROPE_BLUE	"materials/cable/cable_blue.vmt"
 #define MODEL_DRG		"models/weapons/w_models/w_drg_ball.mdl"
-#define MODEL_DRONE_PARENT	"models/props_c17/cashregister01a.mdl"
+#define MODEL_DRONE_PARENT	"models/chaos_fortress/gadgeteer/drone.mdl"
 #define MODEL_DRONE_VISUAL	"models/player/items/all_class/pet_robro.mdl"
 #define MODEL_TOSS_GIB_1	"models/player/gibs/gibs_gear2.mdl"
 #define MODEL_TOSS_GIB_2	"models/player/gibs/gibs_gear3.mdl"
@@ -64,6 +64,12 @@
 #define PARTICLE_SUPERCHARGE_IMPACT_RED		"drg_cow_explosioncore_charged"
 #define PARTICLE_TOOLBOX_TRAIL_RED		"flaregun_trail_red"
 #define PARTICLE_TOOLBOX_TRAIL_BLUE		"flaregun_trail_blue"
+#define PARTICLE_MUZZLE_RED		"muzzle_raygun_red"
+#define PARTICLE_MUZZLE_BLUE	"muzzle_raygun_blue"
+#define PARTICLE_MUZZLE_RED_2		"muzzle_raygun_red"
+#define PARTICLE_MUZZLE_BLUE_2	"muzzle_raygun_blue"
+#define PARTICLE_LASER_RED		"bullet_tracer_raygun_red_bits"
+#define PARTICLE_LASER_BLUE		"bullet_tracer_raygun_blue_bits"
 
 public void OnMapStart()
 {
@@ -148,6 +154,7 @@ int Toss_Owner[2049] = { -1, ... };
 int Toss_Max[MAXPLAYERS + 1] = { 0, ... };
 int Toss_ToolboxOwner[2049] = { -1, ... };
 int Text_Owner[2049] = { -1, ... };
+int Toss_ToolboxParticle[2049] = { -1, ... };
 
 float Toss_DMG[2049] = { 0.0, ... };
 float Toss_KB[2049] = { 0.0, ... };
@@ -621,7 +628,6 @@ public void Toss_CustomSentryLogic(int ref)
 			
 			if (gt >= Toss_SentryStats[entity].NextShot && CanShoot)
 			{
-				//TODO: VFX and SFX. Spawn muzzle flash, spawn laser beam. Also animations.
 				Toss_SentryStats[entity].NextShot = gt + (Toss_SentryStats[entity].fireRate / (gt <= Toss_SentryStats[entity].superchargeEndTime ? (Toss_SentryStats[entity].superchargedType == 1 ? Toss_SentryStats[entity].superchargeFire_Hitscan : Toss_SentryStats[entity].superchargeFire) : 1.0));
 				
 				//Run a traceray to see if our shot will hit the target, or any other target on their team for that matter.
@@ -631,10 +637,26 @@ public void Toss_CustomSentryLogic(int ref)
 				victim = TR_GetEntityIndex();
 				
 				//This just gets the location where the beam should be fired.
-				SpawnBeam_Vectors(pos, otherPos, 0.33, 255, 0, 0, 255, PrecacheModel("materials/sprites/laserbeam.vmt"), 8.0, 8.0, _, 0.0);
+				int r = 255;
+				int b = 120;
+				if (team == TFTeam_Blue)
+				{
+					r = 120;
+					b = 255;
+				}
+				
 				Toss_TraceTarget = target;
 				GetPointFromAngles(pos, angles, 99999.0, otherPos, Toss_IgnoreAllButTarget, MASK_SHOT);
-				SpawnBeam_Vectors(pos, otherPos, 0.1, 255, 255, 255, 255, PrecacheModel("materials/sprites/laserbeam.vmt"), _, _, _, 0.0);
+				
+				int muzzle = AttachParticleToEntity(entity, team == TFTeam_Red ? PARTICLE_MUZZLE_RED_2 : PARTICLE_MUZZLE_BLUE_2, "muzzle", 2.0);
+				if (IsValidEntity(muzzle))
+				{
+					GetEntPropVector(muzzle, Prop_Data, "m_vecAbsOrigin", pos);
+				}
+				
+				SpawnBeam_Vectors(pos, otherPos, 0.1, 255, 255, 255, 255, PrecacheModel("materials/sprites/lgtning.vmt"), 1.0, 1.0, _, 0.0);
+				SpawnBeam_Vectors(pos, otherPos, 0.1, r, 120, b, 255, PrecacheModel("materials/sprites/lgtning.vmt"), 4.0, 4.0, _, 0.0);
+				SpawnBeam_Vectors(pos, otherPos, 0.1, r, 120, b, 120, PrecacheModel("materials/sprites/glow02.vmt"), 8.0, 8.0, _, 0.0);
 				
 				//Deal damage if the victim is valid.
 				if (IsValidEntity(victim))
@@ -742,12 +764,24 @@ public bool Toss_HasLineOfSight(int entity, int target)
 	return !DidHit;
 }
 
-//Used by Toolbox Toss to change the toolbox's skin and particle when it is reflected.
-//TODO: Change particle, change owner
 public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
 {
 	if (Toss_IsToolbox[entity])
+	{
 		SetEntData(entity, FindSendPropInfo("CTFProjectile_Rocket", "m_nSkin"), view_as<int>(newTeam) - 2, 1, true);
+		Toss_RemoveParticle(entity);
+		Toss_ToolboxParticle[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, ""));
+		Toss_ToolboxOwner[entity] = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
+	}
+}
+
+public void Toss_RemoveParticle(int entity)
+{
+	int part = EntRefToEntIndex(Toss_ToolboxParticle[entity]);
+	if (IsValidEntity(part))
+		RemoveEntity(part);
+		
+	Toss_ToolboxParticle[entity] = -1;
 }
 
 //Activates Toolbox Toss by throwing the toolbox.
@@ -828,7 +862,7 @@ public void Toss_Activate(int client, char abilityName[255])
 	
 		TeleportEntity(toolbox, pos, ang, vel);
 		
-		AttachParticleToEntity(toolbox, team == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, "", autoDet);
+		Toss_ToolboxParticle[toolbox] = EntIndexToEntRef(AttachParticleToEntity(toolbox, team == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, "", autoDet));
 		
 		EmitSoundToAll(SOUND_TOOLBOX_FIZZING, toolbox);
 	}
@@ -1122,12 +1156,6 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 		WritePackCell(pack, team);
 		WritePackCell(pack, IsValidClient(owner) ? GetClientUserId(owner) : -1);
 		RequestFrame(Toss_SetSentryTeamOnDelay, pack);
-
-		/*
-		TODO: 
-		• The following things MUST be done, but cannot be done until we have the custom model:
-			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired. Also muzzle flash.
-		*/
 	}
 
 	RemoveEntity(toolbox);
@@ -1311,6 +1339,8 @@ public void OnEntityDestroyed(int entity)
 		{
 			StopSound(entity, SNDCHAN_AUTO, SOUND_TOOLBOX_FIZZING);
 		}
+		
+		Toss_RemoveParticle(entity);
 		
 		Toss_ToolboxOwner[entity] = -1;
 		Toss_IsToolbox[entity] = false;

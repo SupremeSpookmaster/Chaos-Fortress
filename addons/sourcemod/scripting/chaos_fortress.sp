@@ -15,9 +15,8 @@
 //				- Team-colored clock icons swirl around the radius of the effect with team-colored arrow trails attached.
 //				- A team-colored base gradient surrounds the radius and "breathes", fading in and out of brightness.
 //		- Gadgeteer:
-//			- Finalize Toolbox Toss (finish Drone to-do list, fix CF_SimulateSpellCast bugs).
-//			- Write a custom attribute which allows the user to mark victims for Drone targeting.
-//			- MAYBE add an ability to M3 that makes Drones fly towards the user's cursor?
+//			- Choose a new throw animation for Toolbox Toss.
+//			- Write a custom attribute which allows the user to mark victims for Drone targeting. This will require 2 models to be used as fake particles: one attached to his eye, and a big target attached to the marked enemy.
 //			- Write the code for Automation Annihilation. 
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
@@ -34,7 +33,7 @@
 //			- Turns into an unstoppable monster at max souls. This might just be because of random crits giving him triple damage 60% of the time. Test further after removing random crits.
 //			- Any kill will grant a soul, not just melee. This encourages sitting at a distance and fishing for souls risk-free with Skull Servants instead of getting in and fighting.
 //				- Make players drop timed soul pickups that the SB player needs to manually pick up to gain the soul. Upon being picked up, these souls immediately heal the user for 75 HP and the player gains 1 Soul to do whatever they want with.
-//					- This is a fairly drastic change. Only do this if people think SB is overpowered.
+//					- This is a fairly drastic change. Only do this if people think SB is overpowered or boring to play.
 //					- Thanks to all of the work we just put into fake health kits, this should be super easy to implement!
 //		////////////////////////////////////////////
 //		- Orbital Sniper:
@@ -88,6 +87,7 @@
 //	- TODO: Reduce the use of ConfigMap subsections as much as possible. This will reduce lag by a lot and could potentially even avoid a memory leak.
 //	- TODO: Implement notes in the #cf-notes channel.
 //	- TODO: When we edit GenericAOEDamage, make prop_physics and building entities take damage multiplied by the weapon's building damage attributes.
+//	- TODO: Add support for customizing massscale and intertiascale for fake health kits.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
