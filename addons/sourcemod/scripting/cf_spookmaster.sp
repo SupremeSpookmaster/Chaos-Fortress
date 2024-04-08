@@ -306,7 +306,7 @@ public void Discard_Activate(int client, char abilityName[255])
 			EmitSoundToAll(snd, skull, _, 110);
 		}
 		
-		CF_SimulateSpellbookCast(client);
+		CF_SimulateSpellbookCast(client, _, CF_Spell_MeteorShower);
 	}
 }
 

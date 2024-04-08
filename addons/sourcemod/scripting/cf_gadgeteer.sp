@@ -42,9 +42,9 @@
 #define SOUND_DRONE_DAMAGED_4	")weapons/sentry_damage4.wav"
 #define SOUND_DRONE_DAMAGED_ALERT	"misc/hud_warning.wav"
 #define SOUND_DEBUG_HIT_TOOLBOX		"vo/spy_yes01.mp3"
-#define SOUND_TOOLBOX_FIZZING		"@misc/halloween/hwn_bomb_fuse.wav"
+#define SOUND_TOOLBOX_FIZZING		")misc/halloween/hwn_bomb_fuse.wav"
 #define SOUND_TOSS_HIT_WORLD		")weapons/metal_gloves_hit.wav"
-#define SOUND_DRONE_SCANNING			")ui/cyoa_node_absent.wav"
+#define SOUND_DRONE_SCANNING			")weapons/sentry_scan.wav"
 
 #define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
 #define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
@@ -163,6 +163,8 @@ bool Toss_WasHittingSomething[2049] = { false, ... };
 Queue Toss_Sentries[MAXPLAYERS + 1] = { null, ... };
 
 CustomSentry Toss_SentryStats[2049];
+
+float scan_sound_time = 3.1;
 
 enum struct CustomSentry
 {
@@ -310,7 +312,9 @@ enum struct CustomSentry
 		SDKHook(prop, SDKHook_OnTakeDamage, Drone_Damaged);
 		
 		this.exists = true;
-		this.nextScanSound = GetGameTime() + 2.0;
+		EmitSoundToAll(SOUND_DRONE_SCANNING, prop);
+		EmitSoundToAll(SOUND_DRONE_SCANNING, prop);
+		this.nextScanSound = GetGameTime() + scan_sound_time;
 	}
 	
 	//Adds "mod" to the Drone's current HP, automatically updating its health display text and damage indication particle if its health is above 0 or destroying it otherwise.
@@ -387,6 +391,8 @@ enum struct CustomSentry
 		int prop = EntRefToEntIndex(this.entity);
 		if (IsValidEntity(prop))
 		{
+			StopSound(prop, SNDCHAN_AUTO, SOUND_DRONE_SCANNING);
+			
 			float pos[3];
 			GetEntPropVector(prop, Prop_Send, "m_vecOrigin", pos);
 			
@@ -571,12 +577,12 @@ public void Toss_CustomSentryLogic(int ref)
 					EmitSoundToClient(target, SOUND_TOSS_TARGETWARNING, _, _, 110);
 			}
 		}
-		
-		Toss_SentryStats[entity].nextTargetTime = gt + 0.2;
 	}
 	
 	if (Toss_IsValidTarget(target))	//We have a target, rotate to face them and fire if we are able.
 	{
+		StopSound(entity, SNDCHAN_AUTO, SOUND_DRONE_SCANNING);
+		
 		float otherPos[3];
 		CF_WorldSpaceCenter(target, otherPos);
 		//GetClientAbsOrigin(target, otherPos);
@@ -586,7 +592,9 @@ public void Toss_CustomSentryLogic(int ref)
 		{
 			target = -1;
 			Toss_SentryStats[entity].target = -1;
-			Toss_SentryStats[entity].nextScanSound = gt + 2.0;
+			EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
+			EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
+			Toss_SentryStats[entity].nextScanSound = gt + scan_sound_time;
 		}
 		else	//The target is still in our firing radius, turn to face them and fire if able.
 		{
@@ -666,11 +674,7 @@ public void Toss_CustomSentryLogic(int ref)
 		{
 			EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
 			EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
-			EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
-			EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
-			EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
-			EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
-			Toss_SentryStats[entity].nextScanSound = gt + 2.0;
+			Toss_SentryStats[entity].nextScanSound = gt + scan_sound_time;
 		}
 	}
 	
@@ -826,8 +830,7 @@ public void Toss_Activate(int client, char abilityName[255])
 		
 		AttachParticleToEntity(toolbox, team == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, "", autoDet);
 		
-		CF_SimulateSpellbookCast(client);
-		//EmitSoundToAll(SOUND_TOOLBOX_FIZZING, toolbox);
+		EmitSoundToAll(SOUND_TOOLBOX_FIZZING, toolbox);
 	}
 }
 
@@ -1124,7 +1127,6 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 		TODO: 
 		• The following things MUST be done, but cannot be done until we have the custom model:
 			○ When sentries fire, they need a custom firing animation and a team-colored plasma beam indicating where they fired. Also muzzle flash.
-		• We need to figure out how to get the specific damage of every tf_projectile entity and use that for projectile damage on Drones.
 		*/
 	}
 
@@ -1303,6 +1305,11 @@ public void OnEntityDestroyed(int entity)
 		if (Toss_SentryStats[entity].exists)
 		{
 			Toss_SentryStats[entity].Destroy();
+		}
+		
+		if (Toss_IsToolbox[entity])
+		{
+			StopSound(entity, SNDCHAN_AUTO, SOUND_TOOLBOX_FIZZING);
 		}
 		
 		Toss_ToolboxOwner[entity] = -1;

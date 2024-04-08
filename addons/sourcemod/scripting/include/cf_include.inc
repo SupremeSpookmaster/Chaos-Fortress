@@ -71,8 +71,7 @@ enum CF_CharacterRemovalReason
 
 enum CF_SpellIndex
 {
-	CF_Spell_None = -1,
-	CF_Spell_Fireball,
+	CF_Spell_Fireball = 0,
 	CF_Spell_Bats,
 	CF_Spell_Ubercharge,
 	CF_Spell_PumpkinMirv,
@@ -1553,13 +1552,18 @@ native bool CF_IsValidTarget(int entity, TFTeam team, char[] plugin = "", Functi
 native int CF_GetClosestTarget(float pos[3], bool IncludeEntities = false, float &distance = 0.0, float maxDistance = 0.0, TFTeam team = TFTeam_Unassigned, char[] plugin = "", Function filter = INVALID_FUNCTION);
 
 /**
- * Gives a client a spellbook and forces them to cast it, but does not actually cast a spell or create the spell VFX.
+ * Gives a client a spellbook and forces them to cast it.
  * Meant to be used in conjunction with abilities where the client "throws" something, to create a more convincing "throw" effect.
- * Calls the "CF_OnSimulatedSpellUsed" forward at the moment when the spell would normally be cast.
+ * Calls the "CF_OnSimulatedSpellUsed" forward at the moment when the spell would normally be cast unless index is set to CF_Spell_SuperJump, CF_Spell_Minify, CF_Spell_Invisibility, or CF_Spell_Ubercharge.
  *
  * @param client			The client to do this with.
  * @param attributes		Optional spellbook attributes.
- * @param index				If set to a CF_SpellIndex other than CF_Spell_None, the given spell will be cast. Otherwise, it will not.
+ * @param index				Can be set to any CF_SpellIndex to change the spell which is cast, along with its sound effect.
+ * @param dont_cast			If true, the projectile spawned by this spell will not spawn. CF_OnSimulatedSpellUsed will still be called. This will not prevent the effects of CF_Spell_SuperJump, CF_Spell_Minify, CF_Spell_Invisibility, or CF_Spell_Ubercharge from activating.
  * @param instant			If set to true, automatically adds "178 ; 0.0" to the given attributes for instant deploy time.
+ *
+ * @note 	It should be noted that using this native will still play the spell cast sound and spawn
+ * 			the spell cast particle at the client's feet. This cannot be stopped, and there is no workaround, 
+ *			so this should ONLY be used for abilities which are meant to seem "magic".
  */
-native CF_SimulateSpellbookCast(int client, char[] attributes = "", CF_SpellIndex index = CF_Spell_None, bool instant = true);
+native CF_SimulateSpellbookCast(int client, char[] attributes = "", CF_SpellIndex index = CF_Spell_Fireball, bool dont_cast = true, bool instant = true);

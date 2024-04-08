@@ -85,6 +85,9 @@
 //	- TODO: SB's Soul Absorption still uses attributes for its speed increase, change it to use the CF speed natives.
 //	- TODO: Figure out how to prevent "misc/halloween/spell_fireball_cast" from playing when using CF_SimulateSpellbookCast without actually casting anything.
 //		○ If it is even possible, try to also block the spellbook ring particle. I doubt this can be done but it would be neat.
+//	- TODO: Reduce the use of ConfigMap subsections as much as possible. This will reduce lag by a lot and could potentially even avoid a memory leak.
+//	- TODO: Implement notes in the #cf-notes channel.
+//	- TODO: When we edit GenericAOEDamage, make prop_physics and building entities take damage multiplied by the weapon's building damage attributes.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".

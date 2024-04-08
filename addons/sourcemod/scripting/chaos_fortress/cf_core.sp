@@ -474,7 +474,14 @@ public Action PhysTouch(int prop, int entity)
 	int owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
 	int launcher = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
 	
-	float damage = 100.0;	//TODO: Figure out how to get the projectile's damage.
+	float damage = GetProjectileDamage(entity, 100.0);
+	
+	//Building damage attributes:
+	if (IsValidEntity(launcher))
+	{
+		damage *= GetAttributeValue(launcher, 137, 1.0);
+		damage *= GetAttributeValue(launcher, 775, 1.0);
+	}
 		
 	float pos[3];
 	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
@@ -508,4 +515,35 @@ public Action PhysTouch(int prop, int entity)
 		EmitSoundToClient(owner, SOUND_PHYSTOUCH_HIT, _, _, 110, _, _, GetRandomInt(80, 110));
 		
 	return result;
+}
+
+//Gets a projectile's damage. Only works for non-explosive, non-jar, non-spell projectiles because that's all I need.
+public float GetProjectileDamage(int entity, float defaultVal)
+{
+	char classname[255];
+	GetEntityClassname(entity, classname, sizeof(classname));
+	
+	//oh boy it's YandereDev time
+	//Most of these should work, but only tf_projectile_arrow has actually been tested.
+	//TODO: Test both balls and the syringe
+	if (StrEqual(classname, "tf_projectile_arrow"))
+		return GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_Arrow", "m_iDeflected") + 4);
+	else if (StrEqual(classname, "tf_projectile_balloffire"))
+		return GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_BallOfFire", "m_iDeflected") + 4);
+	else if (StrEqual(classname, "tf_projectile_ball_ornament"))
+		return GetEntPropFloat(entity, Prop_Send, "m_flDamage");
+	else if (StrEqual(classname, "tf_projectile_energy_ball"))
+		return GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_EnergyBall", "m_iDeflected") + 4);
+	else if (StrEqual(classname, "tf_projectile_flare"))
+		return GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_Flare", "m_iDeflected") + 4);
+	else if (StrEqual(classname, "tf_projectile_grapplinghook"))
+		return GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_GrapplingHook", "m_iDeflected") + 4);
+	else if (StrEqual(classname, "tf_projectile_healing_bolt"))
+		return GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_HealingBolt", "m_iDeflected") + 4);
+	else if (StrEqual(classname, "tf_projectile_stun_ball"))
+		return GetEntPropFloat(entity, Prop_Send, "m_flDamage");
+	else if (StrEqual(classname, "tf_projectile_syringe"))
+		return GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_Syringe", "m_iDeflected") + 4);
+	
+	return defaultVal;
 }

@@ -2674,7 +2674,7 @@ stock bool Resize_TestSquare(const float bossOrigin[3], float xmin, float xmax, 
 }
 
 //Mother of God this stock name is horrendous. This returns whether or not the entity is a tf_projectile that does NOT explode on impact.
-//It filters out spells, jars, and rockets. Every other tf_projectile returns true.
+//It filters out spells, jars, cleavers, and rockets. Every other tf_projectile returns true.
 //Also returns the entity's classname stored in the given classname buffer for ease-of-use.
 stock bool TF2_IsDamageProjectileWithoutImpactExplosion(int entity, char classname[255])
 {
@@ -2684,7 +2684,8 @@ stock bool TF2_IsDamageProjectileWithoutImpactExplosion(int entity, char classna
 	GetEntityClassname(entity, classname, sizeof(classname));
 	
 	return (StrContains(classname, "tf_projectile") != -1 && StrContains(classname, "spell") == -1 && 
-	StrContains(classname, "jar") == -1 && StrContains(classname, "rocket") == -1);
+	StrContains(classname, "jar") == -1 && StrContains(classname, "rocket") == -1 && StrContains(classname, "cleaver") == -1
+	&& StrContains(classname, "energy_ring") == -1);
 }
 
 //Returns true if the entity is capable of taking damage (prop_physics, base_boss, living player, buildings).

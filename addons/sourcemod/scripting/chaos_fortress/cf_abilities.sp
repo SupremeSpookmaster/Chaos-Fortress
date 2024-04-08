@@ -3472,7 +3472,7 @@ public Native_CF_SimulateSpellbookCast(Handle plugin, int numParams)
 	char atts[255];
 	GetNativeString(2, atts, sizeof(atts));
 	CF_SpellIndex index = GetNativeCell(3);
-	bool instant = GetNativeCell(4);
+	bool instant = GetNativeCell(5);
 	if (instant)
 	{
 		if (StrEqual(atts, ""))
@@ -3496,11 +3496,7 @@ public Native_CF_SimulateSpellbookCast(Handle plugin, int numParams)
 		
 	FakeClientCommand(client, "use tf_weapon_spellbook");
 			
-	if (index == CF_Spell_None)
-	{
-		index = CF_Spell_Fireball;
-		b_BlockFireballs[client] = true;
-	}
+	b_BlockFireballs[client] = GetNativeCell(4);
 	b_Casting[client] = true;
 			
 	SetEntProp(spellbook, Prop_Send, "m_iSpellCharges", 1);
@@ -3559,15 +3555,10 @@ public Action OnSpellSpawn(int ent)
 	
 	if (b_BlockFireballs[owner])
 	{	
-		char classname[255];
-		GetEntityClassname(ent, classname, sizeof(classname));
-		
-		if (StrEqual(classname, "tf_projectile_spellfireball"))
-		{
-			StopSound(owner, SNDCHAN_AUTO, "misc/halloween/spell_fireball_cast.wav");
-			entity = -1;
-			RemoveEntity(ent);
-		}
+		entity = -1;
+		TeleportEntity(ent, OFF_THE_MAP, NULL_VECTOR, NULL_VECTOR);
+		AcceptEntityInput(ent, "Kill");
+		RemoveEntity(ent);
 			
 		b_BlockFireballs[owner] = false;
 	}
