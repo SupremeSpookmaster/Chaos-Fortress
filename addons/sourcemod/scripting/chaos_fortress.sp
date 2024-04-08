@@ -89,6 +89,7 @@
 //	- TODO: Implement notes in the #cf-notes channel.
 //	- TODO: When we edit GenericAOEDamage, make prop_physics and building entities take damage multiplied by the weapon's building damage attributes.
 //	- TODO: Add support for customizing massscale and intertiascale for fake health kits.
+//	- TODO: Remove MOST of the IsValidClient/IsPlayerCharacter/IsValidMulti checks from our natives. These are completely redundant since the user should already be making sure they're passing a valid client in the first place, so these checks just slow the plugin down.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".

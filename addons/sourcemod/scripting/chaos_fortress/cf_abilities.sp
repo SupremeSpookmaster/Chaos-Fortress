@@ -158,6 +158,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_IsValidTarget", Native_CF_IsValidTarget);
 	CreateNative("CF_GetClosestTarget", Native_CF_GetClosestTarget);
 	CreateNative("CF_SimulateSpellbookCast", Native_CF_SimulateSpellbookCast);
+	CreateNative("CF_ForceViewmodelAnimation", Native_CF_ForceViewmodelAnimation);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -3576,3 +3577,14 @@ public Action OnSpellSpawn(int ent)
 }
 
 bool IsCasting(int client) { return b_Casting[client]; }
+
+public Native_CF_ForceViewmodelAnimation(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	char activity[255];
+	GetNativeString(2, activity, sizeof(activity));
+	float rate = GetNativeCell(3);
+	bool hideWeapon = GetNativeCell(4);
+	bool blockAttack = GetNativeCell(5);
+	bool blockWeaponSwitch = GetNativeCell(6);
+}

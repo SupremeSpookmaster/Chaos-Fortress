@@ -1553,7 +1553,6 @@ native int CF_GetClosestTarget(float pos[3], bool IncludeEntities = false, float
 
 /**
  * Gives a client a spellbook and forces them to cast it.
- * Meant to be used in conjunction with abilities where the client "throws" something, to create a more convincing "throw" effect.
  * Calls the "CF_OnSimulatedSpellUsed" forward at the moment when the spell would normally be cast unless index is set to CF_Spell_SuperJump, CF_Spell_Minify, CF_Spell_Invisibility, or CF_Spell_Ubercharge.
  *
  * @param client			The client to do this with.
@@ -1562,8 +1561,20 @@ native int CF_GetClosestTarget(float pos[3], bool IncludeEntities = false, float
  * @param dont_cast			If true, the projectile spawned by this spell will not spawn. CF_OnSimulatedSpellUsed will still be called. This will not prevent the effects of CF_Spell_SuperJump, CF_Spell_Minify, CF_Spell_Invisibility, or CF_Spell_Ubercharge from activating.
  * @param instant			If set to true, automatically adds "178 ; 0.0" to the given attributes for instant deploy time.
  *
- * @note 	It should be noted that using this native will still play the spell cast sound and spawn
- * 			the spell cast particle at the client's feet. This cannot be stopped, and there is no workaround, 
- *			so this should ONLY be used for abilities which are meant to seem "magic".
+ * @note 	It should be noted that using this native will still trigger the spell-cast VFX and SFX. If you only want the viewmodel animation, use CF_ForceViewmodelAnimation instead and set the "activity" parameter to ACT_SPELL_VM_FIRE.
  */
 native CF_SimulateSpellbookCast(int client, char[] attributes = "", CF_SpellIndex index = CF_Spell_Fireball, bool dont_cast = true, bool instant = true);
+
+/**
+ * Forces a client's viewmodel (their hands, what you see in first-person) to play a specified sequence.
+ *
+ * @param client				The client whose viewmodel to animate.
+ * @param activity				The activity to force. For example: ACT_SPELL_VM_FIRE will force the spell-casting animation.
+ * @param playbackRate			Playback rate multiplier.
+ * @param hideWeapon			If true, the weapon currently held by the user will be hidden during the animation.
+ * @param blockAttack			If true, the user will be unable to attack during the animation.
+ * @param blockWeaponSwitch		If true, the user will be unable to switch their weapon during the animation.
+ *
+ * @note	Weapons that are physically part of the user's hands, such as the gunslinger, are not hidden by hideWeapon.
+ */
+native CF_ForceViewmodelAnimation(int client, char[] activity, float playbackRate = 1.0, bool hideWeapon = true, bool blockAttack = true, bool blockWeaponSwitch = true);
