@@ -876,9 +876,13 @@ public void Toss_Activate(int client, char abilityName[255])
 		TeleportEntity(toolbox, pos, ang, vel);
 		
 		//TODO: Convert this feature to a Chaos Fortress native. It should come with the option to hide the user's weapon as well as a duration parameter.
-		//The native should block weapon switches for the duration, and should also make use of m_flNextPrimaryAttack to block attacks. 
+		//The user should be able to pass a sequence name, which we will convert to an int by using the LookupSequence SDKCall.
+		//The native should block weapon switches for the duration, and should also make use of m_flNextPrimaryAttack to block attacks.
+		//In the same way we use an SDKCall to set the sequence, we can use one to get the duration of a sequence. Use this instead of requiring a duration parameter.
+		//Might also be worth it to experiment with the playback speed property for even greater customization.
 		int ent = GetEntPropEnt(client, Prop_Send, "m_hViewModel");
 		SDKCall(g_SDKCall_ResetSequence, ent, 53);
+		SDKCall(g_SDKCall_ResetSequence, client, 53);
 		
 		Toss_ToolboxParticle[toolbox] = EntIndexToEntRef(AttachParticleToEntity(toolbox, team == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, "", autoDet));
 		
