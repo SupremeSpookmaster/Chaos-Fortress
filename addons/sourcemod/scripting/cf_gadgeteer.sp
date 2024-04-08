@@ -357,7 +357,7 @@ enum struct CustomSentry
 			textEnt = WorldText_Create(NULL_VECTOR, NULL_VECTOR, hpText, 10.0, _, _, FONT_TF2_BULKY);
 			if (IsValidEntity(textEnt))
 			{
-				WorldText_AttachToEntity(textEnt, prop, "", _, _, 20.0 * this.scale);
+				WorldText_AttachToEntity(textEnt, prop, "", _, _, 8.0 * this.scale);
 				this.text = EntIndexToEntRef(textEnt);
 				Text_Owner[textEnt] = this.owner;
 				SDKHook(textEnt, SDKHook_SetTransmit, Text_Transmit);
