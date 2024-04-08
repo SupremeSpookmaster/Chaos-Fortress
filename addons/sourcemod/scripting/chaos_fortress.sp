@@ -16,6 +16,7 @@
 //				- A team-colored base gradient surrounds the radius and "breathes", fading in and out of brightness.
 //		- Gadgeteer:
 //			- Choose a new throw animation for Toolbox Toss.
+//			- Add an option to the special resource system called "resource_is_metal" and apply it to Gadgeteer. It should function the same as normal resources, but is always equal to his metal. Adding or subtracting resources should also set his metal.
 //			- Write a custom attribute which allows the user to mark victims for Drone targeting. This will require 2 models to be used as fake particles: one attached to his eye, and a big target attached to the marked enemy.
 //			- Write the code for Automation Annihilation. 
 //

@@ -137,8 +137,19 @@ public const char Drone_DamageSFX[][255] =
 	SOUND_DRONE_DAMAGED_4
 };
 
+Handle g_SDKCall_ResetSequence;
+
 public void OnPluginStart()
 {
+	GameData gd = LoadGameConfigFile("chaos_fortress");
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(gd, SDKConf_Signature, "CBaseAnimating::ResetSequence()");
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+	g_SDKCall_ResetSequence = EndPrepSDKCall();
+	delete gd;
+
+	if(!g_SDKCall_ResetSequence)
+	    SetFailState("Failed to setup SDKCall for CBaseAnimating::ResetSequence()!");
 }
 
 public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
@@ -657,6 +668,8 @@ public void Toss_CustomSentryLogic(int ref)
 				SpawnBeam_Vectors(pos, otherPos, 0.1, 255, 255, 255, 255, PrecacheModel("materials/sprites/lgtning.vmt"), 1.0, 1.0, _, 0.0);
 				SpawnBeam_Vectors(pos, otherPos, 0.1, r, 120, b, 255, PrecacheModel("materials/sprites/lgtning.vmt"), 4.0, 4.0, _, 0.0);
 				SpawnBeam_Vectors(pos, otherPos, 0.1, r, 120, b, 120, PrecacheModel("materials/sprites/glow02.vmt"), 8.0, 8.0, _, 0.0);
+				SpawnBeam_Vectors(pos, otherPos, 0.15, r, 120, b, 80, PrecacheModel("materials/sprites/glow02.vmt"), 12.0, 12.0, _, 0.0);
+				SpawnBeam_Vectors(pos, otherPos, 0.2, r, 120, b, 40, PrecacheModel("materials/sprites/glow02.vmt"), 16.0, 16.0, _, 0.0);
 				
 				//Deal damage if the victim is valid.
 				if (IsValidEntity(victim))
@@ -861,6 +874,11 @@ public void Toss_Activate(int client, char abilityName[255])
 		Toss_ToolboxOwner[toolbox] = GetClientUserId(client);
 	
 		TeleportEntity(toolbox, pos, ang, vel);
+		
+		//TODO: Convert this feature to a Chaos Fortress native. It should come with the option to hide the user's weapon as well as a duration parameter.
+		//The native should block weapon switches for the duration, and should also make use of m_flNextPrimaryAttack to block attacks. 
+		int ent = GetEntPropEnt(client, Prop_Send, "m_hViewModel");
+		SDKCall(g_SDKCall_ResetSequence, ent, 53);
 		
 		Toss_ToolboxParticle[toolbox] = EntIndexToEntRef(AttachParticleToEntity(toolbox, team == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, "", autoDet));
 		
