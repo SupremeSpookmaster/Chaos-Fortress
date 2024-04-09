@@ -3610,6 +3610,10 @@ public Action OnSpellSpawn(int ent)
 
 bool IsCasting(int client) { return b_Casting[client]; }
 
+//TODO: This should call a forward (something like CF_OnForcedViewmodelAnimationEnd) when it ends.
+//The forward should include the client as well as their viewmodel, provided the viewmodel is still valid.
+//The forward should always be called JUST before the animation ACTUALLY ends, that way devs can use the forward
+//to seamlessly transition to another anim before the viewmodel reverts to the old animation.
 public Native_CF_ForceViewmodelAnimation(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
