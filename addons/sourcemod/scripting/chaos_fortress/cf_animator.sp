@@ -1,6 +1,6 @@
-#define EF_BONEMERGE			(1 << 0)
+/*#define EF_BONEMERGE			(1 << 0)
 #define EF_BONEMERGE_FASTCULL	(1 << 7)
-#define EF_PARENT_ANIMATES		(1 << 9)
+#define EF_PARENT_ANIMATES		(1 << 9)*/
 	
 int i_ClientAnimator[MAXPLAYERS + 1] = { -1, ... };
 

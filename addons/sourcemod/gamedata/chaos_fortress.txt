@@ -10,6 +10,12 @@
    			 "windows"    "\x55\x8B\xEC\xA1\x2A\x2A\x2A\x2A\x53\x56\x57\x83\x78\x30\x00\x8B\xD9\x8B\x7D\x08"
    			 "linux"        "@_ZN14CBaseAnimating13ResetSequenceEi"
 			}
+			"CBaseAnimating::SequenceDuration"
+			{
+				"library"		"server"
+				"windows"		"\x55\x8B\xEC\x56\x8B\x75\x08\x57\x8B\xF9\x85\xF6\x75\x2A\x8B\x47\x5C"
+				"linux"			"@_ZN14CBaseAnimating16SequenceDurationEP10CStudioHdri"
+			}
 			"CTFPlayerShared::RecalculatePlayerBodygroups"
 			{
 				// string aPostInventoryA, most top function.

@@ -29,7 +29,7 @@
 #define CRIT4	"player/crit_hit4.wav"
 #define CRIT5	"player/crit_hit5.wav"
 
-#define EF_NODRAW	32
+//#define EF_NODRAW	32
 
 float OFF_THE_MAP[3] = {1182792704.0, 1182792704.0, -964690944.0};
 

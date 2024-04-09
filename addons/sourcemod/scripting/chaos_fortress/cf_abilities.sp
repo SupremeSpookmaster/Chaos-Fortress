@@ -162,6 +162,10 @@ public void CFA_MakeNatives()
 }
 
 Handle g_hSDKWorldSpaceCenter;
+/*Handle g_hSDKResetSequence;
+Handle g_hSDKLookupSequence;
+Handle g_hSDKGetSequenceDuration;
+Handle g_hSDKGetModelPtr;*/
 
 public void CFA_MakeForwards()
 {
@@ -186,10 +190,38 @@ public void CFA_MakeForwards()
 	g_SimulatedSpellCast = new GlobalForward("CF_OnSimulatedSpellUsed", ET_Ignore, Param_Cell, Param_Cell);
 	
 	GameData gd = LoadGameConfigFile("chaos_fortress");
+	
+	//WorldSpaceCenter:
 	StartPrepSDKCall(SDKCall_Entity);
 	PrepSDKCall_SetFromConf(gd, SDKConf_Virtual, "CBaseEntity::WorldSpaceCenter");
 	PrepSDKCall_SetReturnInfo(SDKType_Vector, SDKPass_ByRef);
 	if ((g_hSDKWorldSpaceCenter = EndPrepSDKCall()) == null) SetFailState("Failed to create SDKCall for CBaseEntity::WorldSpaceCenter offset!");
+	//USAGE: SDKCall(g_hSDKWorldSpaceCenter, entity, output_buffer);
+	
+	/*//ResetSequence:
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(gd, SDKConf_Signature, "CBaseAnimating::ResetSequence()");
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+	g_hSDKResetSequence = EndPrepSDKCall();
+	if ((g_hSDKResetSequence = EndPrepSDKCall()) == null) SetFailState("Failed to create SDKCall for CBaseAnimating::ResetSequence() offset!");
+	//USAGE: SDKCall(g_hSDKResetSequence, entity, sequence);
+	
+	//LookupSequence:
+	StartPrepSDKCall(SDKCall_Static);
+	PrepSDKCall_SetFromConf(gd, SDKConf_Signature, "LookupSequence");
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
+	if((g_hSDKLookupSequence = EndPrepSDKCall()) == INVALID_HANDLE) SetFailState("Failed to create SDKCall for LookupSequence");
+	//USAGE: int sequence = SDKCall(g_hSDKLookupSequence, ModelPtr, "ACT_SEQUENCE");
+	
+	//GetSequenceDuration:
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(gd, SDKConf_Signature, "CBaseAnimating::SequenceDuration");
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
+	if((g_hSDKGetSequenceDuration = EndPrepSDKCall()) == INVALID_HANDLE) SetFailState("Failed to create SDKCall for SequenceDuration");
+	//USAGE: float duration = SDKCall(g_hSDKGetSequenceDuration, entity, sequence);*/
 	
 	delete gd;
 }
@@ -3583,8 +3615,21 @@ public Native_CF_ForceViewmodelAnimation(Handle plugin, int numParams)
 	int client = GetNativeCell(1);
 	char activity[255];
 	GetNativeString(2, activity, sizeof(activity));
-	float rate = GetNativeCell(3);
-	bool hideWeapon = GetNativeCell(4);
-	bool blockAttack = GetNativeCell(5);
-	bool blockWeaponSwitch = GetNativeCell(6);
+	bool hideWeapon = GetNativeCell(3);
+	bool blockAttack = GetNativeCell(4);
+	bool blockWeaponSwitch = GetNativeCell(5);
+	
+	int ent = GetEntPropEnt(client, Prop_Send, "m_hViewModel");
+	if (!IsValidEntity(ent))
+		return;
+		
+	CBaseAnimating viewmodel = CBaseAnimating(ent);
+	int sequence = viewmodel.LookupSequence(activity);
+	if (sequence == -1)
+		return;
+		
+	float duration = viewmodel.SequenceDuration(sequence);
+	CPrintToChatAll("%f", duration);
+	
+	viewmodel.ResetSequence(sequence);
 }

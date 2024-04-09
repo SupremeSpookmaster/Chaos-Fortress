@@ -6,6 +6,7 @@
 #include <cf_stocks>
 #include <cf_include>
 #include <SteamWorks>
+#include <cbasenpc>
 
 #include "chaos_fortress/cf_killstreak.sp"
 #include "chaos_fortress/cf_damage.sp"

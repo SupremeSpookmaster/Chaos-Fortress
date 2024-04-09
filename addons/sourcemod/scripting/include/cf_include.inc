@@ -1569,12 +1569,11 @@ native CF_SimulateSpellbookCast(int client, char[] attributes = "", CF_SpellInde
  * Forces a client's viewmodel (their hands, what you see in first-person) to play a specified sequence.
  *
  * @param client				The client whose viewmodel to animate.
- * @param activity				The activity to force. For example: ACT_SPELL_VM_FIRE will force the spell-casting animation.
- * @param playbackRate			Playback rate multiplier.
+ * @param sequence				The sequence to force. For example: "spell_fire" will force the spell-casting animation.
  * @param hideWeapon			If true, the weapon currently held by the user will be hidden during the animation.
  * @param blockAttack			If true, the user will be unable to attack during the animation.
  * @param blockWeaponSwitch		If true, the user will be unable to switch their weapon during the animation.
  *
  * @note	Weapons that are physically part of the user's hands, such as the gunslinger, are not hidden by hideWeapon.
  */
-native CF_ForceViewmodelAnimation(int client, char[] activity, float playbackRate = 1.0, bool hideWeapon = true, bool blockAttack = true, bool blockWeaponSwitch = true);
+native CF_ForceViewmodelAnimation(int client, char[] sequence, bool hideWeapon = true, bool blockAttack = true, bool blockWeaponSwitch = true);
