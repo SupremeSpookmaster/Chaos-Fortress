@@ -108,6 +108,8 @@ int i_HUDG[MAXPLAYERS + 1] = { 255, ... };
 int i_HUDB[MAXPLAYERS + 1] = { 255, ... };
 int i_HUDA[MAXPLAYERS + 1] = { 255, ... };
 
+int MODEL_NONE = -1;
+
 bool b_ProjectileCanCollideWithAllies[2049] = { false, ... };
 
 CF_AbilityType i_HeldBlocked[MAXPLAYERS + 1] = { CF_AbilityType_None, ... };
@@ -321,6 +323,8 @@ public void CFA_MapStart()
 	int entity = FindEntityByClassname(MaxClients + 1, "tf_player_manager");
 	if(IsValidEntity(entity))
 		SDKHook(entity, SDKHook_ThinkPost, ScoreThink);
+		
+	MODEL_NONE = PrecacheModel("models/empty.mdl");
 }
 
 public void ScoreThink(int entity)
@@ -3610,6 +3614,15 @@ public Action OnSpellSpawn(int ent)
 
 bool IsCasting(int client) { return b_Casting[client]; }
 
+bool b_InVMAnim[MAXPLAYERS + 1] = { false, ... };
+bool b_VMHideWeapon[MAXPLAYERS + 1] = { false, ... };
+bool b_VMBlockSwitch[MAXPLAYERS + 1] = { false, ... };
+bool b_VMBlockAttack[MAXPLAYERS + 1] = { false, ... };
+
+float f_VMAnimEndTime[MAXPLAYERS + 1] = { 0.0, ... };
+
+int i_VMIndex[2049] = { -1, ... };
+
 //TODO: This should call a forward (something like CF_OnForcedViewmodelAnimationEnd) when it ends.
 //The forward should include the client as well as their viewmodel, provided the viewmodel is still valid.
 //The forward should always be called JUST before the animation ACTUALLY ends, that way devs can use the forward
@@ -3633,7 +3646,135 @@ public Native_CF_ForceViewmodelAnimation(Handle plugin, int numParams)
 		return;
 		
 	float duration = viewmodel.SequenceDuration(sequence);
-	CPrintToChatAll("%f", duration);
 	
 	viewmodel.ResetSequence(sequence);
+	
+	float gt = GetGameTime();
+	f_VMAnimEndTime[client] = gt + duration;
+	b_VMHideWeapon[client] = hideWeapon;
+	b_VMBlockSwitch[client] = blockWeaponSwitch;
+	b_VMBlockAttack[client] = blockAttack;
+	
+	if (blockAttack)
+	{
+		VMAnim_BlockAttacks(client);
+	}
+	
+	if (hideWeapon)
+	{
+		for (int i = 0; i <= 5; i++)
+		{
+			int weapon = GetPlayerWeaponSlot(client, i);
+				
+			if (IsValidEntity(weapon))
+			{
+				i_VMIndex[weapon] = GetEntProp(weapon, Prop_Send, "m_iViewModelIndex");
+				SetEntProp(weapon, Prop_Send, "m_iViewModelIndex", MODEL_NONE);
+				SetEntityRenderMode(weapon, RENDER_TRANSALPHA);
+				SetEntityRenderColor(weapon, 0, 0, 0, 0);
+			}
+		}
+	}
+	
+	RequestFrame(VMAnim_Check, GetClientUserId(client));
 }
+
+//TODO: The only way to do this is to hide the actual viewmodel and simulate it with a tf_wearable_vm...
+//God I hate Source sometimes...
+//Remember to force the sequence on the simulated VM instead of the ACTUAL VM.
+public void VMAnim_ToggleWeapons(int client, bool visible)
+{
+	for (int i = 0; i <= 5; i++)
+	{
+		int weapon = GetPlayerWeaponSlot(client, i);
+			
+		if (IsValidEntity(weapon))
+		{
+			SetEntProp(weapon, Prop_Send, "m_iViewModelIndex", visible ? i_VMIndex[weapon] : MODEL_NONE);
+			
+			if (!visible)
+			{
+				SetEntityRenderMode(weapon, RENDER_TRANSALPHA);
+				SetEntityRenderColor(weapon, 0, 0, 0, 0);
+			}
+			else
+			{
+				SetEntityRenderMode(weapon, RENDER_NORMAL);
+				SetEntityRenderColor(weapon, 255, 255, 255, 255);
+			}
+		}
+	}
+}
+
+public void VMAnim_BlockAttacks(int client)
+{
+	for (int i = 0; i <= 5; i++)
+	{
+		int weapon = GetPlayerWeaponSlot(client, i);
+			
+		if (IsValidEntity(weapon))
+		{
+			float nextAttack = GetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack");
+			if (nextAttack < f_VMAnimEndTime[client])
+			{
+				nextAttack = f_VMAnimEndTime[client] + 0.1;
+				SetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack", nextAttack);
+			}
+				
+			//TODO: Repeat for secondary and special attacks
+		}
+	}
+}
+
+public void VMAnim_Check(int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client))
+		return;
+		
+	float gt = GetGameTime();
+	float timePerFrame = 0.01587302;
+	
+	if (gt + timePerFrame >= f_VMAnimEndTime[client])
+	{
+		if (b_VMHideWeapon[client])
+		{
+			VMAnim_ToggleWeapons(client, true);
+			b_VMHideWeapon[client] = false;
+		}
+		b_VMBlockSwitch[client] = false;
+		
+		//TODO: Call forward
+		
+		return;
+	}
+	else	//We do these every frame instead of just once at the start because otherwise other plugins may interfere.
+	{
+		if (b_VMBlockAttack[client])
+			VMAnim_BlockAttacks(client);
+			
+		if (b_VMHideWeapon[client])
+		{
+			int weapon = TF2_GetActiveWeapon(client);
+			if (IsValidEntity(weapon))
+			{
+				SetEntProp(weapon, Prop_Send, "m_iViewModelIndex", MODEL_NONE);
+				SetEntityRenderMode(weapon, RENDER_TRANSALPHA);
+				SetEntityRenderColor(weapon, 0, 0, 0, 0);
+			}
+		}
+	}
+	
+	RequestFrame(VMAnim_Check, id);
+}
+
+public Action CFA_WeaponCanSwitch(int client, int weapon)
+{
+    if (!b_VMBlockSwitch[client])
+    	return Plugin_Continue;
+    	
+    if (GetGameTime() <= f_VMAnimEndTime[client])
+    	return Plugin_Handled;
+    	
+    return Plugin_Continue;
+} 

@@ -111,6 +111,7 @@ public Action Timer_ChatMessages(Handle messages)
 public void OnClientPutInServer(int client)
 {
 	SDKHook(client, SDKHook_WeaponSwitch, CFC_WeaponEquipped);
+	SDKHook(client, SDKHook_WeaponCanSwitchTo, CFA_WeaponCanSwitch);
 }
 
 #define SOUND_PHYSTOUCH_HIT		"@weapons/fx/rics/arrow_impact_metal2.wav"
