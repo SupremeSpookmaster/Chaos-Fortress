@@ -3315,8 +3315,6 @@ public void FakeHealthKit_Think(DataPack pack)
 				Call_Finish(result);
 			}
 			
-			delete FunctionPlugin;
-			
 			int maxHPCheck = RoundFloat(float(TF2Util_GetEntityMaxHealth(i)) * hpMult);
 			if (GetEntProp(i, Prop_Send, "m_iHealth") >= maxHPCheck)
 				result = false;
