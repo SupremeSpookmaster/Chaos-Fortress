@@ -11,7 +11,7 @@
 //
 //	- IMMEDIATE PLANS:
 //		- Doktor Medick:
-//			- Make a custom fake particle model for High Time's radius:
+//			- Make a custom fake particle simulation for High Time:
 //				- Team-colored clock icons swirl around the radius of the effect with team-colored arrow trails attached.
 //				- A team-colored base gradient surrounds the radius and "breathes", fading in and out of brightness.
 //		- Gadgeteer:
@@ -57,7 +57,7 @@
 //			- If multiple CBSs use Thousand Volley at the same time, the server will more than likely crash due to too many edicts (unconfirmed, cannot test with bots).
 //		////////////////////////////////////////////
 //		- Doktor Medick:
-//			- None! (Pending public opinion during beta)
+//			- He is definitely WAY too tanky for a healer. He regens while healing, can give himself res while healing, and can toss a healing splash that heals an entire crowd PLUS himself for 80 HP, and even if you DO put him in a dire situation, he can try to teleport away. I wager he will be a bit problematic on launch.
 //		////////////////////////////////////////////
 //		- Gadgeteer:
 //			- He's meant to be support, but his kit encourages roaming and solo play way too much. He's too far into development to change how Toolbox Toss works, so that's not an option.
