@@ -1,3 +1,6 @@
+# *NOTICE*
+This game mode is currently incompatible with 64-bit servers. Not much I can do about that. This notice will be deleted when compatibility issues are resolved.
+
 # *Introducing (eventually because this is not done yet) Chaos Fortress: TF2 with custom classes!*
 ***Chaos Fortress*** is just like normal TF2, but with a twist: instead of playing as one of the nine mercenaries, players step into the shoes of one of many custom characters, each with their own unique kit. Some of these characters are designed to function like souped up versions of the nine mercenaries, while others act more as wildcards, going their own directions entirely. To top it all off, all of these characters have access to powerful Ultimate Abilities, which charge very slowly over time, or by dealing damage. In short: **it's a lot like *Overwatch*, but in TF2 and with different characters, on top of also being very dev-friendly for those who want to make their own characters**.
 
