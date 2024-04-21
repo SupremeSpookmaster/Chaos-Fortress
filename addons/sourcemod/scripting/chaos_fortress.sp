@@ -22,6 +22,9 @@
 //		- ALL:
 //			- Finish viewmodel animator, then retroactively implement it for all of the "I throw a thing" abilities.
 //			- Replace CTFBaseProjectileRocket::Explode SDKCalls in all of the plugins with a function parameter which can be passed to FireGenericProjectile. FGP should do the SDKCall itself and call that function when the explosion happens.
+//		- Christian Brutal Sniper:
+//			- Completely rework Thousand Volley. It has a high chance of immediately crashing the server due to the edict limit. This pairs very poorly with Thousand Volley also being the fastest-charging ult.
+//				- Maybe make it act the same, but the arrows slightly home in on players so we don't need to have as many of them for the ability to be useful? Obviously would need to make them generic projectiles and not actual arrows.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////

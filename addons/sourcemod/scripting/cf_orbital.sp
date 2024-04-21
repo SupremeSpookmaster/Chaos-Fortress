@@ -750,7 +750,7 @@ public Action Strike_DealDamage(Handle smackthoserats, DataPack pack)
 		r = 0;
 	}
 
-	for (int i = 0; i < 8; i++)
+	for (int i = 0; i < 3; i++)
 	{
 		float xLoc[3], yLoc[3];
 		xLoc[0] = groundZero[0] + GetRandomFloat(-radius, radius);
