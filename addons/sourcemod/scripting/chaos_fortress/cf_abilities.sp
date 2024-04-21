@@ -2480,6 +2480,7 @@ public Native_CF_FireGenericRocket(Handle plugin, int numParams)
 	float velocity = GetNativeCell(3);
 	bool crit = GetNativeCell(4);
 	bool allowAlliedCollisions = GetNativeCell(5);
+	float forwardDistance = 20.0 * CF_GetCharacterScale(client);
 	
 	int rocket = CreateEntityByName("tf_projectile_rocket");
 	
@@ -2511,6 +2512,13 @@ public Native_CF_FireGenericRocket(Handle plugin, int numParams)
 		rocketVel[1] = vBuffer[1]*velocity;
 		rocketVel[2] = vBuffer[2]*velocity;
 			
+		if (forwardDistance != 0.0)
+		{
+			float fLen = forwardDistance * Sine( DegToRad( angles[0] + 90.0 ) );
+			spawnLoc[0] = spawnLoc[0] + fLen * Cosine( DegToRad( angles[1] + 0.0) );
+			spawnLoc[1] = spawnLoc[1] + fLen * Sine( DegToRad( angles[1] + 0.0) );
+			spawnLoc[2] = spawnLoc[2] + forwardDistance * Sine( DegToRad( -1 * (angles[0] + 0.0)) );
+		}
 		TeleportEntity(rocket, spawnLoc, angles, rocketVel);
 		
 		b_ProjectileCanCollideWithAllies[rocket] = allowAlliedCollisions;

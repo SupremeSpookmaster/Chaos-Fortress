@@ -19,6 +19,9 @@
 //			- Add an option to the special resource system called "resource_is_metal" and apply it to Gadgeteer. It should function the same as normal resources, but is always equal to his metal. Adding or subtracting resources should also set his metal.
 //			- Write a custom attribute which allows the user to mark victims for Drone targeting. This will require 2 models to be used as fake particles: one attached to his eye, and a big target attached to the marked enemy.
 //			- Write the code for Automation Annihilation. 
+//		- ALL:
+//			- Finish viewmodel animator, then retroactively implement it for all of the "I throw a thing" abilities.
+//			- Replace CTFBaseProjectileRocket::Explode SDKCalls in all of the plugins with a function parameter which can be passed to FireGenericProjectile. FGP should do the SDKCall itself and call that function when the explosion happens.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////
@@ -245,7 +248,7 @@ public Action PlayerKilled_Pre(Event hEvent, const char[] sEvName, bool bDontBro
 	{
 		result = CF_PlayerKilled_Pre(victim, inflictor, attacker, weapon, console, custom, ringer, critType, bits);
 		
-		hEvent.SetInt("userid", GetClientUserId(victim));
+		hEvent.SetInt("userid", (IsValidClient(victim) ? GetClientUserId(victim) : 0));
 		hEvent.SetInt("inflictor_entindex", inflictor);
 		hEvent.SetInt("customkill", custom);
 		hEvent.SetInt("crit_type", critType);
@@ -254,7 +257,7 @@ public Action PlayerKilled_Pre(Event hEvent, const char[] sEvName, bool bDontBro
 			bits |= DMG_CRIT;
 		hEvent.SetInt("damagebits", bits);
 		
-		hEvent.SetInt("attacker", GetClientUserId(attacker));
+		hEvent.SetInt("attacker", (IsValidClient(attacker) ? GetClientUserId(attacker) : 0));
 		hEvent.SetString("weapon", weapon);
 		hEvent.SetString("weapon_logclassname", console);
 	}

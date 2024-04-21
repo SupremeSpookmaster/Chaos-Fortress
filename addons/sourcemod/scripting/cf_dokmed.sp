@@ -46,7 +46,7 @@
 #define PARTICLE_TELEPORT_WARNING_RED	"eyeboss_team_red"
 #define PARTICLE_TELEPORT_WARNING_BLUE	"eyeboss_team_blue"
 
-#define SOUND_FLASK_SHATTER				"physics/glass/glass_sheet_break1.wav"
+#define SOUND_FLASK_SHATTER				")physics/glass/glass_sheet_break1.wav"
 #define SOUND_FLASK_HEAL				"items/smallmedkit1.wav"
 #define SOUND_FLASK_POISON				"items/powerup_pickup_plague_infected.wav"
 #define SOUND_FLASK_POISON_LOOP			"items/powerup_pickup_plague_infected_loop.wav"
@@ -70,6 +70,7 @@ public void OnMapStart()
 	PrecacheSound(SOUND_TIME_BUFF_REMOVED);
 	
 	laserModel = PrecacheModel("materials/sprites/laser.vmt");
+	PrecacheModel("materials/zombie_riot/btd/white.vmt");
 }
 
 DynamicHook g_DHookRocketExplode;
@@ -133,10 +134,12 @@ float Flask_DMGTicks[2049] = { 0.0, ... };
 float Flask_DMGInterval[2049] = { 0.0, ... };
 float Flask_DMGDuration[2049] = { 0.0, ... };
 
+//int keepmakingbodies[2049] = { 0, ... };
+
 public void Cocainum_Activate(int client, char abilityName[255])
 {
 	float vel = CF_GetArgF(client, DOKMED, abilityName, "velocity");
-	int bottle = CF_FireGenericRocket(client, 0.0, vel, false, true);
+	int bottle = CF_FireGenericRocket(client, 0.0, vel, false, false);
 	if (IsValidEntity(bottle))
 	{
 		Flask_Radius[bottle] = CF_GetArgF(client, DOKMED, abilityName, "radius");
@@ -172,7 +175,110 @@ public void Cocainum_Activate(int client, char abilityName[255])
 		
 		CF_PlayRandomSound(client, "", "sound_cocainum_toss");
 	}
+	
+	/*float pos[3];
+	GetClientAbsOrigin(client, pos);
+	float end = GetGameTime() + 4.0;
+	DataPack pack = new DataPack();
+	WritePackCell(pack, GetClientUserId(client));
+	WritePackFloat(pack, end);
+	WritePackFloat(pack, 0.0);
+	WritePackFloatArray(pack, pos, 3);
+	WritePackFloat(pack, 0.0);
+	RequestFrame(test_spawnone, pack);*/
+	
+	//test.AttachToEntity(client, "head");
 }
+
+/*public bool Test_IgnoreAll(entity, mask) 
+{
+	return false;
+} 
+
+public void test_spawnone(DataPack pack)
+{
+	ResetPack(pack);
+	
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	float end = ReadPackFloat(pack);
+	float next = ReadPackFloat(pack);
+	float pos[3];
+	ReadPackFloatArray(pack, pos, sizeof(pos));
+	float angoffset = ReadPackFloat(pack);
+	
+	float gt = GetGameTime();
+	if (!IsValidMulti(client) || gt >= end)
+	{
+		delete pack;
+		return;
+	}
+	
+	if (gt >= next)
+	{
+		ParticleSimulation test = FPS_CreateParticleSimulation(NULL_VECTOR, NULL_VECTOR, 0, 4.0, DOKMED, PSimTest, true);
+		GetClientAbsOrigin(client, pos);
+		TeleportEntity(test.Index, pos);
+		
+		for (int i = 0; i < 4; i++)
+		{
+			float randPos[3], ang[3], thepos[3];
+			ang[0] = 0.0;
+			ang[1] = float(i) * 90.0 + angoffset;
+			ang[2] = 0.0;
+			
+			TR_TraceRayFilter(pos, ang, MASK_SHOT, RayType_Infinite, Test_IgnoreAll);
+			TR_GetEndPosition(thepos);
+			
+			randPos = ConstrainDistance(pos, thepos, 200.0);
+					
+			ParticleBody PBody = FPS_CreateParticleBody(randPos, NULL_VECTOR, 0.1, _, _, 4.0);
+			//PBody.Fading = true;
+				
+			int color[3];
+			color[0] = 255;
+			color[1] = 255;
+			color[2] = 255;
+					
+			int lightcolor[4];
+			lightcolor[0] = 40;
+			lightcolor[1] = 0;
+			lightcolor[2] = 255;
+			lightcolor[3] = 180;
+				
+			float scale = GetRandomFloat(0.25, 1.5);
+			//PBody.AddSprite("materials/zombie_riot/btd/blue.vmt", 1.0, color, 255, RENDER_TRANSALPHA);
+			PBody.AddLight(lightcolor, 5, 200.0);
+			PBody.AddTrail("materials/effects/repair_claw_trail_blue.vmt", 0.5, 10.0 * scale, 0.0, color, 255, RENDER_TRANSALPHA, 3);
+			PBody.AddTrail("materials/effects/electro_beam.vmt", 0.5, 10.0 * scale, 0.0, color, 255, RENDER_TRANSALPHA, 3);
+			//PBody.AddParticle("healshot_trail_red");
+			test.AddParticleBody(PBody);
+		}
+		
+		
+		
+		next = gt + 0.1;
+	}
+	
+	delete pack;
+	pack = new DataPack();
+	WritePackCell(pack, GetClientUserId(client));
+	WritePackFloat(pack, end);
+	WritePackFloat(pack, next);
+	WritePackFloatArray(pack, pos, 3);
+	WritePackFloat(pack, angoffset + 4.0);
+	RequestFrame(test_spawnone, pack);
+}
+
+public void PSimTest(int ent)
+{
+	float ang[3];
+	GetEntPropVector(ent, Prop_Send, "m_angRotation", ang);
+	ang[1] += 4.0;
+	float pos[3];
+	GetEntPropVector(ent, Prop_Data, "m_vecAbsOrigin", pos);
+	pos[2] += 8.0;
+	TeleportEntity(ent, pos, ang);
+}*/
 
 public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
 {

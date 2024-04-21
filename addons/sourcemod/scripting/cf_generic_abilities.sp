@@ -23,8 +23,6 @@
 
 float Weapon_EndTime[2049] = { 0.0, ... };
 
-Handle g_hSDKSetItem;
-
 enum struct OldWeapon
 {
 	int itemIndex; 		
@@ -185,14 +183,6 @@ public void Weapon_ClearAllOldWeapons(int client)
 
 public void OnPluginStart()
 {
-	GameData gamedata = LoadGameConfigFile("tf2.attributes");
-	StartPrepSDKCall(SDKCall_Raw);
-	PrepSDKCall_SetFromConf(gamedata, SDKConf_Signature, "CEconItemView::operator=");
-	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_ByValue);
-	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_ByValue);
-	g_hSDKSetItem = EndPrepSDKCall();
-	if (g_hSDKSetItem == INVALID_HANDLE)
-		LogError("Gamedata error: failed to locate CEconItemView::operator=");
 }
 
 public void OnEntityDestroyed(int entity)
