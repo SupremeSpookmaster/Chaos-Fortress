@@ -15,19 +15,13 @@
 //				- Team-colored clock icons swirl around the radius of the effect with team-colored arrow trails attached.
 //				- A team-colored base gradient surrounds the radius and "breathes", fading in and out of brightness.
 //		- Gadgeteer:
-//			- Choose a new throw animation for Toolbox Toss.
 //			- Add an option to the special resource system called "resource_is_metal" and apply it to Gadgeteer. It should function the same as normal resources, but is always equal to his metal. Adding or subtracting resources should also set his metal.
 //			- Write a custom attribute which allows the user to mark victims for Drone targeting. This will require 2 models to be used as fake particles: one attached to his eye, and a big target attached to the marked enemy.
 //			- Write the code for Automation Annihilation. 
 //		- ALL:
 //			- Add parameters for weapons which allow custom weapon models. These will need to cooperate with generic_abilities and CF_ForceViewmodelAnimation. This removes a dependency and allows easier customization.
 //			- Fix the weird super-long delay with ForceViewmodelAnimation on SB's Soul Discard.
-//			- Convert SpawnParticle and AttachParticleToEntity to work via temp ents, then recompile all plugins. This will reduce edict usage by a ton.
-//			- Replace CTFBaseProjectileRocket::Explode SDKCalls in all of the plugins with a function parameter which can be passed to FireGenericProjectile. FGP should do the SDKCall itself and call that function when the explosion happens.
-//		- Christian Brutal Sniper:
-//			- Completely rework Thousand Volley. It has a high chance of immediately crashing the server due to the edict limit. This pairs very poorly with Thousand Volley also being the fastest-charging ult.
-//				- Maybe make it act the same, but the arrows slightly home in on players so we don't need to have as many of them for the ability to be useful? Obviously would need to make them generic projectiles and not actual arrows.
-//			- Make Heavy Draw *reduce* Blast Bolt's radius, so combining the two functions like a direct hit rocket on steroids instead of just a small, unavoidable nuke.
+//			- Convert SpawnParticle and AttachParticleToEntity to work via temp ents EVENTUALLY, then recompile all plugins. This will reduce edict usage by a ton. Doesn't need to be done immediately as edict crashes are not a huge concern as of the Fake Particle System fix.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////
@@ -60,7 +54,7 @@
 //			- Using Profit Blast to blast jump *might* give him too much mobility for a tank. At the same time, though, he's a melee character with a slow base speed, so I doubt this will be a huge issue.
 //		////////////////////////////////////////////
 //		- Christian Brutal Sniper:
-//			- If multiple CBSs use Thousand Volley at the same time, the server will more than likely crash due to too many edicts (unconfirmed, cannot test with bots).
+//			- None! (Pending public reception during open beta).
 //		////////////////////////////////////////////
 //		- Doktor Medick:
 //			- He is definitely WAY too tanky for a healer. He regens while healing, can give himself res while healing, and can toss a healing splash that heals an entire crowd PLUS himself for 80 HP, and even if you DO put him in a dire situation, he can try to teleport away. I wager he will be a bit problematic on launch.

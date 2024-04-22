@@ -1302,10 +1302,12 @@ native CF_HealPlayer(int client, int healer, int amt, float hpMult);
  * @param velocity				The rocket's base velocity.
  * @param crit					Set to true to make the rocket crit.
  * @param collideWithAllies		Set to true to allow the rocket to collide with allies.
+ * @param pluginName			Name of the plugin which owns the logic function.
+ * @param logic					Function to call when the rocket collides with something. Must accept 3 ints as parameters (first is the rocket, second is its owner, third is the rocket's team) and return an MRESReturn.
  *
  * @return	The entity index of the rocket. 
  */
-native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit = false, bool collideWithAllies = false);
+native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit = false, bool collideWithAllies = false, char pluginName[255] = "", Function logic = INVALID_FUNCTION);
 
 /**
  * Creates a simulated health kit, with more customizable options than just creating an 'item_healthkit'.

@@ -73,15 +73,6 @@ public void OnMapStart()
 	PrecacheModel("materials/zombie_riot/btd/white.vmt");
 }
 
-DynamicHook g_DHookRocketExplode;
-
-public void OnPluginStart()
-{
-	GameData gamedata = LoadGameConfigFile("chaos_fortress");
-	g_DHookRocketExplode = DHook_CreateVirtual(gamedata, "CTFBaseRocket::Explode");
-	delete gamedata;
-}
-
 public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
 	if (!IsValidEntity(weapon))
@@ -141,7 +132,7 @@ bool Cocainum_VMAnim[MAXPLAYERS + 1] = { false, ... };
 public void Cocainum_Activate(int client, char abilityName[255])
 {
 	float vel = CF_GetArgF(client, DOKMED, abilityName, "velocity");
-	int bottle = CF_FireGenericRocket(client, 0.0, vel, false, false);
+	int bottle = CF_FireGenericRocket(client, 0.0, vel, false, true, DOKMED, Bottle_Shatter);
 	if (IsValidEntity(bottle))
 	{
 		Flask_Radius[bottle] = CF_GetArgF(client, DOKMED, abilityName, "radius");
@@ -171,8 +162,7 @@ public void Cocainum_Activate(int client, char abilityName[255])
 			
 		TeleportEntity(bottle, NULL_VECTOR, randAng, NULL_VECTOR);
 		SetEntityMoveType(bottle, MOVETYPE_FLYGRAVITY);
-		
-		g_DHookRocketExplode.HookEntity(Hook_Pre, bottle, Bottle_Shatter);
+
 		RequestFrame(Bottle_Spin, EntIndexToEntRef(bottle));
 		
 		CF_PlayRandomSound(client, "", "sound_cocainum_toss");
@@ -329,12 +319,11 @@ public void Bottle_Spin(int ref)
 	}
 }
 
-public MRESReturn Bottle_Shatter(int bottle)
+public MRESReturn Bottle_Shatter(int bottle, int owner, int teamNum)
 {
 	float gt = GetGameTime();
 	
-	int owner = GetEntPropEnt(bottle, Prop_Send, "m_hOwnerEntity");
-	TFTeam team = view_as<TFTeam>(GetEntProp(bottle, Prop_Send, "m_iTeamNum"));
+	TFTeam team = view_as<TFTeam>(teamNum);
 
 	float pos[3], clientPos[3];
 	GetEntPropVector(bottle, Prop_Send, "m_vecOrigin", pos);

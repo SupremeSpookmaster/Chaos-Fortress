@@ -59,15 +59,6 @@ public void OnMapStart()
 	PrecacheSound(SOUND_STRIKE_WARNING);
 }
 
-DynamicHook g_DHookRocketExplode;
-
-public void OnPluginStart()
-{
-	GameData gamedata = LoadGameConfigFile("chaos_fortress");
-	g_DHookRocketExplode = DHook_CreateVirtual(gamedata, "CTFBaseRocket::Explode");
-	delete gamedata;
-}
-
 public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
 {
 	if (!StrEqual(pluginName, ORBITAL))
@@ -407,7 +398,7 @@ public void Taser_Activate(int client, char abilityName[255])
 	float slow = CF_GetArgF(client, ORBITAL, abilityName, "slow");
 	float duration = CF_GetArgF(client, ORBITAL, abilityName, "duration");
 	
-	int projectile = CF_FireGenericRocket(client, 0.0, velocity, false);
+	int projectile = CF_FireGenericRocket(client, 0.0, velocity, false, false, ORBITAL, DontExplode);
 	if (!IsValidEntity(projectile))
 		return;
 		
@@ -420,13 +411,12 @@ public void Taser_Activate(int client, char abilityName[255])
 	Taser_Slow[projectile] = slow;
 	Taser_Duration[projectile] = duration;
 	Taser_Active[projectile] = true;
-	g_DHookRocketExplode.HookEntity(Hook_Pre, projectile, DontExplode);
 	
 	if (lifespan > 0.0)
 		CreateTimer(lifespan, Timer_RemoveEntity, EntIndexToEntRef(projectile), TIMER_FLAG_NO_MAPCHANGE);
 }
 
-public MRESReturn DontExplode(int projectile)
+public MRESReturn DontExplode(int projectile, int owner, int teamNum)
 {
 	Taser_Collide(projectile, 0);
 	return MRES_Supercede;

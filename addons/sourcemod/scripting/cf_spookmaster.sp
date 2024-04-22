@@ -41,15 +41,6 @@ public void OnMapStart()
 	glowModel = PrecacheModel("materials/sprites/glow02.vmt");
 }
 
-DynamicHook g_DHookRocketExplode;
-
-public void OnPluginStart()
-{
-	GameData gamedata = LoadGameConfigFile("chaos_fortress");
-	g_DHookRocketExplode = DHook_CreateVirtual(gamedata, "CTFBaseRocket::Explode");
-	delete gamedata;
-}
-
 public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
 {
 	if (!StrEqual(pluginName, SPOOKMASTER))
@@ -270,7 +261,7 @@ public void Discard_Activate(int client, char abilityName[255])
 {
 	float velocity = CF_GetArgF(client, SPOOKMASTER, abilityName, "velocity");
 	
-	int skull = CF_FireGenericRocket(client, 0.0, velocity, false);
+	int skull = CF_FireGenericRocket(client, 0.0, velocity, false, false, SPOOKMASTER, Discard_ExplodePre);
 	if (IsValidEntity(skull))
 	{
 		Discard_BaseDMG[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "damage");
@@ -299,8 +290,6 @@ public void Discard_Activate(int client, char abilityName[255])
 		Discard_Particle[skull] = EntIndexToEntRef(AttachParticleToEntity(skull, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_DISCARD_RED : PARTICLE_DISCARD_BLUE, "", _, _, _, 5.0));
 		SetEntityRenderColor(skull, TF2_GetClientTeam(client) == TFTeam_Red ? 255 : 0, 120, TF2_GetClientTeam(client) == TFTeam_Blue ? 255 : 0, 255);
 		SetEntityRenderFx(skull, RENDERFX_GLOWSHELL);
-		
-		g_DHookRocketExplode.HookEntity(Hook_Pre, skull, Discard_ExplodePre);
 		
 		char snd[255], conf[255];
 		CF_GetPlayerConfig(client, conf, sizeof(conf));
@@ -346,10 +335,9 @@ public Action Discard_StartDecay(Handle decay, int ref)
 	return Plugin_Continue;
 }
 
-public MRESReturn Discard_ExplodePre(int skull)
+public MRESReturn Discard_ExplodePre(int skull, int owner, int teamNum)
 {
-	int owner = GetEntPropEnt(skull, Prop_Send, "m_hOwnerEntity");
-	TFTeam team = view_as<TFTeam>(GetEntProp(skull, Prop_Send, "m_iTeamNum"));
+	TFTeam team = view_as<TFTeam>(teamNum);
 	
 	float dmg = Discard_BaseDMG[skull];
 	if (Discard_DecayStart[skull] > 0.0)

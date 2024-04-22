@@ -60,15 +60,6 @@ public void OnMapStart()
 	glowModel = PrecacheModel("materials/sprites/glow02.vmt");
 }
 
-DynamicHook g_DHookRocketExplode;
-
-public void OnPluginStart()
-{
-	GameData gamedata = LoadGameConfigFile("chaos_fortress");
-	g_DHookRocketExplode = DHook_CreateVirtual(gamedata, "CTFBaseRocket::Explode");
-	delete gamedata;
-}
-
 public void CF_OnCharacterCreated(int client)
 {
 	if (CF_HasAbility(client, DEMOPAN, PASSIVES))
@@ -442,7 +433,7 @@ public void Bomb_Launch(int client, char abilityName[255], bool resupply)
 			RemoveEntity(bomb);
 		
 		float velocity = CF_GetArgF(client, DEMOPAN, abilityName, "velocity");
-		bomb = CF_FireGenericRocket(client, 0.0, velocity, false);
+		bomb = CF_FireGenericRocket(client, 0.0, velocity, false, false, DEMOPAN, Bomb_Explode);
 		if (IsValidEntity(bomb))
 		{
 			SetEntityMoveType(bomb, MOVETYPE_FLYGRAVITY);
@@ -454,7 +445,6 @@ public void Bomb_Launch(int client, char abilityName[255], bool resupply)
 			
 			SetEntityModel(bomb, MODEL_REFINED);
 			Bomb_Particle[bomb] = EntIndexToEntRef(AttachParticleToEntity(bomb, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_REFINED_TRAIL_RED : PARTICLE_REFINED_TRAIL_BLUE, "", _, _, _, 5.0));
-			g_DHookRocketExplode.HookEntity(Hook_Pre, bomb, Bomb_Explode);
 			
 			RequestFrame(Bomb_Spin, EntIndexToEntRef(bomb));
 			CF_PlayRandomSound(client, "", "sound_refined_bomb_launch");
@@ -483,10 +473,8 @@ public void Bomb_Spin(int ref)
 	}
 }
 
-public MRESReturn Bomb_Explode(int bomb)
+public MRESReturn Bomb_Explode(int bomb, int owner, int teamNum)
 {
-	int owner = GetEntPropEnt(bomb, Prop_Send, "m_hOwnerEntity");
-
 	float dmg = Bomb_DMG[bomb];
 	
 	float pos[3];

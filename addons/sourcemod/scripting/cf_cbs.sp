@@ -390,6 +390,8 @@ float f_VolleyDamage[MAXPLAYERS + 1] = { 0.0, ... };
 int i_VolleyCount[MAXPLAYERS + 1] = { 0, ... };
 int i_VolleyOwner[2049] = { -1, ... };
 
+int ActiveVolleys = 0;
+
 public void Volley_Activate(int client, char abilityName[255])
 {
 	if (!Draw_IsHoldingHuntsman(client))
@@ -406,9 +408,18 @@ public void Volley_Activate(int client, char abilityName[255])
 	b_VolleyActive[client] = true;
 	TF2_AddCondition(client, TFCond_CritHype);
 	SDKHook(client, SDKHook_PreThink, Volley_CheckHuntsman);
+}
+
+//Because the user can hold the arrow for as long as they want, don't let them gain ult charge until the arrow has been fired:
+public Action CF_OnUltChargeGiven(int client, float &amt)
+{
+	if (b_VolleyActive[client] && amt > 0.0)
+	{
+		amt = 0.0;
+		return Plugin_Changed;
+	}
 	
-	//Because the user can hold the arrow for as long as they want, don't let them gain ult charge until the arrow has been fired and the volley ends:
-	CF_ApplyAbilityCooldown(client, 9999.0, CF_AbilityType_Ult, true);
+	return Plugin_Continue;
 }
 
 public Action Volley_CheckHuntsman(int client)
@@ -435,7 +446,9 @@ public Action Volley_CheckHuntsman(int client)
 public void Volley_OnArrowFired(int entity)
 {
 	int owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
-	if (!IsValidClient(owner) || !b_VolleyActive[owner])
+	
+	//If a client has already activated Thousand Volley, don't allow their volley to trigger if another one is already active.
+	if (!IsValidClient(owner) || !b_VolleyActive[owner] || ActiveVolleys > 0)
 		return;
 		
 	CreateTimer(f_VolleyDelay[owner], Timer_RemoveEntity, EntIndexToEntRef(entity), TIMER_FLAG_NO_MAPCHANGE);
@@ -447,6 +460,7 @@ public void Volley_OnArrowFired(int entity)
 	b_VolleyActive[owner] = false;
 	b_ArrowWillTriggerVolley[entity] = true;
 	i_VolleyOwner[entity] = GetClientUserId(owner);
+	ActiveVolleys++;
 }
 
 public Action Volley_OnTouch(int entity, int other)
@@ -491,11 +505,14 @@ public void Volley_ShootArrows(DataPack pack)
 	delete pack;
 	
 	if (!IsValidClient(client))
+	{
+		ActiveVolleys--;
 		return;
+	}
 	
 	if (endTime < gt)
 	{
-		CF_ApplyAbilityCooldown(client, 0.0, CF_AbilityType_Ult, true);
+		ActiveVolleys--;
 		return;
 	}
 		
@@ -555,6 +572,9 @@ public int Volley_MakeArrow(int client, float VecOrigin[3], float VecAngles[3], 
 
 public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result)
 {
+	if (!StrEqual(plugin, CBS))
+		return Plugin_Continue;
+		
 	if (StrContains(ability, DRAW) != -1)
 	{
 		bool holding = Draw_IsHoldingHuntsman(client);
@@ -566,6 +586,13 @@ public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability
 		if (result)
 			result = holding && (b_DrawActive[client] || GetClientButtons(client) & IN_ATTACK == 0);
 			
+		return Plugin_Changed;
+	}
+	
+	//Don't allow Thousand Volley to be activated if one is already active.
+	if (StrContains(ability, VOLLEY) != -1)
+	{
+		result = ActiveVolleys < 1;
 		return Plugin_Changed;
 	}
 

@@ -109,6 +109,9 @@ int i_HUDG[MAXPLAYERS + 1] = { 255, ... };
 int i_HUDB[MAXPLAYERS + 1] = { 255, ... };
 int i_HUDA[MAXPLAYERS + 1] = { 255, ... };
 
+char s_ProjectileLogicPlugin[2049][255];
+Function g_ProjectileLogic[2049] = { INVALID_FUNCTION, ... };
+
 //int MODEL_NONE = -1;
 
 bool b_ProjectileCanCollideWithAllies[2049] = { false, ... };
@@ -165,6 +168,7 @@ public void CFA_MakeNatives()
 }
 
 Handle g_hSDKWorldSpaceCenter;
+DynamicHook g_DHookRocketExplode;
 /*Handle g_hSDKResetSequence;
 Handle g_hSDKLookupSequence;
 Handle g_hSDKGetSequenceDuration;
@@ -200,32 +204,9 @@ public void CFA_MakeForwards()
 	PrepSDKCall_SetFromConf(gd, SDKConf_Virtual, "CBaseEntity::WorldSpaceCenter");
 	PrepSDKCall_SetReturnInfo(SDKType_Vector, SDKPass_ByRef);
 	if ((g_hSDKWorldSpaceCenter = EndPrepSDKCall()) == null) SetFailState("Failed to create SDKCall for CBaseEntity::WorldSpaceCenter offset!");
-	//USAGE: SDKCall(g_hSDKWorldSpaceCenter, entity, output_buffer);
 	
-	/*//ResetSequence:
-	StartPrepSDKCall(SDKCall_Entity);
-	PrepSDKCall_SetFromConf(gd, SDKConf_Signature, "CBaseAnimating::ResetSequence()");
-	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
-	g_hSDKResetSequence = EndPrepSDKCall();
-	if ((g_hSDKResetSequence = EndPrepSDKCall()) == null) SetFailState("Failed to create SDKCall for CBaseAnimating::ResetSequence() offset!");
-	//USAGE: SDKCall(g_hSDKResetSequence, entity, sequence);
-	
-	//LookupSequence:
-	StartPrepSDKCall(SDKCall_Static);
-	PrepSDKCall_SetFromConf(gd, SDKConf_Signature, "LookupSequence");
-	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
-	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
-	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
-	if((g_hSDKLookupSequence = EndPrepSDKCall()) == INVALID_HANDLE) SetFailState("Failed to create SDKCall for LookupSequence");
-	//USAGE: int sequence = SDKCall(g_hSDKLookupSequence, ModelPtr, "ACT_SEQUENCE");
-	
-	//GetSequenceDuration:
-	StartPrepSDKCall(SDKCall_Entity);
-	PrepSDKCall_SetFromConf(gd, SDKConf_Signature, "CBaseAnimating::SequenceDuration");
-	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
-	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
-	if((g_hSDKGetSequenceDuration = EndPrepSDKCall()) == INVALID_HANDLE) SetFailState("Failed to create SDKCall for SequenceDuration");
-	//USAGE: float duration = SDKCall(g_hSDKGetSequenceDuration, entity, sequence);*/
+	//CTFBaseRocket::Explode:
+	g_DHookRocketExplode = DHook_CreateVirtual(gd, "CTFBaseRocket::Explode");
 	
 	delete gd;
 }
@@ -281,6 +262,8 @@ public void CFA_OnEntityDestroyed(int entity)
 	f_FakeMediShieldHP[entity] = 0.0;
 	f_FakeMediShieldMaxHP[entity] = 0.0;
 	b_ProjectileCanCollideWithAllies[entity] = false;
+	strcopy(s_ProjectileLogicPlugin[entity], 255, "");
+	g_ProjectileLogic[entity] = INVALID_FUNCTION;
 }
 
 void CFA_UpdateMadeCharacter(int client)
@@ -2482,6 +2465,9 @@ public Native_CF_FireGenericRocket(Handle plugin, int numParams)
 	float velocity = GetNativeCell(3);
 	bool crit = GetNativeCell(4);
 	bool allowAlliedCollisions = GetNativeCell(5);
+	char pluginName[255];
+	GetNativeString(6, pluginName, sizeof(pluginName));
+	Function logic = GetNativeFunction(7);
 	float forwardDistance = 20.0 * CF_GetCharacterScale(client);
 	
 	int rocket = CreateEntityByName("tf_projectile_rocket");
@@ -2524,11 +2510,40 @@ public Native_CF_FireGenericRocket(Handle plugin, int numParams)
 		TeleportEntity(rocket, spawnLoc, angles, rocketVel);
 		
 		b_ProjectileCanCollideWithAllies[rocket] = allowAlliedCollisions;
+		s_ProjectileLogicPlugin[rocket] = pluginName;
+		g_ProjectileLogic[rocket] = logic;
+		
+		if (!StrEqual(pluginName, "") && logic != INVALID_FUNCTION)
+			g_DHookRocketExplode.HookEntity(Hook_Pre, rocket, GenericProjectile_Explode);
 		
 		return rocket;
 	}
 	
 	return -1;
+}
+
+public MRESReturn GenericProjectile_Explode(int rocket)
+{
+	if (!StrEqual(s_ProjectileLogicPlugin[rocket], "") && g_ProjectileLogic[rocket] != INVALID_FUNCTION)
+	{
+		Handle plugin = GetPluginHandle(s_ProjectileLogicPlugin[rocket]);
+		if (plugin != null)
+		{
+			MRESReturn ReturnValue = MRES_Ignored;
+			
+			Call_StartFunction(plugin, g_ProjectileLogic[rocket]);
+			
+			Call_PushCell(rocket);
+			Call_PushCell(GetEntPropEnt(rocket, Prop_Send, "m_hOwnerEntity"));
+			Call_PushCell(GetEntProp(rocket, Prop_Send, "m_iTeamNum"));
+			
+			Call_Finish(ReturnValue);
+			
+			return ReturnValue;
+		}
+	}
+	
+	return MRES_Ignored;
 }
 
 int entityBeingTraced = -1;
