@@ -22,6 +22,7 @@
 //		- ALL:
 //			- Add parameters for weapons which allow custom weapon models. These will need to cooperate with generic_abilities and CF_ForceViewmodelAnimation. This removes a dependency and allows easier customization.
 //			- Fix the weird super-long delay with ForceViewmodelAnimation on SB's Soul Discard.
+//			- Convert SpawnParticle and AttachParticleToEntity to work via temp ents, then recompile all plugins. This will reduce edict usage by a ton.
 //			- Replace CTFBaseProjectileRocket::Explode SDKCalls in all of the plugins with a function parameter which can be passed to FireGenericProjectile. FGP should do the SDKCall itself and call that function when the explosion happens.
 //		- Christian Brutal Sniper:
 //			- Completely rework Thousand Volley. It has a high chance of immediately crashing the server due to the edict limit. This pairs very poorly with Thousand Volley also being the fastest-charging ult.
