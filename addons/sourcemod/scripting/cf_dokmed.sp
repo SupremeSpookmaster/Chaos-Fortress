@@ -134,6 +134,8 @@ float Flask_DMGTicks[2049] = { 0.0, ... };
 float Flask_DMGInterval[2049] = { 0.0, ... };
 float Flask_DMGDuration[2049] = { 0.0, ... };
 
+bool Cocainum_VMAnim[MAXPLAYERS + 1] = { false, ... };
+
 //int keepmakingbodies[2049] = { 0, ... };
 
 public void Cocainum_Activate(int client, char abilityName[255])
@@ -174,6 +176,8 @@ public void Cocainum_Activate(int client, char abilityName[255])
 		RequestFrame(Bottle_Spin, EntIndexToEntRef(bottle));
 		
 		CF_PlayRandomSound(client, "", "sound_cocainum_toss");
+		CF_ForceViewmodelAnimation(client, "spell_fire");
+		Cocainum_VMAnim[client] = true;
 	}
 	
 	/*float pos[3];
@@ -188,6 +192,21 @@ public void Cocainum_Activate(int client, char abilityName[255])
 	RequestFrame(test_spawnone, pack);*/
 	
 	//test.AttachToEntity(client, "head");
+}
+
+public void CF_OnForcedVMAnimEnd(int client, char sequence[255])
+{
+	if (!Cocainum_VMAnim[client])
+		return;
+		
+	if (IsPlayerHoldingWeapon(client, 0))
+		CF_ForceViewmodelAnimation(client, "sg_draw", false, true, true);
+	else if (IsPlayerHoldingWeapon(client, 1))
+		CF_ForceViewmodelAnimation(client, "draw", false, true, true);
+	else if (IsPlayerHoldingWeapon(client, 2))
+		CF_ForceViewmodelAnimation(client, "bs_draw", false, true, true);
+			
+	Cocainum_VMAnim[client] = false;
 }
 
 /*public bool Test_IgnoreAll(entity, mask) 
@@ -1407,6 +1426,8 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 		if (Time_Buffed[i][client])
 			Time_ClearBuffs(i, client);
 	}
+	
+	Cocainum_VMAnim[client] = false;
 }
 
 public void OnEntityDestroyed(int entity)

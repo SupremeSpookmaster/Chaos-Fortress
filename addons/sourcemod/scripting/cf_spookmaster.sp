@@ -239,11 +239,14 @@ public void Absorb_HealOnDelay(DataPack pack)
 	CF_HealPlayer(client, client, RoundFloat(amt), 1.0);
 }
 
+bool Discard_VMAnim[MAXPLAYERS + 1] = { false, ... };
+
 public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
 	Discard_Bonus[client] = 0.0;
 	Absorb_Uses[client] = 0;
 	Absorb_DestroyEyeParticles(client);
+	Discard_VMAnim[client] = false;
 }
 
 public void CF_OnCharacterCreated(int client)
@@ -307,7 +310,19 @@ public void Discard_Activate(int client, char abilityName[255])
 		}
 		
 		CF_SimulateSpellbookCast(client, _, CF_Spell_MeteorShower);
+		CF_ForceViewmodelAnimation(client, "spell_fire");
+		Discard_VMAnim[client] = true;
 	}
+}
+
+public void CF_OnForcedVMAnimEnd(int client, char sequence[255])
+{
+	if (!Discard_VMAnim[client])
+		return;
+		
+	CF_ForceViewmodelAnimation(client, "m_draw", false, false, false);
+			
+	Discard_VMAnim[client] = false;
 }
 
 public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)

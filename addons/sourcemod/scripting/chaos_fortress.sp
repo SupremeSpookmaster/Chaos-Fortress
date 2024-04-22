@@ -20,11 +20,13 @@
 //			- Write a custom attribute which allows the user to mark victims for Drone targeting. This will require 2 models to be used as fake particles: one attached to his eye, and a big target attached to the marked enemy.
 //			- Write the code for Automation Annihilation. 
 //		- ALL:
-//			- Finish viewmodel animator, then retroactively implement it for all of the "I throw a thing" abilities.
+//			- Add parameters for weapons which allow custom weapon models. These will need to cooperate with generic_abilities and CF_ForceViewmodelAnimation. This removes a dependency and allows easier customization.
+//			- Fix the weird super-long delay with ForceViewmodelAnimation on SB's Soul Discard.
 //			- Replace CTFBaseProjectileRocket::Explode SDKCalls in all of the plugins with a function parameter which can be passed to FireGenericProjectile. FGP should do the SDKCall itself and call that function when the explosion happens.
 //		- Christian Brutal Sniper:
 //			- Completely rework Thousand Volley. It has a high chance of immediately crashing the server due to the edict limit. This pairs very poorly with Thousand Volley also being the fastest-charging ult.
 //				- Maybe make it act the same, but the arrows slightly home in on players so we don't need to have as many of them for the ability to be useful? Obviously would need to make them generic projectiles and not actual arrows.
+//			- Make Heavy Draw *reduce* Blast Bolt's radius, so combining the two functions like a direct hit rocket on steroids instead of just a small, unavoidable nuke.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////

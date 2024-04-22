@@ -92,6 +92,7 @@ GlobalForward g_FakeMediShieldCollision;
 GlobalForward g_FakeMediShieldDamaged;
 GlobalForward g_AttemptAbility;
 GlobalForward g_SimulatedSpellCast;
+GlobalForward g_ForcedVMAnimEnd;
 
 int i_GenericProjectileOwner[2049] = { -1, ... };
 int i_HealingDone[MAXPLAYERS + 1] = { 0, ... };
@@ -108,7 +109,7 @@ int i_HUDG[MAXPLAYERS + 1] = { 255, ... };
 int i_HUDB[MAXPLAYERS + 1] = { 255, ... };
 int i_HUDA[MAXPLAYERS + 1] = { 255, ... };
 
-int MODEL_NONE = -1;
+//int MODEL_NONE = -1;
 
 bool b_ProjectileCanCollideWithAllies[2049] = { false, ... };
 
@@ -190,6 +191,7 @@ public void CFA_MakeForwards()
 	g_FakeMediShieldDamaged = new GlobalForward("CF_OnFakeMediShieldDamaged", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_FloatByRef, Param_CellByRef, Param_Cell);
 	g_AttemptAbility = new GlobalForward("CF_OnAbilityCheckCanUse", ET_Event, Param_Cell, Param_String, Param_String, Param_Cell, Param_CellByRef);
 	g_SimulatedSpellCast = new GlobalForward("CF_OnSimulatedSpellUsed", ET_Ignore, Param_Cell, Param_Cell);
+	g_ForcedVMAnimEnd = new GlobalForward("CF_OnForcedVMAnimEnd", ET_Ignore, Param_Cell, Param_String);
 	
 	GameData gd = LoadGameConfigFile("chaos_fortress");
 	
@@ -324,7 +326,7 @@ public void CFA_MapStart()
 	if(IsValidEntity(entity))
 		SDKHook(entity, SDKHook_ThinkPost, ScoreThink);
 		
-	MODEL_NONE = PrecacheModel("models/empty.mdl");
+	//MODEL_NONE = PrecacheModel("models/empty.mdl");
 }
 
 public void ScoreThink(int entity)
@@ -3620,17 +3622,18 @@ public Action OnSpellSpawn(int ent)
 
 bool IsCasting(int client) { return b_Casting[client]; }
 
-bool b_InVMAnim[MAXPLAYERS + 1] = { false, ... };
 bool b_VMHideWeapon[MAXPLAYERS + 1] = { false, ... };
 bool b_VMBlockSwitch[MAXPLAYERS + 1] = { false, ... };
 bool b_VMBlockAttack[MAXPLAYERS + 1] = { false, ... };
 
 float f_VMAnimEndTime[MAXPLAYERS + 1] = { 0.0, ... };
 
-int i_VMIndex[2049] = { -1, ... };
+int VMAnim_FakeVM[MAXPLAYERS+1] = { -1, ... };
+
+char VMAnim_ForcedSequence[MAXPLAYERS + 1][255];
 
 //TODO: This should call a forward (something like CF_OnForcedViewmodelAnimationEnd) when it ends.
-//The forward should include the client as well as their viewmodel, provided the viewmodel is still valid.
+//The forward should include the client as well as their viewmodel, provided the viewmodel is still valid, as well as the name of the sequence which was forced.
 //The forward should always be called JUST before the animation ACTUALLY ends, that way devs can use the forward
 //to seamlessly transition to another anim before the viewmodel reverts to the old animation.
 public Native_CF_ForceViewmodelAnimation(Handle plugin, int numParams)
@@ -3660,6 +3663,7 @@ public Native_CF_ForceViewmodelAnimation(Handle plugin, int numParams)
 	b_VMHideWeapon[client] = hideWeapon;
 	b_VMBlockSwitch[client] = blockWeaponSwitch;
 	b_VMBlockAttack[client] = blockAttack;
+	Format(VMAnim_ForcedSequence[client], 255, "%s", activity);
 	
 	if (blockAttack)
 	{
@@ -3667,49 +3671,33 @@ public Native_CF_ForceViewmodelAnimation(Handle plugin, int numParams)
 	}
 	
 	if (hideWeapon)
-	{
-		for (int i = 0; i <= 5; i++)
+	{	
+		int fakeVM = CreateEntityByName("tf_wearable_vm");
+		if (IsValidEntity(fakeVM))
 		{
-			int weapon = GetPlayerWeaponSlot(client, i);
+			int team = GetEntProp(client, Prop_Send, "m_iTeamNum");
+			
+			SetEntProp(ent, Prop_Send, "m_fEffects", GetEntProp(ent, Prop_Send, "m_fEffects") | EF_NODRAW);
+			
+			SetEntProp(fakeVM, Prop_Send, "m_nModelIndex", GetEntProp(ent, Prop_Send, "m_nModelIndex"));
+			SetEntProp(fakeVM, Prop_Send, "m_fEffects", 129);
+			SetEntProp(fakeVM, Prop_Send, "m_iTeamNum", team);
+			SetEntProp(fakeVM, Prop_Send, "m_nSkin", team-2);
+			SetEntProp(fakeVM, Prop_Send, "m_usSolidFlags", 4);
+			SetEntityCollisionGroup(fakeVM, 11);
+			SetEntProp(fakeVM, Prop_Send, "m_bValidatedAttachedEntity", 1);
 				
-			if (IsValidEntity(weapon))
-			{
-				i_VMIndex[weapon] = GetEntProp(weapon, Prop_Send, "m_iViewModelIndex");
-				SetEntProp(weapon, Prop_Send, "m_iViewModelIndex", MODEL_NONE);
-				SetEntityRenderMode(weapon, RENDER_TRANSALPHA);
-				SetEntityRenderColor(weapon, 0, 0, 0, 0);
-			}
+			DispatchSpawn(fakeVM);
+			SetVariantString("!activator");
+			ActivateEntity(fakeVM);
+
+			VMAnim_FakeVM[client] = EntIndexToEntRef(fakeVM);
+
+			SDKCall_EquipWearable(client, fakeVM);
 		}
 	}
 	
 	RequestFrame(VMAnim_Check, GetClientUserId(client));
-}
-
-//TODO: The only way to do this is to hide the actual viewmodel and simulate it with a tf_wearable_vm...
-//God I hate Source sometimes...
-//Remember to force the sequence on the simulated VM instead of the ACTUAL VM.
-public void VMAnim_ToggleWeapons(int client, bool visible)
-{
-	for (int i = 0; i <= 5; i++)
-	{
-		int weapon = GetPlayerWeaponSlot(client, i);
-			
-		if (IsValidEntity(weapon))
-		{
-			SetEntProp(weapon, Prop_Send, "m_iViewModelIndex", visible ? i_VMIndex[weapon] : MODEL_NONE);
-			
-			if (!visible)
-			{
-				SetEntityRenderMode(weapon, RENDER_TRANSALPHA);
-				SetEntityRenderColor(weapon, 0, 0, 0, 0);
-			}
-			else
-			{
-				SetEntityRenderMode(weapon, RENDER_NORMAL);
-				SetEntityRenderColor(weapon, 255, 255, 255, 255);
-			}
-		}
-	}
 }
 
 public void VMAnim_BlockAttacks(int client)
@@ -3745,30 +3733,34 @@ public void VMAnim_Check(int id)
 	{
 		if (b_VMHideWeapon[client])
 		{
-			VMAnim_ToggleWeapons(client, true);
+			int fakeVM = EntRefToEntIndex(VMAnim_FakeVM[client]);
+			if (IsValidEntity(fakeVM))
+			{
+				TF2_RemoveWearable(client, fakeVM);
+			}
+			int ent = GetEntPropEnt(client, Prop_Send, "m_hViewModel");
+			if (IsValidEntity(ent))
+			{
+				SetEntProp(ent, Prop_Send, "m_fEffects", GetEntProp(ent, Prop_Send, "m_fEffects") &~ EF_NODRAW);
+			}
+			
 			b_VMHideWeapon[client] = false;
 		}
 		b_VMBlockSwitch[client] = false;
 		
-		//TODO: Call forward
+		Call_StartForward(g_ForcedVMAnimEnd);
+		
+		Call_PushCell(client);
+		Call_PushString(VMAnim_ForcedSequence[client]);
+		
+		Call_Finish();
 		
 		return;
 	}
-	else	//We do these every frame instead of just once at the start because otherwise other plugins may interfere.
+	else	//We do this every frame instead of just once at the start because otherwise other plugins may interfere.
 	{
 		if (b_VMBlockAttack[client])
 			VMAnim_BlockAttacks(client);
-			
-		if (b_VMHideWeapon[client])
-		{
-			int weapon = TF2_GetActiveWeapon(client);
-			if (IsValidEntity(weapon))
-			{
-				SetEntProp(weapon, Prop_Send, "m_iViewModelIndex", MODEL_NONE);
-				SetEntityRenderMode(weapon, RENDER_TRANSALPHA);
-				SetEntityRenderColor(weapon, 0, 0, 0, 0);
-			}
-		}
 	}
 	
 	RequestFrame(VMAnim_Check, id);

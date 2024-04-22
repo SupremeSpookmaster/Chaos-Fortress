@@ -592,6 +592,14 @@ forward Action CF_OnPhysPropHitByProjectile(int prop, int entity, TFTeam propTea
  */
 forward void CF_OnSimulatedSpellUsed(int client, int entity);
 
+/**
+ * Called when a forced viewmodel animation started by "CF_ForceViewmodelAnimation" ends (this does NOT get called if the client dies/disconnects mid-sequence).
+ *
+ * @param client		The client whose viewmodel was animated.
+ * @param sequence		The sequence which was forced.
+ */
+forward void CF_OnForcedVMAnimEnd(int client, char sequence[255]);
+
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
 ///////////////////////////////////////

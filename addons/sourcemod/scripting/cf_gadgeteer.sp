@@ -786,6 +786,8 @@ public void Toss_RemoveParticle(int entity)
 	Toss_ToolboxParticle[entity] = -1;
 }
 
+bool b_ToolboxVM[MAXPLAYERS + 1] = { false, ... };
+
 //Activates Toolbox Toss by throwing the toolbox.
 public void Toss_Activate(int client, char abilityName[255])
 {
@@ -865,11 +867,27 @@ public void Toss_Activate(int client, char abilityName[255])
 		TeleportEntity(toolbox, pos, ang, vel);
 		
 		CF_ForceViewmodelAnimation(client, "spell_fire");
+		b_ToolboxVM[client] = true;
 		
 		Toss_ToolboxParticle[toolbox] = EntIndexToEntRef(AttachParticleToEntity(toolbox, team == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, "", autoDet));
 		
 		EmitSoundToAll(SOUND_TOOLBOX_FIZZING, toolbox);
 	}
+}
+
+public void CF_OnForcedVMAnimEnd(int client, char sequence[255])
+{
+	if (!b_ToolboxVM[client])
+		return;
+		
+	if (IsPlayerHoldingWeapon(client, 0))
+		CF_ForceViewmodelAnimation(client, "fj_draw", false, false, false);
+	else if (IsPlayerHoldingWeapon(client, 1))
+		CF_ForceViewmodelAnimation(client, "pstl_draw", false, false, false);
+	else if (IsPlayerHoldingWeapon(client, 2))
+		CF_ForceViewmodelAnimation(client, "gun_draw", false, false, false);
+			
+	b_ToolboxVM[client] = false;
 }
 
 //Checks each frame to see if the toolbox is ready to auto-detonate. If it is, it automatically spawns a sentry.
@@ -1299,6 +1317,8 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
 	if (reason == CF_CRR_SWITCHED_CHARACTER || reason == CF_CRR_DISCONNECT || reason == CF_CRR_ROUNDSTATE_CHANGED)
 		Toss_DeleteSentries(client);
+		
+	b_ToolboxVM[client] = false;
 }
 
 //Destroys all of the client's Drones and deletes their collection.

@@ -1365,6 +1365,8 @@ void CFC_WeaponEquipped(int client, int weapon)
  	
  	CFA_UpdateMadeCharacter(client);
  	
+ 	CF_SetCharacterArms(client, g_Characters[client].Arms);
+ 	
  	b_FirstSpawn[client] = false;
  	
  	if (callForward)
@@ -2158,12 +2160,17 @@ public Native_CF_SetCharacterArms(Handle plugin, int numParams)
 	{
 		g_Characters[client].Arms = arms;
 		g_Characters[client].HasCustomArms = true;
+		int model = PrecacheModel(arms);
+		
+		int vm = GetEntPropEnt(client, Prop_Send, "m_hViewModel");
+		if (IsValidEntity(vm))
+		{
+			SetEntProp(vm, Prop_Send, "m_nModelIndex", model);
+		}
 		
 		int weapon = TF2_GetActiveWeapon(client);
 		if (IsValidEntity(weapon))
 		{
-			int model = PrecacheModel(arms);
-
 			SetEntityModel(weapon, arms);
 			SetEntProp(weapon, Prop_Send, "m_nCustomViewmodelModelIndex", model);
 			SetEntProp(weapon, Prop_Send, "m_iViewModelIndex", model);

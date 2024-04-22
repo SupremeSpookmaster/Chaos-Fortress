@@ -170,6 +170,7 @@ public Action Sprint_PreThink(int client)
 float Frag_DMG[MAXPLAYERS + 1] = { 0.0, ... };
 float Frag_Velocity[MAXPLAYERS + 1] = { 0.0, ... };
 bool Frag_HasJarate[MAXPLAYERS + 1] = { false, ... };
+bool Frag_VMAnim[MAXPLAYERS + 1] = { false, ... };
 
 public void Frag_Throw(int client, char abilityName[255])
 {
@@ -178,17 +179,9 @@ public void Frag_Throw(int client, char abilityName[255])
 		
 	Frag_DMG[client] = CF_GetArgF(client, MERC, abilityName, "damage");
 	Frag_Velocity[client] = CF_GetArgF(client, MERC, abilityName, "velocity");
-	Frag_HasJarate[client] = CF_GetArgI(client, MERC, abilityName, "is_jarate") != 0;
-	
-	if (!Frag_HasJarate[client])
-	{
-		CreateTimer(0.18, Frag_ThrowOnDelay, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
-	}
-	else
-	{
-		CF_DoAbility(client, "cf_generic_abilities", "generic_weapon_frag");
-		SDKHook(client, SDKHook_WeaponCanSwitchTo, Frag_BlockWeaponSwitch);
-	}
+	CreateTimer(0.18, Frag_ThrowOnDelay, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+	CF_ForceViewmodelAnimation(client, "pj_fire");
+	Frag_VMAnim[client] = true;
 }
 
 public Action Frag_BlockWeaponSwitch(int client, int weapon)
@@ -274,7 +267,7 @@ public Action Frag_ThrowOnDelay(Handle throwIt, int id)
 	int client = GetClientOfUserId(id);
 	
 	if (IsValidMulti(client))
-			Frag_Activate(client);
+		Frag_Activate(client);
 	
 	return Plugin_Continue;
 }
@@ -311,4 +304,24 @@ public void Frag_Activate(int client)
 		TeleportEntity(grenade, pos, vecAngles, vecVelocity);
 		CF_PlayRandomSound(client, "", "sound_merc_grenade");
 	}
+}
+
+public void CF_OnForcedVMAnimEnd(int client, char sequence[255])
+{
+	if (!Frag_VMAnim[client])
+		return;
+		
+	if (IsPlayerHoldingWeapon(client, 0))
+		CF_ForceViewmodelAnimation(client, "draw", false, false, false);
+	else if (IsPlayerHoldingWeapon(client, 1))
+		CF_ForceViewmodelAnimation(client, "smg_draw", false, false, false);
+	else if (IsPlayerHoldingWeapon(client, 2))
+		CF_ForceViewmodelAnimation(client, "melee_allclass_draw", false, false, false);
+			
+	Frag_VMAnim[client] = false;
+}
+
+public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
+{
+	Frag_VMAnim[client] = false;
 }
