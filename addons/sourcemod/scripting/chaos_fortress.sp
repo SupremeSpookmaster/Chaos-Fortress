@@ -15,7 +15,6 @@
 //				- Team-colored clock icons swirl around the radius of the effect with team-colored arrow trails attached.
 //				- A team-colored base gradient surrounds the radius and "breathes", fading in and out of brightness.
 //		- Gadgeteer:
-//			- Add an option to the special resource system called "resource_is_metal" and apply it to Gadgeteer. It should function the same as normal resources, but is always equal to his metal. Adding or subtracting resources should also set his metal.
 //			- Write a custom attribute which allows the user to mark victims for Drone targeting. This will require 2 models to be used as fake particles: one attached to his eye, and a big target attached to the marked enemy.
 //			- Write the code for Automation Annihilation. 
 //		- ALL:
@@ -51,7 +50,7 @@
 //				- Maybe make Chow cost two Sandviches, then increase Sandvich base regen rate?
 //		////////////////////////////////////////////
 //		- Demopan:
-//			- Using Profit Blast to blast jump *might* give him too much mobility for a tank. At the same time, though, he's a melee character with a slow base speed, so I doubt this will be a huge issue.
+//			- Refined Protection, as incredibly cool as it is, REALLY doesn't fit with his playstyle. Like, at all. Would probably be best to put it on a different character and replace Demopan's R ability with something else.
 //		////////////////////////////////////////////
 //		- Christian Brutal Sniper:
 //			- None! (Pending public reception during open beta).

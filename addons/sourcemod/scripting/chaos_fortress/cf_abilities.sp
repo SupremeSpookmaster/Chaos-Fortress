@@ -5,6 +5,8 @@ float f_UltChargeOnDamage[MAXPLAYERS + 1] = { 0.0, ... };
 float f_UltChargeOnHurt[MAXPLAYERS + 1] = { 0.0, ... };
 float f_UltChargeOnHeal[MAXPLAYERS + 1] = { 0.0, ... };
 float f_UltChargeOnKill[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ResourceRegenInterval[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ResourceRegenNext[MAXPLAYERS + 1] = { 0.0, ... };
 float f_UltCD[MAXPLAYERS + 1] = { 0.0, ... };
 float f_UltCDEndTime[MAXPLAYERS + 1] = { 0.0, ... };
 float f_M2CD[MAXPLAYERS + 1] = { 0.0, ... };
@@ -50,6 +52,7 @@ bool b_M3IsHeld[MAXPLAYERS + 1] = { false, ... };
 bool b_ReloadIsHeld[MAXPLAYERS + 1] = { false, ... };
 bool b_ResourceIsUlt[MAXPLAYERS + 1] = { false, ... };
 bool b_ResourceIsPercentage[MAXPLAYERS + 1] = { false, ... };
+bool b_ResourceIsMetal[MAXPLAYERS + 1] = { false, ... };
 bool b_UseHUD[MAXPLAYERS + 1] = { false, ... };
 bool b_HasM2[MAXPLAYERS + 1] = { false, ... };
 bool b_HasM3[MAXPLAYERS + 1] = { false, ... };
@@ -370,9 +373,10 @@ public Action CFA_HUDTimer(Handle timer)
 				
 				if (b_UsingResources[client] && !b_ResourceIsUlt[client])
 				{
-					if (GetGameTime() >= f_NextResourceRegen[client])
+					if (GetGameTime() >= f_NextResourceRegen[client] && GetGameTime() >= f_ResourceRegenNext[client])
 					{
 						CF_GiveSpecialResource(client, 1.0, CF_ResourceType_Regen);
+						f_ResourceRegenNext[client] = GetGameTime() + f_ResourceRegenInterval[client];
 					}
 					
 					if (showHUD)
@@ -380,13 +384,13 @@ public Action CFA_HUDTimer(Handle timer)
 						if (f_ResourceMax[client] > 0.0)
 						{
 							if (b_ResourceIsPercentage[client])
-								Format(HUDText, sizeof(HUDText), "%s\n%s: %iPUTAPERCENTAGEHERE\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundToFloor((f_Resources[client]/f_ResourceMax[client]) * 100.0));
+								Format(HUDText, sizeof(HUDText), "%s\n%s: %iPUTAPERCENTAGEHERE\n", HUDText, CF_GetSpecialResource(client) != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundToFloor((CF_GetSpecialResource(client)/f_ResourceMax[client]) * 100.0));
 							else
-								Format(HUDText, sizeof(HUDText), "%s\n%s: %i/%i\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundToFloor(f_Resources[client]), RoundToFloor(f_ResourceMax[client]));
+								Format(HUDText, sizeof(HUDText), "%s\n%s: %i/%i\n", HUDText, CF_GetSpecialResource(client) != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundToFloor(CF_GetSpecialResource(client)), RoundToFloor(f_ResourceMax[client]));
 						}
 						else
 						{
-							Format(HUDText, sizeof(HUDText), "%s\n%s: %i\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundToFloor(f_Resources[client]));
+							Format(HUDText, sizeof(HUDText), "%s\n%s: %i\n", HUDText, CF_GetSpecialResource(client) != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundToFloor(CF_GetSpecialResource(client)));
 						}
 					}
 				}
@@ -687,12 +691,16 @@ public void CFA_InitializeResources(int client, ConfigMap map, bool NewChar)
 		
 		if (!b_ResourceIsUlt[client])
 		{
+			b_ResourceIsPercentage[client] = GetBoolFromConfigMap(subsection, "percentage", false);
+			b_ResourceIsMetal[client] = GetBoolFromConfigMap(subsection, "is_metal", false);
+			
 			subsection.Get("name", s_ResourceName[client], 255);
 			subsection.Get("name_plural", s_ResourceName_Plural[client], 255);
 			float start = GetFloatFromConfigMap(subsection, "start", 0.0);
-			float preserve = GetFloatFromConfigMap(subsection, "preserve", 0.0) * f_Resources[client];
+			float preserve = GetFloatFromConfigMap(subsection, "preserve", 0.0) * CF_GetSpecialResource(client);
 			f_ResourceMax[client] = GetFloatFromConfigMap(subsection, "max", 0.0);
-			b_ResourceIsPercentage[client] = GetBoolFromConfigMap(subsection, "percentage", false);
+			f_ResourceRegenInterval[client] = GetFloatFromConfigMap(subsection, "regen_interval", 0.1);
+			f_ResourceRegenNext[client] = GetGameTime() + f_ResourceRegenInterval[client];
 			
 			bool IgnoreResupply = GetBoolFromConfigMap(subsection, "ignore_resupply", true);
 			
@@ -1359,7 +1367,7 @@ public bool HasEnoughResources(int client, float cost, CF_AbilityType type)
 {
 	if(b_UsingResources[client] || type == CF_AbilityType_Ult)
 	{
-		float available = (b_ResourceIsUlt[client] || type == CF_AbilityType_Ult) ? f_UltCharge[client] : f_Resources[client];
+		float available = (b_ResourceIsUlt[client] || type == CF_AbilityType_Ult) ? f_UltCharge[client] : CF_GetSpecialResource(client);
 		if (cost > available)
 		{
 			return false;
@@ -1542,7 +1550,7 @@ public Native_CF_GiveSpecialResource(Handle plugin, int numParams)
 	Call_Finish(result);
 	
 	if (result != Plugin_Handled && result != Plugin_Stop && amt != 0.0)
-		CF_SetSpecialResource(client, f_Resources[client] + amt);
+		CF_SetSpecialResource(client, CF_GetSpecialResource(client) + amt);
 }
 
 public Native_CF_SetSpecialResource(Handle plugin, int numParams)
@@ -1560,12 +1568,11 @@ public Native_CF_SetSpecialResource(Handle plugin, int numParams)
 	Call_StartForward(g_ResourceApplied);
 	
 	Call_PushCell(client);
-	Call_PushFloat(f_Resources[client]);
+	Call_PushFloat(CF_GetSpecialResource(client));
 	Call_PushFloatRef(amt);
 	
 	Action result;
 	Call_Finish(result);
-	
 	
 	if (result != Plugin_Handled && result != Plugin_Stop)
 	{
@@ -1577,9 +1584,11 @@ public Native_CF_SetSpecialResource(Handle plugin, int numParams)
 			amt = f_ResourceMax[client];
 		}
 		
-		float oldResources = f_Resources[client];
+		float oldResources = CF_GetSpecialResource(client);
 		
 		f_Resources[client] = amt;
+		if (b_ResourceIsMetal[client])
+			SetEntProp(client, Prop_Send, "m_iAmmo", RoundFloat(f_Resources[client]), 4, 3);
 		
 		if (amt != oldResources)
 		{
@@ -1615,6 +1624,9 @@ public any Native_CF_GetSpecialResource(Handle plugin, int numParams)
 	if (b_ResourceIsUlt[client] || !b_UsingResources[client])
 		return 0.0;
 	
+	if (b_ResourceIsMetal[client])
+		return float(GetEntProp(client, Prop_Data, "m_iAmmo", 4, 3));
+		
 	return f_Resources[client];
 }
 
