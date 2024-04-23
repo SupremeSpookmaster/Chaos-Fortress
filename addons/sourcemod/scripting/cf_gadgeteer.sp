@@ -155,6 +155,7 @@ int Toss_Max[MAXPLAYERS + 1] = { 0, ... };
 int Toss_ToolboxOwner[2049] = { -1, ... };
 int Text_Owner[2049] = { -1, ... };
 int Toss_ToolboxParticle[2049] = { -1, ... };
+int Toss_Marked[MAXPLAYERS + 1] = { -1, ... };
 
 float Toss_DMG[2049] = { 0.0, ... };
 float Toss_KB[2049] = { 0.0, ... };
@@ -162,6 +163,7 @@ float Toss_UpVel[2049] = { 0.0, ... };
 float Toss_NextBounce[2049] = { 0.0, ... };
 float Toss_AutoDetTime[2049] = { 0.0, ... };
 float Toss_MinVel[2049] = { 0.0, ... };
+float Toss_MarkTime[MAXPLAYERS + 1] = { 0.0, ... };
 float Toss_FacingAng[2049][3];
 
 bool Toss_IsToolbox[2049] = { false, ... };
@@ -590,6 +592,10 @@ public void Toss_CustomSentryLogic(int ref)
 	{
 		StopSound(entity, SNDCHAN_AUTO, SOUND_DRONE_SCANNING);
 		
+		int marked = Toss_GetMarkedTarget(entity);
+		if (IsValidMulti(marked, _, _, true, grabEnemyTeam(owner)))
+			target = marked;
+		
 		float otherPos[3];
 		CF_WorldSpaceCenter(target, otherPos);
 		//GetClientAbsOrigin(target, otherPos);
@@ -712,13 +718,43 @@ public void Toss_CustomSentryLogic(int ref)
 //Gets the closest target for a Drone to shoot at.
 public int Toss_GetClosestTarget(int entity, TFTeam targetTeam, float &distance)
 {
+	SentryBeingChecked = entity;
+	
 	float pos[3];
 	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
 	
-	SentryBeingChecked = entity;
-	int closest = CF_GetClosestTarget(pos, true, distance, Toss_SentryStats[entity].radiusDetection, targetTeam, GADGETEER, Toss_IsValidTarget);
+	int closest = Toss_GetMarkedTarget(entity);
+	
+	if (!IsValidMulti(closest))
+		closest = CF_GetClosestTarget(pos, true, distance, Toss_SentryStats[entity].radiusDetection, targetTeam, GADGETEER, Toss_IsValidTarget);
 	
 	return closest;
+}
+
+public int Toss_GetMarkedTarget(int entity)
+{
+	SentryBeingChecked = entity;
+	
+	float pos[3];
+	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+	
+	int owner = GetClientOfUserId(Toss_SentryStats[entity].owner);
+	if (IsValidClient(owner))
+	{
+		int target = GetClientOfUserId(Toss_Marked[owner]);
+		if (GetGameTime() <= Toss_MarkTime[owner] && IsValidMulti(target, _, _, true, grabEnemyTeam(owner)))
+		{
+			float vicLoc[3];
+			CF_WorldSpaceCenter(target, vicLoc);
+			float dist = GetVectorDistance(pos, vicLoc);
+			if (Toss_IsValidTarget(target) && dist <= Toss_SentryStats[entity].radiusDetection)
+			{
+				return target;
+			}
+		}
+	}
+	
+	return -1;
 }
 
 //Used to determine if a given entity is a valid target for a Drone to shoot at.
@@ -888,6 +924,22 @@ public void CF_OnForcedVMAnimEnd(int client, char sequence[255])
 		CF_ForceViewmodelAnimation(client, "gun_draw", false, false, false);
 			
 	b_ToolboxVM[client] = false;
+}
+
+public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
+{
+	if (Toss_Sentries[attacker] == null || !IsValidEntity(weapon))
+		return Plugin_Continue;
+		
+	float markTime = TF2CustAttr_GetFloat(weapon, "weapon marks victims for drones", 0.0);
+	if (markTime <= 0.0)
+		return Plugin_Continue;
+		
+	Toss_Marked[attacker] = GetClientUserId(victim);
+	Toss_MarkTime[attacker] = GetGameTime() + markTime;
+	//TODO: Fake particle effect for attacker and victim
+	
+	return Plugin_Continue;
 }
 
 //Checks each frame to see if the toolbox is ready to auto-detonate. If it is, it automatically spawns a sentry.

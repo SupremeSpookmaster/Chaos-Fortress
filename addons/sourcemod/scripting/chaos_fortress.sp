@@ -15,11 +15,11 @@
 //				- Team-colored clock icons swirl around the radius of the effect with team-colored arrow trails attached.
 //				- A team-colored base gradient surrounds the radius and "breathes", fading in and out of brightness.
 //		- Gadgeteer:
-//			- Write a custom attribute which allows the user to mark victims for Drone targeting. This will require 2 models to be used as fake particles: one attached to his eye, and a big target attached to the marked enemy.
+//			- Make and apply VFX for drone marks. Also add a sound.
 //			- Write the code for Automation Annihilation. 
 //		- ALL:
 //			- Add parameters for weapons which allow custom weapon models. These will need to cooperate with generic_abilities and CF_ForceViewmodelAnimation. This removes a dependency and allows easier customization.
-//			- Fix the weird super-long delay with ForceViewmodelAnimation on SB's Soul Discard.
+//			- Fix the weird super-long delay with ForceViewmodelAnimation on SB's Soul Discard. This is most likely an issue with SB's viewmodel anims themselves.
 //			- Convert SpawnParticle and AttachParticleToEntity to work via temp ents EVENTUALLY, then recompile all plugins. This will reduce edict usage by a ton. Doesn't need to be done immediately as edict crashes are not a huge concern as of the Fake Particle System fix.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
