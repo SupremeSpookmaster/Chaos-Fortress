@@ -1330,10 +1330,12 @@ native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit = f
  * @param physModel				Optional invisible model to be used for the health kit's physics. 
  * @param redParticle			Optional particle effect to spawn when this health kit is picked up by a red player.
  * @param blueParticle			Optional particle effect to spawn when this health kit is picked up by a blue player.
+ * @param massScale				Optional amount to scale the mass of the health kit for the sake of physics simulations.
+ * @param intertiaScale			Optional amount to scale the intertia of the health kit for the sake of physics simulations.
  *
  * @return	The entity index of the health kit, or -1 if it fails to spawn.
  */
-native int CF_CreateHealthPickup(int owner, float amt, float radius, int mode, float lifespan, float pos[3], char plugin[255] = "", Function filter = INVALID_FUNCTION, char model[255] = "models/items/medkit_medium.mdl", char sequence[255] = "idle", float rate = 1.0, float scale = 1.0, int skin = 0, char sound[255] = "items/smallmedkit1.wav", float hpMult = 1.0, char physModel[255] = "models/items/medkit_medium.mdl", char redParticle[255] = "healthgained_red_large", char blueParticle[255] = "healthgained_blu_large");
+native int CF_CreateHealthPickup(int owner, float amt, float radius, int mode, float lifespan, float pos[3], char plugin[255] = "", Function filter = INVALID_FUNCTION, char model[255] = "models/items/medkit_medium.mdl", char sequence[255] = "idle", float rate = 1.0, float scale = 1.0, int skin = 0, char sound[255] = "items/smallmedkit1.wav", float hpMult = 1.0, char physModel[255] = "models/items/medkit_medium.mdl", float massScale = 1.0, float inertiaScale = 1.0);
 
 /**
  * Creates a simulated medigun shield by using a physics prop.
@@ -1384,10 +1386,12 @@ native float CF_GetShieldWallMaxHealth(int shield);
  * @param skipDefaultFilter		If set to true, Chaos Fortress' default trace filter (CF_DefaultTrace) is ignored. Useful if you want this damage to ignore shields or go through walls.
  * @param includeUser			If set to true, this can damage the user if they are within the radius.
  * @param ignoreInvuln			If set to true, invulnerable players are added to the array returned by this native as long as they would have still been hit by it otherwise.
+ * @param pluginName			Name of the plugin which owns the logic function.
+ * @param logic					Optional function which you can use to filter out specific entities that are within the blast radius. This function must take one int as a parameter (the entity being checked), and return a bool (true to allow the entity to be hit, false otherwise).
  *
  * @return	An array containing the entity indices of all entities hit by this damage, useful for applying additional effects to victims. This gets returned even if it is empty, you will need to manually close the handle when you are done with it.
  */
-native Handle CF_GenericAOEDamage(int attacker, int inflictor, int weapon, float dmg, int damageType, float radius, float groundZero[3], float falloffStart, float falloffMax, bool skipDefaultFilter = false, bool includeUser = true, bool ignoreInvuln = false);
+native Handle CF_GenericAOEDamage(int attacker, int inflictor, int weapon, float dmg, int damageType, float radius, float groundZero[3], float falloffStart, float falloffMax, bool skipDefaultFilter = false, bool includeUser = true, bool ignoreInvuln = false, char pluginName[255] = "", Function logic = INVALID_FUNCTION);
 
 /**
  * Applies a temporary change to the client's movement speed.

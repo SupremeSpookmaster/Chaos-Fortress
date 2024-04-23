@@ -84,15 +84,8 @@
 //	- TODO: The following plugins are mandatory for CF to run, and need to be added to the GitHub's prerequisites:
 //		- None, currently.
 //	- TODO: The current development branch has the following fatal issues which break the plugin, and will need to be fixed in the release branch:
-//		- Doktor Medick (and likely more characters in the future) needs the Fake Particle System, which in turn needs a config or else it will fail to boot. This does not break CF itself, but it does inhibit several important visual indicators used by many of the characters.
-//	- TODO: SB's Soul Absorption still uses attributes for its speed increase, change it to use the CF speed natives.
-//	- TODO: Figure out how to prevent "misc/halloween/spell_fireball_cast" from playing when using CF_SimulateSpellbookCast without actually casting anything.
-//		○ If it is even possible, try to also block the spellbook ring particle. I doubt this can be done but it would be neat.
-//	- TODO: Reduce the use of ConfigMap subsections as much as possible. This will reduce lag by a lot and could potentially even avoid a memory leak.
+//		- None, currently.
 //	- TODO: Implement notes in the #cf-notes channel.
-//	- TODO: When we edit GenericAOEDamage, make prop_physics and building entities take damage multiplied by the weapon's building damage attributes.
-//	- TODO: Add support for customizing massscale and intertiascale for fake health kits.
-//	- TODO: Remove MOST of the IsValidClient/IsPlayerCharacter/IsValidMulti checks from our natives. These are completely redundant since the user should already be making sure they're passing a valid client in the first place, so these checks just slow the plugin down.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".

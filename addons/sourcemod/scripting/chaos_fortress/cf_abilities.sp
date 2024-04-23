@@ -49,6 +49,7 @@ bool b_M2IsHeld[MAXPLAYERS + 1] = { false, ... };
 bool b_M3IsHeld[MAXPLAYERS + 1] = { false, ... };
 bool b_ReloadIsHeld[MAXPLAYERS + 1] = { false, ... };
 bool b_ResourceIsUlt[MAXPLAYERS + 1] = { false, ... };
+bool b_ResourceIsPercentage[MAXPLAYERS + 1] = { false, ... };
 bool b_UseHUD[MAXPLAYERS + 1] = { false, ... };
 bool b_HasM2[MAXPLAYERS + 1] = { false, ... };
 bool b_HasM3[MAXPLAYERS + 1] = { false, ... };
@@ -378,7 +379,10 @@ public Action CFA_HUDTimer(Handle timer)
 					{
 						if (f_ResourceMax[client] > 0.0)
 						{
-							Format(HUDText, sizeof(HUDText), "%s\n%s: %i/%i\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundToFloor(f_Resources[client]), RoundToFloor(f_ResourceMax[client]));
+							if (b_ResourceIsPercentage[client])
+								Format(HUDText, sizeof(HUDText), "%s\n%s: %iPUTAPERCENTAGEHERE\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundToFloor((f_Resources[client]/f_ResourceMax[client]) * 100.0));
+							else
+								Format(HUDText, sizeof(HUDText), "%s\n%s: %i/%i\n", HUDText, f_Resources[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundToFloor(f_Resources[client]), RoundToFloor(f_ResourceMax[client]));
 						}
 						else
 						{
@@ -411,7 +415,10 @@ public Action CFA_HUDTimer(Handle timer)
 								}
 								else
 								{
-									Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_M2Cost[client]), f_M2Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+									if (b_ResourceIsPercentage[client] && f_ResourceMax[client] > 0.0)
+										Format(HUDText, sizeof(HUDText), "%s[%iPUTAPERCENTAGEHERE %s]", HUDText, RoundToFloor((f_M2Cost[client]/f_ResourceMax[client]) * 100.0), f_M2Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+									else
+										Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_M2Cost[client]), f_M2Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
 								}
 							}
 							
@@ -449,7 +456,10 @@ public Action CFA_HUDTimer(Handle timer)
 								}
 								else
 								{
-									Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_M3Cost[client]), f_M3Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+									if (b_ResourceIsPercentage[client] && f_ResourceMax[client] > 0.0)
+										Format(HUDText, sizeof(HUDText), "%s[%iPUTAPERCENTAGEHERE %s]", HUDText, RoundToFloor((f_M3Cost[client]/f_ResourceMax[client]) * 100.0), f_M3Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+									else
+										Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_M3Cost[client]), f_M3Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
 								}
 							}
 							
@@ -487,7 +497,10 @@ public Action CFA_HUDTimer(Handle timer)
 								}
 								else
 								{
-									Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_ReloadCost[client]), f_ReloadCost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+									if (b_ResourceIsPercentage[client] && f_ResourceMax[client] > 0.0)
+										Format(HUDText, sizeof(HUDText), "%s[%iPUTAPERCENTAGEHERE %s]", HUDText, RoundToFloor((f_ReloadCost[client]/f_ResourceMax[client]) * 100.0), f_ReloadCost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+									else
+										Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_ReloadCost[client]), f_ReloadCost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
 								}
 							}
 							
@@ -679,6 +692,7 @@ public void CFA_InitializeResources(int client, ConfigMap map, bool NewChar)
 			float start = GetFloatFromConfigMap(subsection, "start", 0.0);
 			float preserve = GetFloatFromConfigMap(subsection, "preserve", 0.0) * f_Resources[client];
 			f_ResourceMax[client] = GetFloatFromConfigMap(subsection, "max", 0.0);
+			b_ResourceIsPercentage[client] = GetBoolFromConfigMap(subsection, "percentage", false);
 			
 			bool IgnoreResupply = GetBoolFromConfigMap(subsection, "ignore_resupply", true);
 			
@@ -2555,6 +2569,8 @@ public bool CF_AOETrace(entity, contentsmask)
 	return entity != entityBeingTraced;
 }
 
+ArrayList AOE_Hits = null;
+
 public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 {
 	Handle ReturnValue = CreateArray(16);
@@ -2576,63 +2592,96 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 	bool skipDefault = GetNativeCell(10);
 	bool includeUser = GetNativeCell(11);
 	bool ignoreInvuln = GetNativeCell(12);
+	char pluginName[255];
+	GetNativeString(13, pluginName, sizeof(pluginName));
+	Function logic = GetNativeFunction(14);
+
+	delete AOE_Hits;
+	AOE_Hits = CreateArray(255);
 	
-	int targTeam = GetClientTeam(attacker);
+	TR_EnumerateEntitiesSphere(groundZero, radius, PARTITION_NON_STATIC_EDICTS, GenericAOE_Trace, attacker);
 	
-	for (int i = 1; i <= 2048; i++)
+	for (int i = 0; i < GetArraySize(AOE_Hits); i++)
 	{
-		if (IsValidEntity(i))
+		int victim = EntRefToEntIndex(GetArrayCell(AOE_Hits, i));
+		if (IsValidEntity(victim))
 		{
-			if (IsValidClient(i))
+			if (IsValidClient(victim))
 			{
-				if (!IsPlayerAlive(i) || (IsInvuln(i) && !ignoreInvuln))
+				if (!IsPlayerAlive(victim) || (IsInvuln(victim) && !ignoreInvuln) || (victim == attacker && !includeUser))
 					continue;
 			}
+			
+			float vicLoc[3];
+			GetEntPropVector(victim, Prop_Send, "m_vecOrigin", vicLoc);
 				
-			if (!HasEntProp(i, Prop_Send, "m_iTeamNum") || !HasEntProp(i, Prop_Send, "m_vecOrigin"))
-				continue;
-				
-			if (GetEntProp(i, Prop_Send, "m_iTeamNum") != targTeam || (i == attacker && includeUser))
+			if (IsValidClient(victim))
 			{
-				float vicLoc[3];
-				GetEntPropVector(i, Prop_Send, "m_vecOrigin", vicLoc);
-				
-				if (IsValidClient(i))
-				{
-					vicLoc[2] += 40.0;
-				}
-				
+				vicLoc[2] += 40.0;
+			}
+			
+			bool passed = true;
+					
+			if (!skipDefault)
+			{
+				entityBeingTraced = victim;
+				Handle trace = TR_TraceRayFilterEx(groundZero, vicLoc, MASK_PLAYERSOLID_BRUSHONLY, RayType_EndPoint, CF_AOETrace);
+				passed = !TR_DidHit(trace);
+				delete trace;
+			}
+			
+			if (logic != INVALID_FUNCTION && !StrEqual(pluginName, ""))
+			{
+				Call_StartFunction(GetPluginHandle(pluginName), logic);
+				Call_PushCell(victim);
+				Call_Finish(passed);
+			}
+					
+			if (passed)
+			{
 				float dist = GetVectorDistance(groundZero, vicLoc);
-				
-				if (dist <= radius)
+
+				float realDMG = dmg;
+				if (dist > falloffStart)
 				{
-					bool passed = true;
-					
-					if (!skipDefault)
-					{
-						entityBeingTraced = i;
-						Handle trace = TR_TraceRayFilterEx(groundZero, vicLoc, MASK_PLAYERSOLID_BRUSHONLY, RayType_EndPoint, CF_AOETrace);
-						passed = !TR_DidHit(trace);
-						delete trace;
-					}
-					
-					if (passed)
-					{
-						float realDMG = dmg;
-						if (dist > falloffStart)
-						{
-							realDMG *= 1.0 - (((dist - falloffStart) / (radius - falloffStart)) * falloffMax);
-						}
-						
-						SDKHooks_TakeDamage(i, inflictor, attacker, realDMG, damageType, weapon);
-						PushArrayCell(ReturnValue, i);
-					}
+					realDMG *= 1.0 - (((dist - falloffStart) / (radius - falloffStart)) * falloffMax);
 				}
+						
+				char classname[255];
+				GetEntityClassname(victim, classname, sizeof(classname));
+				
+				//If the inflictor is a weapon and the victim is a building or prop_physics, deal damage multiplied by building damage attributes:
+				if (GetEntSendPropOffs(inflictor, "m_AttributeList") > 0 && (StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_dispenser")
+				|| StrEqual(classname, "obj_teleporter") || StrContains(classname, "prop_physics") != -1))
+				{
+					realDMG *= GetAttributeValue(inflictor, 137, 1.0) * GetAttributeValue(inflictor, 775, 1.0);
+				}
+				
+				SDKHooks_TakeDamage(victim, inflictor, attacker, realDMG, damageType, weapon);
+				PushArrayCell(ReturnValue, victim);
 			}
 		}
 	}
 	
+	delete AOE_Hits;
+	
 	return ReturnValue;
+}
+
+public bool GenericAOE_Trace(int entity, int attacker)
+{
+	if (!HasEntProp(entity, Prop_Send, "m_iTeamNum"))
+		return true;
+		
+	int targTeam = GetClientTeam(attacker);
+	
+	if (GetEntProp(entity, Prop_Send, "m_iTeamNum") != targTeam || (entity == attacker))
+	{
+		PushArrayCell(AOE_Hits, EntIndexToEntRef(entity));
+		return true;
+	}
+	
+	return true;
 }
 
 public Action CH_ShouldCollide(int ent1, int ent2, bool &result)
@@ -3199,7 +3248,7 @@ public Native_CF_CreateHealthPickup(Handle plugin, int numParams)
 	char pluginName[255];
 	GetNativeString(7, pluginName, sizeof(pluginName));
 	Function filter = GetNativeFunction(8);
-	char model[255], sequence[255], sound[255], physModel[255], redPart[255], bluePart[255];
+	char model[255], sequence[255], sound[255], physModel[255];
 	GetNativeString(9, model, sizeof(model));
 	GetNativeString(10, sequence, sizeof(sequence));
 	float rate = GetNativeCell(11);
@@ -3208,8 +3257,8 @@ public Native_CF_CreateHealthPickup(Handle plugin, int numParams)
 	GetNativeString(14, sound, sizeof(sound));
 	float hpMult = GetNativeCell(15);
 	GetNativeString(16, physModel, sizeof(physModel));
-	GetNativeString(17, redPart, sizeof(redPart));
-	GetNativeString(18, bluePart, sizeof(bluePart));
+	float mass = GetNativeCell(17);
+	float inertia = GetNativeCell(18);
 	
 	int phys = CreateEntityByName("prop_physics_override");
 	int prop = CreateEntityByName("prop_dynamic_override");
@@ -3218,6 +3267,8 @@ public Native_CF_CreateHealthPickup(Handle plugin, int numParams)
 		DispatchKeyValue(phys, "targetname", "healthparent"); 
 		DispatchKeyValue(phys, "spawnflags", "2"); 
 		DispatchKeyValue(phys, "model", physModel);
+		DispatchKeyValueFloat(phys, "massScale", mass);
+		DispatchKeyValueFloat(phys, "intertiascale", inertia);
 				
 		DispatchSpawn(phys);
 				
@@ -3277,8 +3328,8 @@ public Native_CF_CreateHealthPickup(Handle plugin, int numParams)
 		WritePackString(pack, sound);
 		WritePackFloat(pack, hpMult);
 		WritePackString(pack, pluginName);
-		WritePackString(pack, redPart);
-		WritePackString(pack, bluePart);
+		WritePackString(pack, "healthgained_red_large");
+		WritePackString(pack, "healthgained_blu_large");
 		
 		RequestFrame(FakeHealthKit_Think, pack);
 		
