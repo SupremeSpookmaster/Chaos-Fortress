@@ -170,7 +170,7 @@ public void Cocainum_Activate(int client, char abilityName[255])
 		Cocainum_VMAnim[client] = true;
 	}
 	
-	/*float pos[3];
+	float pos[3];
 	GetClientAbsOrigin(client, pos);
 	float end = GetGameTime() + 4.0;
 	DataPack pack = new DataPack();
@@ -179,7 +179,7 @@ public void Cocainum_Activate(int client, char abilityName[255])
 	WritePackFloat(pack, 0.0);
 	WritePackFloatArray(pack, pos, 3);
 	WritePackFloat(pack, 0.0);
-	RequestFrame(test_spawnone, pack);*/
+	RequestFrame(test_spawnone, pack);
 	
 	//test.AttachToEntity(client, "head");
 }
@@ -199,7 +199,7 @@ public void CF_OnForcedVMAnimEnd(int client, char sequence[255])
 	Cocainum_VMAnim[client] = false;
 }
 
-/*public bool Test_IgnoreAll(entity, mask) 
+public bool Test_IgnoreAll(entity, mask) 
 {
 	return false;
 } 
@@ -230,42 +230,37 @@ public void test_spawnone(DataPack pack)
 		
 		for (int i = 0; i < 4; i++)
 		{
-			float randPos[3], ang[3], thepos[3];
-			ang[0] = 0.0;
-			ang[1] = float(i) * 90.0 + angoffset;
-			ang[2] = 0.0;
-			
-			TR_TraceRayFilter(pos, ang, MASK_SHOT, RayType_Infinite, Test_IgnoreAll);
-			TR_GetEndPosition(thepos);
-			
-			randPos = ConstrainDistance(pos, thepos, 200.0);
+			float randPos[3];
+			randPos[0] = pos[0] + GetRandomFloat(-400.0, 400.0);
+			randPos[1] = pos[1] + GetRandomFloat(-400.0, 400.0);
+			randPos[2] = pos[2];
 					
 			ParticleBody PBody = FPS_CreateParticleBody(randPos, NULL_VECTOR, 0.1, _, _, 4.0);
 			//PBody.Fading = true;
 				
 			int color[3];
-			color[0] = 255;
-			color[1] = 255;
-			color[2] = 255;
+			color[0] = (TF2_GetClientTeam(client) == TFTeam_Red ? 235 : 120) + GetRandomInt(-20, 20)
+			color[1] = 120 + GetRandomInt(-20, 20);
+			color[2] = (TF2_GetClientTeam(client) == TFTeam_Red ? 120 : 235) + GetRandomInt(-20, 20);
 					
 			int lightcolor[4];
-			lightcolor[0] = 40;
-			lightcolor[1] = 0;
-			lightcolor[2] = 255;
+			lightcolor[0] = color[0];
+			lightcolor[1] = color[1];
+			lightcolor[2] = color[2];
 			lightcolor[3] = 180;
 				
 			float scale = GetRandomFloat(0.25, 1.5);
-			//PBody.AddSprite("materials/zombie_riot/btd/blue.vmt", 1.0, color, 255, RENDER_TRANSALPHA);
-			PBody.AddLight(lightcolor, 5, 200.0);
-			PBody.AddTrail("materials/effects/repair_claw_trail_blue.vmt", 0.5, 10.0 * scale, 0.0, color, 255, RENDER_TRANSALPHA, 3);
-			PBody.AddTrail("materials/effects/electro_beam.vmt", 0.5, 10.0 * scale, 0.0, color, 255, RENDER_TRANSALPHA, 3);
-			//PBody.AddParticle("healshot_trail_red");
+			int sprite = PBody.AddSprite("materials/chaos_fortress/sprites/stopwatch.vmt", scale, color, 255, RENDER_TRANSALPHA);
+			PBody.AddTrail("materials/chaos_fortress/sprites/arrow.vmt", 0.5, 25.0 * scale, 5.0 * scale, color, 255, RENDER_TRANSALPHA, 3);
 			test.AddParticleBody(PBody);
+			
+			float pos2[3];
+			pos2 = pos;
+			pos2[2] += 20.0;
+			TeleportEntity(sprite, pos2);
 		}
 		
-		
-		
-		next = gt + 0.1;
+		next = gt + 0.33;
 	}
 	
 	delete pack;
@@ -286,8 +281,8 @@ public void PSimTest(int ent)
 	float pos[3];
 	GetEntPropVector(ent, Prop_Data, "m_vecAbsOrigin", pos);
 	pos[2] += 8.0;
-	TeleportEntity(ent, pos, ang);
-}*/
+	TeleportEntity(ent, pos);
+}
 
 public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
 {
