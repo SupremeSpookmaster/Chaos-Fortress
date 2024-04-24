@@ -15,7 +15,7 @@
 //				- Team-colored clock icons swirl around the radius of the effect with team-colored arrow trails attached.
 //				- A team-colored base gradient surrounds the radius and "breathes", fading in and out of brightness.
 //		- Gadgeteer:
-//			- Make and apply VFX for drone marks. Also add a sound.
+//			- Probably add some sort of M3 ability that lets him place a custom support building.
 //			- Write the code for Automation Annihilation. 
 //		- ALL:
 //			- Add parameters for weapons which allow custom weapon models. These will need to cooperate with generic_abilities and CF_ForceViewmodelAnimation. This removes a dependency and allows easier customization.

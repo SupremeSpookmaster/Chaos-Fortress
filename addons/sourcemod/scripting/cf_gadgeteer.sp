@@ -4,6 +4,7 @@
 #include <cf_stocks>
 #include <math>
 #include <worldtext>
+#include <fakeparticles>
 
 #define GADGETEER		"cf_gadgeteer"
 #define TOSS			"gadgeteer_sentry_toss"
@@ -45,6 +46,7 @@
 #define SOUND_TOOLBOX_FIZZING		")misc/halloween/hwn_bomb_fuse.wav"
 #define SOUND_TOSS_HIT_WORLD		")weapons/metal_gloves_hit.wav"
 #define SOUND_DRONE_SCANNING			")weapons/sentry_scan.wav"
+#define SOUND_DRONES_TARGETING		"misc/doomsday_lift_warning.wav"
 
 #define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
 #define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
@@ -71,6 +73,8 @@
 #define PARTICLE_LASER_RED		"bullet_tracer_raygun_red_bits"
 #define PARTICLE_LASER_BLUE		"bullet_tracer_raygun_blue_bits"
 
+#define MODEL_TARGETING		"models/fake_particles/plane.mdl"
+
 public void OnMapStart()
 {
 	PrecacheModel(MODEL_TOSS);
@@ -85,6 +89,7 @@ public void OnMapStart()
 	PrecacheModel(MODEL_TOSS_GIB_3);
 	PrecacheModel(MODEL_TOSS_GIB_4);
 	PrecacheModel(MODEL_TOSS_GIB_5);
+	PrecacheModel(MODEL_TARGETING);
 	
 	PrecacheSound(SOUND_TOSS_BUILD_1);
 	PrecacheSound(SOUND_TOSS_BUILD_2);
@@ -110,6 +115,7 @@ public void OnMapStart()
 	PrecacheSound(SOUND_TOSS_BUILD_EXTRA);
 	PrecacheSound(SOUND_TOSS_HIT_WORLD);
 	PrecacheSound(SOUND_DRONE_SCANNING);
+	PrecacheSound(SOUND_DRONES_TARGETING);
 }
 
 public const char Toss_BuildSFX[][] =
@@ -760,7 +766,7 @@ public int Toss_GetMarkedTarget(int entity)
 //Used to determine if a given entity is a valid target for a Drone to shoot at.
 public bool Toss_IsValidTarget(int entity)
 {
-	return Toss_HasLineOfSight(SentryBeingChecked, entity) && Entity_Can_Be_Shot(entity);
+	return Toss_HasLineOfSight(SentryBeingChecked, entity) && Entity_Can_Be_Shot(entity) && !IsPlayerInvis(entity);
 }
 
 //Gets the distance from a given position to the nearest surface in a direction, using the mods for the angle.
@@ -926,6 +932,9 @@ public void CF_OnForcedVMAnimEnd(int client, char sequence[255])
 	b_ToolboxVM[client] = false;
 }
 
+int Icon_Target[2049] = { -1, ... };
+int Icon_Mark[MAXPLAYERS + 1] = { -1, ... };
+
 public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
 	if (Toss_Sentries[attacker] == null || !IsValidEntity(weapon))
@@ -935,11 +944,104 @@ public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor
 	if (markTime <= 0.0)
 		return Plugin_Continue;
 		
+	bool DontApplyVFX = false;
+	int current = EntRefToEntIndex(Icon_Mark[attacker])
+	if (IsValidEntity(current))
+	{
+		ParticleBody currentIcon = view_as<ParticleBody>(current);
+		if (GetClientUserId(victim) == Toss_Marked[attacker])
+		{
+			currentIcon.End_Time = GetGameTime() + markTime;
+			DontApplyVFX = true;
+		}
+		else
+		{
+			currentIcon.Fading = true;
+			currentIcon.Logic = INVALID_FUNCTION;
+			currentIcon.Logic_Plugin = null;
+		}
+	}
+	
+	if (GetClientUserId(victim) != Toss_Marked[attacker] || GetGameTime() > Toss_MarkTime[attacker])
+	{
+		EmitSoundToClient(attacker, SOUND_DRONES_TARGETING, _, _, _, _, _, 130);
+		EmitSoundToClient(victim, SOUND_DRONES_TARGETING, _, _, _, _, _, 130);
+	}
+	
 	Toss_Marked[attacker] = GetClientUserId(victim);
 	Toss_MarkTime[attacker] = GetGameTime() + markTime;
-	//TODO: Fake particle effect for attacker and victim
+	
+	if (!DontApplyVFX)
+	{
+		int r = 255;
+		int b = 120;
+		if (TF2_GetClientTeam(attacker) == TFTeam_Blue)
+		{
+			b = 255;
+			r = 120;
+		}
+		
+		float pos[3];
+		GetClientAbsOrigin(victim, pos);
+		pos[2] += 50.0 * CF_GetCharacterScale(victim);
+		
+		int fake = FPS_SpawnFakeParticle(pos, NULL_VECTOR, MODEL_TARGETING, 0, "spin", 0.33, 0.0, r, 120, b, 180, 16.0 * CF_GetCharacterScale(victim));
+		
+		ParticleBody PBody = FPS_CreateParticleBody(pos, NULL_VECTOR, markTime, GADGETEER, Toss_TargetLogic, 6.0);
+		PBody.AddEntity(fake);
+		
+		int color[4];
+		color[0] = r;
+		color[1] = 120;
+		color[2] = b;
+		color[3] = 120;
+		
+		PBody.AddLight(color, 1, 300.0);
+		
+		Icon_Target[PBody.Index] = GetClientUserId(victim);
+		Icon_Mark[attacker] = EntIndexToEntRef(PBody.Index);
+		SDKHook(PBody.Index, SDKHook_SetTransmit, Icon_Transmit);
+	}
 	
 	return Plugin_Continue;
+}
+
+public Action Icon_Transmit(int entity, int client)
+{
+ 	SetEdictFlags(entity, GetEdictFlags(entity)&(~FL_EDICT_ALWAYS));
+ 	
+ 	int targ = GetClientOfUserId(Icon_Target[entity]);
+ 	if (!IsValidClient(targ))
+ 		return Plugin_Continue;
+ 		
+ 	if (IsPlayerInvis(targ) || (client == targ && (!GetEntProp(client, Prop_Send, "m_nForceTauntCam") && !TF2_IsPlayerInCondition(client, TFCond_Taunting))))
+ 	{
+ 		return Plugin_Handled;
+ 	}
+ 	
+ 	return Plugin_Continue;
+}
+
+public void Toss_TargetLogic(int entity)
+{
+	ParticleBody PBody = view_as<ParticleBody>(entity);
+	int vic = GetClientOfUserId(Icon_Target[entity]);
+	if (!IsValidMulti(vic))
+	{
+		PBody.Fading = true;
+		PBody.Logic = INVALID_FUNCTION;
+		PBody.Logic_Plugin = null;
+		return;
+	}
+	
+	float pos[3], ang[3];
+	GetClientAbsOrigin(vic, pos);
+	GetClientAbsAngles(vic, ang);
+	pos[2] += 50.0 * CF_GetCharacterScale(vic);
+	
+	int frame = GetEntProp(entity, Prop_Send, "m_ubInterpolationFrame");
+	TeleportEntity(entity, pos, ang);
+	SetEntProp(entity, Prop_Send, "m_ubInterpolationFrame", frame);
 }
 
 //Checks each frame to see if the toolbox is ready to auto-detonate. If it is, it automatically spawns a sentry.
