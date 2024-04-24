@@ -10,8 +10,6 @@
 
 //
 //	- IMMEDIATE PLANS:
-//		- Doktor Medick:
-//			- Fix the stopwatch sprite for High Time's VFX.
 //		- Orbital Sniper:
 //			- Repurpose the electric spiral effect as an indicator for Orbital Strike's radius.
 //		- Gadgeteer:

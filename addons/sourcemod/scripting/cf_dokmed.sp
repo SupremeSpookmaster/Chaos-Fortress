@@ -54,12 +54,15 @@
 #define SOUND_TIME_BUFFED				"player/invuln_on_vaccinator.wav"
 #define SOUND_TIME_BUFF_REMOVED			"player/invuln_off_vaccinator.wav"
 
+#define MODEL_PLANE		"models/fake_particles/plane.mdl"
+
 int laserModel;
 
 public void OnMapStart()
 {
 	PrecacheModel(MODEL_FLASK_RED);
 	PrecacheModel(MODEL_FLASK_BLUE);
+	PrecacheModel(MODEL_PLANE);
 	
 	PrecacheSound(SOUND_FLASK_SHATTER);
 	PrecacheSound(SOUND_FLASK_HEAL);
@@ -221,6 +224,9 @@ public void Time_MakePSim(DataPack pack)
 			randPos[0] = pos[0] + GetRandomFloat(-400.0, 400.0);
 			randPos[1] = pos[1] + GetRandomFloat(-400.0, 400.0);
 			randPos[2] = pos[2];
+			
+			float randAng[3];
+			randAng[1] = GetRandomFloat(0.0, 360.0);
 					
 			ParticleBody PBody = FPS_CreateParticleBody(randPos, NULL_VECTOR, 0.1, _, _, 4.0);
 
@@ -236,14 +242,10 @@ public void Time_MakePSim(DataPack pack)
 			lightcolor[3] = 180;
 				
 			float scale = GetRandomFloat(0.25, 1.5);
-			int sprite = PBody.AddSprite("materials/chaos_fortress/sprites/stopwatch.vmt", scale, color, 255, RENDER_TRANSALPHA);
+			int fake = FPS_SpawnFakeParticle(randPos, randAng, MODEL_PLANE, 1, "pirouette", _, _, color[0], color[1], color[2], 255, scale * 8.0);
+			PBody.AddEntity(fake);
 			PBody.AddTrail("materials/chaos_fortress/sprites/arrow.vmt", 0.5, 25.0 * scale, 5.0 * scale, color, 255, RENDER_TRANSALPHA, 3);
 			PSim.AddParticleBody(PBody);
-			
-			float pos2[3];
-			pos2 = pos;
-			pos2[2] += 20.0;
-			TeleportEntity(sprite, pos2);
 		}
 		
 		next = gt + 0.33;
