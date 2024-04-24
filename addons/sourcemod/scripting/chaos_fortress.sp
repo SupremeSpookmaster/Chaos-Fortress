@@ -11,16 +11,18 @@
 //
 //	- IMMEDIATE PLANS:
 //		- Doktor Medick:
-//			- Make a custom fake particle simulation for High Time:
-//				- Team-colored clock icons swirl around the radius of the effect with team-colored arrow trails attached.
-//				- A team-colored base gradient surrounds the radius and "breathes", fading in and out of brightness.
+//			- Fix the stopwatch sprite for High Time's VFX.
+//		- Orbital Sniper:
+//			- Repurpose the electric spiral effect as an indicator for Orbital Strike's radius.
 //		- Gadgeteer:
 //			- Probably add some sort of M3 ability that lets him place a custom support building.
-//			- Write the code for Automation Annihilation. 
+//			- Write the code for Automation Annihilation.
 //		- ALL:
 //			- Add parameters for weapons which allow custom weapon models. These will need to cooperate with generic_abilities and CF_ForceViewmodelAnimation. This removes a dependency and allows easier customization.
 //			- Fix the weird super-long delay with ForceViewmodelAnimation on SB's Soul Discard. This is most likely an issue with SB's viewmodel anims themselves.
 //			- Convert SpawnParticle and AttachParticleToEntity to work via temp ents EVENTUALLY, then recompile all plugins. This will reduce edict usage by a ton. Doesn't need to be done immediately as edict crashes are not a huge concern as of the Fake Particle System fix.
+//		- The Gambler:
+//			- Begin work.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////

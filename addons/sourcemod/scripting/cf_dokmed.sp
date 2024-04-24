@@ -169,19 +169,6 @@ public void Cocainum_Activate(int client, char abilityName[255])
 		CF_ForceViewmodelAnimation(client, "spell_fire");
 		Cocainum_VMAnim[client] = true;
 	}
-	
-	float pos[3];
-	GetClientAbsOrigin(client, pos);
-	float end = GetGameTime() + 4.0;
-	DataPack pack = new DataPack();
-	WritePackCell(pack, GetClientUserId(client));
-	WritePackFloat(pack, end);
-	WritePackFloat(pack, 0.0);
-	WritePackFloatArray(pack, pos, 3);
-	WritePackFloat(pack, 0.0);
-	RequestFrame(test_spawnone, pack);
-	
-	//test.AttachToEntity(client, "head");
 }
 
 public void CF_OnForcedVMAnimEnd(int client, char sequence[255])
@@ -204,7 +191,7 @@ public bool Test_IgnoreAll(entity, mask)
 	return false;
 } 
 
-public void test_spawnone(DataPack pack)
+public void Time_MakePSim(DataPack pack)
 {
 	ResetPack(pack);
 	
@@ -224,9 +211,9 @@ public void test_spawnone(DataPack pack)
 	
 	if (gt >= next)
 	{
-		ParticleSimulation test = FPS_CreateParticleSimulation(NULL_VECTOR, NULL_VECTOR, 0, 4.0, DOKMED, PSimTest, true);
+		ParticleSimulation PSim = FPS_CreateParticleSimulation(NULL_VECTOR, NULL_VECTOR, 0, 4.0, DOKMED, Time_PSimLogic, true);
 		GetClientAbsOrigin(client, pos);
-		TeleportEntity(test.Index, pos);
+		TeleportEntity(PSim.Index, pos);
 		
 		for (int i = 0; i < 4; i++)
 		{
@@ -236,8 +223,7 @@ public void test_spawnone(DataPack pack)
 			randPos[2] = pos[2];
 					
 			ParticleBody PBody = FPS_CreateParticleBody(randPos, NULL_VECTOR, 0.1, _, _, 4.0);
-			//PBody.Fading = true;
-				
+
 			int color[3];
 			color[0] = (TF2_GetClientTeam(client) == TFTeam_Red ? 235 : 120) + GetRandomInt(-20, 20)
 			color[1] = 120 + GetRandomInt(-20, 20);
@@ -252,7 +238,7 @@ public void test_spawnone(DataPack pack)
 			float scale = GetRandomFloat(0.25, 1.5);
 			int sprite = PBody.AddSprite("materials/chaos_fortress/sprites/stopwatch.vmt", scale, color, 255, RENDER_TRANSALPHA);
 			PBody.AddTrail("materials/chaos_fortress/sprites/arrow.vmt", 0.5, 25.0 * scale, 5.0 * scale, color, 255, RENDER_TRANSALPHA, 3);
-			test.AddParticleBody(PBody);
+			PSim.AddParticleBody(PBody);
 			
 			float pos2[3];
 			pos2 = pos;
@@ -270,10 +256,10 @@ public void test_spawnone(DataPack pack)
 	WritePackFloat(pack, next);
 	WritePackFloatArray(pack, pos, 3);
 	WritePackFloat(pack, angoffset + 4.0);
-	RequestFrame(test_spawnone, pack);
+	RequestFrame(Time_MakePSim, pack);
 }
 
-public void PSimTest(int ent)
+public void Time_PSimLogic(int ent)
 {
 	float ang[3];
 	GetEntPropVector(ent, Prop_Send, "m_angRotation", ang);
@@ -1147,6 +1133,8 @@ public void Time_Activate(int client, char abilityName[255])
 	SDKHook(client, SDKHook_PreThink, Time_PreThink);
 }
 
+int Time_BreatheDirection[2049] = { -1, ... };
+
 public void Time_MakeVFX(int client)
 {
 	int r;
@@ -1164,9 +1152,21 @@ public void Time_MakeVFX(int client)
 	
 	float scale = (Time_Radius[client] * 2.0) / 51.948;
 	
-	Time_VFX[client] = EntIndexToEntRef(FPS_AttachFakeParticleToEntity(client, "root", "models/fake_particles/chaos_fortress/player_aura.mdl", 1, "rotate", 0.1, _, r, 180, b, 0, scale));
-	RequestFrame(Medigun_FadeIn, Time_VFX[client]);
+	Time_VFX[client] = EntIndexToEntRef(FPS_AttachFakeParticleToEntity(client, "root", "models/fake_particles/chaos_fortress/player_aura.mdl", 3, "rotate", 0.1, _, r, 180, b, 255, scale));
+	RequestFrame(Time_Breathe, Time_VFX[client]);
 	RequestFrame(Time_SpeedUp, Time_VFX[client]);
+	Time_BreatheDirection[EntRefToEntIndex(Time_VFX[client])] = -1;
+	
+	float pos[3];
+	GetClientAbsOrigin(client, pos);
+	float end = Time_EndTime[client];
+	DataPack pack = new DataPack();
+	WritePackCell(pack, GetClientUserId(client));
+	WritePackFloat(pack, end);
+	WritePackFloat(pack, 0.0);
+	WritePackFloatArray(pack, pos, 3);
+	WritePackFloat(pack, 0.0);
+	RequestFrame(Time_MakePSim, pack);
 }
 
 public void Time_ClearVFX(int client)
@@ -1179,6 +1179,34 @@ public void Time_ClearVFX(int client)
 		RequestFrame(Time_SlowDown, Time_VFX[client]);
 		Time_VFX[client] = -1;
 	}
+}
+
+public void Time_Breathe(int ref)
+{
+	int ent = EntRefToEntIndex(ref);
+	if (!IsValidEntity(ent))
+		return;
+		
+	if (b_FadingOut[ent])
+		return;
+		
+	int r, g, b, a;
+	GetEntityRenderColor(ent, r, g, b, a);
+	a += 2 * Time_BreatheDirection[ent];
+	if (a > 255)
+	{
+		a = 255;
+		Time_BreatheDirection[ent] *= -1;
+	}
+	else if (a < 80)
+	{
+		a = 80;
+		Time_BreatheDirection[ent] *= -1;
+	}
+	
+	SetEntityRenderColor(ent, r, g, b, a);
+	
+	RequestFrame(Time_Breathe, ref);
 }
 
 public void Time_SpeedUp(int ref)
