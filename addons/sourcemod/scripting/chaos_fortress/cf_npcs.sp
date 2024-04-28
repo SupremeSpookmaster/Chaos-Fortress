@@ -1,0 +1,4 @@
+void NPCs_PluginStart()
+{
+	
+}

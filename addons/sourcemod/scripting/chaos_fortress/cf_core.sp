@@ -16,6 +16,7 @@
 #include "chaos_fortress/cf_weapons.sp"
 #include "chaos_fortress/cf_abilities.sp"
 #include "chaos_fortress/cf_animator.sp"
+#include "chaos_fortress/cf_npcs.sp"
 
 int i_CFRoundState = 0; //The current round state.
 
