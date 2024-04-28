@@ -10,10 +10,25 @@
 
 //
 //	- IMMEDIATE PLANS:
-//		- Orbital Sniper:
-//			- Repurpose the electric spiral effect as an indicator for Orbital Strike's radius.
 //		- Gadgeteer:
-//			- Probably add some sort of M3 ability that lets him place a custom support building.
+//			- Add M3 ability - Support Drone:
+//				- Utilizes NPCs.
+//				- Teleports a Support Drone to the user's crosshairs (very short max range).
+//				- Support Drones automatically move to the weakest ally within a certain range and will heal them at a rate of 20 HP/s. 
+//				- All allies within the heal radius who are not the intended target are healed for 10 HP/s.
+//				- Support Drones will always heal their intended target for a minimum of 5 seconds. If a different player becomes the "weakest nearby ally", they are ignored until the minimum heal duration has passed.
+//				- If there are no valid allies within their detection radius, they will default to attempting to heal their owner. If their owner is not alive, they will find the closest ally.
+//				- 250 max HP.
+//				- 400 HU/s movement speed.
+//				- 120 HU heal radius.
+//				- Heals itself at a rate of 10 HP/s.
+//				- Cannot be used if the user already has an active Support Drone.
+//				- Costs 300 Scrap Metal.
+//				- Should use the Robot Destruction "A" robot for the model.
+//			- Add R ability - Command Support Drone:
+//				- Cannot be used if the user does not have an active Support Drone.
+//				- Costs nothing, has no cooldown.
+//				- Finds the ally closest to the user's cursor, within 100 HU. If this ally is valid, the Support Drone will immediately drop what it is doing and prioritize that ally.
 //			- Write the code for Automation Annihilation.
 //		- ALL:
 //			- Add parameters for weapons which allow custom weapon models. These will need to cooperate with generic_abilities and CF_ForceViewmodelAnimation. This removes a dependency and allows easier customization.
