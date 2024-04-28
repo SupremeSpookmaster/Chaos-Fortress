@@ -2,6 +2,7 @@
 #include <sdkhooks>
 #include <tf2_stocks>
 #include <cf_stocks>
+#include <fakeparticles>
 
 #define ORBITAL		"cf_orbital"
 #define HEIGHT		"orbital_height_advantage"
@@ -567,6 +568,7 @@ public void VFX_Activate(int client, char abilityName[255])
 
 public void Strike_Activate(int client, char abilityName[255])
 {
+	//TODO: Electric spiral for VFX, should fade in as the strike charges up 
 	float delay = CF_GetArgF(client, ORBITAL, abilityName, "delay");
 	float duration = CF_GetArgF(client, ORBITAL, abilityName, "duration");
 	float interval = CF_GetArgF(client, ORBITAL, abilityName, "interval");
