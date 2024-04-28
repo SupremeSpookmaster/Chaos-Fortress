@@ -3710,10 +3710,7 @@ int VMAnim_FakeVM[MAXPLAYERS+1] = { -1, ... };
 
 char VMAnim_ForcedSequence[MAXPLAYERS + 1][255];
 
-//TODO: This should call a forward (something like CF_OnForcedViewmodelAnimationEnd) when it ends.
-//The forward should include the client as well as their viewmodel, provided the viewmodel is still valid, as well as the name of the sequence which was forced.
-//The forward should always be called JUST before the animation ACTUALLY ends, that way devs can use the forward
-//to seamlessly transition to another anim before the viewmodel reverts to the old animation.
+//TODO: Make this work with custom weapon models.
 public Native_CF_ForceViewmodelAnimation(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
