@@ -133,6 +133,94 @@ methodmap CFNPC < CBaseCombatCharacter
 	 */
 	public native CBaseNPC GetBaseNPC();
 
+	/**
+	 * Retrieves the INextBot at the root of this CFNPC.
+	 */
+	public native INextBot GetBot();
+
+	/**
+	 * Sets the CFNPC's current sequence. The sequence is automatically checked with LookupSequence.
+	 * 
+	 * @param	sequence	The sequence to set.
+	 * 
+	 * @return	True if the sequence exists and was successfully set, false otherwise.
+	 */
+	public native bool SetSequence(char[] sequence);
+
+	/**
+	 * Sets the CFNPC's current activity. The activity is automatically checked with LookupActivity.
+	 * 
+	 * @param	activity	The activity to set.
+	 * 
+	 * @return	True if the activity exists and was successfully set, false otherwise.
+	 */
+	public native bool SetActivity(char[] activity);
+
+	/**
+	 * Retrieves the index of the given activity.
+	 * 
+	 * @param activity	The activity to lookup.
+	 * 
+	 * @return	The activity's index, -1 if it does not exist.
+	 */
+	public native int LookupActivity(char[] activity);
+
+	/**
+	 * Sets the time in the current sequence/activity's cycle.
+	 * 
+	 * @param cycle		The time to set.
+	 *
+	 */
+	public native void SetCycle(float cycle);
+
+	/**
+	 * Sets the playback rate for the CFNPC's sequences and activities. Note that this is always reset to 1.0 when using SetSequence or SetActivity.
+	 * 
+	 * @param rate		The playback rate to set.
+	 */
+	public native void SetPlaybackRate(float rate);
+
+	/**
+	 * Adds a gesture to the CFNPC.
+	 * 
+	 * @param gesture		The gesture to add. EX: "ACT_MP_ATTACK_STAND_MELEE".
+	 * @param cancel		If true: cancel any currently-active gestures.
+	 * @param duration		The duration of the gesture.
+	 * @param autoKill		If true: automatically remove the gesture once its animation is finished.
+	 * @param playbackRate	The rate at which the gesture should be animated.
+	 */
+	public native void AddGesture(char[] gesture, bool cancel = true, float duration = 1.0, bool autoKill = true, float playbackRate = 1.0);
+
+	/**
+	 * Removes the given gesture from a CFNPC.
+	 * 
+	 * @param gesture		The gesture to remove.
+	 */
+	public native void RemoveGesture(char[] gesture);
+
+	/**
+	 * Gets this CFNPC's PathFollower.
+	 */
+	public native PathFollower GetPathFollower();
+
+	/**
+	 * Causes this CFNPC to begin moving towards its target destination.
+	 */
+	public native void StartPathing();
+
+	/**
+	 * Stops this CFNPC from moving towards its target destination.
+	 */
+	public native void StopPathing();
+
+	/**
+	 * Sets the vector coordinates for this CFNPC's target destination. This DOES NOT make them start moving, you must use CFNPC.StartPathing for that.
+	 * 
+	 * @param pos		The location to target.
+	 */
+	public native void SetGoalVector(float pos[3]);
+
+	
 	property int Index
 	{
 		public native get();

@@ -15,6 +15,18 @@ char CFNPC_Model[2049][255];
 GlobalForward g_OnCFNPCCreated;
 GlobalForward g_OnCFNPCDestroyed;
 
+Handle g_hLookupActivity;
+
+void CFNPC_MapStart()
+{
+
+}
+
+void CFNPC_MapEnd()
+{
+	
+}
+
 void CFNPC_MakeForwards()
 {
 	g_OnCFNPCCreated = new GlobalForward("CF_OnCFNPCCreated", ET_Ignore, Param_Cell);
@@ -22,7 +34,19 @@ void CFNPC_MakeForwards()
 
 	CEntityFactory CFNPC_Factory = new CEntityFactory(NPC_NAME, CFNPC_OnCreate, CFNPC_OnDestroy);
 	CFNPC_Factory.DeriveFromNPC();
+	CFNPC_Factory.BeginDataMapDesc().DefineIntField("cf_pPath").EndDataMapDesc();
 	CFNPC_Factory.Install();
+
+	GameData gd = LoadGameConfigFile("chaos_fortress");
+
+	StartPrepSDKCall(SDKCall_Static);
+	PrepSDKCall_SetFromConf(gd, SDKConf_Signature, "LookupActivity");
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);	//pStudioHdr
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);		//label
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);	//return index
+	if((g_hLookupActivity = EndPrepSDKCall()) == INVALID_HANDLE) SetFailState("Failed to create Call for LookupActivity.");
+
+	delete gd;
 }
 
 void CFNPC_MakeNatives()
@@ -83,10 +107,29 @@ void CFNPC_MakeNatives()
 
 	//CBaseNPC:
 	CreateNative("CFNPC.GetBaseNPC", Native_CFNPCGetBaseNPC);
+
+	//INextBot:
+	CreateNative("CFNPC.GetBot", Native_CFNPCGetBot);
+
+	//Sequences, Activities, and Gestures:
+	CreateNative("CFNPC.SetSequence", Native_CFNPCSetSequence);
+	CreateNative("CFNPC.LookupActivity", Native_CFNPCLookupActivity);
+	CreateNative("CFNPC.SetActivity", Native_CFNPCSetActivity);
+	CreateNative("CFNPC.SetCycle", Native_CFNPCSetCycle);
+	CreateNative("CFNPC.SetPlaybackRate", Native_CFNPCSetPlaybackRate);
+	CreateNative("CFNPC.AddGesture", Native_CFNPCAddGesture);
+	CreateNative("CFNPC.RemoveGesture", Native_CFNPCRemoveGesture);
+
+	//Pathing and Movement:
+	CreateNative("CFNPC.GetPathFollower", Native_CFNPCGetPathFollower);
+	CreateNative("CFNPC.StartPathing", Native_CFNPCStartPathing);
+	CreateNative("CFNPC.StopPathing", Native_CFNPCStopPathing);
+	CreateNative("CFNPC.SetGoalVector", Native_CFNPCSetGoalVector);
 }
 
 void CFNPC_OnCreate(int npc)
 {
+	view_as<CFNPC>(npc).SetProp(Prop_Data, "cf_pPath", view_as<int>(g_NpcPathFollower))
 	Call_StartForward(g_OnCFNPCCreated);
 	Call_PushCell(npc);
 	Call_Finish();
@@ -423,4 +466,147 @@ public int Native_CFNPCSetExists(Handle plugin, int numParams)
 	IExist[GetNativeCell(1)] = GetNativeCell(2);
 
 	return 0; 
+}
+
+public any Native_CFNPCSetSequence(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	char sequence[255];
+	GetNativeString(2, sequence, sizeof(sequence));
+
+	int anim = npc.LookupSequence(sequence);
+	if (anim > -1)
+	{
+		SetEntProp(npc.Index, Prop_Send, "m_nSequence", anim);
+		return true;
+	}
+
+	return false;
+}
+
+public int Native_CFNPCLookupActivity(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	char activity[255];
+	GetNativeString(2, activity, sizeof(activity));
+
+	Address modelPtr = npc.GetModelPtr();
+	if (modelPtr == Address_Null)
+		return -1;
+
+	return SDKCall(g_hLookupActivity, modelPtr, activity);
+}
+
+public any Native_CFNPCSetActivity(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	char activityStr[255];
+	GetNativeString(2, activityStr, sizeof(activityStr));
+
+	int activity = npc.LookupActivity(activityStr);
+	if (activity > -1)
+	{
+		int sequence = npc.SelectWeightedSequence(view_as<Activity>(activity));
+		if (sequence <= 0)
+			return false;
+
+		SetEntProp(npc.Index, Prop_Send, "m_nSequence", sequence);
+		npc.SetCycle(0.0);
+		npc.SetPlaybackRate(1.0);
+
+		return true;
+	}
+
+	return false;
+}
+
+public int Native_CFNPCSetCycle(Handle plugin, int numParams)
+{
+	SetEntPropFloat(GetNativeCell(1), Prop_Send, "m_flCycle", GetNativeCell(2));
+	return 0;
+}
+
+public int Native_CFNPCSetPlaybackRate(Handle plugin, int numParams)
+{
+	SetEntPropFloat(GetNativeCell(1), Prop_Send, "m_flPlaybackRate", GetNativeCell(2));
+	return 0;
+}
+
+public int Native_CFNPCAddGesture(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	char gesture[255];
+	GetNativeString(2, gesture, sizeof(gesture));
+	bool cancel = GetNativeCell(3);
+	float duration = GetNativeCell(4);
+	bool autoKill = GetNativeCell(5);
+	float rate = GetNativeCell(6);
+
+	int activity = npc.LookupActivity(gesture);
+	if (activity <= 0)
+		return 0;
+
+	if (cancel)
+		view_as<CBaseCombatCharacter>(npc).RestartGesture(view_as<Activity>(activity), true, autoKill);
+	else
+		view_as<CBaseCombatCharacter>(npc).AddGesture(view_as<Activity>(activity), duration, autoKill);
+
+	int layer = npc.FindGestureLayer(view_as<Activity>(activity));
+	if (layer > -1)
+		npc.SetLayerPlaybackRate(layer, rate);
+
+	return 0;
+}
+
+public int Native_CFNPCRemoveGesture(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	char gesture[255];
+	GetNativeString(2, gesture, sizeof(gesture));
+
+	int activity = npc.LookupActivity(gesture);
+	if (activity <= 0)
+		return 0;
+
+	int layer = npc.FindGestureLayer(view_as<Activity>(activity));
+	if (layer > -1)
+		npc.FastRemoveLayer(layer);
+
+	return 0;
+}
+
+public any Native_CFNPCGetPathFollower(Handle plugin, int numParams)
+{
+	return view_as<PathFollower>(view_as<CFNPC>(GetNativeCell(1)).GetProp(Prop_Data, "cf_pPath"));
+}
+
+public int Native_CFNPCStartPathing(Handle plugin, int numParams)
+{
+	view_as<CFNPC>(GetNativeCell(1)).GetPathFollower().SetMinLookAheadDistance(100.0);
+
+	return 0;
+}
+
+public int Native_CFNPCStopPathing(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	npc.GetPathFollower().Invalidate();
+	npc.GetLocomotion().Stop();
+
+	return 0;
+}
+
+public int Native_CFNPCSetGoalVector(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	float pos[3];
+	GetNativeArray(2, pos, sizeof(pos));
+	npc.GetPathFollower().ComputeToPos(npc.GetBot(), pos);
+
+	return 0;
+}
+
+public any Native_CFNPCGetBot(Handle plugin, int numParams)
+{
+	return view_as<CFNPC>(GetNativeCell(1)).MyNextBotPointer();
 }

@@ -2701,7 +2701,7 @@ stock bool Entity_Can_Be_Shot(int entity)
 	GetEntityClassname(entity, classname, sizeof(classname));
 	
 	return (StrContains(classname, "prop_physics") != -1) || (StrContains(classname, "base_boss") != -1) || (StrContains(classname, "obj_sentry") != -1)
-	|| (StrContains(classname, "obj_dispenser") != -1) || (StrContains(classname, "obj_teleporter") != -1);
+	|| (StrContains(classname, "obj_dispenser") != -1) || (StrContains(classname, "obj_teleporter") != -1) || (StrContains(classname, "npc") != -1);
 }
 
 //Returns true if the entity is a solid brush. Primarily just filters out "info_" and "trigger_" entities, as well as MOST "func_" entities.

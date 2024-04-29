@@ -56,6 +56,8 @@
 
 #define MODEL_PLANE		"models/fake_particles/plane.mdl"
 
+#define MODEL_NPC_TEST	"models/player/sniper.mdl"
+
 int laserModel;
 
 public void OnMapStart()
@@ -63,7 +65,7 @@ public void OnMapStart()
 	PrecacheModel(MODEL_FLASK_RED);
 	PrecacheModel(MODEL_FLASK_BLUE);
 	PrecacheModel(MODEL_PLANE);
-	PrecacheModel("models/bots/bot_worker/bot_worker_a.mdl");
+	PrecacheModel(MODEL_NPC_TEST);
 	
 	PrecacheSound(SOUND_FLASK_SHATTER);
 	PrecacheSound(SOUND_FLASK_HEAL);
@@ -131,7 +133,7 @@ float Flask_DMGDuration[2049] = { 0.0, ... };
 
 bool Cocainum_VMAnim[MAXPLAYERS + 1] = { false, ... };
 
-//int keepmakingbodies[2049] = { 0, ... };
+int NPCTest_Owner[2049] = { -1, ... };
 
 public void Cocainum_Activate(int client, char abilityName[255])
 {
@@ -177,7 +179,29 @@ public void Cocainum_Activate(int client, char abilityName[255])
 	float pos[3], ang[3];
 	GetClientAbsOrigin(client, pos);
 	GetClientAbsAngles(client, ang);
-	CFNPC("models/bots/bot_worker/bot_worker_a.mdl", GetRandomInt(0, 10) == 0 ? grabEnemyTeam(client) : TF2_GetClientTeam(client), 200, 200, _, 1.0, _, _, _, _, pos, ang);
+	int test = CFNPC(MODEL_NPC_TEST, GetRandomInt(0, 0) != 0 ? grabEnemyTeam(client) : TF2_GetClientTeam(client), 200, 200, _, 1.5, _, NPC_Test, DOKMED, 0.5, pos, ang).Index;
+	CFNPC thisisdumb = view_as<CFNPC>(test);
+	thisisdumb.SetActivity("ACT_MP_RUN_MELEE");
+	thisisdumb.AddGesture("ACT_MP_ATTACK_STAND_MELEE");
+	NPCTest_Owner[test] = GetClientUserId(client);
+	CPrintToChatAll("Index on spawn: %i", test);
+	thisisdumb.StartPathing();
+}
+
+public void NPC_Test(int npc)
+{
+	CFNPC test = view_as<CFNPC>(npc);
+	test.AddGesture("ACT_MP_ATTACK_STAND_MELEE");
+	
+	int target = GetClientOfUserId(NPCTest_Owner[npc]);
+	if (IsValidClient(target))
+	{
+		float pos[3];
+		GetClientAbsOrigin(target, pos);
+		test.SetGoalVector(pos);
+	}
+
+	CPrintToChatAll("{indigo}My owner is {orange}%i, {indigo}my index is {orange}%i.", target, npc);
 }
 
 public void CF_OnForcedVMAnimEnd(int client, char sequence[255])

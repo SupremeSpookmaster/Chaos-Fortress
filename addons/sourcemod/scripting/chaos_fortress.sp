@@ -40,11 +40,10 @@
 //		- NPCs:
 //			- Add ragdolls and gibs.
 //			- Add movement.
-//			- Add animation controls.
 //			- See if headshots work or if I need to do something special.
-//			- Add attacks.
-//			- Fix weird falling bug.
-//			- Fix collision.
+//			- Add natives for basic attacks.
+//			- Fix weird falling bug (possibly unfixable).
+//			- Fix collision (likely related to bounding box and lag comp).
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////

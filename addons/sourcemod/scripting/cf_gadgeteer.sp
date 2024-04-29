@@ -492,9 +492,9 @@ public bool Toss_IgnoreAllButTarget(entity, contentsMask)
 }
 
 //A trace which returns true as long as the entity is not a Drone or a client.
-public bool Toss_IgnoreDrones(entity, contentsMask)
+public bool Toss_IgnoreDrones(entity, contentsMask, target)
 {	
-	return !Toss_SentryStats[entity].exists && (entity == 0 || entity > MaxClients) && Brush_Is_Solid(entity);
+	return !Toss_SentryStats[entity].exists && (entity == 0 || entity > MaxClients) && Brush_Is_Solid(entity) && entity != target;
 }
 
 //A trace which returns true as long as the entity can be shot and is on the opposite of a specified team (Toss_TraceTeam).
@@ -802,7 +802,7 @@ public bool Toss_HasLineOfSight(int entity, int target)
 	CF_WorldSpaceCenter(entity, pos);
 	CF_WorldSpaceCenter(target, otherPos);
 		
-	Handle trace = TR_TraceRayFilterEx(pos, otherPos, MASK_SHOT, RayType_EndPoint, Toss_IgnoreDrones);
+	Handle trace = TR_TraceRayFilterEx(pos, otherPos, MASK_SHOT, RayType_EndPoint, Toss_IgnoreDrones, target);
 	bool DidHit = TR_DidHit(trace);
 	delete trace;
 	return !DidHit;

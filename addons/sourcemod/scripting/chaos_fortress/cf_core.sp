@@ -133,9 +133,16 @@ public void CF_MapStart()
 	CFW_MapStart();
 	
 	CFA_MapStart();
+
+	CFNPC_MapStart();
 	
 	PrecacheSound(SOUND_PHYSTOUCH_HIT);
 	PrecacheSound(SOUND_PHYSTOUCH_BLAST);
+}
+
+public void OnMapEnd()
+{
+	CFNPC_MapEnd();
 }
 
 /**
