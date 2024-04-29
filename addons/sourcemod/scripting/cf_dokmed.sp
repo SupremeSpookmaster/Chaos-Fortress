@@ -63,6 +63,7 @@ public void OnMapStart()
 	PrecacheModel(MODEL_FLASK_RED);
 	PrecacheModel(MODEL_FLASK_BLUE);
 	PrecacheModel(MODEL_PLANE);
+	PrecacheModel("models/bots/bot_worker/bot_worker_a.mdl");
 	
 	PrecacheSound(SOUND_FLASK_SHATTER);
 	PrecacheSound(SOUND_FLASK_HEAL);
@@ -172,6 +173,11 @@ public void Cocainum_Activate(int client, char abilityName[255])
 		CF_ForceViewmodelAnimation(client, "spell_fire");
 		Cocainum_VMAnim[client] = true;
 	}
+
+	float pos[3], ang[3];
+	GetClientAbsOrigin(client, pos);
+	GetClientAbsAngles(client, ang);
+	CFNPC("models/bots/bot_worker/bot_worker_a.mdl", grabEnemyTeam(client), 200, 200, _, 0.8, _, _, _, _, pos, ang);
 }
 
 public void CF_OnForcedVMAnimEnd(int client, char sequence[255])
@@ -187,6 +193,16 @@ public void CF_OnForcedVMAnimEnd(int client, char sequence[255])
 		CF_ForceViewmodelAnimation(client, "bs_draw", false, true, true);
 			
 	Cocainum_VMAnim[client] = false;
+}
+
+public void CF_OnCFNPCCreated(int entity)
+{
+	CPrintToChatAll("{unusual}I LIVE!");
+}
+
+public void CF_OnCFNPCDestroyed(int entity)
+{
+	CPrintToChatAll("{unusual}I DIE!");
 }
 
 public bool Test_IgnoreAll(entity, mask) 

@@ -3,6 +3,8 @@
 #endif
 #define _cfinc_included_
 
+#include <cbasenpc>
+
 enum CF_ResourceType
 {
     CF_ResourceType_Generic = 0,
@@ -84,6 +86,113 @@ enum CF_SpellIndex
 	CF_Spell_MeteorShower,
 	CF_Spell_Skeletons
 };
+
+methodmap CFNPC < CBaseCombatCharacter
+{
+	/**
+	 * Creates a new Chaos Fortress NPC.
+	 *
+	 * @param model			Model to use. Needs to be precached.
+	 * @param team			The NPC's team.
+	 * @param health		The NPC's health.
+	 * @param maxHealth		The NPC's max health.
+	 * @param skin			Skin to set. Set below zero to automatically assign a skin based on the given team (requires TFTeam_Red or TFTeam_Blue).
+	 * @param scale			Model scale. Affects bounding box.
+	 * @param speed			Movement speed, in hammer units per second.
+	 * @param logic			A function which is called per "thinkRate" interval while the NPC is active. Must take one integer, which is the NPC's entity index.
+	 * @param plugin		The name of the plugin which contains the logic function.
+	 * @param thinkRate		The rate at which this NPC's logic function is called. 0.0 or below: every frame.
+	 * @param pos			Position to spawn the NPC at.
+	 * @param ang			Angles to spawn the NPC with.
+	 * @param lifespan		Time until the NPC is automatically destroyed. <= 0.0: do not delete.
+	 */
+	public native CFNPC(char[] model, TFTeam team, int health = 200, int maxHealth = 200, int skin = -1, float scale = 1.0, float speed = 300.0, Function logic = INVALID_FUNCTION, char plugin[255] = "", float thinkRate = 0.0, float pos[3] = NULL_VECTOR, float ang[3] = NULL_VECTOR, float lifespan = 0.0);
+
+	/**
+	 * Retrieves the CFNPC's model, stored in the output buffer.
+	 * 
+	 * @param output		Output buffer to store the model's path.
+	 * @param size			Output buffer length.
+	 */
+	public native void GetModel(char[] output, int size);
+
+	/**
+	 * Sets the CFNPC's model.
+	 * 
+	 * @param newModel		New model to use. Must be precached.
+	 */
+	public native void SetModel(char[] newModel);
+
+	property int Index
+	{
+		public native get();
+	}
+
+	property Function g_Logic
+	{
+		public native set(Function value);
+	}
+	
+	property Handle g_LogicPlugin
+	{
+		public native get();
+		public native set(Handle value);
+	}
+
+	property TFTeam i_Team
+	{
+		public native get();
+		public native set(TFTeam value);
+	}
+
+	property int i_Skin
+	{
+		public native get();
+		public native set(int value);
+	}
+
+	property int i_Health
+	{
+		public native get();
+		public native set(int value);
+	}
+
+	property int i_MaxHealth
+	{
+		public native get();
+		public native set(int value);
+	}
+
+	property float f_Scale
+	{
+		public native get();
+		public native set(float value);
+	}
+
+	property float f_Speed
+	{
+		public native get();
+		public native set(float value);
+	}
+
+	property float f_ThinkRate
+	{
+		public native get();
+		public native set(float value);
+	}
+
+	property float f_NextThinkTime
+	{
+		public native get();
+		public native set(float value);
+	}
+
+	property float f_EndTime
+	{
+		public native get();
+		public native set(float value);
+	}
+}
 
 //TODO: This will need to be expanded upon to include things like medigun shields
 public bool CF_DefaultTrace(entity, contentsMask)
@@ -599,6 +708,20 @@ forward void CF_OnSimulatedSpellUsed(int client, int entity);
  * @param sequence		The sequence which was forced.
  */
 forward void CF_OnForcedVMAnimEnd(int client, char sequence[255]);
+
+/**
+ * Called when a CFNPC is created.
+ * 
+ * @param entity	The CFNPC.
+ */
+forward void CF_OnCFNPCCreated(int entity);
+
+/**
+ * Called when a CFNPC is destroyed.
+ * 
+ * @param entity	The CFNPC.
+ */
+forward void CF_OnCFNPCDestroyed(int entity);
 
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
