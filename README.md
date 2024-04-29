@@ -63,9 +63,10 @@ Though I do consider myself to be a decent programmer, I have never made a game 
 
 <summary>Click to view programming credits.</summary>
 
-  - **[Artvin](https://github.com/artvin01)** and **[Batfoxkid](https://github.com/Batfoxkid)** (Creators of ***[TF2 Zombie Riot](https://github.com/artvin01/TF2-Zombie-Riot)***, which I borrowed code from at certain points, lots of general advice and support)
-  - **[Zabaniya001, AKA Suza](https://github.com/Zabaniya001/Zabaniya001)** (Various tips and tricks, help regarding code cleanliness and performance, lots of help with unfamiliar coding territory)
-  - **[CookieCat](https://github.com/CookieCat45)** (Help with finding netprops when I was unable to find them myself)
+  - **[Artvin](https://github.com/artvin01)** and **[Batfoxkid](https://github.com/Batfoxkid)**, the creators of ***[TF2 Zombie Riot](https://github.com/artvin01/TF2-Zombie-Riot)***, which I borrowed code from at certain points; practically the entire NPC system was created by reverse-engineering Zombie Riot's NPC base.
+  - **[Zabaniya001, AKA Suza](https://github.com/Zabaniya001/Zabaniya001)**, for offering various tips and tricks, help regarding code cleanliness and performance, lots of help with unfamiliar coding territory)
+  - **[CookieCat](https://github.com/CookieCat45)**, for help with finding netprops when I was unable to find them myself.
+  - **[Jakub/ficool2](https://github.com/ficool2)**, for consistently offering helpful advice on a range of topics.
   - ...And of course, myself: **[Spookmaster](https://github.com/SupremeSpookmaster)** (Lead Dev, Game Mode Creator, All Default Characters)
 </details>
 
