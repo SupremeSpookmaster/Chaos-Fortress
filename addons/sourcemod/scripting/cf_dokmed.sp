@@ -177,7 +177,7 @@ public void Cocainum_Activate(int client, char abilityName[255])
 	float pos[3], ang[3];
 	GetClientAbsOrigin(client, pos);
 	GetClientAbsAngles(client, ang);
-	CFNPC("models/bots/bot_worker/bot_worker_a.mdl", grabEnemyTeam(client), 200, 200, _, 0.8, _, _, _, _, pos, ang);
+	CFNPC("models/bots/bot_worker/bot_worker_a.mdl", GetRandomInt(0, 10) == 0 ? grabEnemyTeam(client) : TF2_GetClientTeam(client), 200, 200, _, 1.0, _, _, _, _, pos, ang);
 }
 
 public void CF_OnForcedVMAnimEnd(int client, char sequence[255])
@@ -193,16 +193,6 @@ public void CF_OnForcedVMAnimEnd(int client, char sequence[255])
 		CF_ForceViewmodelAnimation(client, "bs_draw", false, true, true);
 			
 	Cocainum_VMAnim[client] = false;
-}
-
-public void CF_OnCFNPCCreated(int entity)
-{
-	CPrintToChatAll("{unusual}I LIVE!");
-}
-
-public void CF_OnCFNPCDestroyed(int entity)
-{
-	CPrintToChatAll("{unusual}I DIE!");
 }
 
 public bool Test_IgnoreAll(entity, mask) 

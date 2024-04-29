@@ -2729,3 +2729,11 @@ stock bool Brush_Is_Solid(int entity)
 	
 	return true;
 }
+
+stock bool IsAlly(int me, int them)
+{
+	if (!HasEntProp(them, Prop_Send, "m_iTeamNum"))
+		return false;
+
+	return (GetEntProp(me, Prop_Send, "m_iTeamNum") == GetEntProp(them, Prop_Send, "m_iTeamNum"));
+}

@@ -123,9 +123,25 @@ methodmap CFNPC < CBaseCombatCharacter
 	 */
 	public native void SetModel(char[] newModel);
 
+	/**
+	 * Retrieves the CFNPC's locomotion interface.
+	 */
+	public native CBaseNPC_Locomotion GetLocomotion();
+
+	/**
+	 * Retrieves the CBaseNPC at the root of this CFNPC.
+	 */
+	public native CBaseNPC GetBaseNPC();
+
 	property int Index
 	{
 		public native get();
+	}
+
+	property bool b_Exists
+	{
+		public native get();
+		public native set(bool value);
 	}
 
 	property Function g_Logic

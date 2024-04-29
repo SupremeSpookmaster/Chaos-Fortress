@@ -8,6 +8,8 @@ float CFNPC_ThinkRate[2049] = { 0.0, ... };
 float CFNPC_NextThinkTime[2049] = { 0.0, ... };
 float CFNPC_EndTime[2049] = { 0.0, ... };
 
+bool IExist[2049] = { false, ... };
+
 char CFNPC_Model[2049][255];
 
 GlobalForward g_OnCFNPCCreated;
@@ -71,6 +73,16 @@ void CFNPC_MakeNatives()
 	CreateNative("CFNPC.i_Health.get", Native_CFNPCGetHealth);
 	CreateNative("CFNPC.i_MaxHealth.set", Native_CFNPCSetMaxHealth);
 	CreateNative("CFNPC.i_MaxHealth.get", Native_CFNPCGetMaxHealth);
+
+	//Exists:
+	CreateNative("CFNPC.b_Exists.set", Native_CFNPCSetExists);
+	CreateNative("CFNPC.b_Exists.get", Native_CFNPCGetExists);
+
+	//Locomotion:
+	CreateNative("CFNPC.GetLocomotion", Native_CFNPCGetLocomotion);
+
+	//CBaseNPC:
+	CreateNative("CFNPC.GetBaseNPC", Native_CFNPCGetBaseNPC);
 }
 
 void CFNPC_OnCreate(int npc)
@@ -78,6 +90,8 @@ void CFNPC_OnCreate(int npc)
 	Call_StartForward(g_OnCFNPCCreated);
 	Call_PushCell(npc);
 	Call_Finish();
+
+	view_as<CFNPC>(npc).b_Exists = true;
 }
 
 void CFNPC_OnDestroy(int npc)
@@ -87,6 +101,9 @@ void CFNPC_OnDestroy(int npc)
 	Call_Finish();
 
 	SDKUnhook(npc, SDKHook_OnTakeDamagePost, CFNPC_PostDamage);
+	SDKUnhook(npc, SDKHook_OnTakeDamage, CFNPC_OnDamage);
+
+	view_as<CFNPC>(npc).b_Exists = false;
 }
 
 public int Native_CFNPCConstructor(Handle plugin, int numParams)
@@ -112,6 +129,7 @@ public int Native_CFNPCConstructor(Handle plugin, int numParams)
 	if (IsValidEntity(ent))
 	{
 		CFNPC npc = view_as<CFNPC>(ent);
+		CBaseNPC base = npc.GetBaseNPC();
 
 		npc.g_Logic = logic;
 		npc.g_LogicPlugin = GetPluginHandle(logicPlugin);
@@ -131,20 +149,60 @@ public int Native_CFNPCConstructor(Handle plugin, int numParams)
 		DispatchSpawn(ent);
 		ActivateEntity(ent);
 
+		CBaseNPC_Locomotion loco = npc.GetLocomotion();
+		loco.SetCallback(LocomotionCallback_ShouldCollideWith, CFNPC_ShouldCollide);
+		loco.SetCallback(LocomotionCallback_IsEntityTraversable, CFNPC_IsTraversable);
+
+		SetEntProp(ent, Prop_Data, "m_nSolidType", 2); 
+		SetEntityFlags(ent, FL_NPC);
 		SetEntProp(ent, Prop_Send, "m_bGlowEnabled", false);
 		SetEntProp(ent, Prop_Data, "m_bSequenceLoops", true);
 		SetEntProp(ent, Prop_Data, "m_bloodColor", -1);
+
+		base.flStepSize = 17.0;
+		base.flGravity = 800.0;
+		base.flAcceleration = 6000.0;
+		base.flJumpHeight = 250.0;
+		base.flFrictionSideways = 5.0;
+		base.flMaxYawRate = 225.0;
+		base.flDeathDropHeight = 999999.0;
 
 		TeleportEntity(ent, pos, ang);
 
 		RequestFrame(CFNPC_InternalLogic, EntIndexToEntRef(ent));
 
 		SDKHook(ent, SDKHook_OnTakeDamagePost, CFNPC_PostDamage);
+		SDKHook(ent, SDKHook_OnTakeDamage, CFNPC_OnDamage);
 
 		return ent;
 	}
 
 	return -1;
+}
+
+public bool CFNPC_ShouldCollide(CBaseNPC_Locomotion loco, int other)
+{ 
+	int bot = loco.GetBot().GetNextBotCombatCharacter();
+	return CFNPC_CollisionCheck(bot, other);
+}
+
+//TODO: Expand on this if necessary.
+public bool CFNPC_CollisionCheck(int bot, int other)
+{
+	return !IsAlly(bot, other);
+}
+
+public bool CFNPC_IsTraversable(CBaseNPC_Locomotion loco, int other, TraverseWhenType when)
+{
+	if (other < 1)
+		return false;
+
+	//int bot = loco.GetBot().GetNextBotCombatCharacter();
+
+	if (Brush_Is_Solid(other))
+		return false;
+
+	return true;
 }
 
 public void CFNPC_PostDamage(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, const float damageForce[3], const float damagePosition[3])
@@ -172,6 +230,17 @@ public void CFNPC_PostDamage(int victim, int attacker, int inflictor, float dama
 	}
 }
 
+public Action CFNPC_OnDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int damagecustom)
+{
+	if (IsAlly(victim, attacker))
+	{
+		damage = 0.0;
+		return Plugin_Changed;
+	}
+
+	return Plugin_Continue;
+}
+
 public void CFNPC_InternalLogic(int ref)
 {
 	int ent = EntRefToEntIndex(ref);
@@ -189,7 +258,7 @@ public void CFNPC_InternalLogic(int ref)
 
 		npc.f_NextThinkTime = gt + npc.f_ThinkRate;
 	}
-
+	
 	if (gt >= npc.f_EndTime && npc.f_EndTime > 0.0)
 	{
 		RemoveEntity(ent);
@@ -333,6 +402,25 @@ public int Native_CFNPCSetMaxHealth(Handle plugin, int numParams)
 	int ent = GetNativeCell(1);
 	int hp = GetNativeCell(2);
 	SetEntProp(ent, Prop_Data, "m_iMaxHealth", hp);
+
+	return 0; 
+}
+
+public any Native_CFNPCGetLocomotion(Handle plugin, int numParams)
+{
+	CBaseNPC npc = TheNPCs.FindNPCByEntIndex(GetNativeCell(1));
+	return npc.GetLocomotion();
+}
+
+public any Native_CFNPCGetBaseNPC(Handle plugin, int numParams)
+{
+	return TheNPCs.FindNPCByEntIndex(GetNativeCell(1));
+}
+
+public any Native_CFNPCGetExists(Handle plugin, int numParams) { return IExist[GetNativeCell(1)]; }
+public int Native_CFNPCSetExists(Handle plugin, int numParams) 
+{
+	IExist[GetNativeCell(1)] = GetNativeCell(2);
 
 	return 0; 
 }

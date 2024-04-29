@@ -11,6 +11,7 @@
 //
 //	- IMMEDIATE PLANS:
 //		- Gadgeteer:
+//			- Change Toolbox Toss Drones to work via an NPC once the NPC system is done. Sucks to throw all of the work down the drain, but NPCs just work better and don't require ten million workarounds.
 //			- Add M3 ability - Support Drone:
 //				- Utilizes NPCs.
 //				- Teleports a Support Drone to the user's crosshairs (very short max range).
@@ -36,6 +37,14 @@
 //			- Convert SpawnParticle and AttachParticleToEntity to work via temp ents EVENTUALLY, then recompile all plugins. This will reduce edict usage by a ton. Doesn't need to be done immediately as edict crashes are not a huge concern as of the Fake Particle System fix.
 //		- The Gambler:
 //			- Begin work.
+//		- NPCs:
+//			- Add ragdolls and gibs.
+//			- Add movement.
+//			- Add animation controls.
+//			- See if headshots work or if I need to do something special.
+//			- Add attacks.
+//			- Fix weird falling bug.
+//			- Fix collision.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////
