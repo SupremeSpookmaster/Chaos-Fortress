@@ -3,6 +3,8 @@
 Function CFNPC_Logic[2049] = { INVALID_FUNCTION, ... };
 Handle CFNPC_LogicPlugin[2049] = { null, ... };
 
+int i_TotalNPCs[2049] = { -1, ... };
+
 float CFNPC_Speed[2049] = { 0.0, ... };
 float CFNPC_ThinkRate[2049] = { 0.0, ... };
 float CFNPC_NextThinkTime[2049] = { 0.0, ... };
@@ -17,14 +19,45 @@ GlobalForward g_OnCFNPCDestroyed;
 
 Handle g_hLookupActivity;
 
+PathFollower g_PathFollowers[2049];
+
 void CFNPC_MapStart()
 {
-
+	for (int i = MaxClients + 1; i < 2049; i++)
+		g_PathFollowers[i] = PathFollower(CFNPC_PathCost, Path_FilterIgnoreActors, Path_FilterOnlyActors);
 }
 
 void CFNPC_MapEnd()
 {
+	for (int i = MaxClients + 1; i < 2049; i++)
+	{
+		if (g_PathFollowers[i].IsValid())
+			g_PathFollowers[i].Destroy();
+	}
+}
+
+public float CFNPC_PathCost(INextBot bot, CNavArea area, CNavArea from_area, CNavLadder ladder, int iElevator, float length)
+{
+	float dist;
+	if (length != 0.0) 
+	{
+		dist = length;
+	}
+	else 
+	{
+		float vecCenter[3], vecFromCenter[3];
+		area.GetCenter(vecCenter);
+		from_area.GetCenter(vecFromCenter);
+		
+		float vecSubtracted[3];
+		SubtractVectors(vecCenter, vecFromCenter, vecSubtracted);
+		
+		dist = GetVectorLength(vecSubtracted);
+	}
 	
+	float cost = dist * ((1.0 + (GetRandomFloat(0.0, 1.0)) + 1.0) * 25.0);
+	
+	return from_area.GetCostSoFar() + cost;
 }
 
 void CFNPC_MakeForwards()
@@ -32,8 +65,12 @@ void CFNPC_MakeForwards()
 	g_OnCFNPCCreated = new GlobalForward("CF_OnCFNPCCreated", ET_Ignore, Param_Cell);
 	g_OnCFNPCDestroyed = new GlobalForward("CF_OnCFNPCDestroyed", ET_Ignore, Param_Cell);
 
+	/*NextBotActionFactory AcFac = new NextBotActionFactory("CFNPCMainAction");
+	AcFac.SetEventCallback(EventResponderType_OnActorEmoted, PluginBot_OnActorEmoted);*/
+
 	CEntityFactory CFNPC_Factory = new CEntityFactory(NPC_NAME, CFNPC_OnCreate, CFNPC_OnDestroy);
 	CFNPC_Factory.DeriveFromNPC();
+	//CFNPC_Factory.SetInitialActionFactory(AcFac);
 	CFNPC_Factory.BeginDataMapDesc().DefineIntField("cf_pPath").EndDataMapDesc();
 	CFNPC_Factory.Install();
 
@@ -129,12 +166,24 @@ void CFNPC_MakeNatives()
 
 void CFNPC_OnCreate(int npc)
 {
-	view_as<CFNPC>(npc).SetProp(Prop_Data, "cf_pPath", view_as<int>(g_NpcPathFollower))
+	CFNPC alive = view_as<CFNPC>(npc);
+
+	for (int i = MaxClients + 1; i < 2049; i++)
+	{
+		int entity = EntRefToEntIndex(i_TotalNPCs[i]);
+		if (!IsValidEntity(entity))
+		{
+			alive.SetProp(Prop_Data, "cf_pPath", view_as<int>(g_PathFollowers[i]));
+			i_TotalNPCs[i] = EntIndexToEntRef(alive.Index);
+			break;
+		}
+	}
+
 	Call_StartForward(g_OnCFNPCCreated);
 	Call_PushCell(npc);
 	Call_Finish();
 
-	view_as<CFNPC>(npc).b_Exists = true;
+	alive.b_Exists = true;
 }
 
 void CFNPC_OnDestroy(int npc)
@@ -145,8 +194,32 @@ void CFNPC_OnDestroy(int npc)
 
 	SDKUnhook(npc, SDKHook_OnTakeDamagePost, CFNPC_PostDamage);
 	SDKUnhook(npc, SDKHook_OnTakeDamage, CFNPC_OnDamage);
+	SDKUnhook(npc, SDKHook_ThinkPost, NpcBaseThinkPost);
 
-	view_as<CFNPC>(npc).b_Exists = false;
+	CFNPC dead = view_as<CFNPC>(npc);
+	if(dead.GetPathFollower().IsValid())
+	{
+		dead.GetPathFollower().Invalidate(); //Remove its current path
+	}
+	dead.SetProp(Prop_Data, "cf_pPath", -1);
+
+	CFNPC_RemoveFromPaths(dead);
+
+	dead.b_Exists = false;
+}
+
+void CFNPC_RemoveFromPaths(CFNPC npc)
+{
+	for (int i = MaxClients + 1; i < 2049; i++)
+	{
+		int entity = EntRefToEntIndex(i_TotalNPCs[i]);
+		if (entity == npc.Index)
+		{
+			npc.SetProp(Prop_Data, "cf_pPath", 0);
+			i_TotalNPCs[i] = -1;
+			break;
+		}
+	}
 }
 
 public int Native_CFNPCConstructor(Handle plugin, int numParams)
@@ -216,11 +289,27 @@ public int Native_CFNPCConstructor(Handle plugin, int numParams)
 
 		SDKHook(ent, SDKHook_OnTakeDamagePost, CFNPC_PostDamage);
 		SDKHook(ent, SDKHook_OnTakeDamage, CFNPC_OnDamage);
+		SDKHook(ent, SDKHook_Think, NpcBaseThink);
+		SDKHook(ent, SDKHook_ThinkPost, NpcBaseThinkPost);
 
 		return ent;
 	}
 
 	return -1;
+}
+
+public void NpcBaseThink(int iNPC)
+{
+	CFNPC npc = view_as<CFNPC>(iNPC);
+
+	npc.GetBaseNPC().flRunSpeed = npc.f_Speed;
+	npc.GetBaseNPC().flWalkSpeed = npc.f_Speed;
+}
+
+public void NpcBaseThinkPost(int iNPC)
+{
+	CBaseCombatCharacter(iNPC).SetNextThink(GetGameTime());
+	SetEntPropFloat(iNPC, Prop_Data, "m_flSimulationTime",GetGameTime());
 }
 
 public bool CFNPC_ShouldCollide(CBaseNPC_Locomotion loco, int other)
@@ -308,6 +397,8 @@ public void CFNPC_InternalLogic(int ref)
 		return;
 	}
 
+	npc.GetPathFollower().Update(npc.GetBot());
+
 	RequestFrame(CFNPC_InternalLogic, ref);
 }
 
@@ -378,6 +469,9 @@ public int Native_CFNPCSetSpeed(Handle plugin, int numParams)
 	int ent = GetNativeCell(1);
 	float speed = GetNativeCell(2);
 	CFNPC_Speed[ent] = speed;
+	CFNPC npc = view_as<CFNPC>(ent);
+	npc.GetBaseNPC().flRunSpeed = speed;
+	npc.GetBaseNPC().flWalkSpeed = speed;
 
 	return 0; 
 }
@@ -582,7 +676,9 @@ public any Native_CFNPCGetPathFollower(Handle plugin, int numParams)
 
 public int Native_CFNPCStartPathing(Handle plugin, int numParams)
 {
-	view_as<CFNPC>(GetNativeCell(1)).GetPathFollower().SetMinLookAheadDistance(100.0);
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	npc.GetPathFollower().SetMinLookAheadDistance(100.0);
+	npc.GetLocomotion().Run();
 
 	return 0;
 }

@@ -39,7 +39,7 @@
 //			- Begin work.
 //		- NPCs:
 //			- Add ragdolls and gibs.
-//			- Add movement.
+//			- Make run cycles actually work as intended with movement.
 //			- See if headshots work or if I need to do something special.
 //			- Add natives for basic attacks.
 //			- Fix weird falling bug (possibly unfixable).

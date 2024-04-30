@@ -179,12 +179,11 @@ public void Cocainum_Activate(int client, char abilityName[255])
 	float pos[3], ang[3];
 	GetClientAbsOrigin(client, pos);
 	GetClientAbsAngles(client, ang);
-	int test = CFNPC(MODEL_NPC_TEST, GetRandomInt(0, 0) != 0 ? grabEnemyTeam(client) : TF2_GetClientTeam(client), 200, 200, _, 1.5, _, NPC_Test, DOKMED, 0.5, pos, ang).Index;
+	int test = CFNPC(MODEL_NPC_TEST, GetRandomInt(0, 0) != 0 ? grabEnemyTeam(client) : TF2_GetClientTeam(client), 200, 200, _, 1.5, 0.0, NPC_Test, DOKMED, 0.5, pos, ang).Index;
 	CFNPC thisisdumb = view_as<CFNPC>(test);
 	thisisdumb.SetActivity("ACT_MP_RUN_MELEE");
 	thisisdumb.AddGesture("ACT_MP_ATTACK_STAND_MELEE");
 	NPCTest_Owner[test] = GetClientUserId(client);
-	CPrintToChatAll("Index on spawn: %i", test);
 	thisisdumb.StartPathing();
 }
 
@@ -199,9 +198,10 @@ public void NPC_Test(int npc)
 		float pos[3];
 		GetClientAbsOrigin(target, pos);
 		test.SetGoalVector(pos);
+		test.StartPathing();
 	}
 
-	CPrintToChatAll("{indigo}My owner is {orange}%i, {indigo}my index is {orange}%i.", target, npc);
+	test.f_Speed += 10.0;
 }
 
 public void CF_OnForcedVMAnimEnd(int client, char sequence[255])
