@@ -141,6 +141,7 @@ void CFNPC_MakeNatives()
 
 	//Locomotion:
 	CreateNative("CFNPC.GetLocomotion", Native_CFNPCGetLocomotion);
+	CreateNative("CFNPC.GetGroundMotionVector", Native_CFNPCGetGroundMotionVector);
 
 	//CBaseNPC:
 	CreateNative("CFNPC.GetBaseNPC", Native_CFNPCGetBaseNPC);
@@ -148,7 +149,7 @@ void CFNPC_MakeNatives()
 	//INextBot:
 	CreateNative("CFNPC.GetBot", Native_CFNPCGetBot);
 
-	//Sequences, Activities, and Gestures:
+	//Sequences, Activities, Pose Parameters, and Gestures:
 	CreateNative("CFNPC.SetSequence", Native_CFNPCSetSequence);
 	CreateNative("CFNPC.LookupActivity", Native_CFNPCLookupActivity);
 	CreateNative("CFNPC.SetActivity", Native_CFNPCSetActivity);
@@ -156,12 +157,15 @@ void CFNPC_MakeNatives()
 	CreateNative("CFNPC.SetPlaybackRate", Native_CFNPCSetPlaybackRate);
 	CreateNative("CFNPC.AddGesture", Native_CFNPCAddGesture);
 	CreateNative("CFNPC.RemoveGesture", Native_CFNPCRemoveGesture);
+	CreateNative("CFNPC.i_PoseMoveX.get", Native_CFNPCGetPoseMoveX);
+	CreateNative("CFNPC.i_PoseMoveY.get", Native_CFNPCGetPoseMoveY);
 
 	//Pathing and Movement:
 	CreateNative("CFNPC.GetPathFollower", Native_CFNPCGetPathFollower);
 	CreateNative("CFNPC.StartPathing", Native_CFNPCStartPathing);
 	CreateNative("CFNPC.StopPathing", Native_CFNPCStopPathing);
 	CreateNative("CFNPC.SetGoalVector", Native_CFNPCSetGoalVector);
+	CreateNative("CFNPC.GetGroundSpeed", Native_CFNPCGetGroundSpeed);
 }
 
 void CFNPC_OnCreate(int npc)
@@ -395,6 +399,29 @@ public void CFNPC_InternalLogic(int ref)
 	{
 		RemoveEntity(ent);
 		return;
+	}
+
+	float groundSpeed = npc.GetGroundSpeed();
+
+	if (groundSpeed < 0.01)
+	{
+		if (npc.i_PoseMoveX >= 0)
+			npc.SetPoseParameter(npc.i_PoseMoveX, 0.0);
+		if (npc.i_PoseMoveY >= 0)
+			npc.SetPoseParameter(npc.i_PoseMoveY, 0.0);
+	}
+	else
+	{
+		float front[3], right[3], up[3];
+		npc.GetVectors(front, right, up);
+
+		float motion[3];
+		npc.GetGroundMotionVector(motion);
+
+		if (npc.i_PoseMoveX >= 0)
+			npc.SetPoseParameter(npc.i_PoseMoveX, GetVectorDotProduct(motion, front));
+		if (npc.i_PoseMoveY >= 0)
+			npc.SetPoseParameter(npc.i_PoseMoveY, GetVectorDotProduct(motion, right));
 	}
 
 	npc.GetPathFollower().Update(npc.GetBot());
@@ -705,4 +732,31 @@ public int Native_CFNPCSetGoalVector(Handle plugin, int numParams)
 public any Native_CFNPCGetBot(Handle plugin, int numParams)
 {
 	return view_as<CFNPC>(GetNativeCell(1)).MyNextBotPointer();
+}
+
+public any Native_CFNPCGetGroundSpeed(Handle plugin, int numParams)
+{
+	return view_as<CFNPC>(GetNativeCell(1)).GetLocomotion().GetGroundSpeed();
+}
+
+public int Native_CFNPCGetPoseMoveX(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	return npc.LookupPoseParameter("move_x");
+}
+
+public int Native_CFNPCGetPoseMoveY(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	return npc.LookupPoseParameter("move_y");
+}
+
+public int Native_CFNPCGetGroundMotionVector(Handle plugin, int numParams)
+{
+	float vec[3];
+	CBaseNPC_Locomotion loco = view_as<CFNPC>(GetNativeCell(1)).GetLocomotion();
+	loco.GetGroundMotionVector(vec);
+	SetNativeArray(2, vec, 3);
+
+	return 0;
 }

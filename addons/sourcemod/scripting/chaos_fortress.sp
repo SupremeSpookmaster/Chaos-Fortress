@@ -39,11 +39,11 @@
 //			- Begin work.
 //		- NPCs:
 //			- Add ragdolls and gibs.
-//			- Make run cycles actually work as intended with movement.
 //			- See if headshots work or if I need to do something special.
 //			- Add natives for basic attacks.
-//			- Fix weird falling bug (possibly unfixable).
 //			- Fix collision (likely related to bounding box and lag comp).
+//			- Add attachments.
+//			- Migrate this entire thing to the Portable NPC System when it's ready. Allow server owners to configure the maximum number of active NPCs active at once, as well as how the plugin should deal with attempted spawns when the cap has been reached.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////

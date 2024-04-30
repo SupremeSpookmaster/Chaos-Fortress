@@ -220,7 +220,18 @@ methodmap CFNPC < CBaseCombatCharacter
 	 */
 	public native void SetGoalVector(float pos[3]);
 
-	
+	/**
+	 * Retrieves the CFNPC's ground speed.
+	 */
+	public native float GetGroundSpeed();
+
+	/**
+	 * Retrieves the CFNPC's ground motion vector, stored in the output vector.
+	 * 
+	 * @param output	Output vector.
+	 */
+	public native void GetGroundMotionVector(float output[3]);
+
 	property int Index
 	{
 		public native get();
@@ -265,6 +276,16 @@ methodmap CFNPC < CBaseCombatCharacter
 	{
 		public native get();
 		public native set(int value);
+	}
+
+	property int i_PoseMoveX
+	{
+		public native get();
+	}
+
+	property int i_PoseMoveY
+	{
+		public native get();
 	}
 
 	property float f_Scale
