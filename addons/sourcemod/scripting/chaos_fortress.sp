@@ -38,14 +38,13 @@
 //		- The Gambler:
 //			- Begin work.
 //		- NPCs:
-//			- Add gibs.
-//			- Add an option to make NPCs automatically enter their air/swim animations if airborne or in the water.
-//			- Add an option to make NPCs use the look_x and look_y pose parameters to automatically look towards their target destination.
 //			- Fix headshots.
 //			- Add natives for basic attacks (should have generic melee, generic projectile, and generic bullets).
 //			- Fix collision (likely related to bounding box and lag comp).
 //			- Add attachments.
-//			- Migrate this entire thing to the Portable NPC System when it's ready. Allow server owners to configure the maximum number of active NPCs active at once, as well as how the plugin should deal with attempted spawns when the cap has been reached.
+//			- Add an option to make NPCs automatically enter their air/swim animations if airborne or in the water.
+//			- Add an option to make NPCs use the look_x and look_y pose parameters to automatically look towards their target destination.
+//			- Migrate this entire thing to the Portable NPC System when it's ready, then add the Portable NPC System to the Chaos Fortress prerequisites. Allow server owners to configure the maximum number of active NPCs active at once, as well as how the plugin should deal with attempted spawns when the cap has been reached.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////

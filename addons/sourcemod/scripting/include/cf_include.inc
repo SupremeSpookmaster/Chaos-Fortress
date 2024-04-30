@@ -105,8 +105,9 @@ methodmap CFNPC < CBaseCombatCharacter
 	 * @param pos			Position to spawn the NPC at.
 	 * @param ang			Angles to spawn the NPC with.
 	 * @param lifespan		Time until the NPC is automatically destroyed. <= 0.0: do not delete.
+	 * @param bleedType		The type of blood VFX to use when this CFNPC bleeds. Note that certain gibs will ignore this as their blood effects are specifically part of their model.
 	 */
-	public native CFNPC(char[] model, TFTeam team, int health = 200, int maxHealth = 200, int skin = -1, float scale = 1.0, float speed = 300.0, Function logic = INVALID_FUNCTION, char plugin[255] = "", float thinkRate = 0.0, float pos[3] = NULL_VECTOR, float ang[3] = NULL_VECTOR, float lifespan = 0.0);
+	public native CFNPC(char[] model, TFTeam team, int health = 200, int maxHealth = 200, int skin = -1, float scale = 1.0, float speed = 300.0, Function logic = INVALID_FUNCTION, char plugin[255] = "", float thinkRate = 0.0, float pos[3] = NULL_VECTOR, float ang[3] = NULL_VECTOR, float lifespan = 0.0, int bleedType = -1);
 
 	/**
 	 * Retrieves the CFNPC's model, stored in the output buffer.
@@ -233,26 +234,51 @@ methodmap CFNPC < CBaseCombatCharacter
 	public native void GetGroundMotionVector(float output[3]);
 
 	/**
-	 * Forces the CFNPC to ragdoll. Note that this *does* kill the CFNPC.
+	 * Forces the CFNPC to ragdoll, killing it in the process.
 	 * 
 	 * @param vel	Optional ragdoll velocity. Can be left as NULL_VECTOR to not do anything special.
 	 */
 	public native void Ragdoll(float vel[3] = NULL_VECTOR);
 
 	/**
+	 * Immediately gibs the CFNPC, killing it in the process. Note that only NPCs that actually have gibs will work with this, use CFNPC.AddGib to create a list of gibs to be used.
+	 */
+	public native void Gib();
+
+	/**
+	 * Adds a model to the CFNPC's list of models to be used when it is gibbed. These models must all be precached.
+	 * 
+	 * @param model			The model. The gib's skin is automatically set to use the same skin as the CFNPC.
+	 * @param attachment	The attachment this model should be spawned on. Spawns at the center of the CFNPC's model if left blank.
+	 */
+	public native void AddGib(char[] model, char[] attachment = "");
+
+	/**
 	 * Either retrieves or sets the ragdoll force for this CFNPC.
 	 * 
-	 * @param pos			Vector.
-	 * @param override		If true: use "pos" to replace the current ragdoll force. Otherwise, stores the current ragdoll force in pos as an output vector.
+	 * @param vel			Vector.
+	 * @param override		If true: use "vel" to replace the current ragdoll force. Otherwise, stores the current ragdoll force in vel as an output vector.
 	 */
-	public native void PunchForce(const float pos[3], bool override);
+	public native void PunchForce(const float vel[3], bool override);
 
 	property int Index
 	{
 		public native get();
 	}
 
+	property int i_BleedType
+	{
+		public native get();
+		public native set(int value);
+	}
+
 	property bool b_Exists
+	{
+		public native get();
+		public native set(bool value);
+	}
+
+	property bool b_GibsForced
 	{
 		public native get();
 		public native set(bool value);

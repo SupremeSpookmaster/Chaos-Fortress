@@ -57,6 +57,13 @@
 #define MODEL_PLANE		"models/fake_particles/plane.mdl"
 
 #define MODEL_NPC_TEST	"models/player/sniper.mdl"
+#define MODEL_NPC_TEST_GIB_1	"models/player/gibs/snipergib001.mdl" //foot_L
+#define MODEL_NPC_TEST_GIB_2	"models/player/gibs/snipergib002.mdl" //???
+#define MODEL_NPC_TEST_GIB_3	"models/player/gibs/snipergib003.mdl" //effect_hand_L
+#define MODEL_NPC_TEST_GIB_4	"models/player/gibs/snipergib004.mdl" //flag
+#define MODEL_NPC_TEST_GIB_5	"models/player/gibs/snipergib005.mdl" //head
+#define MODEL_NPC_TEST_GIB_6	"models/player/gibs/snipergib006.mdl" //eyes
+#define MODEL_NPC_TEST_GIB_7	"models/player/gibs/snipergib007.mdl" //partyhat
 
 int laserModel;
 
@@ -66,6 +73,13 @@ public void OnMapStart()
 	PrecacheModel(MODEL_FLASK_BLUE);
 	PrecacheModel(MODEL_PLANE);
 	PrecacheModel(MODEL_NPC_TEST);
+	PrecacheModel(MODEL_NPC_TEST_GIB_1);
+	PrecacheModel(MODEL_NPC_TEST_GIB_2);
+	PrecacheModel(MODEL_NPC_TEST_GIB_3);
+	PrecacheModel(MODEL_NPC_TEST_GIB_4);
+	PrecacheModel(MODEL_NPC_TEST_GIB_5);
+	PrecacheModel(MODEL_NPC_TEST_GIB_6);
+	PrecacheModel(MODEL_NPC_TEST_GIB_7);
 	
 	PrecacheSound(SOUND_FLASK_SHATTER);
 	PrecacheSound(SOUND_FLASK_HEAL);
@@ -179,12 +193,18 @@ public void Cocainum_Activate(int client, char abilityName[255])
 	float pos[3], ang[3];
 	GetClientAbsOrigin(client, pos);
 	GetClientAbsAngles(client, ang);
-	int test = CFNPC(MODEL_NPC_TEST, GetRandomInt(0, 0) == 0 ? grabEnemyTeam(client) : TF2_GetClientTeam(client), 200, 200, _, 1.5, 900.0, NPC_Test, DOKMED, 0.5, pos, ang).Index;
+	int test = CFNPC(MODEL_NPC_TEST, GetRandomInt(0, 0) == 0 ? grabEnemyTeam(client) : TF2_GetClientTeam(client), 200, 200, _, 1.5, 0.0, NPC_Test, DOKMED, 0.5, pos, ang).Index;
 	CFNPC thisisdumb = view_as<CFNPC>(test);
 	thisisdumb.SetActivity("ACT_MP_RUN_MELEE");
 	thisisdumb.AddGesture("ACT_MP_ATTACK_STAND_MELEE");
 	NPCTest_Owner[test] = GetClientUserId(client);
 	thisisdumb.StartPathing();
+	thisisdumb.AddGib(MODEL_NPC_TEST_GIB_1, "foot_L");
+	thisisdumb.AddGib(MODEL_NPC_TEST_GIB_3, "effect_hand_L");
+	thisisdumb.AddGib(MODEL_NPC_TEST_GIB_4, "flag");
+	thisisdumb.AddGib(MODEL_NPC_TEST_GIB_5, "head");
+	thisisdumb.AddGib(MODEL_NPC_TEST_GIB_6, "eyes");
+	thisisdumb.AddGib(MODEL_NPC_TEST_GIB_7, "partyhat");
 }
 
 public void NPC_Test(int npc)
