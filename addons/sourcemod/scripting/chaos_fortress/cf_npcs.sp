@@ -193,6 +193,9 @@ void CFNPC_MakeNatives()
 	CreateNative("CFNPC.b_GibsForced.set", Native_CFNPCSetForcedGib);
 	CreateNative("CFNPC.i_BleedType.get", Native_CFNPCGetBleedType);
 	CreateNative("CFNPC.i_BleedType.set", Native_CFNPCSetBleedType);
+
+	//Attachments:
+	CreateNative("CFNPC.AttachModel", Native_CFNPCAttachModel);
 }
 
 void CFNPC_OnCreate(int npc)
@@ -906,6 +909,26 @@ public int Native_CFNPCGib(Handle plugin, int numParams)
 	RemoveEntity(ent);
 
 	return 0;
+}
+
+public int Native_CFNPCAttachModel(Handle plugin, int numParams)
+{
+	int ent = GetNativeCell(1);
+	CFNPC npc = view_as<CFNPC>(ent);
+
+	char model[255], attachment[255];
+	GetNativeString(2, model, sizeof(model));
+	if (!CheckFile(model))
+		return -1;
+	PrecacheModel(model);
+
+	GetNativeString(3, attachment, sizeof(attachment));
+	int skin = GetNativeCell(4);
+	float scale = GetNativeCell(5);
+	bool bonemerge = GetNativeCell(6);
+	bool weapon = GetNativeCell(7);
+
+	
 }
 
 public void CFNPC_SpawnGib(char model[255], int skin, float pos[3], float ang[3], float vel[3])

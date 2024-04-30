@@ -261,6 +261,20 @@ methodmap CFNPC < CBaseCombatCharacter
 	 */
 	public native void PunchForce(const float vel[3], bool override);
 
+	/**
+	 * Attaches a model to the CFNPC. These are precached automatically.
+	 * 
+	 * @param model			The model to attach.
+	 * @param attachment	The bone to attach to.
+	 * @param skin			The skin to use. Set to -1 to automatically set the skin based on the CFNPC's team.
+	 * @param scale			The model's scale.
+	 * @param bonemerge		If true, bonemerges the model to the CFNPC (useful for cosmetics). Note that this will bypass "attachment".
+	 * @param weapon		If true, this model is treated as a weapon. This is used primarily for muzzle flashes.
+	 * 
+	 * @return	The entity index of the attached model.
+	 */
+	public native int AttachModel(char[] model, char[] attachment, int skin = -1, float scale = 1.0, bool bonemerge = true, bool weapon = false);
+
 	property int Index
 	{
 		public native get();
