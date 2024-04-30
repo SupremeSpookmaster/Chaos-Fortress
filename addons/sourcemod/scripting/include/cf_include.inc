@@ -232,6 +232,21 @@ methodmap CFNPC < CBaseCombatCharacter
 	 */
 	public native void GetGroundMotionVector(float output[3]);
 
+	/**
+	 * Forces the CFNPC to ragdoll. Note that this *does* kill the CFNPC.
+	 * 
+	 * @param vel	Optional ragdoll velocity. Can be left as NULL_VECTOR to not do anything special.
+	 */
+	public native void Ragdoll(float vel[3] = NULL_VECTOR);
+
+	/**
+	 * Either retrieves or sets the ragdoll force for this CFNPC.
+	 * 
+	 * @param pos			Vector.
+	 * @param override		If true: use "pos" to replace the current ragdoll force. Otherwise, stores the current ragdoll force in pos as an output vector.
+	 */
+	public native void PunchForce(const float pos[3], bool override);
+
 	property int Index
 	{
 		public native get();

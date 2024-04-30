@@ -9,6 +9,7 @@ float CFNPC_Speed[2049] = { 0.0, ... };
 float CFNPC_ThinkRate[2049] = { 0.0, ... };
 float CFNPC_NextThinkTime[2049] = { 0.0, ... };
 float CFNPC_EndTime[2049] = { 0.0, ... };
+float f_PunchForce[2049][3];
 
 bool IExist[2049] = { false, ... };
 
@@ -18,6 +19,7 @@ GlobalForward g_OnCFNPCCreated;
 GlobalForward g_OnCFNPCDestroyed;
 
 Handle g_hLookupActivity;
+Handle SDK_Ragdoll;
 
 PathFollower g_PathFollowers[2049];
 
@@ -76,12 +78,20 @@ void CFNPC_MakeForwards()
 
 	GameData gd = LoadGameConfigFile("chaos_fortress");
 
+	//LookupActivity:
 	StartPrepSDKCall(SDKCall_Static);
 	PrepSDKCall_SetFromConf(gd, SDKConf_Signature, "LookupActivity");
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);	//pStudioHdr
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);		//label
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);	//return index
 	if((g_hLookupActivity = EndPrepSDKCall()) == INVALID_HANDLE) SetFailState("Failed to create Call for LookupActivity.");
+
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(gd, SDKConf_Virtual, "CBaseAnimating::BecomeRagdollOnClient");
+	PrepSDKCall_AddParameter(SDKType_Vector, SDKPass_ByRef);
+	SDK_Ragdoll = EndPrepSDKCall();
+	if(!SDK_Ragdoll)
+		LogError("[Gamedata] Could not find CBaseAnimating::BecomeRagdollOnClient");
 
 	delete gd;
 }
@@ -166,6 +176,10 @@ void CFNPC_MakeNatives()
 	CreateNative("CFNPC.StopPathing", Native_CFNPCStopPathing);
 	CreateNative("CFNPC.SetGoalVector", Native_CFNPCSetGoalVector);
 	CreateNative("CFNPC.GetGroundSpeed", Native_CFNPCGetGroundSpeed);
+
+	//Miscellaneous:
+	CreateNative("CFNPC.Ragdoll", Native_CFNPCRagdoll);
+	CreateNative("CFNPC.PunchForce", Native_CFNPCPunchForce);
 }
 
 void CFNPC_OnCreate(int npc)
@@ -341,11 +355,48 @@ public bool CFNPC_IsTraversable(CBaseNPC_Locomotion loco, int other, TraverseWhe
 	return true;
 }
 
+public void CFNPC_OnKilled(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, const float damageForce[3], const float damagePos[3])
+{
+	//TODO: Call forward, allow devs to change damagetype and return Plugin_Handled to prevent the kill
+
+	Action result = Plugin_Continue;
+
+	if (result == Plugin_Continue)
+	{
+		CFNPC npc = view_as<CFNPC>(victim);
+
+		npc.PunchForce(damageForce, true);
+
+		bool shouldGib = npc.b_GibsForced;
+
+		if (!shouldGib && (damagetype & DMG_NEVERGIB == 0))
+		{
+			shouldGib = (damagetype & DMG_BLAST != 0) || (damagetype & DMG_BLAST_SURFACE != 0) || (damagetype & DMG_ALWAYSGIB != 0);
+
+			if (!shouldGib && IsValidEntity(weapon))
+			{
+				if (GetAttributeValue(weapon, 309, 0.0) != 0.0 && (damagetype & DMG_CRIT != 0 || damagetype & DMG_ACID == DMG_ACID))
+					shouldGib = true;
+			}
+		}
+		
+		if (shouldGib)
+		{
+			
+		}
+		else
+		{
+			npc.Ragdoll();
+		}
+	}
+}
+
 public void CFNPC_PostDamage(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, const float damageForce[3], const float damagePosition[3])
 {
 	Event event = CreateEvent("npc_hurt");
 	if(event != null) 
 	{
+		//TODO: Call forward, allow devs to change damage and damagetype
 		event.SetInt("entindex", victim);
 		event.SetInt("health", view_as<CFNPC>(victim).i_Health);
 		event.SetInt("damageamount", RoundToFloor(damage));
@@ -362,7 +413,7 @@ public void CFNPC_PostDamage(int victim, int attacker, int inflictor, float dama
 
 	if (view_as<CFNPC>(victim).i_Health < 1)
 	{
-		RemoveEntity(victim);
+		CFNPC_OnKilled(victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition);
 	}
 }
 
@@ -759,4 +810,56 @@ public int Native_CFNPCGetGroundMotionVector(Handle plugin, int numParams)
 	SetNativeArray(2, vec, 3);
 
 	return 0;
+}
+
+public int Native_CFNPCRagdoll(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+
+	float ragdollVel[3], override[3];
+	GetNativeArray(2, override, sizeof(override));
+	if (!Vector_Is_Null(override))
+	{
+		npc.PunchForce(override, true);
+	}
+
+	npc.PunchForce(ragdollVel, false);
+	ScaleVector(ragdollVel, 2.0);
+
+	if(ragdollVel[0] == 0.0 || ragdollVel[0] > 10000000.0 || ragdollVel[1] > 10000000.0 || ragdollVel[2] > 10000000.0 || ragdollVel[0] < -10000000.0 || ragdollVel[1] < -10000000.0 || ragdollVel[2] < -10000000.0) //knockback is way too huge. set to 0.
+	{
+		ragdollVel[0] = 1.0;
+		ragdollVel[1] = 1.0;
+		ragdollVel[2] = 1.0;
+	}
+
+	SDKCall_Ragdoll(npc.Index, ragdollVel);
+
+	return 0;
+}
+
+public int Native_CFNPCPunchForce(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	bool override = GetNativeCell(3);
+
+	if (override)
+	{
+		float pos[3];
+		GetNativeArray(2, pos, sizeof(pos));
+
+		for (int i = 0; i < 3; i++)
+			f_PunchForce[npc.Index][i] = pos[i];
+	}
+	else
+	{
+		SetNativeArray(2, f_PunchForce[npc.Index], 3);
+	}
+
+	return 0;
+}
+
+public void SDKCall_Ragdoll(int entity, float vel[3])
+{
+	SDKCall(SDK_Ragdoll, entity, vel);
 }

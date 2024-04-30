@@ -51,6 +51,11 @@
 				"linux"		"240"
 				"windows"	"239"
 			}
+			"CBaseAnimating::BecomeRagdollOnClient"
+			{
+				"windows"	"205"
+				"linux"		"206"
+			}
 		}
 	}
 }

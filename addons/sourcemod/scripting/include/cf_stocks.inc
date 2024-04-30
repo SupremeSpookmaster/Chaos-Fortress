@@ -2737,3 +2737,14 @@ stock bool IsAlly(int me, int them)
 
 	return (GetEntProp(me, Prop_Send, "m_iTeamNum") == GetEntProp(them, Prop_Send, "m_iTeamNum"));
 }
+
+stock bool Vector_Is_Null(float vec[3])
+{
+	for (int i = 0; i < 3; i++)
+	{
+		if (vec[i] != 0.0)
+			return false;
+	}
+
+	return true;
+}
