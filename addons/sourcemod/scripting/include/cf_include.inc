@@ -426,6 +426,50 @@ public bool CF_DefaultTrace(entity, contentsMask)
 ////////////////////////////////////////
 
 /**
+ * Called when a CFNPC is headshot.
+ * 
+ * @param npc			The CFNPC.
+ * @param weapon		The weapon used to inflict this headshot. Not guaranteed to be valid!
+ * @param inflictor		The inflictor which caused this headshot. Guaranteed to be valid.
+ * @param attacker		The player who attacked the CFNPC. Guaranteed to be valid.
+ * @param multiplier	Headshot damage multiplier.
+ * @param miniCrit		Set to true to make the headshot mini-crit instead of full-crit. 
+ * 						Note that this *will* reduce the multiplier to 45% of its current value if the headshot was not already a mini-crit.
+ * 
+ * @return	Plugin_Changed if you changed any values, Plugin_Handled or Plugin_Stop to prevent the headshot, or Plugin_Continue to proceed as normal.
+ */
+forward Action CF_OnCFNPCHeadshot(CFNPC npc, int weapon, int inflictor, int attacker, float &multiplier, bool &miniCrit);
+
+/**
+ * Called when a CFNPC is damaged.
+ * 
+ * @param npc			The CFNPC.
+ * @param damage		The damage dealt.
+ * @param weapon		The weapon used.
+ * @param inflictor		The entity which inflicted the damage.
+ * @param attacker		The entity which attacked the CFNPC.
+ * @param damagetype	Damage bits.
+ * @param damagecustom	Custom damage bits.
+ * 
+ * @return	Plugin_Changed if you changed any values, Plugin_Handled or Plugin_Stop to prevent the damage, or Plugin_Continue to proceed as normal.
+ */
+forward Action CF_OnCFNPCTakeDamage(CFNPC npc, float &damage, int weapon, int inflictor, int attacker, int &damagetype, int &damagecustom);
+
+/**
+ * Called when a CFNPC is killed.
+ * 
+ * @param npc			The CFNPC.
+ * @param damage		The damage dealt which killed the CFNPC.
+ * @param weapon		The weapon used.
+ * @param inflictor		The entity which killed the CFNPC.
+ * @param attacker		The entity which killed the CFNPC.
+ * @param damagetype	Damage bits.
+ * 
+ * @return	Plugin_Changed if you changed any values, Plugin_Handled or Plugin_Stop to prevent the CFNPC from dying, or Plugin_Continue to proceed as normal.
+ */
+forward Action CF_OnCFNPCKilled(CFNPC npc, float damage, int weapon, int inflictor, int attacker, int &damagetype);
+
+/**
  * Called when a character runs any command.
  *
  * @param client			The client who ran the command.

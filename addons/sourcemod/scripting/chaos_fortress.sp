@@ -38,7 +38,7 @@
 //		- The Gambler:
 //			- Begin work.
 //		- NPCs:
-//			- Finalize headshots.
+//			- Fix Huntsman headshots.
 //			- Figure out how to customize the NPC's surfaceprop so it doesn't just sound like you're hitting metal when using melee.
 //			- Make NPCs bleed when hit. Allow devs to specify the sprite used for this bleed.
 //			- Add natives for basic attacks (should have generic melee, generic projectile, and generic bullets).

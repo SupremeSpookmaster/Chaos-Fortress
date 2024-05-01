@@ -18,6 +18,9 @@ char CFNPC_Model[2049][255];
 
 GlobalForward g_OnCFNPCCreated;
 GlobalForward g_OnCFNPCDestroyed;
+GlobalForward g_OnCFNPCHeadshot;
+GlobalForward g_OnCFNPCDamaged;
+GlobalForward g_OnCFNPCKilled;
 
 Handle g_hLookupActivity;
 Handle SDK_Ragdoll;
@@ -91,6 +94,9 @@ void CFNPC_MakeForwards()
 {
 	g_OnCFNPCCreated = new GlobalForward("CF_OnCFNPCCreated", ET_Ignore, Param_Cell);
 	g_OnCFNPCDestroyed = new GlobalForward("CF_OnCFNPCDestroyed", ET_Ignore, Param_Cell);
+	g_OnCFNPCHeadshot = new GlobalForward("CF_OnCFNPCHeadshot", ET_Event, Param_Any, Param_Cell, Param_Cell, Param_Cell, Param_FloatByRef, Param_CellByRef);
+	g_OnCFNPCDamaged = new GlobalForward("CF_OnCFNPCTakeDamage", ET_Event, Param_Any, Param_FloatByRef, Param_Cell, Param_Cell, Param_Cell, Param_CellByRef, Param_CellByRef);
+	g_OnCFNPCKilled = new GlobalForward("CF_OnCFNPCKilled", ET_Event, Param_Any, Param_Float, Param_Cell, Param_Cell, Param_Cell, Param_CellByRef);
 
 	/*NextBotActionFactory AcFac = new NextBotActionFactory("CFNPCMainAction");
 	AcFac.SetEventCallback(EventResponderType_OnActorEmoted, PluginBot_OnActorEmoted);*/
@@ -414,8 +420,6 @@ public Action CFNPC_TraceAttack(int victim, int& attacker, int& inflictor, float
 		}
 	}
 
-	//TODO: Add a forward to let devs decide whether or not any given attack should be a headshot.
-
 	if (hitgroup == HITGROUP_HEAD && CanHeadshot)
 	{
 		float mult = 3.0;
@@ -426,7 +430,6 @@ public Action CFNPC_TraceAttack(int victim, int& attacker, int& inflictor, float
 			//Attribute 869: Crits Become Mini-Crits
 			if (GetAttributeValue(weapon, 869, 0.0) != 0.0)
 			{
-				mult = 1.35;
 				MiniCrit = true;
 			}
 
@@ -434,21 +437,45 @@ public Action CFNPC_TraceAttack(int victim, int& attacker, int& inflictor, float
 			mult *= GetAttributeValue(weapon, 869, 1.0);
 		}
 
-		//TODO: Add a forward to let devs customize the headshot's damage multiplier
+		Action result = Plugin_Continue;
+		Call_StartForward(g_OnCFNPCHeadshot);
 
-		damage *= mult;
+		Call_PushCell(view_as<CFNPC>(victim));
+		Call_PushCell(weapon);
+		Call_PushCell(inflictor);
+		Call_PushCell(attacker);
+		Call_PushFloatRef(mult);
+		Call_PushCellRef(MiniCrit);
 
-		if (MiniCrit)
-			PlayMiniCritSound(attacker);
-		else
-			PlayCritSound(attacker);
+		Call_Finish(result);
 
-		//TODO: Crit particle
+		if (result != Plugin_Handled && result != Plugin_Stop)
+		{
+			if (MiniCrit)
+				mult *= 0.45;
+			damage *= mult;
 
-		return Plugin_Changed;
+			if (MiniCrit)
+				PlayMiniCritSound(attacker);
+			else
+				PlayCritSound(attacker);
+
+			CFNPC_SpawnCritParticle(view_as<CFNPC>(victim), MiniCrit);
+
+			return Plugin_Changed;
+		}
 	}
 
 	return Plugin_Continue;
+}
+
+public void CFNPC_SpawnCritParticle(CFNPC victim, bool MiniCrit)
+{
+	float pos[3];
+	GetEntPropVector(victim.Index, Prop_Send, "m_vecOrigin", pos);
+	pos[2] += 80.0 * victim.f_Scale;
+
+	SpawnParticle(pos, MiniCrit ? "minicrit_text" : "crit_text", 3.0);
 }
 
 public void CFNPC_Think(int iNPC)
@@ -492,11 +519,20 @@ public bool CFNPC_IsTraversable(CBaseNPC_Locomotion loco, int other, TraverseWhe
 
 public void CFNPC_OnKilled(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, const float damageForce[3], const float damagePos[3])
 {
-	//TODO: Call forward, allow devs to change damagetype and return Plugin_Handled to prevent the kill
-
 	Action result = Plugin_Continue;
 
-	if (result == Plugin_Continue)
+	Call_StartForward(g_OnCFNPCKilled);
+
+	Call_PushCell(view_as<CFNPC>(victim));
+	Call_PushFloat(damage);
+	Call_PushCell(weapon);
+	Call_PushCell(inflictor);
+	Call_PushCell(attacker);
+	Call_PushCellRef(damagetype);
+
+	Call_Finish(result);
+
+	if (result == Plugin_Continue || result == Plugin_Changed)
 	{
 		CFNPC npc = view_as<CFNPC>(victim);
 
@@ -531,7 +567,6 @@ public void CFNPC_PostDamage(int victim, int attacker, int inflictor, float dama
 	Event event = CreateEvent("npc_hurt");
 	if(event != null) 
 	{
-		//TODO: Call forward, allow devs to change damage and damagetype
 		event.SetInt("entindex", victim);
 		event.SetInt("health", view_as<CFNPC>(victim).i_Health);
 		event.SetInt("damageamount", RoundToFloor(damage));
@@ -560,7 +595,27 @@ public Action CFNPC_OnDamage(int victim, int &attacker, int &inflictor, float &d
 		return Plugin_Changed;
 	}
 
-	return Plugin_Continue;
+	Action result;
+
+	Call_StartForward(g_OnCFNPCDamaged);
+
+	Call_PushCell(view_as<CFNPC>(victim));
+	Call_PushFloatRef(damage);
+	Call_PushCell(weapon);
+	Call_PushCell(inflictor);
+	Call_PushCell(attacker);
+	Call_PushCellRef(damagetype);
+	Call_PushCellRef(damagecustom);
+
+	Call_Finish(result);
+
+	if (result == Plugin_Handled || result == Plugin_Changed)
+	{
+		damage = 0.0;
+		result = Plugin_Changed;
+	}
+
+	return result;
 }
 
 public void CFNPC_InternalLogic(int ref)
