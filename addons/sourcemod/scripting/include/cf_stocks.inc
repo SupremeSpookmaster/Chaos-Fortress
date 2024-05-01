@@ -29,6 +29,12 @@
 #define CRIT4	"player/crit_hit4.wav"
 #define CRIT5	"player/crit_hit5.wav"
 
+#define MINICRIT1	"player/crit_hit_mini.wav"
+#define MINICRIT2	"player/crit_hit_mini2.wav"
+#define MINICRIT3	"player/crit_hit_mini3.wav"
+#define MINICRIT4	"player/crit_hit_mini4.wav"
+#define MINICRIT5	"player/crit_hit_mini5.wav"
+
 //#define EF_NODRAW	32
 
 float OFF_THE_MAP[3] = {1182792704.0, 1182792704.0, -964690944.0};
@@ -1955,6 +1961,44 @@ public void PlayCritSound(int client)
 		{
 			PrecacheSound(CRIT5);
 			EmitSoundToClient(client, CRIT5);
+		}
+	}
+}
+
+/**
+ * Plays a mini-crit sound effect to a client.
+ *
+ * @param client		Client to play to.
+ *
+ */
+public void PlayMiniCritSound(int client)
+{
+	switch(GetRandomInt(1, 5))
+	{
+		case 1:
+		{
+			PrecacheSound(MINICRIT1);
+			EmitSoundToClient(client, MINICRIT1);
+		}
+		case 2:
+		{
+			PrecacheSound(MINICRIT2);
+			EmitSoundToClient(client, MINICRIT2);
+		}
+		case 3:
+		{
+			PrecacheSound(MINICRIT3);
+			EmitSoundToClient(client, MINICRIT3);
+		}
+		case 4:
+		{
+			PrecacheSound(MINICRIT4);
+			EmitSoundToClient(client, MINICRIT4);
+		}
+		case 5:
+		{
+			PrecacheSound(MINICRIT5);
+			EmitSoundToClient(client, MINICRIT5);
 		}
 	}
 }

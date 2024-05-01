@@ -193,7 +193,7 @@ public void Cocainum_Activate(int client, char abilityName[255])
 	float pos[3], ang[3];
 	GetClientAbsOrigin(client, pos);
 	GetClientAbsAngles(client, ang);
-	int test = CFNPC(MODEL_NPC_TEST, GetRandomInt(0, 0) == 0 ? grabEnemyTeam(client) : TF2_GetClientTeam(client), 200, 200, _, 1.5, 0.0, NPC_Test, DOKMED, 0.5, pos, ang).Index;
+	int test = CFNPC(MODEL_NPC_TEST, GetRandomInt(0, 0) == 0 ? grabEnemyTeam(client) : TF2_GetClientTeam(client), 200, 200, _, 1.0, 0.0, NPC_Test, DOKMED, 0.5, pos, ang).Index;
 	CFNPC thisisdumb = view_as<CFNPC>(test);
 	thisisdumb.SetActivity("ACT_MP_RUN_MELEE");
 	thisisdumb.AddGesture("ACT_MP_ATTACK_STAND_MELEE");

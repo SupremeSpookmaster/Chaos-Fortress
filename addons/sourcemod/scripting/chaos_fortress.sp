@@ -38,7 +38,7 @@
 //		- The Gambler:
 //			- Begin work.
 //		- NPCs:
-//			- Fix headshots (this is done with TraceAttack, reverse-engineer that. Would likely be a good idea to let devs customize the headshot damage multiplier as well as whether or not the NPC can be headshot in the first place).
+//			- Finalize headshots.
 //			- Figure out how to customize the NPC's surfaceprop so it doesn't just sound like you're hitting metal when using melee.
 //			- Make NPCs bleed when hit. Allow devs to specify the sprite used for this bleed.
 //			- Add natives for basic attacks (should have generic melee, generic projectile, and generic bullets).

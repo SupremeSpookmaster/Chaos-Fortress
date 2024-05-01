@@ -29,6 +29,20 @@ ArrayList g_GibAttachments[2049];
 ArrayList g_AttachedModels[2049];
 ArrayList g_AttachedWeaponModels[2049];
 
+enum //hitgroup_t
+{
+	HITGROUP_GENERIC,
+	HITGROUP_HEAD,
+	HITGROUP_CHEST,
+	HITGROUP_STOMACH,
+	HITGROUP_LEFTARM,
+	HITGROUP_RIGHTARM,
+	HITGROUP_LEFTLEG,
+	HITGROUP_RIGHTLEG,
+	
+	NUM_HITGROUPS
+};
+
 void CFNPC_MapStart()
 {
 	for (int i = MaxClients + 1; i < 2049; i++)
@@ -237,7 +251,9 @@ void CFNPC_OnDestroy(int npc)
 
 	SDKUnhook(npc, SDKHook_OnTakeDamagePost, CFNPC_PostDamage);
 	SDKUnhook(npc, SDKHook_OnTakeDamage, CFNPC_OnDamage);
-	SDKUnhook(npc, SDKHook_ThinkPost, NpcBaseThinkPost);
+	SDKUnhook(npc, SDKHook_ThinkPost, CFNPC_ThinkPost);
+	SDKUnhook(npc, SDKHook_Think, CFNPC_Think);
+	SDKUnhook(npc, SDKHook_TraceAttack, CFNPC_TraceAttack);
 
 	CFNPC dead = view_as<CFNPC>(npc);
 	if(dead.GetPathFollower().IsValid())
@@ -338,8 +354,9 @@ public int Native_CFNPCConstructor(Handle plugin, int numParams)
 
 		SDKHook(ent, SDKHook_OnTakeDamagePost, CFNPC_PostDamage);
 		SDKHook(ent, SDKHook_OnTakeDamage, CFNPC_OnDamage);
-		SDKHook(ent, SDKHook_Think, NpcBaseThink);
-		SDKHook(ent, SDKHook_ThinkPost, NpcBaseThinkPost);
+		SDKHook(ent, SDKHook_Think, CFNPC_Think);
+		SDKHook(ent, SDKHook_ThinkPost, CFNPC_ThinkPost);
+		SDKHook(ent, SDKHook_TraceAttack, CFNPC_TraceAttack);
 
 		return ent;
 	}
@@ -347,7 +364,94 @@ public int Native_CFNPCConstructor(Handle plugin, int numParams)
 	return -1;
 }
 
-public void NpcBaseThink(int iNPC)
+public Action CFNPC_TraceAttack(int victim, int& attacker, int& inflictor, float& damage, int& damagetype, int& ammotype, int hitbox, int hitgroup)
+{
+	if (!IsValidEntity(inflictor) || !IsValidClient(attacker))
+		return Plugin_Continue;
+
+	int weapon;
+	if (HasEntProp(inflictor, Prop_Send, "m_hOriginalLauncher"))	//Get the projectile's weapon.
+		weapon = GetEntPropEnt(inflictor, Prop_Send, "m_hOriginalLauncher");
+	else
+		weapon = GetEntPropEnt(attacker, Prop_Send, "m_hActiveWeapon");	//Get the player's active weapon since the attack was hitscan.
+
+	char classname[255];
+	GetEntityClassname(inflictor, classname, sizeof(classname));
+	
+	bool AllowHeadshot = true;
+	if (IsValidEntity(weapon))
+	{
+		//Attribute 42: No Headshots
+		AllowHeadshot = GetAttributeValue(weapon, 42, 0.0) == 0.0;
+
+		//Attribute 306: Only Headshot at Full Charge
+		if (AllowHeadshot && GetAttributeValue(weapon, 306, 0.0) != 0.0 && HasEntProp(weapon, Prop_Send, "m_flChargedDamage"))
+		{
+			AllowHeadshot = (GetEntPropFloat(weapon, Prop_Send, "m_flChargedDamage") / 150.0) >= 1.0;
+		}
+	}
+
+	bool CanHeadshot = false;
+	if (AllowHeadshot)
+	{
+		CanHeadshot = StrEqual(classname, "tf_projectile_arrow");	//TODO: Figure out why arrows aren't able to headshot.
+
+		if (!CanHeadshot && IsValidEntity(weapon))
+		{
+			//Attribute 51: Allow Headshots
+			CanHeadshot = GetAttributeValue(weapon, 51, 0.0) != 0.0
+
+			//Check if the weapon is a sniper rifle or bow with any charge.
+			if (!CanHeadshot && HasEntProp(weapon, Prop_Send, "m_flChargedDamage"))
+			{
+				char weaponName[255];
+				GetEntityClassname(weapon, weaponName, sizeof(weaponName));
+				if (StrContains(weaponName, "sniperrifle") != -1 || StrContains(weaponName, "compound_bow") != -1)
+				{
+					CanHeadshot = GetEntPropFloat(weapon, Prop_Send, "m_flChargedDamage") > 0.0;
+				}
+			}
+		}
+	}
+
+	//TODO: Add a forward to let devs decide whether or not any given attack should be a headshot.
+
+	if (hitgroup == HITGROUP_HEAD && CanHeadshot)
+	{
+		float mult = 3.0;
+		bool MiniCrit = false;
+
+		if (IsValidEntity(weapon))
+		{
+			//Attribute 869: Crits Become Mini-Crits
+			if (GetAttributeValue(weapon, 869, 0.0) != 0.0)
+			{
+				mult = 1.35;
+				MiniCrit = true;
+			}
+
+			//Attribute 390: Increased Headshot Damage
+			mult *= GetAttributeValue(weapon, 869, 1.0);
+		}
+
+		//TODO: Add a forward to let devs customize the headshot's damage multiplier
+
+		damage *= mult;
+
+		if (MiniCrit)
+			PlayMiniCritSound(attacker);
+		else
+			PlayCritSound(attacker);
+
+		//TODO: Crit particle
+
+		return Plugin_Changed;
+	}
+
+	return Plugin_Continue;
+}
+
+public void CFNPC_Think(int iNPC)
 {
 	CFNPC npc = view_as<CFNPC>(iNPC);
 
@@ -355,7 +459,7 @@ public void NpcBaseThink(int iNPC)
 	npc.GetBaseNPC().flWalkSpeed = npc.f_Speed;
 }
 
-public void NpcBaseThinkPost(int iNPC)
+public void CFNPC_ThinkPost(int iNPC)
 {
 	CBaseCombatCharacter(iNPC).SetNextThink(GetGameTime());
 	SetEntPropFloat(iNPC, Prop_Data, "m_flSimulationTime",GetGameTime());
