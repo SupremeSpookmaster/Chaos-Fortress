@@ -205,6 +205,11 @@ public void Cocainum_Activate(int client, char abilityName[255])
 	thisisdumb.AddGib(MODEL_NPC_TEST_GIB_5, "head");
 	thisisdumb.AddGib(MODEL_NPC_TEST_GIB_6, "eyes");
 	thisisdumb.AddGib(MODEL_NPC_TEST_GIB_7, "partyhat");
+
+	thisisdumb.AttachModel("models/weapons/c_models/c_machete/c_machete_festivizer.mdl", "weapon_bone", _, _, _, _, true);
+	thisisdumb.AttachModel("models/weapons/c_models/c_machete/c_machete.mdl", "weapon_bone", _, _, _, _, true);
+	thisisdumb.AttachModel("models/player/items/sniper/xms_sniper_sweater_vest.mdl");
+	thisisdumb.AttachModel("models/workshop/player/items/sniper/xms2013_sniper_layer_vest/xms2013_sniper_layer_vest.mdl");
 }
 
 public void NPC_Test(int npc)

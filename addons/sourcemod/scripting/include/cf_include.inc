@@ -266,6 +266,7 @@ methodmap CFNPC < CBaseCombatCharacter
 	 * 
 	 * @param model			The model to attach.
 	 * @param attachment	The bone to attach to.
+	 * @param sequence		Optional sequence to apply to the model.
 	 * @param skin			The skin to use. Set to -1 to automatically set the skin based on the CFNPC's team.
 	 * @param scale			The model's scale.
 	 * @param bonemerge		If true, bonemerges the model to the CFNPC (useful for cosmetics). Note that this will bypass "attachment".
@@ -273,7 +274,15 @@ methodmap CFNPC < CBaseCombatCharacter
 	 * 
 	 * @return	The entity index of the attached model.
 	 */
-	public native int AttachModel(char[] model, char[] attachment, int skin = -1, float scale = 1.0, bool bonemerge = true, bool weapon = false);
+	public native int AttachModel(char[] model, char[] attachment = "", char[] sequence = "", int skin = -1, float scale = 1.0, bool bonemerge = true, bool weapon = false);
+
+	/**
+	 * Removes all specified models attached via CFNPC.AttachModel.
+	 * 
+	 * @param cosmetics		Set to true to remove models classified as cosmetics.
+	 * @param weapons		Set to true to remove models classified as weapons.
+	 */
+	public native void RemoveAttachments(bool cosmetics = true, bool weapons = true);
 
 	property int Index
 	{
@@ -313,6 +322,18 @@ methodmap CFNPC < CBaseCombatCharacter
 	{
 		public native get();
 		public native set(TFTeam value);
+	}
+
+	property ArrayList g_AttachedCosmetics
+	{
+		public native get();
+		public native set(ArrayList value);
+	}
+
+	property ArrayList g_AttachedWeapons
+	{
+		public native get();
+		public native set(ArrayList value);
 	}
 
 	property int i_Skin

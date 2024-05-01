@@ -26,6 +26,8 @@ PathFollower g_PathFollowers[2049];
 
 ArrayList g_Gibs[2049];
 ArrayList g_GibAttachments[2049];
+ArrayList g_AttachedModels[2049];
+ArrayList g_AttachedWeaponModels[2049];
 
 void CFNPC_MapStart()
 {
@@ -42,6 +44,8 @@ void CFNPC_MapEnd()
 
 		delete g_Gibs[i];
 		delete g_GibAttachments[i];
+		delete g_AttachedModels[i];
+		delete g_AttachedWeaponModels[i];
 	}
 }
 
@@ -196,6 +200,11 @@ void CFNPC_MakeNatives()
 
 	//Attachments:
 	CreateNative("CFNPC.AttachModel", Native_CFNPCAttachModel);
+	CreateNative("CFNPC.g_AttachedCosmetics.get", Native_CFNPCGetAttachedCosmetics);
+	CreateNative("CFNPC.g_AttachedCosmetics.set", Native_CFNPCSetAttachedCosmetics);
+	CreateNative("CFNPC.g_AttachedWeapons.get", Native_CFNPCGetAttachedWeapons);
+	CreateNative("CFNPC.g_AttachedWeapons.set", Native_CFNPCSetAttachedWeapons);
+	CreateNative("CFNPC.RemoveAttachments", Native_CFNPCRemoveAttachments);
 }
 
 void CFNPC_OnCreate(int npc)
@@ -241,6 +250,8 @@ void CFNPC_OnDestroy(int npc)
 
 	delete g_Gibs[npc];
 	delete g_GibAttachments[npc];
+	delete g_AttachedModels[npc];
+	delete g_AttachedWeaponModels[npc];
 
 	dead.b_Exists = false;
 }
@@ -916,19 +927,88 @@ public int Native_CFNPCAttachModel(Handle plugin, int numParams)
 	int ent = GetNativeCell(1);
 	CFNPC npc = view_as<CFNPC>(ent);
 
-	char model[255], attachment[255];
+	char model[255], attachment[255], sequence[255];
 	GetNativeString(2, model, sizeof(model));
 	if (!CheckFile(model))
 		return -1;
 	PrecacheModel(model);
 
 	GetNativeString(3, attachment, sizeof(attachment));
-	int skin = GetNativeCell(4);
-	float scale = GetNativeCell(5);
-	bool bonemerge = GetNativeCell(6);
-	bool weapon = GetNativeCell(7);
+	GetNativeString(4, sequence, sizeof(sequence));
+	int skin = GetNativeCell(5);
+	float scale = GetNativeCell(6);
+	bool bonemerge = GetNativeCell(7);
+	bool weapon = GetNativeCell(8);
 
+	int item = CreateEntityByName("prop_dynamic_override");
+	if(!IsValidEntity(item))	//Infinitely loop this if it fails to spawn, because apparently TF2 has a very small reason to fail to spawn props.
+	{
+		return npc.AttachModel(model, attachment, sequence, skin, scale, bonemerge, weapon);
+	}
+
+	DispatchKeyValue(item, "model", model);
+
+	if(scale == 1.0)
+	{
+		DispatchKeyValueFloat(item, "modelscale", GetEntPropFloat(ent, Prop_Send, "m_flModelScale"));
+	}
+	else
+	{
+		DispatchKeyValueFloat(item, "modelscale", scale);
+	}
+
+	DispatchSpawn(item);
+	if (bonemerge)
+		SetEntProp(item, Prop_Send, "m_fEffects", EF_BONEMERGE|EF_PARENT_ANIMATES);
+
+	SetEntityMoveType(item, MOVETYPE_NONE);
+	SetEntProp(item, Prop_Data, "m_nNextThinkTick", -1.0);
 	
+	if(!StrEqual(sequence, ""))
+	{
+		SetVariantString(sequence);
+		AcceptEntityInput(item, "SetAnimation");
+	}
+
+	SetVariantString("!activator");
+	AcceptEntityInput(item, "SetParent", ent);
+
+	if(attachment[0])
+	{
+		SetVariantString(attachment);
+		AcceptEntityInput(item, "SetParentAttachmentMaintainOffset"); 
+	}	
+
+	if (skin < 0)
+	{
+		if (npc.i_Team == TFTeam_Red || npc.i_Team == TFTeam_Blue)
+			SetEntProp(item, Prop_Send, "m_nSkin", view_as<int>(npc.i_Team) - 2);
+		else
+			SetEntProp(item, Prop_Send, "m_nSkin", 0);
+	}
+	else
+	{
+		SetEntProp(item, Prop_Send, "m_nSkin", skin);
+	}
+
+	if (weapon)
+	{
+		if (npc.g_AttachedWeapons == null)
+			npc.g_AttachedWeapons = new ArrayList(255);
+
+		PushArrayCell(npc.g_AttachedWeapons, EntIndexToEntRef(item));
+	}
+	else
+	{
+		if (npc.g_AttachedCosmetics == null)
+			npc.g_AttachedCosmetics = new ArrayList(255);
+
+		PushArrayCell(npc.g_AttachedCosmetics, EntIndexToEntRef(item));
+	}
+		
+	PreventAllCollisions(item);
+
+	return item;
 }
 
 public void CFNPC_SpawnGib(char model[255], int skin, float pos[3], float ang[3], float vel[3])
@@ -1003,5 +1083,53 @@ public int Native_CFNPCPunchForce(Handle plugin, int numParams)
 
 public void SDKCall_Ragdoll(int entity, float vel[3])
 {
+	view_as<CFNPC>(entity).RemoveAttachments();
 	SDKCall(SDK_Ragdoll, entity, vel);
+}
+
+public any Native_CFNPCGetAttachedCosmetics(Handle plugin, int numParams) { return g_AttachedModels[GetNativeCell(1)]; }
+public int Native_CFNPCSetAttachedCosmetics(Handle plugin, int numParams)
+{
+	g_AttachedModels[GetNativeCell(1)] = GetNativeCell(2);
+
+	return 0;
+}
+
+public any Native_CFNPCGetAttachedWeapons(Handle plugin, int numParams) { return g_AttachedWeaponModels[GetNativeCell(1)]; }
+public int Native_CFNPCSetAttachedWeapons(Handle plugin, int numParams)
+{
+	g_AttachedWeaponModels[GetNativeCell(1)] = GetNativeCell(2);
+
+	return 0;
+}
+
+public int Native_CFNPCRemoveAttachments(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+
+	if (GetNativeCell(2) && npc.g_AttachedCosmetics != null)
+	{
+		for (int i = 0; i < GetArraySize(npc.g_AttachedCosmetics); i++)
+		{
+			int ent = EntRefToEntIndex(GetArrayCell(npc.g_AttachedCosmetics, i));
+			if (IsValidEntity(ent))
+				RemoveEntity(ent);
+		}
+
+		delete npc.g_AttachedCosmetics;
+	}
+
+	if (GetNativeCell(3))
+	{
+		for (int i = 0; i < GetArraySize(npc.g_AttachedWeapons); i++)
+		{
+			int ent = EntRefToEntIndex(GetArrayCell(npc.g_AttachedWeapons, i));
+			if (IsValidEntity(ent))
+				RemoveEntity(ent);
+		}
+
+		delete npc.g_AttachedWeapons;
+	}
+
+	return 0;
 }

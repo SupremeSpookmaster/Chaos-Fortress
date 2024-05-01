@@ -38,12 +38,20 @@
 //		- The Gambler:
 //			- Begin work.
 //		- NPCs:
-//			- Fix headshots.
+//			- Fix headshots (this is done with TraceAttack, reverse-engineer that. Would likely be a good idea to let devs customize the headshot damage multiplier as well as whether or not the NPC can be headshot in the first place).
+//			- Figure out how to customize the NPC's surfaceprop so it doesn't just sound like you're hitting metal when using melee.
+//			- Make NPCs bleed when hit. Allow devs to specify the sprite used for this bleed.
 //			- Add natives for basic attacks (should have generic melee, generic projectile, and generic bullets).
-//			- Fix collision (likely related to bounding box and lag comp).
-//			- Add attachments.
 //			- Add an option to make NPCs automatically enter their air/swim animations if airborne or in the water.
 //			- Add an option to make NPCs use the look_x and look_y pose parameters to automatically look towards their target destination.
+//			- NPC CFGs should function like FF2 boss CFGs, with sections for equipped models, name, etc. One of these sections should be called "functionality", where devs can add and tweak AI modifiers to control how the NPC behaves.
+//			- Make a few basic AI templates. These should be split into categories governing movement and combat.
+//				- Chaser (movement): chases the nearest player. Can be customized to specify the target's team as well as whether or not it will predict their movement.
+//				- Zoner (movement): runs away from players if they are too close, but will chase them if they are too far. Can be customized to specify the team to flee from/chase, as well as whether it turns away or strafes backwards when fleeing.
+//				- Brawler (combat): punches enemies who get too close. Should be customizable to set attack interval, damage, melee range, and melee width.
+//				- Gunner (combat): shoots enemies who are within a certain range. Should be customizable in the same way as Brawler, but also include options for spread, clip size, falloff, ramp-up, and reload time.
+//				- Barrager (combat): shoots enemies with projectiles. Should be customizable in the same way as gunner, but also include options for explosive projectiles.
+//			- Fix collision (likely related to bounding box and lag comp).
 //			- Migrate this entire thing to the Portable NPC System when it's ready, then add the Portable NPC System to the Chaos Fortress prerequisites. Allow server owners to configure the maximum number of active NPCs active at once, as well as how the plugin should deal with attempted spawns when the cap has been reached.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
