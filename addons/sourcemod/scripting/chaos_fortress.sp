@@ -39,7 +39,8 @@
 //			- Begin work.
 //		- NPCs:
 //			- Fix Huntsman headshots.
-//			- Figure out how to customize the NPC's surfaceprop so it doesn't just sound like you're hitting metal when using melee.
+//			- Make NPCs ignitable.
+//			- Make custom melee hitreg so it doesn't sound like you're hitting a wall every time you hit an NPC with melee.
 //			- Make NPCs bleed when hit. Allow devs to specify the sprite used for this bleed.
 //			- Add natives for basic attacks (should have generic melee, generic projectile, and generic bullets).
 //			- Add an option to make NPCs automatically enter their air/swim animations if airborne or in the water.
@@ -53,6 +54,7 @@
 //				- Barrager (combat): shoots enemies with projectiles. Should be customizable in the same way as gunner, but also include options for explosive projectiles.
 //			- Fix collision (likely related to bounding box and lag comp).
 //			- Migrate this entire thing to the Portable NPC System when it's ready, then add the Portable NPC System to the Chaos Fortress prerequisites. Allow server owners to configure the maximum number of active NPCs active at once, as well as how the plugin should deal with attempted spawns when the cap has been reached.
+//			- Some day down the road (not immediately), add the Fake Player Model system. Should actually be fairly easy to implement given all of the control we have over animations.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////

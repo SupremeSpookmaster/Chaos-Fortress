@@ -1,18 +1,27 @@
 #define NPC_NAME	"cf_base_npc"
 
+#define VFX_AFTERBURN_RED		"burningplayer_red"
+#define VFX_AFTERBURN_BLUE		"burningplayer_blue"
+#define VFX_AFTERBURN_HAUNTED	"halloween_burningplayer_flyingbits"
+
 Function CFNPC_Logic[2049] = { INVALID_FUNCTION, ... };
 Handle CFNPC_LogicPlugin[2049] = { null, ... };
 
 int i_TotalNPCs[2049] = { -1, ... };
+int i_AfterburnAttacker[2049] = { -1, ... };
 
 float CFNPC_Speed[2049] = { 0.0, ... };
 float CFNPC_ThinkRate[2049] = { 0.0, ... };
 float CFNPC_NextThinkTime[2049] = { 0.0, ... };
 float CFNPC_EndTime[2049] = { 0.0, ... };
+float f_AfterburnEndTime[2049] = { 0.0, ... };
+float f_AfterburnDMG[2049] = { 0.0, ... };
+float f_NextBurn[2049] = { 0.0, ... };
 float f_PunchForce[2049][3];
 
 bool IExist[2049] = { false, ... };
 bool ForcedToGib[2049] = { false, ... };
+bool b_AfterburnHaunted[2049] = { false, ... };
 
 char CFNPC_Model[2049][255];
 
@@ -50,6 +59,12 @@ void CFNPC_MapStart()
 {
 	for (int i = MaxClients + 1; i < 2049; i++)
 		g_PathFollowers[i] = PathFollower(CFNPC_PathCost, Path_FilterIgnoreActors, Path_FilterOnlyActors);
+
+	PrecacheParticleEffect(VFX_AFTERBURN_RED);
+	PrecacheParticleEffect(VFX_AFTERBURN_BLUE);
+	PrecacheParticleEffect(VFX_AFTERBURN_HAUNTED);
+	PrecacheEffect("ParticleEffect");
+	PrecacheEffect("ParticleEffectStop");
 }
 
 void CFNPC_MapEnd()
@@ -225,6 +240,19 @@ void CFNPC_MakeNatives()
 	CreateNative("CFNPC.g_AttachedWeapons.get", Native_CFNPCGetAttachedWeapons);
 	CreateNative("CFNPC.g_AttachedWeapons.set", Native_CFNPCSetAttachedWeapons);
 	CreateNative("CFNPC.RemoveAttachments", Native_CFNPCRemoveAttachments);
+
+	//Afterburn:
+	CreateNative("CFNPC.b_Burning.get", Native_CFNPCGetBurning);
+	CreateNative("CFNPC.f_AfterburnEndTime.get", Native_CFNPCGetAfterburnEndTime);
+	CreateNative("CFNPC.f_AfterburnEndTime.set", Native_CFNPCSetAfterburnEndTime);
+	CreateNative("CFNPC.f_AfterburnDMG.get", Native_CFNPCGetAfterburnDMG);
+	CreateNative("CFNPC.f_AfterburnDMG.set", Native_CFNPCSetAfterburnDMG);
+	CreateNative("CFNPC.i_AfterburnAttacker.get", Native_CFNPCGetAfterburnAttacker);
+	CreateNative("CFNPC.i_AfterburnAttacker.set", Native_CFNPCSetAfterburnAttacker);
+	CreateNative("CFNPC.b_AfterburnIsHaunted.get", Native_CFNPCGetAfterburnHaunted);
+	CreateNative("CFNPC.b_AfterburnIsHaunted.set", Native_CFNPCSetAfterburnHaunted);
+	CreateNative("CFNPC.Ignite", Native_CFNPCIgnite);
+	CreateNative("CFNPC.Extinguish", Native_CFNPCExtinguish);
 }
 
 void CFNPC_OnCreate(int npc)
@@ -375,6 +403,8 @@ public Action CFNPC_TraceAttack(int victim, int& attacker, int& inflictor, float
 	if (!IsValidEntity(inflictor) || !IsValidClient(attacker))
 		return Plugin_Continue;
 
+	CFNPC npc = view_as<CFNPC>(victim);
+
 	int weapon;
 	if (HasEntProp(inflictor, Prop_Send, "m_hOriginalLauncher"))	//Get the projectile's weapon.
 		weapon = GetEntPropEnt(inflictor, Prop_Send, "m_hOriginalLauncher");
@@ -394,6 +424,47 @@ public Action CFNPC_TraceAttack(int victim, int& attacker, int& inflictor, float
 		if (AllowHeadshot && GetAttributeValue(weapon, 306, 0.0) != 0.0 && HasEntProp(weapon, Prop_Send, "m_flChargedDamage"))
 		{
 			AllowHeadshot = (GetEntPropFloat(weapon, Prop_Send, "m_flChargedDamage") / 150.0) >= 1.0;
+		}
+
+		if (npc.b_Burning)
+		{
+			//Attributes 20 and 735: Crit VS Burning Targets
+			if (GetAttributeValue(weapon, 20, 0.0) != 0.0 || GetAttributeValue(weapon, 735, 0.0) != 0.0)
+				damagetype |= DMG_ACID;
+			else if (GetAttributeValue(weapon, 638, 0.0) != 0.0)	//Attribute 638: Mini-Crit Burning Targets From Front, Full-Crit From Back
+			{
+				//TODO: Check if in front or back, add crit or mini-crit accordingly
+			}
+
+			//Attribute 795: Damage Bonus VS Burning Targets
+			damage *= GetAttributeValue(weapon, 795, 1.0);
+
+			//Attribute 2063: Dragon's Fury Properties
+			if (GetAttributeValue(weapon, 2063, 0.0) != 0.0)
+			{
+				damage *= 3.0;
+				//TODO: Make next attack available faster
+			}
+
+			//Attribute 2067: Mini-Crit and Extinguish Burning Targets, Speed Boost on Kill
+			if (GetAttributeValue(weapon, 2067, 0.0) != 0.0)
+			{
+				//TODO: Force mini-crit, also grant speed boost if the damage ends up being lethal
+				npc.Extinguish();
+			}
+		}
+		else
+		{
+			//Attribute 21: Damage Penalty VS Non-Burning Targets
+			damage *= GetAttributeValue(weapon, 21, 1.0);
+
+			//Attribute 22: No Crits VS Non-Burning Targets
+			if (GetAttributeValue(weapon, 22, 0.0) != 0.0)
+				damagetype &= ~DMG_ACID;
+
+			//Attribute 408: Crit VS Non-Burning Targets
+			if (GetAttributeValue(weapon, 408, 0.0) != 0.0)
+				damagetype |= DMG_ACID;
 		}
 	}
 
@@ -461,12 +532,11 @@ public Action CFNPC_TraceAttack(int victim, int& attacker, int& inflictor, float
 				PlayCritSound(attacker);
 
 			CFNPC_SpawnCritParticle(view_as<CFNPC>(victim), MiniCrit);
-
-			return Plugin_Changed;
+			//TODO: Move crit particle and sounds to PostDamage
 		}
 	}
 
-	return Plugin_Continue;
+	return Plugin_Changed;
 }
 
 public void CFNPC_SpawnCritParticle(CFNPC victim, bool MiniCrit)
@@ -581,9 +651,79 @@ public void CFNPC_PostDamage(int victim, int attacker, int inflictor, float dama
 		event.Fire();
 	}
 
+	CFNPC_AttemptIgnite(victim, attacker, inflictor, weapon);
+
 	if (view_as<CFNPC>(victim).i_Health < 1)
 	{
 		CFNPC_OnKilled(victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition);
+	}
+}
+
+public void CFNPC_AttemptIgnite(int victim, int attacker, int inflictor, int weapon)
+{
+	CFNPC npc = view_as<CFNPC>(victim);
+	bool burn = false;
+	float burnTime = 0.0;
+	float minBurnTime = 0.0;
+	float maxBurnTime = 0.0;
+	float burnDMG = 0.0;
+	bool haunted = false;
+
+	char classname[255];
+	if (IsValidEntity(weapon))
+	{
+		//Attributes 73, 74, 828, and 829 all affect afterburn duration.
+		float timeMult = (GetAttributeValue(weapon, 73, 1.0) * GetAttributeValue(weapon, 74, 1.0) * GetAttributeValue(weapon, 828, 1.0) * GetAttributeValue(weapon, 829, 1.0));
+		//Attributes 71 and 72 both affect afterburn damage.
+		float dmgMult = (GetAttributeValue(weapon, 71, 1.0) * GetAttributeValue(weapon, 72, 1.0));
+
+		GetEntityClassname(weapon, classname, sizeof(classname));
+		if (StrEqual(classname, "tf_weapon_flamethrower"))
+		{
+			minBurnTime = 4.0 * timeMult;
+			maxBurnTime = 10.0 * timeMult;
+			burnTime = 0.4 * timeMult;
+			burn = true;
+		}
+		else if (StrEqual(classname, "tf_weapon_rocketlauncher_fireball"))
+		{
+			minBurnTime = 2.5 * timeMult;
+			maxBurnTime = 2.5 * timeMult;
+			burnTime = 2.5 * timeMult;
+			burn = true;
+		}
+		else if (StrContains(classname, "flaregun") != -1)
+		{
+			burnTime = 7.5 * timeMult;
+			minBurnTime = burnTime;
+			maxBurnTime = burnTime;
+			burn = true;
+		}
+		else if (GetAttributeValue(weapon, 208, 0.0) != 0.0)
+		{
+			burnTime = GetAttributeValue(weapon, 208, 0.0) * timeMult;
+			minBurnTime = burnTime;
+			maxBurnTime = burnTime;
+			burn = true;
+		}
+
+		burnDMG = 4.0 * dmgMult;
+		haunted = GetAttributeValue(weapon, 1008, 0.0) != 0.0;
+	}
+	else if (IsValidEntity(inflictor))
+	{
+		GetEntityClassname(inflictor, classname, sizeof(classname));
+		if (StrContains(classname, "tf_projectile_flare") != -1)
+		{
+			burnTime = 7.5;
+			burn = true;
+			burnDMG = 4.0;
+		}
+	}
+
+	if (burn)
+	{
+		npc.Ignite(burnTime, minBurnTime, maxBurnTime, burnDMG, haunted, attacker);
 	}
 }
 
@@ -643,6 +783,27 @@ public void CFNPC_InternalLogic(int ref)
 	}
 
 	float groundSpeed = npc.GetGroundSpeed();
+
+	if (npc.b_Burning)
+	{
+		if (gt >= f_NextBurn[npc.Index])
+		{
+			SDKHooks_TakeDamage(npc.Index, npc.i_AfterburnAttacker, npc.i_AfterburnAttacker, npc.f_AfterburnDMG, DMG_BURN, _, _, _, false);
+			CPrintToChatAll("REMAINING AFTERBURN: %.2f", npc.f_AfterburnEndTime - gt);
+			if (gt + 0.5 > npc.f_AfterburnEndTime)
+			{
+				npc.Extinguish();
+			}
+			else
+			{
+				f_NextBurn[npc.Index] = gt + 0.5;
+				if (npc.b_AfterburnIsHaunted)
+				{
+					AttachParticle_TE(npc.Index, VFX_AFTERBURN_HAUNTED);
+				}
+			}
+		}
+	}
 
 	if (groundSpeed < 0.01)
 	{
@@ -1291,4 +1452,156 @@ public int Native_CFNPCRemoveAttachments(Handle plugin, int numParams)
 	}
 
 	return 0;
+}
+
+public any Native_CFNPCGetAfterburnEndTime(Handle plugin, int numParams) { return f_AfterburnEndTime[GetNativeCell(1)]; }
+public int Native_CFNPCSetAfterburnEndTime(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	float endTime = GetNativeCell(2);
+
+	if (endTime > GetGameTime())
+	{
+		if (!npc.b_Burning)
+		{
+			f_NextBurn[npc.Index] = GetGameTime() + 0.5;
+
+			if (npc.b_AfterburnIsHaunted)
+				AttachParticle_TE(npc.Index, VFX_AFTERBURN_HAUNTED);
+			else
+				AttachParticle_TE(npc.Index, npc.i_Team == TFTeam_Red ? VFX_AFTERBURN_RED : VFX_AFTERBURN_BLUE);
+
+			CPrintToChatAll("DEBUG: Adding burn VFX");
+		}
+
+		f_AfterburnEndTime[npc.Index] = endTime;
+	}
+	else
+	{
+		if (npc.b_Burning)
+		{
+			f_NextBurn[npc.Index] = 0.0;
+			
+			if (npc.b_AfterburnIsHaunted)
+				RemoveParticle_TE(npc.Index, VFX_AFTERBURN_HAUNTED);
+			else
+				RemoveParticle_TE(npc.Index, npc.i_Team == TFTeam_Red ? VFX_AFTERBURN_RED : VFX_AFTERBURN_BLUE);
+
+			CPrintToChatAll("DEBUG: Removing burn VFX");
+		}
+
+		f_AfterburnEndTime[npc.Index] = 0.0;
+	}
+
+	return 0;
+}
+
+public any Native_CFNPCGetBurning(Handle plugin, int numParams) { return f_AfterburnEndTime[GetNativeCell(1)] >= GetGameTime(); }
+
+public any Native_CFNPCGetAfterburnDMG(Handle plugin, int numParams) { return f_AfterburnDMG[GetNativeCell(1)]; }
+public int Native_CFNPCSetAfterburnDMG(Handle plugin, int numParams) { f_AfterburnDMG[GetNativeCell(1)] = GetNativeCell(2); return 0; }
+
+public int Native_CFNPCGetAfterburnAttacker(Handle plugin, int numParams) { return GetClientOfUserId(i_AfterburnAttacker[GetNativeCell(1)]); }
+public int Native_CFNPCSetAfterburnAttacker(Handle plugin, int numParams)
+{ 
+	int client = GetNativeCell(2);
+	if (!IsValidClient(client))
+		i_AfterburnAttacker[GetNativeCell(1)] = -1;
+	else
+		i_AfterburnAttacker[GetNativeCell(1)] = GetClientUserId(client);
+
+	return 0;
+}
+
+public any Native_CFNPCGetAfterburnHaunted(Handle plugin, int numParams) { return b_AfterburnHaunted[GetNativeCell(1)]; }
+public int Native_CFNPCSetAfterburnHaunted(Handle plugin, int numParams)
+{ 
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+
+	if (npc.b_AfterburnIsHaunted)
+		RemoveParticle_TE(npc.Index, VFX_AFTERBURN_HAUNTED);
+	else
+		RemoveParticle_TE(npc.Index, npc.i_Team == TFTeam_Red ? VFX_AFTERBURN_RED : VFX_AFTERBURN_BLUE);
+
+	b_AfterburnHaunted[npc.Index] = GetNativeCell(2);
+
+	if (npc.b_Burning)
+	{
+		if (npc.b_AfterburnIsHaunted)
+			AttachParticle_TE(npc.Index, VFX_AFTERBURN_HAUNTED);
+		else
+			AttachParticle_TE(npc.Index, npc.i_Team == TFTeam_Red ? VFX_AFTERBURN_RED : VFX_AFTERBURN_BLUE);
+	}
+
+	return 0;
+}
+
+public any Native_CFNPCIgnite(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+
+	float burnTime = GetNativeCell(2);
+	float minBurnTime = GetNativeCell(3);
+	float maxBurnTime = GetNativeCell(4);
+	float burnDMG = GetNativeCell(5);
+	bool haunted = GetNativeCell(6);
+	int attacker = GetNativeCell(7);
+
+	float gt = GetGameTime();
+
+	if (npc.b_Burning)
+	{
+		float current = npc.f_AfterburnEndTime - gt;
+		if (current < maxBurnTime && maxBurnTime > 0.0)
+		{
+			current += burnTime;
+			if (current > maxBurnTime)
+			{
+				burnTime = current - maxBurnTime;
+			}
+		}
+		else if (current + burnTime < minBurnTime)
+		{
+			burnTime = (minBurnTime - current);
+		}
+	}
+	else if (burnTime < minBurnTime)
+	{
+		burnTime = minBurnTime;
+	}
+
+	//TODO: Call forward to allow devs to block the afterburn or modify values.
+		
+	npc.f_AfterburnEndTime = gt + burnTime;
+	npc.i_AfterburnAttacker = attacker;
+	npc.b_AfterburnIsHaunted = haunted;
+	npc.f_AfterburnDMG = burnDMG;
+
+	return true;
+}
+
+public any Native_CFNPCExtinguish(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+
+	bool result = true;
+	//TODO: Call forward to allow devs to prevent extinguishes from happening
+
+	if (result)
+	{
+		npc.f_AfterburnEndTime = 0.0;
+		npc.b_AfterburnIsHaunted = false;
+		npc.i_AfterburnAttacker = 0;
+		npc.f_AfterburnDMG = 0.0;
+	}
+	else
+	{
+		float gt = GetGameTime();
+		if (npc.f_AfterburnEndTime - gt < 0.5)
+		{
+			npc.f_AfterburnEndTime = gt + 0.5;
+		}
+	}
+
+	return result;
 }

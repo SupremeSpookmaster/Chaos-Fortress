@@ -56,6 +56,19 @@ enum ViewmodelSequence
 	VMS_Jarate_Throw
 };
 
+enum ParticleAttachment_t {
+	PATTACH_ABSORIGIN = 0,
+	PATTACH_ABSORIGIN_FOLLOW,
+	PATTACH_CUSTOMORIGIN,
+	PATTACH_POINT,
+	PATTACH_POINT_FOLLOW,
+	PATTACH_WORLDORIGIN,
+	PATTACH_ROOTBONE_FOLLOW
+};
+
+#define PARTICLE_DISPATCH_FROM_ENTITY		(1<<0)
+#define PARTICLE_DISPATCH_RESET_PARTICLES	(1<<1)
+
 stock float ApproachAngle(float target, float value, float speed)
 {
 	target = anglemod(target);
@@ -2001,6 +2014,111 @@ public void PlayMiniCritSound(int client)
 			EmitSoundToClient(client, MINICRIT5);
 		}
 	}
+}
+
+stock void AttachParticle_TE(int entity, char particle[255])
+{
+	TE_SetupParticleEffect(particle, PATTACH_ABSORIGIN_FOLLOW, entity);
+	TE_WriteNum("m_bControlPoint1", entity);	
+	TE_SendToAll();
+}
+
+stock void RemoveParticle_TE(int entity, char particle[255])
+{
+	TE_Start("EffectDispatch");
+	TE_WriteNum("entindex", entity);
+	TE_WriteNum("m_nHitBox", GetParticleEffectIndex(particle));
+	TE_WriteNum("m_iEffectName", GetEffectIndex("ParticleEffectStop"));
+	TE_SendToAll();
+}
+
+stock PrecacheEffect(const String:sEffectName[])
+{
+	static table = INVALID_STRING_TABLE;
+	
+	if (table == INVALID_STRING_TABLE)
+	{
+		table = FindStringTable("EffectDispatch");
+	}
+	
+	new bool:save = LockStringTables(false);
+	AddToStringTable(table, sEffectName);
+	LockStringTables(save);
+}
+
+stock PrecacheParticleEffect(const String:sEffectName[])
+{
+	static table = INVALID_STRING_TABLE;
+	
+	if (table == INVALID_STRING_TABLE)
+	{
+		table = FindStringTable("ParticleEffectNames");
+	}
+	
+	new bool:save = LockStringTables(false);
+	AddToStringTable(table, sEffectName);
+	LockStringTables(save);
+}
+
+stock TE_SetupParticleEffect(const String:sParticleName[], ParticleAttachment_t:iAttachType, entity)//, const Float:fOrigin[3] = NULL_VECTOR, const Float:fAngles[3] = NULL_VECTOR, const Float:fStart[3] = NULL_VECTOR, iAttachmentPoint = -1, bool:bResetAllParticlesOnEntity = false)
+{
+	TE_Start("EffectDispatch");
+	
+	TE_WriteNum("m_nHitBox", GetParticleEffectIndex(sParticleName));
+	
+	new fFlags;
+	if(entity > 0)
+	{
+		new Float:fEntityOrigin[3];
+		GetEntPropVector(entity, Prop_Data, "m_vecOrigin", fEntityOrigin);
+		TE_WriteFloatArray("m_vOrigin[0]", fEntityOrigin, 3);
+
+		if(iAttachType != PATTACH_WORLDORIGIN)
+		{
+			TE_WriteNum("entindex", entity);
+			fFlags |= PARTICLE_DISPATCH_FROM_ENTITY;
+		}
+	}
+	
+	TE_WriteNum("m_fFlags", fFlags);
+	TE_WriteNum("m_nDamageType", _:iAttachType);
+	TE_WriteNum("m_nAttachmentIndex", -1);
+	
+	TE_WriteNum("m_iEffectName", GetEffectIndex("ParticleEffect"));
+}
+
+stock int GetParticleEffectIndex(const char[] sEffectName)
+{
+	static int table = INVALID_STRING_TABLE;
+	
+	if (table == INVALID_STRING_TABLE)
+	{
+		table = FindStringTable("ParticleEffectNames");
+	}
+	
+	int iIndex = FindStringIndex(table, sEffectName);
+	if(iIndex != INVALID_STRING_INDEX)
+		return iIndex;
+	
+	// This is the invalid string index
+	return 0;
+}
+
+stock int GetEffectIndex(const char[] sEffectName)
+{
+	static int table = INVALID_STRING_TABLE;
+	
+	if (table == INVALID_STRING_TABLE)
+	{
+		table = FindStringTable("EffectDispatch");
+	}
+	
+	int iIndex = FindStringIndex(table, sEffectName);
+	if(iIndex != INVALID_STRING_INDEX)
+		return iIndex;
+	
+	// This is the invalid string index
+	return 0;
 }
 
 /**

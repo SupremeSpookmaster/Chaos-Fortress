@@ -284,6 +284,30 @@ methodmap CFNPC < CBaseCombatCharacter
 	 */
 	public native void RemoveAttachments(bool cosmetics = true, bool weapons = true);
 
+	/**
+	 * Ignites the CFNPC.
+	 * 
+	 * @param duration		The time to extend the CFNPC's remaining afterburn duration.
+	 * @param minDuration	If the CFNPC's total afterburn duration would be shorter than this value after adding the specified duration, set the afterburn duration to this value.
+	 * 						EX: If the CFNPC's remaining afterburn duration is 2 seconds and the duration parameter is 4 seconds, the CFNPC's afterburn duration will be 6 seconds.
+	 * 						If we set minDuration to 8 seconds, the CFNPC will instead be set to burn for 8 seconds, because 6 seconds is shorter than the minimum duration.
+	 * @param maxDuration	The same as minDuration, but caps the afterburn duration instead. This does nothing if the CFNPC's remaining afterburn duration is already higher than this value.
+	 * 						If <= 0.0: there is no cap to afterburn duration.
+	 * @param damage		The damage dealt per tick by afterburn.
+	 * @param haunted		If true: the Spectral Flame Halloween spell effect will be used as the afterburn particle.
+	 * @param attacker		The entity which will be credited for damage dealt by the afterburn.
+	 * 
+	 * @return 	True if the CFNPC was successfully ignited, false if something prevented it.
+	 */
+	public native bool Ignite(float duration, float minDuration = 0.0, float maxDuration = 0.0, float damage = 4.0, bool haunted = false, int attacker = 0);
+
+	/**
+	 * Extinguishes the CFNPC's afterburn.
+	 * 
+	 * @return	True if the CFNPC was successfully extinguished, false otherwise.
+	 */
+	public native bool Extinguish();
+
 	property int Index
 	{
 		public native get();
@@ -302,6 +326,17 @@ methodmap CFNPC < CBaseCombatCharacter
 	}
 
 	property bool b_GibsForced
+	{
+		public native get();
+		public native set(bool value);
+	}
+
+	property bool b_Burning
+	{
+		public native get();
+	}
+
+	property bool b_AfterburnIsHaunted
 	{
 		public native get();
 		public native set(bool value);
@@ -364,6 +399,12 @@ methodmap CFNPC < CBaseCombatCharacter
 		public native get();
 	}
 
+	property int i_AfterburnAttacker
+	{
+		public native get();
+		public native set(int value);
+	}
+
 	property float f_Scale
 	{
 		public native get();
@@ -389,6 +430,18 @@ methodmap CFNPC < CBaseCombatCharacter
 	}
 
 	property float f_EndTime
+	{
+		public native get();
+		public native set(float value);
+	}
+
+	property float f_AfterburnEndTime
+	{
+		public native get();
+		public native set(float value);
+	}
+
+	property float f_AfterburnDMG
 	{
 		public native get();
 		public native set(float value);
