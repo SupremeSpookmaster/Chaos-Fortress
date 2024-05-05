@@ -29,6 +29,7 @@ This game mode is currently incompatible with 64-bit servers. Not much I can do 
 - **[SteamWorks](https://forums.alliedmods.net/showthread.php?t=229556)**
 - **[TF2 Custom Attributes](https://forums.alliedmods.net/showthread.php?p=2703773)**
 - **[Fake Particle System](https://github.com/SupremeSpookmaster/Fake-Particle-System)** - Note that you will need to use the version of `data/fake_particle_system/fakeparticles.cfg` which comes packaged with ***Chaos Fortress***, and not the version included in the release build of the Fake Particle System.
+- **[Portable NPC System](https://github.com/SupremeSpookmaster/TF2-Portable-NPC-System)** - Again, note that you will need to use the version of `data/pnpc/npcs.cfg` which comes packaged with ***Chaos Fortress***, and not the version included in the release build of the Portable NPC System.
 - **[TF2 World Text Helper](https://github.com/SupremeSpookmaster/TF2-World-Text-Helper)**
 - **[CBaseNPC](https://github.com/TF2-DMB/CBaseNPC)**
 - **RECOMMENDED: [TF2 Weaponmodel Override](https://github.com/Zabaniya001/TF2CA-weaponmodel_override)** - Not required to function, but is used by many default characters.
