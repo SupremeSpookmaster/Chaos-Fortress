@@ -9,17 +9,18 @@ This game mode is currently incompatible with 64-bit servers. Not much I can do 
 ## *Installation Guide:*
   1. Install all of the **[prerequisites](https://github.com/SupremeSpookmaster/Chaos-Fortress#prerequisites)**.
   2. Download the **latest release Installation Build. (LINK PENDING)**
-  3. Extract the zip file directly to your server's sourcemod folder.
+  3. Extract the zip file directly to your server's `tf` folder.
   4. ***Chaos Fortress*** should now be installed on your server!
   5. Configure the game mode to your heart's content. *(Optional)*
 
 ## *Update Guide*
   1. Download the **latest release Update Build. (LINK PENDING)**
-  2. Extract the zip file directly to your server's sourcemod folder.
-  3. ***Chaos Fortress*** should now be updated on your server!
+  2. Extract the zip file directly to your server's `tf` folder, not including `tf/addons/sourcemod/data/fake_particle_system/fakeparticles.cfg` or `tf/addons/sourcemod/data/pnpc/npcs.cfg`. See step 3 to see how to handle these files.
+  3. Some updates will include new characters, and some of these new characters may add new "fake particles" and/or NPCs. When this is the case, if you have made any edits to your server's `fakeparticles.cfg` or `npc.cfg` files, simply add the new data from the update build's CFGs to your versions. Otherwise, if you have not made any edits, you may simply overwrite your current versions of these files with the new versions.
+  4. ***Chaos Fortress*** should now be updated on your server!
 
 ## *Prerequisites:*
-- **[SourceMod 1.11+](https://www.sourcemod.net/downloads.php)**
+- **[SourceMod 1.12+](https://www.sourcemod.net/downloads.php)**
 - **[TF2Attributes 1.7.0+](https://github.com/FlaminSarge/tf2attributes)**
 - **[TF2Items](https://github.com/asherkin/TF2Items)**
 - **[TF2 Econ Data](https://github.com/nosoop/SM-TFEconData)**
@@ -29,11 +30,12 @@ This game mode is currently incompatible with 64-bit servers. Not much I can do 
 - **[SteamWorks](https://forums.alliedmods.net/showthread.php?t=229556)**
 - **[TF2 Custom Attributes](https://forums.alliedmods.net/showthread.php?p=2703773)**
 - **[Fake Particle System](https://github.com/SupremeSpookmaster/Fake-Particle-System)** - Note that you will need to use the version of `data/fake_particle_system/fakeparticles.cfg` which comes packaged with ***Chaos Fortress***, and not the version included in the release build of the Fake Particle System.
+- **[Portable NPC System](https://github.com/SupremeSpookmaster/TF2-Portable-NPC-System)** - Again, note that you will need to use the version of `data/pnpc/npcs.cfg` which comes packaged with ***Chaos Fortress***, and not the version included in the release build of the Portable NPC System.
 - **[TF2 World Text Helper](https://github.com/SupremeSpookmaster/TF2-World-Text-Helper)**
 - **[CBaseNPC](https://github.com/TF2-DMB/CBaseNPC)**
 - **RECOMMENDED: [TF2 Weaponmodel Override](https://github.com/Zabaniya001/TF2CA-weaponmodel_override)** - Not required to function, but is used by many default characters.
 - **RECOMMENDED: [TF2 Move Speed Unlocker](https://forums.alliedmods.net/showthread.php?p=2659562)** - Not required to function, but makes certain character techniques more fun.
-- **RECOMMENDED: [TF2 Edict Limiter](https://github.com/sapphonie/tf2-edict-limiter)** - Not required to function, but TF2 was never meant to handle some of the things these characters can do, so this plugin will help prevent some of the crashes that may cause.
+- **RECOMMENDED: [TF2 Edict Limiter](https://github.com/sapphonie/tf2-edict-limiter)** - Not required to function, and the "vanilla" build of ***Chaos Fortress*** (vanilla meaning straight from the installation build with no changes) should never cause edict limit crashes, but it's still better to be safe than sorry.
 - **RECOMMENDED: Enable Halloween Mode.** You can do this however you want, be it through a plugin or just setting the cvar, but I highly recommend you enable Halloween mode so that your characters can take full advantage of the built-in wearables system.
 
 ## *Making Custom Characters*
