@@ -16,7 +16,8 @@ This game mode is currently incompatible with 64-bit servers. Not much I can do 
 ## *Update Guide*
   1. Download the **latest release Update Build. (LINK PENDING)**
   2. Extract the zip file directly to your server's sourcemod folder.
-  3. ***Chaos Fortress*** should now be updated on your server!
+  3. Some updates will include new characters, and some of these new characters may add new "fake particles" or NPCs. When this is the case, if you have made any edits to your server's `fakeparticles.cfg` or `npc.cfg` files, simply add the new data from the update build's CFGs to your versions. Otherwise, if you have not made any edits, you may simply overwrite your current versions of these files with the new versions.
+  4. ***Chaos Fortress*** should now be updated on your server!
 
 ## *Prerequisites:*
 - **[SourceMod 1.11+](https://www.sourcemod.net/downloads.php)**
