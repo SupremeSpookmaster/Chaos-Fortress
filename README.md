@@ -35,7 +35,7 @@ This game mode is currently incompatible with 64-bit servers. Not much I can do 
 - **[CBaseNPC](https://github.com/TF2-DMB/CBaseNPC)**
 - **RECOMMENDED: [TF2 Weaponmodel Override](https://github.com/Zabaniya001/TF2CA-weaponmodel_override)** - Not required to function, but is used by many default characters.
 - **RECOMMENDED: [TF2 Move Speed Unlocker](https://forums.alliedmods.net/showthread.php?p=2659562)** - Not required to function, but makes certain character techniques more fun.
-- **RECOMMENDED: [TF2 Edict Limiter](https://github.com/sapphonie/tf2-edict-limiter)** - Not required to function, but TF2 was never meant to handle some of the things these characters can do, so this plugin will help prevent some of the crashes that may cause.
+- **RECOMMENDED: [TF2 Edict Limiter](https://github.com/sapphonie/tf2-edict-limiter)** - Not required to function, and the "vanilla" build of ***Chaos Fortress*** (vanilla meaning straight from the installation build with no changes) should never cause edict limit crashes, but it's still better to be safe than sorry.
 - **RECOMMENDED: Enable Halloween Mode.** You can do this however you want, be it through a plugin or just setting the cvar, but I highly recommend you enable Halloween mode so that your characters can take full advantage of the built-in wearables system.
 
 ## *Making Custom Characters*
