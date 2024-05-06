@@ -304,9 +304,11 @@ methodmap CFNPC < CBaseCombatCharacter
 	/**
 	 * Extinguishes the CFNPC's afterburn.
 	 * 
+	 * @param forced	If true, the return value of CF_OnCFNPCExtinguished is completely ignored, forcing the extinguish to go through no matter what.
+	 * 
 	 * @return	True if the CFNPC was successfully extinguished, false otherwise.
 	 */
-	public native bool Extinguish();
+	public native bool Extinguish(bool forced = false);
 
 	property int Index
 	{
@@ -521,6 +523,30 @@ forward Action CF_OnCFNPCTakeDamage(CFNPC npc, float &damage, int weapon, int in
  * @return	Plugin_Changed if you changed any values, Plugin_Handled or Plugin_Stop to prevent the CFNPC from dying, or Plugin_Continue to proceed as normal.
  */
 forward Action CF_OnCFNPCKilled(CFNPC npc, float damage, int weapon, int inflictor, int attacker, int &damagetype);
+
+/**
+ * Called when a CFNPC is extinguished via the CFNPC.Extinguish native.
+ * 
+ * @param npc			The CFNPC.
+ * 
+ * @return	False to prevent the extinguish, otherwise return true. Note that this value is ignored if the "forced" parameter of CFNPC.Extinguish was set to true.
+ */
+forward bool CF_OnCFNPCExtinguished(CFNPC npc);
+
+/**
+ * Called when a CFNPC is ignited.
+ * 
+ * @param npc		The CFNPC.
+ * @param burnTime	The duration of the burn.
+ * @param minBurnTime	If, after applying burnTime to the current afterburn duration, the final afterburn duration would be shorter than this value: set the final afterburn duration to this value.
+ * @param maxBurnTime	If, after applying burnTime to the current afterburn duration, the final afterburn duration would be longer than this value: set the final afterburn duration to this value. Does nothing if the afterburn duration is already longer than this.
+ * @param attacker	The entity which will be credited for the afterburn damage.
+ * @param haunted	If true, the afterburn particle will be set to Spectral Flames instead of the standard team-colored afterburn particle.
+ * @param burnDMG	Damage dealt per afterburn tick.
+ * 
+ * @param return Plugin_Changed if you changed any values, Plugin_Handled or Plugin_Stop to prevent the afterburn, or Plugin_Continue to do nothing.
+ */
+forward Action CF_OnCFNPCIgnited(CFNPC npc, float &burnTime, float &minBurnTime, float &maxBurnTime, int &attacker, bool &haunted, float &burnDMG);
 
 /**
  * Called when a character runs any command.

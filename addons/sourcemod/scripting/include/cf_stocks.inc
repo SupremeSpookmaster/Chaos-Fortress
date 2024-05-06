@@ -474,8 +474,7 @@ stock Handle getAimTrace(int client, TraceEntityFilter customTrace)
 	
 	//GAT_User = client;
 	
-	if (customTrace != Trace_OnlyHitWorld)
-		trace = TR_TraceRayFilterEx(eyePos, eyeAng, MASK_SHOT, RayType_Infinite, customTrace);
+	trace = TR_TraceRayFilterEx(eyePos, eyeAng, MASK_SHOT, RayType_Infinite, customTrace);
 	
 	return trace;
 }
@@ -1574,6 +1573,69 @@ stock float GetAttributeValue(int entity, int attribute, float defaultVal)
 		return defaultVal;
 		
 	return TF2Attrib_GetValue(addy);
+}
+
+//Thanks, Artvin:
+stock float[] GetWorldSpaceCenter(int client)
+{
+	float v[3]; v = GetAbsOrigin(client);
+	
+	float max_space[3];
+	GetEntPropVector(client, Prop_Data, "m_vecMaxs", max_space);
+	v[2] += max_space[2] / 2;
+	
+	return v;
+}
+
+stock float[] GetAbsOrigin(int client)
+{
+	float v[3];
+	GetEntPropVector(client, Prop_Data, "m_vecAbsOrigin", v);
+	return v;
+}
+
+stock float[] GetOrigin(int client)
+{
+	float v[3];
+	GetEntPropVector(client, Prop_Data, "m_vecOrigin", v);
+	return v;
+}
+
+stock bool IsBehindAndFacingTarget(int owner, int target)
+{
+	float vecToTarget[3];
+	SubtractVectors(GetWorldSpaceCenter(target), GetWorldSpaceCenter(owner), vecToTarget);
+
+	vecToTarget[2] = 0.0;
+	NormalizeVector(vecToTarget, vecToTarget);
+	
+	float vecEyeAngles[3];
+	
+	if(owner <= MaxClients)
+		GetClientEyeAngles(owner, vecEyeAngles);
+	else
+		GetEntPropVector(owner, Prop_Data, "m_angRotation", vecEyeAngles);
+		
+	float vecOwnerForward[3];
+	GetAngleVectors(vecEyeAngles, vecOwnerForward, NULL_VECTOR, NULL_VECTOR);
+	vecOwnerForward[2] = 0.0;
+	NormalizeVector(vecOwnerForward, vecOwnerForward);
+	
+	if(target <= MaxClients)
+		GetClientEyeAngles(target, vecEyeAngles);
+	else
+		GetEntPropVector(target, Prop_Data, "m_angRotation", vecEyeAngles);
+
+	float vecTargetForward[3];
+	GetAngleVectors(vecEyeAngles, vecTargetForward, NULL_VECTOR, NULL_VECTOR);
+	vecTargetForward[2] = 0.0;
+	NormalizeVector(vecTargetForward, vecTargetForward);
+	
+	float flPosVsTargetViewDot = GetVectorDotProduct(vecToTarget, vecTargetForward);
+	float flPosVsOwnerViewDot = GetVectorDotProduct(vecToTarget, vecOwnerForward);
+	float flViewAnglesDot = GetVectorDotProduct(vecTargetForward, vecOwnerForward);
+	
+	return ( flPosVsTargetViewDot > 0.0 && flPosVsOwnerViewDot > 0.5 && flViewAnglesDot > -0.3 );
 }
 
 stock void WritePackFloatArray(DataPack pack, const float[] arr, int size)

@@ -22,6 +22,7 @@ float f_PunchForce[2049][3];
 bool IExist[2049] = { false, ... };
 bool ForcedToGib[2049] = { false, ... };
 bool b_AfterburnHaunted[2049] = { false, ... };
+bool b_MiniCrit[2049] = { false, ... };
 
 char CFNPC_Model[2049][255];
 
@@ -30,6 +31,8 @@ GlobalForward g_OnCFNPCDestroyed;
 GlobalForward g_OnCFNPCHeadshot;
 GlobalForward g_OnCFNPCDamaged;
 GlobalForward g_OnCFNPCKilled;
+GlobalForward g_OnCFNPCExtinguished;
+GlobalForward g_OnCFNPCIgnited;
 
 Handle g_hLookupActivity;
 Handle SDK_Ragdoll;
@@ -112,6 +115,8 @@ void CFNPC_MakeForwards()
 	g_OnCFNPCHeadshot = new GlobalForward("CF_OnCFNPCHeadshot", ET_Event, Param_Any, Param_Cell, Param_Cell, Param_Cell, Param_FloatByRef, Param_CellByRef);
 	g_OnCFNPCDamaged = new GlobalForward("CF_OnCFNPCTakeDamage", ET_Event, Param_Any, Param_FloatByRef, Param_Cell, Param_Cell, Param_Cell, Param_CellByRef, Param_CellByRef);
 	g_OnCFNPCKilled = new GlobalForward("CF_OnCFNPCKilled", ET_Event, Param_Any, Param_Float, Param_Cell, Param_Cell, Param_Cell, Param_CellByRef);
+	g_OnCFNPCExtinguished = new GlobalForward("CF_OnCFNPCExtinguished", ET_Single, Param_Any);
+	g_OnCFNPCIgnited = new GlobalForward("CF_OnCFNPCIgnited", ET_Event, Param_Any, Param_FloatByRef, Param_FloatByRef, Param_FloatByRef, Param_CellByRef, Param_CellByRef, Param_FloatByRef);
 
 	/*NextBotActionFactory AcFac = new NextBotActionFactory("CFNPCMainAction");
 	AcFac.SetEventCallback(EventResponderType_OnActorEmoted, PluginBot_OnActorEmoted);*/
@@ -403,17 +408,8 @@ public Action CFNPC_TraceAttack(int victim, int& attacker, int& inflictor, float
 	if (!IsValidEntity(inflictor) || !IsValidClient(attacker))
 		return Plugin_Continue;
 
-	CFNPC npc = view_as<CFNPC>(victim);
+	int weapon = GetEntPropEnt(attacker, Prop_Send, "m_hActiveWeapon");
 
-	int weapon;
-	if (HasEntProp(inflictor, Prop_Send, "m_hOriginalLauncher"))	//Get the projectile's weapon.
-		weapon = GetEntPropEnt(inflictor, Prop_Send, "m_hOriginalLauncher");
-	else
-		weapon = GetEntPropEnt(attacker, Prop_Send, "m_hActiveWeapon");	//Get the player's active weapon since the attack was hitscan.
-
-	char classname[255];
-	GetEntityClassname(inflictor, classname, sizeof(classname));
-	
 	bool AllowHeadshot = true;
 	if (IsValidEntity(weapon))
 	{
@@ -425,68 +421,22 @@ public Action CFNPC_TraceAttack(int victim, int& attacker, int& inflictor, float
 		{
 			AllowHeadshot = (GetEntPropFloat(weapon, Prop_Send, "m_flChargedDamage") / 150.0) >= 1.0;
 		}
-
-		if (npc.b_Burning)
-		{
-			//Attributes 20 and 735: Crit VS Burning Targets
-			if (GetAttributeValue(weapon, 20, 0.0) != 0.0 || GetAttributeValue(weapon, 735, 0.0) != 0.0)
-				damagetype |= DMG_ACID;
-			else if (GetAttributeValue(weapon, 638, 0.0) != 0.0)	//Attribute 638: Mini-Crit Burning Targets From Front, Full-Crit From Back
-			{
-				//TODO: Check if in front or back, add crit or mini-crit accordingly
-			}
-
-			//Attribute 795: Damage Bonus VS Burning Targets
-			damage *= GetAttributeValue(weapon, 795, 1.0);
-
-			//Attribute 2063: Dragon's Fury Properties
-			if (GetAttributeValue(weapon, 2063, 0.0) != 0.0)
-			{
-				damage *= 3.0;
-				//TODO: Make next attack available faster
-			}
-
-			//Attribute 2067: Mini-Crit and Extinguish Burning Targets, Speed Boost on Kill
-			if (GetAttributeValue(weapon, 2067, 0.0) != 0.0)
-			{
-				//TODO: Force mini-crit, also grant speed boost if the damage ends up being lethal
-				npc.Extinguish();
-			}
-		}
-		else
-		{
-			//Attribute 21: Damage Penalty VS Non-Burning Targets
-			damage *= GetAttributeValue(weapon, 21, 1.0);
-
-			//Attribute 22: No Crits VS Non-Burning Targets
-			if (GetAttributeValue(weapon, 22, 0.0) != 0.0)
-				damagetype &= ~DMG_ACID;
-
-			//Attribute 408: Crit VS Non-Burning Targets
-			if (GetAttributeValue(weapon, 408, 0.0) != 0.0)
-				damagetype |= DMG_ACID;
-		}
 	}
 
 	bool CanHeadshot = false;
-	if (AllowHeadshot)
+	if (AllowHeadshot && !CanHeadshot && IsValidEntity(weapon))
 	{
-		CanHeadshot = StrEqual(classname, "tf_projectile_arrow");	//TODO: Figure out why arrows aren't able to headshot.
+		//Attribute 51: Allow Headshots
+		CanHeadshot = GetAttributeValue(weapon, 51, 0.0) != 0.0
 
-		if (!CanHeadshot && IsValidEntity(weapon))
+		//Check if the weapon is a sniper rifle or bow with any charge.
+		if (!CanHeadshot && HasEntProp(weapon, Prop_Send, "m_flChargedDamage"))
 		{
-			//Attribute 51: Allow Headshots
-			CanHeadshot = GetAttributeValue(weapon, 51, 0.0) != 0.0
-
-			//Check if the weapon is a sniper rifle or bow with any charge.
-			if (!CanHeadshot && HasEntProp(weapon, Prop_Send, "m_flChargedDamage"))
+			char weaponName[255];
+			GetEntityClassname(weapon, weaponName, sizeof(weaponName));
+			if (StrContains(weaponName, "sniperrifle") != -1)
 			{
-				char weaponName[255];
-				GetEntityClassname(weapon, weaponName, sizeof(weaponName));
-				if (StrContains(weaponName, "sniperrifle") != -1 || StrContains(weaponName, "compound_bow") != -1)
-				{
-					CanHeadshot = GetEntPropFloat(weapon, Prop_Send, "m_flChargedDamage") > 0.0;
-				}
+				CanHeadshot = GetEntPropFloat(weapon, Prop_Send, "m_flChargedDamage") > 0.0;
 			}
 		}
 	}
@@ -532,18 +482,19 @@ public Action CFNPC_TraceAttack(int victim, int& attacker, int& inflictor, float
 				PlayCritSound(attacker);
 
 			CFNPC_SpawnCritParticle(view_as<CFNPC>(victim), MiniCrit);
-			//TODO: Move crit particle and sounds to PostDamage
 		}
 	}
 
 	return Plugin_Changed;
 }
 
-public void CFNPC_SpawnCritParticle(CFNPC victim, bool MiniCrit)
+void CFNPC_SpawnCritParticle(CFNPC victim, bool MiniCrit, float pos[3] = NULL_VECTOR)
 {
-	float pos[3];
-	GetEntPropVector(victim.Index, Prop_Send, "m_vecOrigin", pos);
-	pos[2] += 80.0 * victim.f_Scale;
+	if (Vector_Is_Null(pos))
+	{
+		GetEntPropVector(victim.Index, Prop_Send, "m_vecOrigin", pos);
+		pos[2] += 80.0 * victim.f_Scale;
+	}
 
 	SpawnParticle(pos, MiniCrit ? "minicrit_text" : "crit_text", 3.0);
 }
@@ -621,6 +572,8 @@ public void CFNPC_OnKilled(int victim, int attacker, int inflictor, float damage
 			}
 		}
 		
+		npc.Extinguish();
+
 		if (shouldGib)
 		{
 			npc.Gib();
@@ -735,6 +688,85 @@ public Action CFNPC_OnDamage(int victim, int &attacker, int &inflictor, float &d
 		return Plugin_Changed;
 	}
 
+	CFNPC npc = view_as<CFNPC>(victim);
+
+	if (npc.b_Burning)
+	{
+		//Attributes 20 and 735: Crit VS Burning Targets
+		if (GetAttributeValue(weapon, 20, 0.0) != 0.0 || GetAttributeValue(weapon, 735, 0.0) != 0.0)
+			damagetype |= DMG_ACID;
+		else if (GetAttributeValue(weapon, 638, 0.0) != 0.0)	//Attribute 638: Mini-Crit Burning Targets From Front, Full-Crit From Back
+		{
+			if (IsBehindAndFacingTarget(attacker, victim))
+				damagetype |= DMG_ACID;
+			else
+				b_MiniCrit[victim] = true;
+		}
+
+		//Attribute 795: Damage Bonus VS Burning Targets
+		damage *= GetAttributeValue(weapon, 795, 1.0);
+
+		//Attribute 2063: Dragon's Fury Properties
+		if (GetAttributeValue(weapon, 2063, 0.0) != 0.0)
+		{
+			damage *= 3.0;
+			
+			if (IsValidEntity(weapon))
+			{
+				float next = GetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack");
+				if (next > GetGameTime())
+				{
+					float diff = next - GetGameTime();
+					diff /= 2.0;
+					SetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack", GetGameTime() + diff);
+				}
+			}
+		}
+
+		//Attribute 2067: Mini-Crit and Extinguish Burning Targets, Speed Boost on Kill
+		if (GetAttributeValue(weapon, 2067, 0.0) != 0.0)
+		{
+			b_MiniCrit[victim] = true;
+			if (damage * 1.35 > float(npc.i_Health) && IsValidClient(attacker))
+				TF2_AddCondition(attacker, TFCond_SpeedBuffAlly, 4.0);
+
+			npc.Extinguish();
+		}
+	}
+	else
+	{
+		//Attribute 21: Damage Penalty VS Non-Burning Targets
+		damage *= GetAttributeValue(weapon, 21, 1.0);
+
+		//Attribute 22: No Crits VS Non-Burning Targets
+		if (GetAttributeValue(weapon, 22, 0.0) != 0.0)
+			damagetype &= ~DMG_ACID;
+
+		//Attribute 408: Crit VS Non-Burning Targets
+		if (GetAttributeValue(weapon, 408, 0.0) != 0.0)
+			damagetype |= DMG_ACID;
+	}
+
+	bool crit = (damagetype & DMG_ACID) == DMG_ACID;
+	if (crit && GetAttributeValue(weapon, 869, 0.0) == 0.0)
+	{
+		CFNPC_SpawnCritParticle(view_as<CFNPC>(victim), false, damagePosition);
+		if (IsValidClient(attacker))
+			PlayCritSound(attacker);
+
+		damage *= 3.0;
+	}
+	else if (b_MiniCrit[victim] || GetAttributeValue(weapon, 869, 0.0) != 0.0)
+	{
+		CFNPC_SpawnCritParticle(view_as<CFNPC>(victim), true, damagePosition);
+		if (IsValidClient(attacker))
+			PlayMiniCritSound(attacker);
+
+		damage *= 1.35;
+	}
+
+	b_MiniCrit[victim] = false;
+
 	Action result;
 
 	Call_StartForward(g_OnCFNPCDamaged);
@@ -749,13 +781,13 @@ public Action CFNPC_OnDamage(int victim, int &attacker, int &inflictor, float &d
 
 	Call_Finish(result);
 
-	if (result == Plugin_Handled || result == Plugin_Changed)
+	if (result == Plugin_Handled || result == Plugin_Stop)
 	{
 		damage = 0.0;
 		result = Plugin_Changed;
 	}
 
-	return result;
+	return Plugin_Changed;
 }
 
 public void CFNPC_InternalLogic(int ref)
@@ -1470,8 +1502,6 @@ public int Native_CFNPCSetAfterburnEndTime(Handle plugin, int numParams)
 				AttachParticle_TE(npc.Index, VFX_AFTERBURN_HAUNTED);
 			else
 				AttachParticle_TE(npc.Index, npc.i_Team == TFTeam_Red ? VFX_AFTERBURN_RED : VFX_AFTERBURN_BLUE);
-
-			CPrintToChatAll("DEBUG: Adding burn VFX");
 		}
 
 		f_AfterburnEndTime[npc.Index] = endTime;
@@ -1486,8 +1516,6 @@ public int Native_CFNPCSetAfterburnEndTime(Handle plugin, int numParams)
 				RemoveParticle_TE(npc.Index, VFX_AFTERBURN_HAUNTED);
 			else
 				RemoveParticle_TE(npc.Index, npc.i_Team == TFTeam_Red ? VFX_AFTERBURN_RED : VFX_AFTERBURN_BLUE);
-
-			CPrintToChatAll("DEBUG: Removing burn VFX");
 		}
 
 		f_AfterburnEndTime[npc.Index] = 0.0;
@@ -1549,33 +1577,58 @@ public any Native_CFNPCIgnite(Handle plugin, int numParams)
 
 	float gt = GetGameTime();
 
-	if (npc.b_Burning)
+	Action result = Plugin_Continue;
+
+	Call_StartForward(g_OnCFNPCIgnited);
+	Call_PushCell(npc);
+	Call_PushFloatRef(burnTime);
+	Call_PushFloatRef(minBurnTime);
+	Call_PushFloatRef(maxBurnTime);
+	Call_PushCellRef(attacker);
+	Call_PushCellRef(haunted);
+	Call_PushFloatRef(burnDMG);
+	Call_Finish(result);
+		
+	if (result != Plugin_Handled && result != Plugin_Stop)
 	{
-		float current = npc.f_AfterburnEndTime - gt;
-		if (current < maxBurnTime && maxBurnTime > 0.0)
+		bool AddDirectly = false;
+		if (npc.b_Burning)
 		{
-			current += burnTime;
-			if (current > maxBurnTime)
+			float current = npc.f_AfterburnEndTime - gt;
+
+			if (current + burnTime >= maxBurnTime && maxBurnTime > 0.0)
 			{
-				burnTime = current - maxBurnTime;
+				current += burnTime;
+				if (current > maxBurnTime)
+				{
+					burnTime = maxBurnTime;
+				}
+			}
+			else if (current + burnTime < minBurnTime)
+			{
+				burnTime = (minBurnTime - current);
+			}
+			else
+			{
+				AddDirectly = true;
 			}
 		}
-		else if (current + burnTime < minBurnTime)
+		else if (burnTime < minBurnTime)
 		{
-			burnTime = (minBurnTime - current);
+			burnTime = minBurnTime;
 		}
-	}
-	else if (burnTime < minBurnTime)
-	{
-		burnTime = minBurnTime;
-	}
 
-	//TODO: Call forward to allow devs to block the afterburn or modify values.
-		
-	npc.f_AfterburnEndTime = gt + burnTime;
-	npc.i_AfterburnAttacker = attacker;
-	npc.b_AfterburnIsHaunted = haunted;
-	npc.f_AfterburnDMG = burnDMG;
+		if (!AddDirectly)
+			npc.f_AfterburnEndTime = gt + burnTime;
+		else
+			npc.f_AfterburnEndTime += burnTime;
+
+		npc.i_AfterburnAttacker = attacker;
+		npc.b_AfterburnIsHaunted = haunted;
+		npc.f_AfterburnDMG = burnDMG;
+
+		CPrintToChatAll("{green}New ignite time: %.2f", npc.f_AfterburnEndTime - gt);
+	}
 
 	return true;
 }
@@ -1583,11 +1636,15 @@ public any Native_CFNPCIgnite(Handle plugin, int numParams)
 public any Native_CFNPCExtinguish(Handle plugin, int numParams)
 {
 	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	bool forced = GetNativeCell(2);
 
 	bool result = true;
-	//TODO: Call forward to allow devs to prevent extinguishes from happening
 
-	if (result)
+	Call_StartForward(g_OnCFNPCExtinguished);
+	Call_PushCell(npc);
+	Call_Finish(result);
+
+	if (result || forced)
 	{
 		npc.f_AfterburnEndTime = 0.0;
 		npc.b_AfterburnIsHaunted = false;
@@ -1597,10 +1654,9 @@ public any Native_CFNPCExtinguish(Handle plugin, int numParams)
 	else
 	{
 		float gt = GetGameTime();
-		if (npc.f_AfterburnEndTime - gt < 0.5)
-		{
-			npc.f_AfterburnEndTime = gt + 0.5;
-		}
+
+		npc.f_AfterburnEndTime = gt + 1.0;
+		f_NextBurn[npc.Index] = gt + 0.5;
 	}
 
 	return result;

@@ -38,8 +38,7 @@
 //		- The Gambler:
 //			- Begin work.
 //		- NPCs:
-//			- Fix Huntsman headshots.
-//			- Make NPCs ignitable.
+//			- Fix Huntsman headshots (optional?)
 //			- Make custom melee hitreg so it doesn't sound like you're hitting a wall every time you hit an NPC with melee.
 //			- Make NPCs bleed when hit. Allow devs to specify the sprite used for this bleed.
 //			- Add natives for basic attacks (should have generic melee, generic projectile, and generic bullets).
