@@ -43,8 +43,14 @@
 //			- Add an option to make NPCs use the body_pitch and body_yaw pose parameters to automatically look towards their target destination.
 //			- Fix collision (likely related to bounding box and lag comp).
 //			- Add SetGoalEntity.
+//			- Make jars work against NPCs.
+//			- Make NPCs milkable and jarate-able.
+//			- Make NPCs vulnerable to bleed effects.
+//			- Make sandman balls damage NPCs.
+//			- Add natives for modifying NPC speed temporarily, like the CF character speed natives.
 //			//////// EVERYTHING BELOW HERE REQUIRES THE PORTABLE NPC SYSTEM TO BE A STANDALONE PLUGIN, PORT NPCS TO THE PORTABLE NPC SYSTEM ONCE THE ABOVE ARE FINISHED: //////// 
 //			- Make custom melee hitreg so it doesn't sound like you're hitting a wall every time you hit an NPC with melee.
+//			- Manually simulate explosions. Can be done by detecting when an explosive entity spawns (rockets, pills, sentry rockets, stickies), then calculating its radius and falloff based on attributes from the thing that fired it. When the entity despawns or collides with something, simulate the explosion manually using those stats. Damage can be grabbed at the time of the explosion. Pills will need to check if they're colliding with a valid enemy. Also don't forget the Loch-n-Load's "disappear on hitting walls" attribute.
 //			- Add lag compensation.
 //			- Add an option to make NPCs automatically enter their air/swim animations if airborne or in the water.
 //			- Add customizable sounds for any number of custom triggers.
