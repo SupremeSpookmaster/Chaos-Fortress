@@ -38,8 +38,9 @@
 //		- The Gambler:
 //			- Begin work.
 //		- NPCs:
+//			- Add natives to set all of the values of CBaseNPC.
 //			- Add natives for basic attacks (should have generic melee, generic projectile, and generic bullets).
-//			- Add an option to make NPCs use the look_x and look_y pose parameters to automatically look towards their target destination.
+//			- Add an option to make NPCs use the body_pitch and body_yaw pose parameters to automatically look towards their target destination.
 //			- Fix collision (likely related to bounding box and lag comp).
 //			- Add SetGoalEntity.
 //			//////// EVERYTHING BELOW HERE REQUIRES THE PORTABLE NPC SYSTEM TO BE A STANDALONE PLUGIN, PORT NPCS TO THE PORTABLE NPC SYSTEM ONCE THE ABOVE ARE FINISHED: //////// 
@@ -55,9 +56,15 @@
 //				- Brawler (combat): punches enemies who get too close. Should be customizable to set attack interval, damage, melee range, and melee width.
 //				- Gunner (combat): shoots enemies who are within a certain range. Should be customizable in the same way as Brawler, but also include options for spread, clip size, falloff, ramp-up, and reload time.
 //				- Barrager (combat): shoots enemies with projectiles. Should be customizable in the same way as gunner, but also include options for explosive projectiles.
+//			- NPC behavior should be split into 4 basic categories:
+//				- Movement logic.
+//				- Combat logic.
+//				- "Aspects", AKA passive effects.
+//				- "Abilities", AKA special abilities that can only be activated by custom NPC logic.
+//				- Movement and combat will typically only be used by extremely basic NPCs, where as aspects and abilities are used to create more complex NPCs.
 //			- Allow server owners to configure several settings:
-//				- Max NPCs, max gibs, max model attachments per NPC.
-//			- Some day down the road (not immediately), add the Fake Player Model system. Should actually be fairly easy to implement given all of the control we have over animations.
+//				- Max NPCs, max gibs, max model attachments per NPC, whether or not NPCs should have visible health bars, whether or not the NPC's remaining HP should be displayed on the user's HUD when the NPC is damaged.
+//			- Some day down the road (not immediately), add the Fake Player Model system. Should actually be fairly easy to implement given all of the control we have over animations; we just copy the user's current sequence, pose parameters, and gestures to the NPC every frame, then when we animate the NPC we stop copying until the animation is done.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////
@@ -96,8 +103,6 @@
 //			- He is definitely WAY too tanky for a healer. He regens while healing, can give himself res while healing, and can toss a healing splash that heals an entire crowd PLUS himself for 80 HP, and even if you DO put him in a dire situation, he can try to teleport away. I wager he will be a bit problematic on launch.
 //		////////////////////////////////////////////
 //		- Gadgeteer:
-//			- He's meant to be support, but his kit encourages roaming and solo play way too much. He's too far into development to change how Toolbox Toss works, so that's not an option.
-//				- This may not be a REAL issue and instead just a false concern, as Gadgeteer doesn't have a lot of firepower and will likely die in a real fight before he can get 3 Drones out. Still something to watch out for during the public beta.
 //			- Notes regarding Drone stats:
 //				- Can fire twice per second.
 //				- Deals 20 damage per shot, for a total DPS of 40 per Drone, not counting Supercharge.

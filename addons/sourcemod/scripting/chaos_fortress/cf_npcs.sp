@@ -233,6 +233,8 @@ void CFNPC_MakeNatives()
 	CreateNative("CFNPC.StopPathing", Native_CFNPCStopPathing);
 	CreateNative("CFNPC.SetGoalVector", Native_CFNPCSetGoalVector);
 	CreateNative("CFNPC.GetGroundSpeed", Native_CFNPCGetGroundSpeed);
+	CreateNative("CFNPC.f_YawRate.get", Native_CFNPCGetYawRate);
+	CreateNative("CFNPC.f_YawRate.set", Native_CFNPCSetYawRate);
 
 	//Gibs and Ragdolls:
 	CreateNative("CFNPC.Ragdoll", Native_CFNPCRagdoll);
@@ -1079,6 +1081,19 @@ public any Native_CFNPCGetLocomotion(Handle plugin, int numParams)
 {
 	CBaseNPC npc = TheNPCs.FindNPCByEntIndex(GetNativeCell(1));
 	return npc.GetLocomotion();
+}
+
+public any Native_CFNPCGetYawRate(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	return npc.GetBaseNPC().flMaxYawRate;
+}
+
+public int Native_CFNPCSetYawRate(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	npc.GetBaseNPC().flMaxYawRate = GetNativeCell(2);
+	return 0;
 }
 
 public any Native_CFNPCGetBaseNPC(Handle plugin, int numParams)

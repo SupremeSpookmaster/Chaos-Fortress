@@ -479,6 +479,12 @@ methodmap CFNPC < CBaseCombatCharacter
 		public native get();
 		public native set(float value);
 	}
+
+	property float f_YawRate
+	{
+		public native get();
+		public native set(float value);
+	}
 }
 
 //TODO: This will need to be expanded upon to include things like medigun shields
