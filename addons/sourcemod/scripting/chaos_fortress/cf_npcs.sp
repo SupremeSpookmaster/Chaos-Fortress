@@ -3,6 +3,7 @@
 #define VFX_AFTERBURN_RED		"burningplayer_red"
 #define VFX_AFTERBURN_BLUE		"burningplayer_blue"
 #define VFX_AFTERBURN_HAUNTED	"halloween_burningplayer_flyingbits"
+#define VFX_DEFAULT_BLEED		"blood_impact_red_01_goop"
 
 Function CFNPC_Logic[2049] = { INVALID_FUNCTION, ... };
 Handle CFNPC_LogicPlugin[2049] = { null, ... };
@@ -17,6 +18,7 @@ float CFNPC_EndTime[2049] = { 0.0, ... };
 float f_AfterburnEndTime[2049] = { 0.0, ... };
 float f_AfterburnDMG[2049] = { 0.0, ... };
 float f_NextBurn[2049] = { 0.0, ... };
+float f_NextFlinch[2049] = { 0.0, ... };
 float f_PunchForce[2049][3];
 
 bool IExist[2049] = { false, ... };
@@ -25,6 +27,8 @@ bool b_AfterburnHaunted[2049] = { false, ... };
 bool b_MiniCrit[2049] = { false, ... };
 
 char CFNPC_Model[2049][255];
+char CFNPC_BleedParticle[2049][255];
+char CFNPC_FlinchSequence[2049][255];
 
 GlobalForward g_OnCFNPCCreated;
 GlobalForward g_OnCFNPCDestroyed;
@@ -66,6 +70,8 @@ void CFNPC_MapStart()
 	PrecacheParticleEffect(VFX_AFTERBURN_RED);
 	PrecacheParticleEffect(VFX_AFTERBURN_BLUE);
 	PrecacheParticleEffect(VFX_AFTERBURN_HAUNTED);
+	PrecacheParticleEffect(VFX_DEFAULT_BLEED);
+
 	PrecacheEffect("ParticleEffect");
 	PrecacheEffect("ParticleEffectStop");
 }
@@ -235,8 +241,13 @@ void CFNPC_MakeNatives()
 	CreateNative("CFNPC.AddGib", Native_CFNPCAddGib);
 	CreateNative("CFNPC.b_GibsForced.get", Native_CFNPCGetForcedGib);
 	CreateNative("CFNPC.b_GibsForced.set", Native_CFNPCSetForcedGib);
-	CreateNative("CFNPC.i_BleedType.get", Native_CFNPCGetBleedType);
-	CreateNative("CFNPC.i_BleedType.set", Native_CFNPCSetBleedType);
+
+	//Damage VFX:
+	CreateNative("CFNPC.SetBleedParticle", Native_CFNPCSetBleedEffect);
+	CreateNative("CFNPC.GetBleedParticle", Native_CFNPCGetBleedEffect);
+	CreateNative("CFNPC.SetFlinchSequence", Native_CFNPCSetFlinchSequence);
+	CreateNative("CFNPC.GetFlinchSequence", Native_CFNPCGetFlinchSequence);
+	CreateNative("CFNPC.SetDamagedVFX", Native_CFNPCSetDamageVFX);
 
 	//Attachments:
 	CreateNative("CFNPC.AttachModel", Native_CFNPCAttachModel);
@@ -343,7 +354,6 @@ public int Native_CFNPCConstructor(Handle plugin, int numParams)
 	GetNativeArray(11, pos, sizeof(pos));
 	GetNativeArray(12, ang, sizeof(ang));
 	float lifespan = GetNativeCell(13);
-	int bleedType = GetNativeCell(14);
 
 	int ent = CreateEntityByName(NPC_NAME);
 	if (IsValidEntity(ent))
@@ -361,7 +371,8 @@ public int Native_CFNPCConstructor(Handle plugin, int numParams)
 		npc.f_Scale = scale;
 		npc.f_Speed = speed;
 		npc.f_ThinkRate = thinkRate;
-		npc.i_BleedType = bleedType;
+		npc.SetBleedParticle(VFX_DEFAULT_BLEED);
+
 		if (lifespan > 0.0)
 			npc.f_EndTime = GetGameTime() + lifespan;
 		else
@@ -378,6 +389,7 @@ public int Native_CFNPCConstructor(Handle plugin, int numParams)
 		SetEntityFlags(ent, FL_NPC);
 		SetEntProp(ent, Prop_Send, "m_bGlowEnabled", false);
 		SetEntProp(ent, Prop_Data, "m_bSequenceLoops", true);
+		SetEntProp(ent, Prop_Data, "m_bloodColor", -1);
 
 		base.flStepSize = 17.0;
 		base.flGravity = 800.0;
@@ -587,6 +599,8 @@ public void CFNPC_OnKilled(int victim, int attacker, int inflictor, float damage
 
 public void CFNPC_PostDamage(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, const float damageForce[3], const float damagePosition[3])
 {
+	CFNPC npc = view_as<CFNPC>(victim);
+
 	Event event = CreateEvent("npc_hurt");
 	if(event != null) 
 	{
@@ -605,6 +619,27 @@ public void CFNPC_PostDamage(int victim, int attacker, int inflictor, float dama
 	}
 
 	CFNPC_AttemptIgnite(victim, attacker, inflictor, weapon);
+
+	if (!StrEqual(CFNPC_BleedParticle[victim], ""))
+	{
+		float dPos[3];
+		dPos = damagePosition;
+
+		if (Vector_Is_Null(dPos))
+		{
+			dPos = GetWorldSpaceCenter(victim);
+			for (int i = 0; i < 3; i++)
+				dPos[i] += GetRandomFloat(-20.0 * npc.f_Scale, 20.0 * npc.f_Scale);
+		}
+
+		SpawnParticle(dPos, CFNPC_BleedParticle[victim], 0.66);	//TODO: Make this a TE entity. Also do the same to crit text.
+	}
+
+	if (!StrEqual(CFNPC_FlinchSequence[victim], "") && GetGameTime() >= f_NextFlinch[victim])
+	{
+		npc.AddGesture(CFNPC_FlinchSequence[victim]);
+		f_NextFlinch[victim] = GetGameTime() + 0.2;
+	}
 
 	if (view_as<CFNPC>(victim).i_Health < 1)
 	{
@@ -821,7 +856,6 @@ public void CFNPC_InternalLogic(int ref)
 		if (gt >= f_NextBurn[npc.Index])
 		{
 			SDKHooks_TakeDamage(npc.Index, npc.i_AfterburnAttacker, npc.i_AfterburnAttacker, npc.f_AfterburnDMG, DMG_BURN, _, _, _, false);
-			CPrintToChatAll("REMAINING AFTERBURN: %.2f", npc.f_AfterburnEndTime - gt);
 			if (gt + 0.5 > npc.f_AfterburnEndTime)
 			{
 				npc.Extinguish();
@@ -864,15 +898,6 @@ public void CFNPC_InternalLogic(int ref)
 }
 
 public int Native_CFNPCGetIndex(Handle plugin, int numParams) { return GetNativeCell(1); }
-
-public int Native_CFNPCGetBleedType(Handle plugin, int numParams) { return GetEntProp(GetNativeCell(1), Prop_Data, "m_bloodColor"); }
-
-public int Native_CFNPCSetBleedType(Handle plugin, int numParams) 
-{ 
-	SetEntProp(GetNativeCell(1), Prop_Data, "m_bloodColor", GetNativeCell(2));
-	
-	return 0;
-}
 
 public int Native_CFNPCSetLogic(Handle plugin, int numParams) 
 { 
@@ -991,6 +1016,43 @@ public int Native_CFNPCSetModel(Handle plugin, int numParams)
 	}
 
 	return 0; 
+}
+
+public int Native_CFNPCGetBleedEffect(Handle plugin, int numParams) { SetNativeString(2, CFNPC_BleedParticle[GetNativeCell(1)], GetNativeCell(3)); return 0; }
+public int Native_CFNPCSetBleedEffect(Handle plugin, int numParams) 
+{
+	int ent = GetNativeCell(1);
+	char newBleed[255];
+	GetNativeString(2, newBleed, sizeof(newBleed));
+
+	strcopy(CFNPC_BleedParticle[ent], 255, newBleed);
+
+	return 0; 
+}
+
+public int Native_CFNPCGetFlinchSequence(Handle plugin, int numParams) { SetNativeString(2, CFNPC_FlinchSequence[GetNativeCell(1)], GetNativeCell(3)); return 0; }
+public int Native_CFNPCSetFlinchSequence(Handle plugin, int numParams) 
+{
+	int ent = GetNativeCell(1);
+	char newFlinch[255];
+	GetNativeString(2, newFlinch, sizeof(newFlinch));
+
+	strcopy(CFNPC_FlinchSequence[ent], 255, newFlinch);
+
+	return 0; 
+}
+
+public int Native_CFNPCSetDamageVFX(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	char newBleed[255], newFlinch[255];
+	GetNativeString(2, newBleed, sizeof(newBleed));
+	GetNativeString(3, newFlinch, sizeof(newFlinch));
+
+	npc.SetBleedParticle(newBleed);
+	npc.SetFlinchSequence(newFlinch);
+
+	return 0;
 }
 
 public int Native_CFNPCGetHealth(Handle plugin, int numParams) { return GetEntProp(GetNativeCell(1), Prop_Data, "m_iHealth"); }
@@ -1626,8 +1688,6 @@ public any Native_CFNPCIgnite(Handle plugin, int numParams)
 		npc.i_AfterburnAttacker = attacker;
 		npc.b_AfterburnIsHaunted = haunted;
 		npc.f_AfterburnDMG = burnDMG;
-
-		CPrintToChatAll("{green}New ignite time: %.2f", npc.f_AfterburnEndTime - gt);
 	}
 
 	return true;

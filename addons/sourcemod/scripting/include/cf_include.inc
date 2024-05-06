@@ -105,9 +105,8 @@ methodmap CFNPC < CBaseCombatCharacter
 	 * @param pos			Position to spawn the NPC at.
 	 * @param ang			Angles to spawn the NPC with.
 	 * @param lifespan		Time until the NPC is automatically destroyed. <= 0.0: do not delete.
-	 * @param bleedType		The type of blood VFX to use when this CFNPC bleeds. Note that certain gibs will ignore this as their blood effects are specifically part of their model.
 	 */
-	public native CFNPC(char[] model, TFTeam team, int health = 200, int maxHealth = 200, int skin = -1, float scale = 1.0, float speed = 300.0, Function logic = INVALID_FUNCTION, char plugin[255] = "", float thinkRate = 0.0, float pos[3] = NULL_VECTOR, float ang[3] = NULL_VECTOR, float lifespan = 0.0, int bleedType = -1);
+	public native CFNPC(char[] model, TFTeam team, int health = 200, int maxHealth = 200, int skin = -1, float scale = 1.0, float speed = 300.0, Function logic = INVALID_FUNCTION, char plugin[255] = "", float thinkRate = 0.0, float pos[3] = NULL_VECTOR, float ang[3] = NULL_VECTOR, float lifespan = 0.0);
 
 	/**
 	 * Retrieves the CFNPC's model, stored in the output buffer.
@@ -123,6 +122,44 @@ methodmap CFNPC < CBaseCombatCharacter
 	 * @param newModel		New model to use. Must be precached.
 	 */
 	public native void SetModel(char[] newModel);
+
+	/**
+	 * Retrieves the bleed particle used when this CFNPC takes damage, stored in the output buffer.
+	 * 
+	 * @param output		Output buffer to store the bleed particle.
+	 * @param size			Output buffer length.
+	 */
+	public native void GetBleedParticle(char[] output, int size);
+
+	/**
+	 * Sets the CFNPC's bleed particle, to be used when the CFNPC is damaged.
+	 * 
+	 * @param newBleed		New bleed particle to use. Can be left blank tomake the CFNPC not bleed at all.
+	 */
+	public native void SetBleedParticle(char[] newBleed);
+
+	/**
+	 * Retrieves the gesture played when this CFNPC takes damage, stored in the output buffer.
+	 * 
+	 * @param output		Output buffer to store the flinch sequence.
+	 * @param size			Output buffer length.
+	 */
+	public native void GetFlinchSequence(char[] output, int size);
+
+	/**
+	 * Sets the CFNPC's flinch gesture, to be used when the CFNPC is damaged.
+	 * 
+	 * @param newFlinch		New flinch sequence to use, EX: ACT_MP_GESTURE_FLINCH_CHEST. Can be left blank to make the CFNPC not flinch at all.
+	 */
+	public native void SetFlinchSequence(char[] newFlinch);
+
+	/**
+	 * Sets the CFNPC's bleed particle and flinch gesture.
+	 * 
+	 * @param newBleed		Bleed particle.
+	 * @param newFlinch		Flinch gesture, EX: ACT_MP_GESTURE_FLINCH_CHEST.
+	 */
+	public native void SetDamagedVFX(char[] newBleed, char[] newFlinch);
 
 	/**
 	 * Retrieves the CFNPC's locomotion interface.
@@ -313,12 +350,6 @@ methodmap CFNPC < CBaseCombatCharacter
 	property int Index
 	{
 		public native get();
-	}
-
-	property int i_BleedType
-	{
-		public native get();
-		public native set(int value);
 	}
 
 	property bool b_Exists
