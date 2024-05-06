@@ -42,8 +42,12 @@
 //			- Add an option to make NPCs use the look_x and look_y pose parameters to automatically look towards their target destination.
 //			- Fix collision (likely related to bounding box and lag comp).
 //			- Add SetGoalEntity.
+//			//////// EVERYTHING BELOW HERE REQUIRES THE PORTABLE NPC SYSTEM TO BE A STANDALONE PLUGIN, PORT NPCS TO THE PORTABLE NPC SYSTEM ONCE THE ABOVE ARE FINISHED: //////// 
 //			- Make custom melee hitreg so it doesn't sound like you're hitting a wall every time you hit an NPC with melee.
-//			- Add an option to make NPCs automatically enter their air/swim animations if airborne or in the water (requires standalone CFG system).
+//			- Add lag compensation.
+//			- Add an option to make NPCs automatically enter their air/swim animations if airborne or in the water.
+//			- Add customizable sounds for any number of custom triggers.
+//				- Should include: sound_damaged, sound_impact, sound_kill, and sound_killed as officially supported sound cues, then have "CFNPC.PlaySound" as a native to play custom cues.
 //			- NPC CFGs should function like FF2 boss CFGs, with sections for equipped models, name, etc. One of these sections should be called "functionality", where devs can add and tweak AI modifiers to control how the NPC behaves.
 //			- Make a few basic AI templates. These should be split into categories governing movement and combat.
 //				- Chaser (movement): chases the nearest player. Can be customized to specify the target's team as well as whether or not it will predict their movement.
@@ -51,7 +55,8 @@
 //				- Brawler (combat): punches enemies who get too close. Should be customizable to set attack interval, damage, melee range, and melee width.
 //				- Gunner (combat): shoots enemies who are within a certain range. Should be customizable in the same way as Brawler, but also include options for spread, clip size, falloff, ramp-up, and reload time.
 //				- Barrager (combat): shoots enemies with projectiles. Should be customizable in the same way as gunner, but also include options for explosive projectiles.
-//			- Migrate this entire thing to the Portable NPC System when it's ready, then add the Portable NPC System to the Chaos Fortress prerequisites. Allow server owners to configure the maximum number of active NPCs active at once, as well as how the plugin should deal with attempted spawns when the cap has been reached.
+//			- Allow server owners to configure several settings:
+//				- Max NPCs, max gibs, max model attachments per NPC.
 //			- Some day down the road (not immediately), add the Fake Player Model system. Should actually be fairly easy to implement given all of the control we have over animations.
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
