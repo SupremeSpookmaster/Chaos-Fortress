@@ -581,9 +581,21 @@ forward bool CF_OnCFNPCExtinguished(CFNPC npc);
  * @param haunted	If true, the afterburn particle will be set to Spectral Flames instead of the standard team-colored afterburn particle.
  * @param burnDMG	Damage dealt per afterburn tick.
  * 
- * @param return Plugin_Changed if you changed any values, Plugin_Handled or Plugin_Stop to prevent the afterburn, or Plugin_Continue to do nothing.
+ * @return 			Plugin_Changed if you changed any values, Plugin_Handled or Plugin_Stop to prevent the afterburn, or Plugin_Continue to do nothing.
  */
 forward Action CF_OnCFNPCIgnited(CFNPC npc, float &burnTime, float &minBurnTime, float &maxBurnTime, int &attacker, bool &haunted, float &burnDMG);
+
+/**
+ * Called when bleed is applied to a CFNPC.
+ * 
+ * @param npc		The CFNPC.
+ * @param bleedTime	The duration of the bleed.
+ * @param bleedDMG	The damage the bleed will inflict per tick.
+ * @param attacker	The entity which will be credited for the bleed damage.
+ * 
+ * @return 			Plugin_Changed if you changed any values, Plugin_Handled or Plugin_Stop to prevent the bleed, or Plugin_Continue to do nothing.
+ */
+forward Action CF_OnCFNPCBleed(CFNPC npc, float &bleedTime, float &bleedDMG, int &attacker);
 
 /**
  * Called when a character runs any command.

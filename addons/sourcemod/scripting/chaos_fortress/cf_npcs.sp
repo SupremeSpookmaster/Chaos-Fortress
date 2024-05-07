@@ -621,6 +621,7 @@ public void CFNPC_PostDamage(int victim, int attacker, int inflictor, float dama
 	}
 
 	CFNPC_AttemptIgnite(victim, attacker, inflictor, weapon);
+	CFNPC_AttemptBleed(victim, attacker, inflictor, weapon);
 
 	if (!StrEqual(CFNPC_BleedParticle[victim], ""))
 	{
@@ -714,6 +715,44 @@ public void CFNPC_AttemptIgnite(int victim, int attacker, int inflictor, int wea
 	if (burn)
 	{
 		npc.Ignite(burnTime, minBurnTime, maxBurnTime, burnDMG, haunted, attacker);
+	}
+}
+
+public void CFNPC_AttemptBleed(int victim, int attacker, int inflictor, int weapon)
+{
+	CFNPC npc = view_as<CFNPC>(victim);
+
+	bool bleed = false;
+	float bleedTime = 0.0;
+	float bleedDMG = 4.0;
+
+	if (IsValidEntity(weapon))
+	{
+		bleedTime = GetAttributeValue(weapon, 149, 0.0);
+
+		if (bleedTime > 0.0)
+			bleed = true;
+	}
+
+	if (IsValidEntity(inflictor) && !bleed)
+	{
+		char classname[255];
+		GetEntityClassname(inflictor, classname, sizeof(classname));
+
+		if (StrEqual(classname, "tf_projectile_ball_ornament") || StrEqual(classname, "tf_projectile_cleaver"))
+		{
+			bleedTime = 5.0;
+			bleed = true;
+		}
+	}
+
+	if (IsValidEntity(weapon))
+		bleedDMG *= GetAttributeValue(weapon, 138, 1.0);
+
+	if (bleed)
+	{
+		//TODO: Call npc.Bleed, which should call a forward and create a bleed timer if the forward passes
+		npc.Bleed(bleedTime, bleedDMG, attacker);
 	}
 }
 
