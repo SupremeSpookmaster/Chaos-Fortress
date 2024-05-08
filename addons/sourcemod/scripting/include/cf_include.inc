@@ -339,6 +339,17 @@ methodmap CFNPC < CBaseCombatCharacter
 	public native bool Ignite(float duration, float minDuration = 0.0, float maxDuration = 0.0, float damage = 4.0, bool haunted = false, int attacker = 0);
 
 	/**
+	 * Causes the CFNPC to bleed.
+	 * 
+	 * @param duration		The duration of the bleed.
+	 * @param damage		Damage dealt per bleed tick.
+	 * @param attacker		The entity which will be credited with the bleed damage.
+	 * 
+	 * @return	True if the CFNPC was successfully made bleeding, false if something prevented it.
+	 */
+	public native bool Bleed(float duration, float damage, int attacker = 0);
+
+	/**
 	 * Extinguishes the CFNPC's afterburn.
 	 * 
 	 * @param forced	If true, the return value of CF_OnCFNPCExtinguished is completely ignored, forcing the extinguish to go through no matter what.

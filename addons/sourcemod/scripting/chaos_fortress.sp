@@ -42,11 +42,11 @@
 //			- Add natives for basic attacks (should have generic melee, generic projectile, and generic bullets).
 //			- Add an option to make NPCs use the body_pitch and body_yaw pose parameters to automatically look towards their target destination.
 //			- Fix collision (likely related to bounding box and lag comp).
+//			- Make NPCs collide with all of the following entities, and make them work as intended when they collide:
+//				- Sandman Balls - should deal damage and slow the NPC temporarily, then bounce off and become inert.
+//				- Flying Guillotine - should be deleted on contact and then deal damage, apply bleed, and emit a sound.
+//				- Jars (milk, jarate, maybe gas?) - should be deleted on contact and then spawn particle, play sound, and apply milk/jarate effects.
 //			- Add SetGoalEntity.
-//			- Make jars work against NPCs.
-//			- Make NPCs milkable and jarate-able.
-//			- Make NPCs vulnerable to bleed effects.
-//			- Make sandman balls damage NPCs.
 //			- Add natives for modifying NPC speed temporarily, like the CF character speed natives. Make sure sandman balls and any weapon with the "slow target on hit" attribute apply this native if the victim is not already slowed.
 //			//////// EVERYTHING BELOW HERE REQUIRES THE PORTABLE NPC SYSTEM TO BE A STANDALONE PLUGIN, PORT NPCS TO THE PORTABLE NPC SYSTEM ONCE THE ABOVE ARE FINISHED: //////// 
 //			- Make custom melee hitreg so it doesn't sound like you're hitting a wall every time you hit an NPC with melee.

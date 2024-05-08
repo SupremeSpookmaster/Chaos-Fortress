@@ -10,6 +10,7 @@ Handle CFNPC_LogicPlugin[2049] = { null, ... };
 
 int i_TotalNPCs[2049] = { -1, ... };
 int i_AfterburnAttacker[2049] = { -1, ... };
+int i_BleedStacks[2049] = { 0, ... };
 
 float CFNPC_Speed[2049] = { 0.0, ... };
 float CFNPC_ThinkRate[2049] = { 0.0, ... };
@@ -37,6 +38,7 @@ GlobalForward g_OnCFNPCDamaged;
 GlobalForward g_OnCFNPCKilled;
 GlobalForward g_OnCFNPCExtinguished;
 GlobalForward g_OnCFNPCIgnited;
+GlobalForward g_OnCFNPCBleed;
 
 Handle g_hLookupActivity;
 Handle SDK_Ragdoll;
@@ -123,6 +125,7 @@ void CFNPC_MakeForwards()
 	g_OnCFNPCKilled = new GlobalForward("CF_OnCFNPCKilled", ET_Event, Param_Any, Param_Float, Param_Cell, Param_Cell, Param_Cell, Param_CellByRef);
 	g_OnCFNPCExtinguished = new GlobalForward("CF_OnCFNPCExtinguished", ET_Single, Param_Any);
 	g_OnCFNPCIgnited = new GlobalForward("CF_OnCFNPCIgnited", ET_Event, Param_Any, Param_FloatByRef, Param_FloatByRef, Param_FloatByRef, Param_CellByRef, Param_CellByRef, Param_FloatByRef);
+	g_OnCFNPCBleed = new GlobalForward("CF_OnCFNPCBleed", ET_Event, Param_Any, Param_FloatByRef, Param_FloatByRef, Param_CellByRef);
 
 	/*NextBotActionFactory AcFac = new NextBotActionFactory("CFNPCMainAction");
 	AcFac.SetEventCallback(EventResponderType_OnActorEmoted, PluginBot_OnActorEmoted);*/
@@ -271,6 +274,10 @@ void CFNPC_MakeNatives()
 	CreateNative("CFNPC.b_AfterburnIsHaunted.set", Native_CFNPCSetAfterburnHaunted);
 	CreateNative("CFNPC.Ignite", Native_CFNPCIgnite);
 	CreateNative("CFNPC.Extinguish", Native_CFNPCExtinguish);
+
+	//Bleed:
+	CreateNative("CFNPC.Bleed", Native_CFNPCBleed);
+	CreateNative("CFNPC.b_Bleeding.get", Native_CFNPCGetBleeding);
 }
 
 void CFNPC_OnCreate(int npc)
@@ -320,6 +327,7 @@ void CFNPC_OnDestroy(int npc)
 	delete g_GibAttachments[npc];
 	delete g_AttachedModels[npc];
 	delete g_AttachedWeaponModels[npc];
+	i_BleedStacks[npc] = 0;
 
 	dead.b_Exists = false;
 }
@@ -415,6 +423,42 @@ public int Native_CFNPCConstructor(Handle plugin, int numParams)
 	}
 
 	return -1;
+}
+
+//TODO: Replace this with a hull trace that gets called every frame
+public void CFNPC_Touch(int entity, int other)
+{
+	char classname[255];
+	GetEntityClassname(other, classname, sizeof(classname));
+
+	bool remove = false;
+	if (StrEqual(classname, "tf_projectile_cleaver"))
+	{
+		CPrintToChatAll("Touched guillotine");
+		remove = true;
+	}
+	else if (StrEqual(classname, "tf_projectile_stun_ball"))
+	{
+		CPrintToChatAll("Touched sandman ball");
+	}
+	else if (StrEqual(classname, "tf_projectile_jar"))
+	{
+		CPrintToChatAll("Touched jarate");
+		remove = true;
+	}
+	else if (StrEqual(classname, "tf_projectile_jar_milk"))
+	{
+		CPrintToChatAll("Touched milk");
+		remove = true;
+	}
+	else if (StrEqual(classname, "tf_projectile_jar_gas"))
+	{
+		CPrintToChatAll("Touched propane tank");
+		remove = true;
+	}
+
+	if (remove)
+		RemoveEntity(other);
 }
 
 public Action CFNPC_TraceAttack(int victim, int& attacker, int& inflictor, float& damage, int& damagetype, int& ammotype, int hitbox, int hitgroup)
@@ -751,7 +795,6 @@ public void CFNPC_AttemptBleed(int victim, int attacker, int inflictor, int weap
 
 	if (bleed)
 	{
-		//TODO: Call npc.Bleed, which should call a forward and create a bleed timer if the forward passes
 		npc.Bleed(bleedTime, bleedDMG, attacker);
 	}
 }
@@ -1775,3 +1818,61 @@ public any Native_CFNPCExtinguish(Handle plugin, int numParams)
 
 	return result;
 }
+
+public any Native_CFNPCBleed(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+
+	float bleedTime = GetNativeCell(2);
+	float bleedDMG = GetNativeCell(3);
+	int attacker = GetNativeCell(4);
+
+	Call_StartForward(g_OnCFNPCBleed);
+
+	Call_PushCell(npc);
+	Call_PushFloatRef(bleedTime);
+	Call_PushFloatRef(bleedDMG);
+	Call_PushCellRef(attacker);
+
+	Action result;
+	Call_Finish(result);
+
+	if (result != Plugin_Stop && result != Plugin_Handled)
+	{
+		DataPack pack = new DataPack();
+		CreateDataTimer(0.5, CFNPC_BleedTimer, pack, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+		WritePackCell(pack, EntIndexToEntRef(npc.Index));
+		WritePackFloat(pack, GetGameTime() + bleedTime + 0.1);
+		WritePackFloat(pack, bleedDMG);
+		WritePackCell(pack, EntIndexToEntRef(attacker));
+
+		i_BleedStacks[npc.Index]++;
+
+		return true;
+	}
+
+	return false;
+}
+
+public Action CFNPC_BleedTimer(Handle bleed, DataPack pack)
+{
+	ResetPack(pack);
+	int npc = EntRefToEntIndex(ReadPackCell(pack));
+	if (!IsValidEntity(npc))
+		return Plugin_Stop;
+
+	float endTime = ReadPackFloat(pack);
+	if (GetGameTime() >= endTime)
+	{
+		i_BleedStacks[npc]--;
+		return Plugin_Stop;
+	}
+
+	float dmg = ReadPackFloat(pack);
+	int attacker = EntRefToEntIndex(ReadPackCell(pack));
+
+	SDKHooks_TakeDamage(npc, 0, IsValidEntity(attacker) ? attacker : 0, dmg, _, _, _, _, false);
+	return Plugin_Continue;
+}
+
+public any Native_CFNPCGetBleeding(Handle plugin, int numParams) { return i_BleedStacks[GetNativeCell(1)] > 0; }
