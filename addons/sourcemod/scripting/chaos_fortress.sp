@@ -38,7 +38,6 @@
 //		- The Gambler:
 //			- Begin work.
 //		- NPCs:
-//			- Add natives for modifying NPC speed temporarily, like the CF character speed natives. Make sure sandman balls and any weapon with the "slow target on hit" attribute apply this native if the victim is not already slowed.
 //			- Make NPCs collide with all of the following entities, and make them work as intended when they collide:
 //				- Sandman Balls - should deal damage and slow the NPC temporarily, then bounce off and become inert. Damage should be calculated at the moment the ball spawns, and be stored in a global array.
 //				- Flying Guillotine - should be deleted on contact and then deal damage, apply bleed, and emit a sound. Damage should be calculated at the moment the cleaver spawns, and be stored in a global array.

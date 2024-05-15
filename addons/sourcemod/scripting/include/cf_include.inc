@@ -368,7 +368,7 @@ methodmap CFNPC < CBaseCombatCharacter
 	 * 					>= 2: Directly add "mod" to the CFNPC's current speed.
 	 * @param duration	The duration of the speed modifier.
 	 */
-	public native void ApplyTemporarySpeedModifier(float mod, int speedMode, float duration);
+	public native void ApplyTemporarySpeedChange(float mod, int speedMode, float duration);
 
 	property int Index
 	{

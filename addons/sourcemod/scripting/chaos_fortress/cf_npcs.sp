@@ -2006,4 +2006,60 @@ public Action CFNPC_BleedTimer(Handle bleed, DataPack pack)
 
 public any Native_CFNPCGetBleeding(Handle plugin, int numParams) { return i_BleedStacks[GetNativeCell(1)] > 0; }
 
-public int Native_CFNPCModifySpeed(Handle plugin, int numParams) { return 0; }
+public int Native_CFNPCModifySpeed(Handle plugin, int numParams) 
+{ 
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	float mod = GetNativeCell(2);
+	int mode = GetNativeCell(3);
+	float duration = GetNativeCell(4);
+
+	float diff;
+	if (mode <= 0)
+	{
+		float current = npc.f_MaxSpeed;
+		current *= mod;
+		diff = current - npc.f_MaxSpeed;
+	}
+	else
+	{
+		if (mode == 1)
+		{
+			float current = npc.f_Speed;
+			current *= mod;
+			diff = current - npc.f_Speed;
+		}
+		else
+		{
+			diff = mod;
+		}
+	}
+
+	npc.f_Speed += diff;
+	if (npc.f_Speed < 0.0)
+	{
+		diff += npc.f_Speed;
+		npc.f_Speed = 0.0;
+	}
+
+	DataPack pack = new DataPack();
+	CreateDataTimer(duration, CFNPC_RemoveTemporarySpeedChange, pack, TIMER_FLAG_NO_MAPCHANGE);
+	WritePackCell(pack, EntIndexToEntRef(npc.Index));
+	WritePackFloat(pack, diff);
+
+	return 0;
+}
+
+public Action CFNPC_RemoveTemporarySpeedChange(Handle timer, DataPack pack)
+{
+	ResetPack(pack);
+
+	int ent = EntRefToEntIndex(ReadPackCell(pack));
+	float diff = ReadPackFloat(pack);
+
+	if (!IsValidEntity(ent))
+		return Plugin_Continue;
+
+	view_as<CFNPC>(ent).f_Speed -= diff;
+
+	return Plugin_Continue;
+}
