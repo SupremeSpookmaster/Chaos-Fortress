@@ -14,8 +14,8 @@ This game mode is currently incompatible with 64-bit servers. Not much I can do 
   5. Configure the game mode to your heart's content. *(Optional)*
 
 ## *Update Guide*
-  1. Download the **latest release Update Build. (LINK PENDING)**
-  2. Extract the zip file directly to your server's `tf` folder, not including `tf/addons/sourcemod/data/fake_particle_system/fakeparticles.cfg` or `tf/addons/sourcemod/data/pnpc/npcs.cfg`. See step 3 to see how to handle these files.
+  1. Download the **latest release Update Build. (LINK PENDING)** Alternatively, if you do not want to add any new characters that the update may include, download the **latest release No-Characters Update Build. (LINK PENDING)**
+  2. Extract the zip file directly to your server's `tf` folder. If you did not choose the no-characters build, you will notice these files: `tf/addons/sourcemod/data/fake_particle_system/fakeparticles.cfg` and `tf/addons/sourcemod/data/pnpc/npcs.cfg`. These files should be skipped, instead see step 3 to know how to handle them. These files do not exist in the no-characters build, so step 3 can be skipped if that is the build you chose.
   3. Some updates will include new characters, and some of these new characters may add new "fake particles" and/or NPCs. When this is the case, if you have made any edits to your server's `fakeparticles.cfg` or `npcs.cfg` files, simply add the new data from the update build's CFGs to your versions. Otherwise, if you have not made any edits, you may simply overwrite your current versions of these files with the new versions.
   4. ***Chaos Fortress*** should now be updated on your server!
 
