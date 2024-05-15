@@ -496,6 +496,48 @@ methodmap CFNPC < CBaseCombatCharacter
 		public native get();
 		public native set(float value);
 	}
+
+	property float f_StepSize
+	{
+		public native get();
+		public native set(float value);
+	}
+
+	property float f_Gravity
+	{
+		public native get();
+		public native set(float value);
+	}
+
+	property float f_Acceleration
+	{
+		public native get();
+		public native set(float value);
+	}
+
+	property float f_JumpHeight
+	{
+		public native get();
+		public native set(float value);
+	}
+
+	property float f_FrictionSideways
+	{
+		public native get();
+		public native set(float value);
+	}
+	
+	property float f_FrictionForwards
+	{
+		public native get();
+		public native set(float value);
+	}
+
+	property float f_DeathDropHeight
+	{
+		public native get();
+		public native set(float value);
+	}
 }
 
 //TODO: This will need to be expanded upon to include things like medigun shields

@@ -236,8 +236,24 @@ void CFNPC_MakeNatives()
 	CreateNative("CFNPC.StopPathing", Native_CFNPCStopPathing);
 	CreateNative("CFNPC.SetGoalVector", Native_CFNPCSetGoalVector);
 	CreateNative("CFNPC.GetGroundSpeed", Native_CFNPCGetGroundSpeed);
+
+	//CBaseNPC Base Values:
 	CreateNative("CFNPC.f_YawRate.get", Native_CFNPCGetYawRate);
 	CreateNative("CFNPC.f_YawRate.set", Native_CFNPCSetYawRate);
+	CreateNative("CFNPC.f_StepSize.get", Native_CFNPCGetStepSize);
+	CreateNative("CFNPC.f_StepSize.set", Native_CFNPCSetStepSize);
+	CreateNative("CFNPC.f_Gravity.get", Native_CFNPCGetGravity);
+	CreateNative("CFNPC.f_Gravity.set", Native_CFNPCSetGravity);
+	CreateNative("CFNPC.f_Acceleration.get", Native_CFNPCGetAcceleration);
+	CreateNative("CFNPC.f_Acceleration.set", Native_CFNPCSetAcceleration);
+	CreateNative("CFNPC.f_JumpHeight.get", Native_CFNPCGetJumpHeight);
+	CreateNative("CFNPC.f_JumpHeight.set", Native_CFNPCSetJumpHeight);
+	CreateNative("CFNPC.f_FrictionSideways.get", Native_CFNPCGetFrictionSideways);
+	CreateNative("CFNPC.f_FrictionSideways.set", Native_CFNPCSetFrictionSideways);
+	CreateNative("CFNPC.f_FrictionForwards.get", Native_CFNPCGetFrictionForwards);
+	CreateNative("CFNPC.f_FrictionForwards.set", Native_CFNPCSetFrictionForwards);
+	CreateNative("CFNPC.f_DeathDropHeight.get", Native_CFNPCGetDeathDropHeight);
+	CreateNative("CFNPC.f_DeathDropHeight.set", Native_CFNPCSetDeathDropHeight);
 
 	//Gibs and Ragdolls:
 	CreateNative("CFNPC.Ragdoll", Native_CFNPCRagdoll);
@@ -1175,6 +1191,97 @@ public int Native_CFNPCSetYawRate(Handle plugin, int numParams)
 {
 	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
 	npc.GetBaseNPC().flMaxYawRate = GetNativeCell(2);
+	return 0;
+}
+
+public any Native_CFNPCGetStepSize(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	return npc.GetBaseNPC().flStepSize;
+}
+
+public int Native_CFNPCSetStepSize(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	npc.GetBaseNPC().flStepSize = GetNativeCell(2);
+	return 0;
+}
+
+public any Native_CFNPCGetGravity(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	return npc.GetBaseNPC().flGravity;
+}
+
+public int Native_CFNPCSetGravity(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	npc.GetBaseNPC().flGravity = GetNativeCell(2);
+	return 0;
+}
+
+public any Native_CFNPCGetAcceleration(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	return npc.GetBaseNPC().flAcceleration;
+}
+
+public int Native_CFNPCSetAcceleration(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	npc.GetBaseNPC().flAcceleration = GetNativeCell(2);
+	return 0;
+}
+
+public any Native_CFNPCGetJumpHeight(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	return npc.GetBaseNPC().flJumpHeight;
+}
+
+public int Native_CFNPCSetJumpHeight(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	npc.GetBaseNPC().flJumpHeight = GetNativeCell(2);
+	return 0;
+}
+
+public any Native_CFNPCGetFrictionSideways(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	return npc.GetBaseNPC().flFrictionSideways;
+}
+
+public int Native_CFNPCSetFrictionSideways(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	npc.GetBaseNPC().flFrictionSideways = GetNativeCell(2);
+	return 0;
+}
+
+public any Native_CFNPCGetFrictionForwards(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	return npc.GetBaseNPC().flFrictionForward;
+}
+
+public int Native_CFNPCSetFrictionForwards(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	npc.GetBaseNPC().flFrictionForward = GetNativeCell(2);
+	return 0;
+}
+
+public any Native_CFNPCGetDeathDropHeight(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	return npc.GetBaseNPC().flDeathDropHeight;
+}
+
+public int Native_CFNPCSetDeathDropHeight(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	npc.GetBaseNPC().flDeathDropHeight = GetNativeCell(2);
 	return 0;
 }
 

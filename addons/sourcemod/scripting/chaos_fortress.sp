@@ -38,13 +38,12 @@
 //		- The Gambler:
 //			- Begin work.
 //		- NPCs:
-//			- Add natives to set all of the values of CBaseNPC.
 //			- Add natives for basic attacks (should have generic melee, generic projectile, and generic bullets).
 //			- Add an option to make NPCs use the body_pitch and body_yaw pose parameters to automatically look towards their target destination.
 //			- Fix collision (likely related to bounding box and lag comp).
 //			- Make NPCs collide with all of the following entities, and make them work as intended when they collide:
-//				- Sandman Balls - should deal damage and slow the NPC temporarily, then bounce off and become inert.
-//				- Flying Guillotine - should be deleted on contact and then deal damage, apply bleed, and emit a sound.
+//				- Sandman Balls - should deal damage and slow the NPC temporarily, then bounce off and become inert. Damage should be calculated at the moment the ball spawns, and be stored in a global array.
+//				- Flying Guillotine - should be deleted on contact and then deal damage, apply bleed, and emit a sound. Damage should be calculated at the moment the cleaver spawns, and be stored in a global array.
 //				- Jars (milk, jarate, maybe gas?) - should be deleted on contact and then spawn particle, play sound, and apply milk/jarate effects.
 //			- Add SetGoalEntity.
 //			- Add natives for modifying NPC speed temporarily, like the CF character speed natives. Make sure sandman balls and any weapon with the "slow target on hit" attribute apply this native if the victim is not already slowed.
