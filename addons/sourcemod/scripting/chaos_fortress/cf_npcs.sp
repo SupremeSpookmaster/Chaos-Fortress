@@ -184,6 +184,8 @@ void CFNPC_MakeNatives()
 	//Speed:
 	CreateNative("CFNPC.f_Speed.set", Native_CFNPCSetSpeed);
 	CreateNative("CFNPC.f_Speed.get", Native_CFNPCGetSpeed);
+	CreateNative("CFNPC.f_MaxSpeed.set", Native_CFNPCSetMaxSpeed);
+	CreateNative("CFNPC.f_MaxSpeed.get", Native_CFNPCGetMaxSpeed);
 
 	//Think Rate and Next Think Time:
 	CreateNative("CFNPC.f_ThinkRate.set", Native_CFNPCSetThinkRate);
@@ -236,6 +238,7 @@ void CFNPC_MakeNatives()
 	CreateNative("CFNPC.StopPathing", Native_CFNPCStopPathing);
 	CreateNative("CFNPC.SetGoalVector", Native_CFNPCSetGoalVector);
 	CreateNative("CFNPC.GetGroundSpeed", Native_CFNPCGetGroundSpeed);
+	CreateNative("CFNPC.ApplyTemporarySpeedChange", Native_CFNPCModifySpeed);
 
 	//CBaseNPC Base Values:
 	CreateNative("CFNPC.f_YawRate.get", Native_CFNPCGetYawRate);
@@ -396,6 +399,7 @@ public int Native_CFNPCConstructor(Handle plugin, int numParams)
 		npc.i_Skin = skin;
 		npc.f_Scale = scale;
 		npc.f_Speed = speed;
+		npc.f_MaxSpeed = speed;
 		npc.f_ThinkRate = thinkRate;
 		npc.SetBleedParticle(VFX_DEFAULT_BLEED);
 
@@ -986,10 +990,16 @@ public void CFNPC_InternalLogic(int ref)
 		float motion[3];
 		npc.GetGroundMotionVector(motion);
 
+		float mult = (1.66 * npc.f_Speed)/npc.f_MaxSpeed;
+		if (mult < 0.0)
+			mult = 0.0;
+		if (mult > 1.0)
+			mult = 1.0;
+
 		if (npc.i_PoseMoveX >= 0)
-			npc.SetPoseParameter(npc.i_PoseMoveX, GetVectorDotProduct(motion, front));
+			npc.SetPoseParameter(npc.i_PoseMoveX, GetVectorDotProduct(motion, front) * mult);
 		if (npc.i_PoseMoveY >= 0)
-			npc.SetPoseParameter(npc.i_PoseMoveY, GetVectorDotProduct(motion, right));
+			npc.SetPoseParameter(npc.i_PoseMoveY, GetVectorDotProduct(motion, right) * mult);
 	}
 
 	npc.GetPathFollower().Update(npc.GetBot());
@@ -1058,15 +1068,27 @@ public int Native_CFNPCSetScale(Handle plugin, int numParams)
 	return 0; 
 }
 
-public any Native_CFNPCGetSpeed(Handle plugin, int numParams) { return CFNPC_Speed[GetNativeCell(1)]; }
+public any Native_CFNPCGetSpeed(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	return npc.GetBaseNPC().flRunSpeed;
+}
+
 public int Native_CFNPCSetSpeed(Handle plugin, int numParams) 
 {
 	int ent = GetNativeCell(1);
 	float speed = GetNativeCell(2);
-	CFNPC_Speed[ent] = speed;
 	CFNPC npc = view_as<CFNPC>(ent);
 	npc.GetBaseNPC().flRunSpeed = speed;
 	npc.GetBaseNPC().flWalkSpeed = speed;
+
+	return 0; 
+}
+
+public any Native_CFNPCGetMaxSpeed(Handle plugin, int numParams) { return CFNPC_Speed[GetNativeCell(1)]; }
+public int Native_CFNPCSetMaxSpeed(Handle plugin, int numParams) 
+{
+	CFNPC_Speed[GetNativeCell(1)] = GetNativeCell(2);
 
 	return 0; 
 }
@@ -1983,3 +2005,5 @@ public Action CFNPC_BleedTimer(Handle bleed, DataPack pack)
 }
 
 public any Native_CFNPCGetBleeding(Handle plugin, int numParams) { return i_BleedStacks[GetNativeCell(1)] > 0; }
+
+public int Native_CFNPCModifySpeed(Handle plugin, int numParams) { return 0; }

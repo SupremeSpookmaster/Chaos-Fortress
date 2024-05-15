@@ -358,6 +358,18 @@ methodmap CFNPC < CBaseCombatCharacter
 	 */
 	public native bool Extinguish(bool forced = false);
 
+	/**
+	 * Temporarily changes the CFNPC's speed.
+	 * 
+	 * @param mod		The factor by which to change the CFNPC's speed, relative to speedMode.
+	 * @param speedMode	Used to determine how to change the CFNPC's speed.
+	 * 					<= 0: Multiply the CFNPC's base speed by "mod" and add the difference to their speed.
+	 * 					1: The same as 0, but with the CFNPC's current speed instead of their base speed.
+	 * 					>= 2: Directly add "mod" to the CFNPC's current speed.
+	 * @param duration	The duration of the speed modifier.
+	 */
+	public native void ApplyTemporarySpeedModifier(float mod, int speedMode, float duration);
+
 	property int Index
 	{
 		public native get();
@@ -456,6 +468,12 @@ methodmap CFNPC < CBaseCombatCharacter
 	}
 
 	property float f_Speed
+	{
+		public native get();
+		public native set(float value);
+	}
+
+	property float f_MaxSpeed
 	{
 		public native get();
 		public native set(float value);
