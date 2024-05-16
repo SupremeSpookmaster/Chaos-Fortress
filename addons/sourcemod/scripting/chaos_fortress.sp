@@ -38,6 +38,7 @@
 //		- The Gambler:
 //			- Begin work.
 //		- NPCs:
+//			- Figure out why rapidly hitting NPCs in the legs with projectiles causes them to teleport out of the map.
 //			- Make NPCs collide with all of the following entities, and make them work as intended when they collide:
 //				- Sandman Balls - should deal damage and slow the NPC temporarily, then bounce off and become inert. Damage should be calculated at the moment the ball spawns, and be stored in a global array.
 //				- Flying Guillotine - should be deleted on contact and then deal damage, apply bleed, and emit a sound. Damage should be calculated at the moment the cleaver spawns, and be stored in a global array.

@@ -5,6 +5,9 @@
 #define VFX_AFTERBURN_HAUNTED	"halloween_burningplayer_flyingbits"
 #define VFX_DEFAULT_BLEED		"blood_impact_red_01_goop"
 
+static float DEFAULT_MINS[3] = { -24.0, -24.0, 0.0 };
+static float DEFAULT_MAXS[3] = { 24.0, 24.0, 82.0 };
+
 Function CFNPC_Logic[2049] = { INVALID_FUNCTION, ... };
 Handle CFNPC_LogicPlugin[2049] = { null, ... };
 
@@ -180,6 +183,7 @@ void CFNPC_MakeNatives()
 	//Scale:
 	CreateNative("CFNPC.f_Scale.set", Native_CFNPCSetScale);
 	CreateNative("CFNPC.f_Scale.get", Native_CFNPCGetScale);
+	CreateNative("CFNPC.SetBoundingBox", Native_CFNPCSetBoundingBox);
 
 	//Speed:
 	CreateNative("CFNPC.f_Speed.set", Native_CFNPCSetSpeed);
@@ -332,6 +336,7 @@ void CFNPC_OnDestroy(int npc)
 	SDKUnhook(npc, SDKHook_ThinkPost, CFNPC_ThinkPost);
 	SDKUnhook(npc, SDKHook_Think, CFNPC_Think);
 	SDKUnhook(npc, SDKHook_TraceAttack, CFNPC_TraceAttack);
+	SDKUnhook(npc, SDKHook_Touch, CFNPC_Touch);
 
 	CFNPC dead = view_as<CFNPC>(npc);
 	if(dead.GetPathFollower().IsValid())
@@ -402,6 +407,7 @@ public int Native_CFNPCConstructor(Handle plugin, int numParams)
 		npc.f_MaxSpeed = speed;
 		npc.f_ThinkRate = thinkRate;
 		npc.SetBleedParticle(VFX_DEFAULT_BLEED);
+		npc.SetBoundingBox(DEFAULT_MINS, DEFAULT_MAXS);
 
 		if (lifespan > 0.0)
 			npc.f_EndTime = GetGameTime() + lifespan;
@@ -438,6 +444,7 @@ public int Native_CFNPCConstructor(Handle plugin, int numParams)
 		SDKHook(ent, SDKHook_Think, CFNPC_Think);
 		SDKHook(ent, SDKHook_ThinkPost, CFNPC_ThinkPost);
 		SDKHook(ent, SDKHook_TraceAttack, CFNPC_TraceAttack);
+		SDKHook(ent, SDKHook_Touch, CFNPC_Touch);
 
 		return ent;
 	}
@@ -445,7 +452,7 @@ public int Native_CFNPCConstructor(Handle plugin, int numParams)
 	return -1;
 }
 
-//TODO: Replace this with a hull trace that gets called every frame
+//TODO: Add functionality to each collision
 public void CFNPC_Touch(int entity, int other)
 {
 	char classname[255];
@@ -454,26 +461,43 @@ public void CFNPC_Touch(int entity, int other)
 	bool remove = false;
 	if (StrEqual(classname, "tf_projectile_cleaver"))
 	{
-		CPrintToChatAll("Touched guillotine");
-		remove = true;
+		bool live = view_as<bool>(GetEntProp(other, Prop_Send, "m_bTouched"));
+		if (!live)
+		{
+			float dmg = GetEntPropFloat(other, Prop_Send, "m_flDamage"); //TODO: This is not correct, need to calculate it based on base damage, crits, and weapon attributes
+			CPrintToChatAll("This guillotine should deal %.2f damage.", dmg);
+
+			SetEntProp(other, Prop_Send, "m_bTouched", 1);
+			remove = true;
+		}
 	}
 	else if (StrEqual(classname, "tf_projectile_stun_ball"))
 	{
-		CPrintToChatAll("Touched sandman ball");
+		bool live = view_as<bool>(GetEntProp(other, Prop_Send, "m_bTouched"));
+		if (!live)
+		{
+			float dmg = GetEntPropFloat(other, Prop_Send, "m_flDamage");	//TODO: This is not correct, need to calculate it based on base damage, crits, and weapon attributes
+			CPrintToChatAll("This ball should deal %.2f damage.", dmg);
+
+			SetEntProp(other, Prop_Send, "m_bTouched", 1);
+		}
 	}
 	else if (StrEqual(classname, "tf_projectile_jar"))
 	{
 		CPrintToChatAll("Touched jarate");
+		//TODO: Explode into jarate, will require jarate natives
 		remove = true;
 	}
 	else if (StrEqual(classname, "tf_projectile_jar_milk"))
 	{
 		CPrintToChatAll("Touched milk");
+		//TODO: Explode into milk, will require milk natives
 		remove = true;
 	}
 	else if (StrEqual(classname, "tf_projectile_jar_gas"))
 	{
 		CPrintToChatAll("Touched propane tank");
+		//TODO: Explode into gas, will require custom gas logic
 		remove = true;
 	}
 
@@ -953,20 +977,28 @@ public void CFNPC_InternalLogic(int ref)
 		return;
 	}
 
-	float groundSpeed = npc.GetGroundSpeed();
+	CFNPC_BurnLogic(npc, gt);
+	CFNPC_SetMovePose(npc);
 
+	npc.GetPathFollower().Update(npc.GetBot());
+
+	RequestFrame(CFNPC_InternalLogic, ref);
+}
+
+public void CFNPC_BurnLogic(CFNPC npc, float gametime)
+{
 	if (npc.b_Burning)
 	{
-		if (gt >= f_NextBurn[npc.Index])
+		if (gametime >= f_NextBurn[npc.Index])
 		{
 			SDKHooks_TakeDamage(npc.Index, npc.i_AfterburnAttacker, npc.i_AfterburnAttacker, npc.f_AfterburnDMG, DMG_BURN, _, _, _, false);
-			if (gt + 0.5 > npc.f_AfterburnEndTime)
+			if (gametime + 0.5 > npc.f_AfterburnEndTime)
 			{
 				npc.Extinguish();
 			}
 			else
 			{
-				f_NextBurn[npc.Index] = gt + 0.5;
+				f_NextBurn[npc.Index] = gametime + 0.5;
 				if (npc.b_AfterburnIsHaunted)
 				{
 					AttachParticle_TE(npc.Index, VFX_AFTERBURN_HAUNTED);
@@ -974,6 +1006,11 @@ public void CFNPC_InternalLogic(int ref)
 			}
 		}
 	}
+}
+
+public void CFNPC_SetMovePose(CFNPC npc)
+{
+	float groundSpeed = npc.GetGroundSpeed();
 
 	if (groundSpeed < 0.01)
 	{
@@ -1001,10 +1038,6 @@ public void CFNPC_InternalLogic(int ref)
 		if (npc.i_PoseMoveY >= 0)
 			npc.SetPoseParameter(npc.i_PoseMoveY, GetVectorDotProduct(motion, right) * mult);
 	}
-
-	npc.GetPathFollower().Update(npc.GetBot());
-
-	RequestFrame(CFNPC_InternalLogic, ref);
 }
 
 public int Native_CFNPCGetIndex(Handle plugin, int numParams) { return GetNativeCell(1); }
@@ -2062,4 +2095,26 @@ public Action CFNPC_RemoveTemporarySpeedChange(Handle timer, DataPack pack)
 	view_as<CFNPC>(ent).f_Speed -= diff;
 
 	return Plugin_Continue;
+}
+
+public int Native_CFNPCSetBoundingBox(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	float mins[3], maxs[3];
+	GetNativeArray(2, mins, sizeof(mins));
+	GetNativeArray(3, maxs, sizeof(maxs));
+
+	if (GetNativeCell(4))
+	{
+		ScaleVector(mins, npc.f_Scale);
+		ScaleVector(maxs, npc.f_Scale);
+	}
+
+	npc.GetBaseNPC().SetBodyMaxs(maxs);
+	npc.GetBaseNPC().SetBodyMins(mins);
+
+	SetEntPropVector(npc.Index, Prop_Data, "m_vecMaxs", maxs);
+	SetEntPropVector(npc.Index, Prop_Data, "m_vecMins", mins);
+
+	return 0;
 }

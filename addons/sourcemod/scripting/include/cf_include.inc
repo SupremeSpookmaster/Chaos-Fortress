@@ -370,6 +370,15 @@ methodmap CFNPC < CBaseCombatCharacter
 	 */
 	public native void ApplyTemporarySpeedChange(float mod, int speedMode, float duration);
 
+	/**
+	 * Sets the bounding box of the CFNPC. 
+	 * 
+	 * @param mins		New mins.
+	 * @param maxs		New maxs.
+	 * @param autoscale	If true, the mins and maxs are automatically scaled based on the CFNPC's model scale.
+	 */
+	public native void SetBoundingBox(float mins[3], float maxs[3], bool autoscale = true);
+
 	property int Index
 	{
 		public native get();
