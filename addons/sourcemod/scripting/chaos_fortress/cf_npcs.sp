@@ -463,6 +463,12 @@ public int Native_CFNPCConstructor(Handle plugin, int numParams)
 
 public void CFNPC_Touch(int entity, int other)
 {
+	if (!HasEntProp(other, Prop_Send, "m_iTeamNum"))
+		return;
+
+	if (GetEntProp(other, Prop_Send, "m_iTeamNum") == GetEntProp(entity, Prop_Send, "m_iTeamNum"))
+		return;
+
 	CFNPC npc = view_as<CFNPC>(entity);
 
 	char classname[255];
@@ -1004,6 +1010,9 @@ public void CFNPC_InternalLogic(int ref)
 		return;
 
 	CFNPC npc = view_as<CFNPC>(ent);
+
+	if (!npc.b_Exists)
+		return;
 
 	float gt = GetGameTime();
 	if (CFNPC_Logic[ent] != INVALID_FUNCTION && npc.g_LogicPlugin != null && gt >= npc.f_NextThinkTime)
@@ -2154,7 +2163,7 @@ public int Native_CFNPCSetBoundingBox(Handle plugin, int numParams)
 	float scale = 1.1;	//We always scale 10% bigger because otherwise certain projectiles (balls, cleavers, jars) harmlessly bounce off at certain angles.
 	if (GetNativeCell(4))
 	{
-		scale += npc.f_Scale;
+		scale *= npc.f_Scale;
 	}
 
 	ScaleVector(mins, scale);

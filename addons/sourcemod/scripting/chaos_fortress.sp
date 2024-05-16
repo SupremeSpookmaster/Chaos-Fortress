@@ -41,7 +41,7 @@
 //			- Figure out why rapidly hitting NPCs in the legs with projectiles or closing spawn doors on them causes them to teleport out of the map.
 //			- Make NPCs vulnerable to trigger_hurts (they don't need to take accurate damage, just kill them instantly if they're inside one, this way they don't get stuck in death pits)
 //			- Make NPCs collide with all of the following entities, and make them work as intended when they collide:
-//				- Jars (milk, jarate, maybe gas?) - should be deleted on contact and then spawn particle, play sound, and apply milk/jarate effects.
+//				- Jars (milk, jarate, maybe gas?) - should be deleted on contact and then spawn particle, play sound, and apply milk/jarate effects. Will need OnNPCMilked, etc to let devs allow or block milk/jarate/gas
 //			- Add natives for basic attacks (should have generic melee, generic projectile, and generic bullets).
 //			- Add an option to make NPCs use the body_pitch and body_yaw pose parameters to automatically look towards their target destination.
 //			- Fix collision (likely related to bounding box and lag comp).
