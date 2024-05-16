@@ -1011,7 +1011,7 @@ public void CFNPC_InternalLogic(int ref)
 
 	CFNPC npc = view_as<CFNPC>(ent);
 
-	if (!npc.b_Exists)
+	if (!npc.b_Exists || I_AM_DEAD[ent])
 		return;
 
 	float gt = GetGameTime();
@@ -1032,10 +1032,23 @@ public void CFNPC_InternalLogic(int ref)
 
 	CFNPC_BurnLogic(npc, gt);
 	CFNPC_SetMovePose(npc);
+	CFNPC_CheckTriggerHurt(npc);
 
 	npc.GetPathFollower().Update(npc.GetBot());
 
 	RequestFrame(CFNPC_InternalLogic, ref);
+}
+
+public void CFNPC_CheckTriggerHurt(CFNPC npc)
+{
+	float pos[3];
+	GetEntPropVector(npc.Index, Prop_Send, "m_vecOrigin", pos);
+	if (IsPointHazard(pos))
+	{
+		npc.i_Health = 0;
+		SetEntProp(npc.Index, Prop_Data, "m_takedamage", 1, 1);
+		SDKHooks_TakeDamage(npc.Index, 0, 0, 9999999.0, _, _, _, _, false);
+	}
 }
 
 public void CFNPC_BurnLogic(CFNPC npc, float gametime)

@@ -2979,3 +2979,33 @@ stock void PreventAllCollisions(int entity)
 	SetEntProp(entity, Prop_Send, "m_usSolidFlags", 12); 
 	SetEntProp(entity, Prop_Data, "m_nSolidType", 6);
 }
+
+bool HazardResult;
+stock bool IsPointHazard(const float pos1[3])
+{
+	HazardResult = false;
+	TR_EnumerateEntities(pos1, pos1, PARTITION_TRIGGER_EDICTS, RayType_EndPoint, TraceEntityEnumerator_EnumerateTriggers);
+	return HazardResult;
+}
+
+public bool TraceEntityEnumerator_EnumerateTriggers(int entity, int client)
+{
+	char classname[16];
+	if(GetEntityClassname(entity, classname, sizeof(classname)) && !StrContains(classname, "trigger_hurt"))
+	{
+		if(!GetEntProp(entity, Prop_Data, "m_bDisabled"))
+		{
+			Handle trace = TR_ClipCurrentRayToEntityEx(MASK_ALL, entity);
+			bool didHit = TR_DidHit(trace);
+			delete trace;
+			
+			if (didHit)
+			{
+				HazardResult = true;
+				return false;
+			}
+		}
+	}
+	
+	return true;
+}
