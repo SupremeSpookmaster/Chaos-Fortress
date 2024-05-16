@@ -38,10 +38,9 @@
 //		- The Gambler:
 //			- Begin work.
 //		- NPCs:
-//			- Figure out why rapidly hitting NPCs in the legs with projectiles causes them to teleport out of the map.
+//			- Figure out why rapidly hitting NPCs in the legs with projectiles or closing spawn doors on them causes them to teleport out of the map.
+//			- Make NPCs vulnerable to trigger_hurts (they don't need to take accurate damage, just kill them instantly if they're inside one, this way they don't get stuck in death pits)
 //			- Make NPCs collide with all of the following entities, and make them work as intended when they collide:
-//				- Sandman Balls - should deal damage and slow the NPC temporarily, then bounce off and become inert. Damage should be calculated at the moment the ball spawns, and be stored in a global array.
-//				- Flying Guillotine - should be deleted on contact and then deal damage, apply bleed, and emit a sound. Damage should be calculated at the moment the cleaver spawns, and be stored in a global array.
 //				- Jars (milk, jarate, maybe gas?) - should be deleted on contact and then spawn particle, play sound, and apply milk/jarate effects.
 //			- Add natives for basic attacks (should have generic melee, generic projectile, and generic bullets).
 //			- Add an option to make NPCs use the body_pitch and body_yaw pose parameters to automatically look towards their target destination.

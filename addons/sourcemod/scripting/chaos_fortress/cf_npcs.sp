@@ -5,6 +5,9 @@
 #define VFX_AFTERBURN_HAUNTED	"halloween_burningplayer_flyingbits"
 #define VFX_DEFAULT_BLEED		"blood_impact_red_01_goop"
 
+#define SND_SANDMAN_HIT			")player/pl_impact_stun.wav"
+#define SND_CLEAVER_HIT			")weapons/cleaver_hit_03.wav"
+
 static float DEFAULT_MINS[3] = { -24.0, -24.0, 0.0 };
 static float DEFAULT_MAXS[3] = { 24.0, 24.0, 82.0 };
 
@@ -29,6 +32,7 @@ bool IExist[2049] = { false, ... };
 bool ForcedToGib[2049] = { false, ... };
 bool b_AfterburnHaunted[2049] = { false, ... };
 bool b_MiniCrit[2049] = { false, ... };
+bool I_AM_DEAD[2049] = { false, ... };
 
 char CFNPC_Model[2049][255];
 char CFNPC_BleedParticle[2049][255];
@@ -79,6 +83,9 @@ void CFNPC_MapStart()
 
 	PrecacheEffect("ParticleEffect");
 	PrecacheEffect("ParticleEffectStop");
+
+	PrecacheSound(SND_SANDMAN_HIT);
+	PrecacheSound(SND_CLEAVER_HIT);
 }
 
 void CFNPC_MapEnd()
@@ -323,6 +330,7 @@ void CFNPC_OnCreate(int npc)
 	Call_Finish();
 
 	alive.b_Exists = true;
+	I_AM_DEAD[npc] = false;
 }
 
 void CFNPC_OnDestroy(int npc)
@@ -354,6 +362,7 @@ void CFNPC_OnDestroy(int npc)
 	i_BleedStacks[npc] = 0;
 
 	dead.b_Exists = false;
+	I_AM_DEAD[npc] = true;
 }
 
 void CFNPC_RemoveFromPaths(CFNPC npc)
@@ -452,11 +461,14 @@ public int Native_CFNPCConstructor(Handle plugin, int numParams)
 	return -1;
 }
 
-//TODO: Add functionality to each collision
 public void CFNPC_Touch(int entity, int other)
 {
+	CFNPC npc = view_as<CFNPC>(entity);
+
 	char classname[255];
 	GetEntityClassname(other, classname, sizeof(classname));
+
+	float pos[3];
 
 	bool remove = false;
 	if (StrEqual(classname, "tf_projectile_cleaver"))
@@ -464,10 +476,26 @@ public void CFNPC_Touch(int entity, int other)
 		bool live = view_as<bool>(GetEntProp(other, Prop_Send, "m_bTouched"));
 		if (!live)
 		{
-			float dmg = GetEntPropFloat(other, Prop_Send, "m_flDamage"); //TODO: This is not correct, need to calculate it based on base damage, crits, and weapon attributes
-			CPrintToChatAll("This guillotine should deal %.2f damage.", dmg);
+			float dmg = 50.0;
+
+			int owner = GetEntPropEnt(other, Prop_Send, "m_hThrower");
+			int launcher = GetEntPropEnt(other, Prop_Send, "m_hOriginalLauncher");
+
+			if (IsValidEntity(launcher))
+				dmg *= GetAttributeValue(launcher, 1, 1.0) * GetAttributeValue(launcher, 2, 1.0);
+
+			GetEntPropVector(other, Prop_Send, "m_vecOrigin", pos);
 
 			SetEntProp(other, Prop_Send, "m_bTouched", 1);
+			SDKHooks_TakeDamage(entity, other, owner, dmg, GetEntProp(other, Prop_Send, "m_bCritical") > 0 ? DMG_CLUB|DMG_ACID : DMG_CLUB, launcher, _, pos, false);
+
+			if (IsValidClient(owner))
+			{
+				EmitSoundToClient(owner, SND_CLEAVER_HIT);
+			}
+
+			EmitSoundToAll(SND_CLEAVER_HIT, other);
+
 			remove = true;
 		}
 	}
@@ -476,10 +504,25 @@ public void CFNPC_Touch(int entity, int other)
 		bool live = view_as<bool>(GetEntProp(other, Prop_Send, "m_bTouched"));
 		if (!live)
 		{
-			float dmg = GetEntPropFloat(other, Prop_Send, "m_flDamage");	//TODO: This is not correct, need to calculate it based on base damage, crits, and weapon attributes
-			CPrintToChatAll("This ball should deal %.2f damage.", dmg);
+			float dmg = 15.0;
 
+			int launcher = GetEntPropEnt(other, Prop_Send, "m_hOriginalLauncher");
+			int owner = GetEntPropEnt(other, Prop_Send, "m_hOwnerEntity");
+			GetEntPropVector(other, Prop_Send, "m_vecOrigin", pos);
+
+			if (IsValidEntity(launcher))
+				dmg *= GetAttributeValue(launcher, 1, 1.0) * GetAttributeValue(launcher, 2, 1.0);
+
+			SDKHooks_TakeDamage(entity, other, owner, dmg, GetEntProp(other, Prop_Send, "m_bCritical") > 0 ? DMG_CLUB|DMG_ACID : DMG_CLUB, launcher, _, pos, false);
+			npc.ApplyTemporarySpeedChange(0.5, 1, 6.0);
 			SetEntProp(other, Prop_Send, "m_bTouched", 1);
+
+			if (IsValidClient(owner))
+			{
+				EmitSoundToClient(owner, SND_SANDMAN_HIT);
+			}
+
+			EmitSoundToAll(SND_SANDMAN_HIT, other);
 		}
 	}
 	else if (StrEqual(classname, "tf_projectile_jar"))
@@ -497,7 +540,7 @@ public void CFNPC_Touch(int entity, int other)
 	else if (StrEqual(classname, "tf_projectile_jar_gas"))
 	{
 		CPrintToChatAll("Touched propane tank");
-		//TODO: Explode into gas, will require custom gas logic
+		//TODO: Explode into gas, will require custom gas logic and gas natives
 		remove = true;
 	}
 
@@ -675,6 +718,7 @@ public void CFNPC_OnKilled(int victim, int attacker, int inflictor, float damage
 		}
 		
 		npc.Extinguish();
+		I_AM_DEAD[victim] = true;
 
 		if (shouldGib)
 		{
@@ -1792,7 +1836,7 @@ public int Native_CFNPCRemoveAttachments(Handle plugin, int numParams)
 		delete npc.g_AttachedCosmetics;
 	}
 
-	if (GetNativeCell(3))
+	if (GetNativeCell(3) && npc.g_AttachedWeapons != null)
 	{
 		for (int i = 0; i < GetArraySize(npc.g_AttachedWeapons); i++)
 		{
@@ -2023,6 +2067,9 @@ public Action CFNPC_BleedTimer(Handle bleed, DataPack pack)
 	if (!IsValidEntity(npc))
 		return Plugin_Stop;
 
+	if (I_AM_DEAD[npc])
+		return Plugin_Stop;
+
 	float endTime = ReadPackFloat(pack);
 	if (GetGameTime() >= endTime)
 	{
@@ -2104,11 +2151,14 @@ public int Native_CFNPCSetBoundingBox(Handle plugin, int numParams)
 	GetNativeArray(2, mins, sizeof(mins));
 	GetNativeArray(3, maxs, sizeof(maxs));
 
+	float scale = 1.1;	//We always scale 10% bigger because otherwise certain projectiles (balls, cleavers, jars) harmlessly bounce off at certain angles.
 	if (GetNativeCell(4))
 	{
-		ScaleVector(mins, npc.f_Scale);
-		ScaleVector(maxs, npc.f_Scale);
+		scale += npc.f_Scale;
 	}
+
+	ScaleVector(mins, scale);
+	ScaleVector(maxs, scale);
 
 	npc.GetBaseNPC().SetBodyMaxs(maxs);
 	npc.GetBaseNPC().SetBodyMins(mins);
