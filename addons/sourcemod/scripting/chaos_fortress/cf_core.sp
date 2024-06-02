@@ -419,6 +419,7 @@ public void OnGameFrame()
 public void OnEntityCreated(int entity, const char[] classname)
 {
 	CFA_OnEntityCreated(entity, classname);
+	CFNPC_OnEntityCreated(entity, classname);
 	
 	//Don't let players drop Mannpower powerups on death:
 	if (StrContains(classname, "powerup") != -1)

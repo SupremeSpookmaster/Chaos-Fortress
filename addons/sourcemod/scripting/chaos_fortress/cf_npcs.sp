@@ -4,9 +4,20 @@
 #define VFX_AFTERBURN_BLUE		"burningplayer_blue"
 #define VFX_AFTERBURN_HAUNTED	"halloween_burningplayer_flyingbits"
 #define VFX_DEFAULT_BLEED		"blood_impact_red_01_goop"
+#define VFX_MILK				"peejar_drips_milk"
+#define VFX_JARATE				"peejar_drips"
+#define VFX_GAS_RED				"gas_can_drips_red"
+#define VFX_GAS_BLUE			"gas_can_drips_blue"
+
+#define PARTICLE_JAR_EXPLODE_MILK		"peejar_impact_milk"
+#define PARTICLE_JAR_EXPLODE_JARATE		"peejar_impact"
+#define PARTICLE_JAR_EXPLODE_GAS_RED	"gas_can_impact_red"
+#define PARTICLE_JAR_EXPLODE_GAS_BLUE	"gas_can_impact_blue"
 
 #define SND_SANDMAN_HIT			")player/pl_impact_stun.wav"
 #define SND_CLEAVER_HIT			")weapons/cleaver_hit_03.wav"
+#define SND_JAR_EXPLODE			")weapons/jar_explode.wav"
+#define SND_GAS_EXPLODE			")weapons/gas_can_explode.wav"
 
 static float DEFAULT_MINS[3] = { -24.0, -24.0, 0.0 };
 static float DEFAULT_MAXS[3] = { 24.0, 24.0, 82.0 };
@@ -86,6 +97,8 @@ void CFNPC_MapStart()
 
 	PrecacheSound(SND_SANDMAN_HIT);
 	PrecacheSound(SND_CLEAVER_HIT);
+	PrecacheSound(SND_JAR_EXPLODE);
+	PrecacheSound(SND_GAS_EXPLODE);
 }
 
 void CFNPC_MapEnd()
@@ -310,6 +323,15 @@ void CFNPC_MakeNatives()
 	CreateNative("CFNPC.b_Bleeding.get", Native_CFNPCGetBleeding);
 }
 
+public void CFNPC_OnEntityCreated(int entity, const char[] classname)
+{
+	//All projectiles that have any sort of explosion (not including wrap assassin) need to have custom explosion logic so that they work seamlessly with NPCs:
+	if (StrContains(classname, "tf_projectile_jar") != -1)
+	{
+		SDKHook(entity, SDKHook_TouchPost, CFNPC_JarTouch);
+	}
+}
+
 void CFNPC_OnCreate(int npc)
 {
 	CFNPC alive = view_as<CFNPC>(npc);
@@ -531,27 +553,63 @@ public void CFNPC_Touch(int entity, int other)
 			EmitSoundToAll(SND_SANDMAN_HIT, other);
 		}
 	}
-	else if (StrEqual(classname, "tf_projectile_jar"))
-	{
-		CPrintToChatAll("Touched jarate");
-		//TODO: Explode into jarate, will require jarate natives
-		remove = true;
-	}
-	else if (StrEqual(classname, "tf_projectile_jar_milk"))
-	{
-		CPrintToChatAll("Touched milk");
-		//TODO: Explode into milk, will require milk natives
-		remove = true;
-	}
-	else if (StrEqual(classname, "tf_projectile_jar_gas"))
-	{
-		CPrintToChatAll("Touched propane tank");
-		//TODO: Explode into gas, will require custom gas logic and gas natives
-		remove = true;
-	}
 
 	if (remove)
 		RemoveEntity(other);
+}
+
+public Action CFNPC_JarTouch(int entity, int other)
+{
+	char classname[255];
+	GetEntityClassname(entity, classname, sizeof(classname));
+
+	int team = GetEntProp(entity, Prop_Send, "m_iTeamNum");
+	bool isRed = team == view_as<int>(TFTeam_Red);
+
+	if (HasEntProp(other, Prop_Send, "m_iTeamNum"))
+	{
+		if (GetEntProp(other, Prop_Send, "m_iTeamNum") == team)
+			return Plugin_Handled;
+	}
+
+	int owner = GetEntPropEnt(entity, Prop_Send, "m_hThrower");
+	int launcher = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
+
+	float pos[3];
+
+	if (StrEqual(classname, "tf_projectile_jar"))
+	{
+		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+
+		SpawnParticle(pos, PARTICLE_JAR_EXPLODE_JARATE, 2.0);
+		EmitSoundToAll(SND_JAR_EXPLODE, entity);
+
+		//Coat all surrounding valid enemies (not including buildings) in jarate
+	}
+	else if (StrEqual(classname, "tf_projectile_jar_milk"))
+	{
+		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+
+		SpawnParticle(pos, PARTICLE_JAR_EXPLODE_MILK, 2.0);
+		EmitSoundToAll(SND_JAR_EXPLODE, entity);
+
+		//Coat all surrounding valid enemies (not including buildings) in milk
+	}
+	else if (StrEqual(classname, "tf_projectile_jar_gas"))
+	{
+		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+
+		SpawnParticle(pos, isRed ? PARTICLE_JAR_EXPLODE_GAS_RED : PARTICLE_JAR_EXPLODE_GAS_BLUE, 2.0);
+		EmitSoundToAll(SND_GAS_EXPLODE, entity);
+
+		//TODO: Spawn gas cloud
+	}
+
+	CPrintToChatAll("A jar collided with something.");
+
+	RemoveEntity(entity);
+
+	return Plugin_Continue;
 }
 
 public Action CFNPC_TraceAttack(int victim, int& attacker, int& inflictor, float& damage, int& damagetype, int& ammotype, int hitbox, int hitgroup)
