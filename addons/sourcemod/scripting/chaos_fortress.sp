@@ -49,6 +49,7 @@
 //			- Make custom melee hitreg so it doesn't sound like you're hitting a wall every time you hit an NPC with melee.
 //				- Instead of a custom attribute, just grab the 263 and 264 attributes from all melee weapons at the moment they attack and apply those to a global array, then set the attributes to 0.0 and restore them after running our custom melee logic.
 //			- Manually simulate explosions. Can be done by detecting when an explosive entity spawns (rockets, pills, sentry rockets, stickies), then calculating its radius and falloff based on attributes from the thing that fired it. When the entity despawns or collides with something, simulate the explosion manually using those stats. Damage can be grabbed at the time of the explosion. Pills will need to check if they're colliding with a valid enemy. Also don't forget the Loch-n-Load's "disappear on hitting walls" attribute.
+//				- Add a forward to let devs prevent this manual simulation from occurring and/or change its stats, so that custom abilities that use rockets/pills/etc as a base aren't broken by this.
 //			- Add lag compensation.
 //			- Fix collision (likely related to lag comp).
 //			- Add an option to make NPCs automatically enter their air/swim animations if airborne or in the water.
@@ -66,7 +67,7 @@
 //				- Combat logic.
 //				- "Aspects", AKA passive effects.
 //				- "Abilities", AKA special abilities that can only be activated by custom NPC logic.
-//				- Movement and combat will typically only be used by extremely basic NPCs, where as aspects and abilities are used to create more complex NPCs.
+//				- Movement and combat will typically only be used by extremely basic NPCs, whereas aspects and abilities are used to create more complex NPCs.
 //			- Allow server owners to configure several settings:
 //				- Max NPCs, max gibs, max model attachments per NPC, whether or not NPCs should have visible health bars, whether or not the NPC's remaining HP should be displayed on the user's HUD when the NPC is damaged.
 //			- Port all of the "GetClosestTarget/Ally/Whatever" natives from CF.
