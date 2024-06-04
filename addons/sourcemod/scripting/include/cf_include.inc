@@ -2197,3 +2197,12 @@ native CF_ForceViewmodelAnimation(int client, char[] sequence, bool hideWeapon =
 native CFNPC_Explosion(float pos[3], float radius, float damage, float falloffStartRange = 0.0, float falloffEndRange = 0.0, float falloffMax = 0.5, int inflictor = 0, 
 						int weapon = 0, int attacker = 0, int damagetype = DMG_GENERIC, bool skipLOS = false, bool ignoreInvuln = false, bool hitAttacker = true, 
 						Function filterFunction = INVALID_FUNCTION, char filterPlugin[255] = "", Function hitFunction = INVALID_FUNCTION, char hitPlugin[255] = "");
+
+/**
+ * Checks if a given entity is a CFNPC or base_boss.
+ * 
+ * @param entity	The entity to check.
+ * 
+ * @return	True if the entity is a CFNPC or base_boss, false otherwise.
+ */
+native bool CFNPC_IsNPC(int entity);

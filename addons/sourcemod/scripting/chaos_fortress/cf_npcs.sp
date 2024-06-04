@@ -324,6 +324,7 @@ void CFNPC_MakeNatives()
 
 	//Global (not specific to the CFNPC methodmap) Natives:
 	CreateNative("CFNPC_Explosion", Native_CFNPCExplosion);
+	CreateNative("CFNPC_IsNPC", Native_CFNPCIsThisAnNPC);
 }
 
 public void CFNPC_OnEntityCreated(int entity, const char[] classname)
@@ -2426,4 +2427,20 @@ public bool CFNPC_LOSCheck(entity, contentsMask)
 	}
 		
 	return true;
+}
+
+public any Native_CFNPCIsThisAnNPC(Handle plugin, int numParams)
+{
+	int ent = GetNativeCell(1);
+
+	if (!IsValidEntity(ent))
+		return false;
+
+	char classname[255];
+	GetEntityClassname(ent, classname, sizeof(classname));
+
+	if (StrContains(classname, "base_boss") != -1)
+		return true;
+
+	return view_as<CFNPC>(ent).b_Exists;
 }

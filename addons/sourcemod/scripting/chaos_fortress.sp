@@ -45,7 +45,6 @@
 //			- Add natives for basic attacks (should have generic melee, generic projectile, and generic bullets).
 //			- Add an option to make NPCs use the body_pitch and body_yaw pose parameters to automatically look towards their target destination.
 //			- Add SetGoalEntity.
-//			- Add a global native to check if a given entity is a CFNPC.
 //			//////// EVERYTHING BELOW HERE REQUIRES THE PORTABLE NPC SYSTEM TO BE A STANDALONE PLUGIN, PORT NPCS TO THE PORTABLE NPC SYSTEM ONCE THE ABOVE ARE FINISHED: //////// 
 //			- Make custom melee hitreg so it doesn't sound like you're hitting a wall every time you hit an NPC with melee.
 //				- Instead of a custom attribute, just grab the 263 and 264 attributes from all melee weapons at the moment they attack and apply those to a global array, then set the attributes to 0.0 and restore them after running our custom melee logic.
