@@ -127,7 +127,7 @@
 //		- [ ] Control Points
 //		- [ ] King of the Hill
 //	- TODO: Finalize the wiki by updating each page with all of the changes. This will take several days at the bare minimum.
-//	- TODO: Add support for translations. This will be a huge pain in the ass, but does not need to be done until public release.
+//		- May end up just scrapping the wiki. It adds way too much upkeep for next to no benefit.
 //	- TODO: Make sure plugin variables automatically get reset on map change. I imagine this will not be a problem, but if it's like ZR and variables don't get reset automatically, it's going to be a nightmare to deal with.
 //	- TODO: The following plugins are mandatory for CF to run, and need to be added to the GitHub's prerequisites:
 //		- None, currently.
@@ -138,6 +138,7 @@
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
 //	- Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
 //		- "desc_brief" will be what shows up when you first open a character's page in the !characters menu. "desc_detailed" is a secondary menu like the lore button, but with multiple pages of detailed info.
+//	- TODO: Add support for translations. This will be a huge pain in the ass, but does not need to be done until public release.
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
 //	- For some reason, players get equipped with the heavy's Apparatchik's Apparel cosmetic????????????????????????? It's invisible while alive but becomes visible on death and also displays in the 3D player model shown in the HUD. This has no effect on gameplay but it's really ugly. Honestly baffling.
@@ -150,8 +151,6 @@
 //	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This feature may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //			- Scrap this feature entirely and remove all mentions of it from the code. This will be a giant pain in the ass but does not need to be done until public release.
 //	- ALL: All projectiles are affected by every instance of CF_OnGenericProjectileTeamChanged (excluding Gadgeteer) because I forgot to add a filter. Oops.
-//	- The x64 update might kill Chaos Fortress before it's even released. Look into leaning away from DHooks.
-//	- DEVELOPMENT: Something is leaking edicts again...................................
 //
 //	- PRESUMED UNFIXABLE (major bugs which I don't believe can be fixed with my current SourceMod expertise. The best thing you can do is classify these as exploits and punish them as such):
 //	- DEMOPAN: Enemies can get stuck in his shield if they walk into it while it is held. Demopans can abuse this to intentionally get enemies stuck for free kills. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.

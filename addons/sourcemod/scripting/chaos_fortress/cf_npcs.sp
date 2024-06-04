@@ -588,7 +588,9 @@ public Action CFNPC_JarTouch(int entity, int other)
 		SpawnParticle(pos, PARTICLE_JAR_EXPLODE_JARATE, 2.0);
 		EmitSoundToAll(SND_JAR_EXPLODE, entity);
 
-		//TODO: Coat all surrounding valid enemies (not including buildings) in jarate
+		//Calculate radius based on vanilla jarate radius + attributes, then use the explosion native to cover all surrounding victims in jarate.
+		//Duration will need to be calculated from attributes as well.
+		//Explosion native needs to be expanded to allow devs to hit allies as well. Then, use that to extinguish burning allies within the radius.
 	}
 	else if (StrEqual(classname, "tf_projectile_jar_milk"))
 	{
@@ -599,7 +601,7 @@ public Action CFNPC_JarTouch(int entity, int other)
 
 		CFNPC_Explosion(pos, 80.0, 9999.0, -1.0, _, _, entity, launcher, owner, DMG_ACID);
 
-		//TODO: Coat all surrounding valid enemies (not including buildings) in milk
+		//TODO: Same process as jarate, but for milk instead.
 	}
 	else if (StrEqual(classname, "tf_projectile_jar_gas"))
 	{
@@ -608,10 +610,9 @@ public Action CFNPC_JarTouch(int entity, int other)
 		SpawnParticle(pos, isRed ? PARTICLE_JAR_EXPLODE_GAS_RED : PARTICLE_JAR_EXPLODE_GAS_BLUE, 2.0);
 		EmitSoundToAll(SND_GAS_EXPLODE, entity);
 
-		//TODO: Spawn gas cloud
+		//TODO: Spawn gas cloud. Use RequestFrame recursion to detect whenever an entity enters the cloud's radius, then
+		//apply the gas effect to them if they aren't already gassed. Radius and duration need to be calculated based on attributes.
 	}
-
-	CPrintToChatAll("A jar collided with something.");
 
 	RemoveEntity(entity);
 
