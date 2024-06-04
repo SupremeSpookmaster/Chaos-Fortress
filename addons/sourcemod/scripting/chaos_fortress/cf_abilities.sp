@@ -2623,14 +2623,12 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 				if (!IsPlayerAlive(victim) || (IsInvuln(victim) && !ignoreInvuln) || (victim == attacker && !includeUser))
 					continue;
 			}
+
+			if (!GetEntProp(victim, Prop_Data, "m_takedamage") && !ignoreInvuln)
+				continue;
 			
 			float vicLoc[3];
-			GetEntPropVector(victim, Prop_Send, "m_vecOrigin", vicLoc);
-				
-			if (IsValidClient(victim))
-			{
-				vicLoc[2] += 40.0;
-			}
+			CF_WorldSpaceCenter(victim, vicLoc);
 			
 			bool passed = true;
 					
@@ -2659,17 +2657,20 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 					realDMG *= 1.0 - (((dist - falloffStart) / (radius - falloffStart)) * falloffMax);
 				}
 						
-				char classname[255];
-				GetEntityClassname(victim, classname, sizeof(classname));
-				
-				//If the inflictor is a weapon and the victim is a building or prop_physics, deal damage multiplied by building damage attributes:
-				if (GetEntSendPropOffs(inflictor, "m_AttributeList") > 0 && (StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_dispenser")
-				|| StrEqual(classname, "obj_teleporter") || StrContains(classname, "prop_physics") != -1))
+				//If the weapon is valid and the victim is a building or prop_physics, deal damage multiplied by building damage attributes:
+				if (IsValidEntity(weapon))
 				{
-					realDMG *= GetAttributeValue(inflictor, 137, 1.0) * GetAttributeValue(inflictor, 775, 1.0);
+					char classname[255];
+					GetEntityClassname(victim, classname, sizeof(classname));
+
+					if (GetEntSendPropOffs(weapon, "m_AttributeList") > 0 && (StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_dispenser")
+					|| StrEqual(classname, "obj_teleporter") || StrContains(classname, "prop_physics") != -1))
+					{
+						realDMG *= GetAttributeValue(weapon, 137, 1.0) * GetAttributeValue(weapon, 775, 1.0);
+					}
 				}
 				
-				SDKHooks_TakeDamage(victim, inflictor, attacker, realDMG, damageType, weapon);
+				SDKHooks_TakeDamage(victim, inflictor, attacker, realDMG, damageType, weapon, _, groundZero, false);
 				PushArrayCell(ReturnValue, victim);
 			}
 		}

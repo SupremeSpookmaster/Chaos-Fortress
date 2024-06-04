@@ -321,6 +321,9 @@ void CFNPC_MakeNatives()
 	//Bleed:
 	CreateNative("CFNPC.Bleed", Native_CFNPCBleed);
 	CreateNative("CFNPC.b_Bleeding.get", Native_CFNPCGetBleeding);
+
+	//Global (not specific to the CFNPC methodmap) Natives:
+	CreateNative("CFNPC_Explosion", Native_CFNPCExplosion);
 }
 
 public void CFNPC_OnEntityCreated(int entity, const char[] classname)
@@ -584,7 +587,7 @@ public Action CFNPC_JarTouch(int entity, int other)
 		SpawnParticle(pos, PARTICLE_JAR_EXPLODE_JARATE, 2.0);
 		EmitSoundToAll(SND_JAR_EXPLODE, entity);
 
-		//Coat all surrounding valid enemies (not including buildings) in jarate
+		//TODO: Coat all surrounding valid enemies (not including buildings) in jarate
 	}
 	else if (StrEqual(classname, "tf_projectile_jar_milk"))
 	{
@@ -593,7 +596,9 @@ public Action CFNPC_JarTouch(int entity, int other)
 		SpawnParticle(pos, PARTICLE_JAR_EXPLODE_MILK, 2.0);
 		EmitSoundToAll(SND_JAR_EXPLODE, entity);
 
-		//Coat all surrounding valid enemies (not including buildings) in milk
+		CFNPC_Explosion(pos, 80.0, 9999.0, -1.0, _, _, entity, launcher, owner, DMG_ACID);
+
+		//TODO: Coat all surrounding valid enemies (not including buildings) in milk
 	}
 	else if (StrEqual(classname, "tf_projectile_jar_gas"))
 	{
@@ -2247,4 +2252,178 @@ public int Native_CFNPCSetBoundingBox(Handle plugin, int numParams)
 	SetEntPropVector(npc.Index, Prop_Data, "m_vecMins", mins);
 
 	return 0;
+}
+
+Handle CFNPC_HitByBlast = null;
+
+public int Native_CFNPCExplosion(Handle plugin, int numParams)
+{
+	float pos[3];
+	GetNativeArray(1, pos, sizeof(pos));
+	float radius = GetNativeCell(2);
+	float damage = GetNativeCell(3);
+	float falloffStartRange = GetNativeCell(4);
+	float falloffEndRange = GetNativeCell(5);
+	float falloffMax = GetNativeCell(6);
+	int inflictor = GetNativeCell(7);
+	int weapon = GetNativeCell(8);
+	int attacker = GetNativeCell(9);
+	int damageType = GetNativeCell(10);
+	bool skipLOS = GetNativeCell(11);
+	bool ignoreInvuln = GetNativeCell(12);
+	bool hitAttacker = GetNativeCell(13);
+
+	char filterPlugin[255], hitPlugin[255];
+	Function filterFunction = GetNativeFunction(14);
+	GetNativeString(15, filterPlugin, sizeof(filterPlugin));
+	Function hitFunction = GetNativeFunction(16);
+	GetNativeString(17, hitPlugin, sizeof(hitPlugin));
+
+	delete CFNPC_HitByBlast;
+	CFNPC_HitByBlast = CreateArray(255);
+	
+	TR_EnumerateEntitiesSphere(pos, radius, PARTITION_NON_STATIC_EDICTS, CFNPC_BlastTrace, attacker);
+	
+	for (int i = 0; i < GetArraySize(CFNPC_HitByBlast); i++)
+	{
+		int victim = EntRefToEntIndex(GetArrayCell(CFNPC_HitByBlast, i));
+		if (IsValidEntity(victim))
+		{
+			if (IsValidClient(victim))
+			{
+				if (!IsPlayerAlive(victim) || (IsInvuln(victim) && !ignoreInvuln) || (victim == attacker && !hitAttacker))
+					continue;
+			}
+
+			if (!GetEntProp(victim, Prop_Data, "m_takedamage") && !ignoreInvuln)
+				continue;
+			
+			float vicLoc[3];
+			CF_WorldSpaceCenter(victim, vicLoc);
+			
+			bool passed = true;
+					
+			if (!skipLOS)
+			{
+				Handle trace = TR_TraceRayFilterEx(pos, vicLoc, MASK_PLAYERSOLID_BRUSHONLY, RayType_EndPoint, CFNPC_AOETrace, victim);
+				passed = !TR_DidHit(trace);
+				delete trace;
+			}
+			
+			if (filterFunction != INVALID_FUNCTION && !StrEqual(filterPlugin, ""))
+			{
+				Call_StartFunction(GetPluginHandle(filterPlugin), filterFunction);
+				Call_PushCell(victim);
+				Call_PushCell(attacker);
+				Call_PushCell(inflictor);
+				Call_PushCell(weapon);
+				Call_PushFloat(damage);
+				Call_Finish(passed);
+			}
+					
+			if (passed)
+			{
+				float dist = GetVectorDistance(pos, vicLoc);
+
+				float realDMG = damage;
+				if (dist > falloffStartRange && falloffStartRange >= 0.0)
+				{
+					realDMG *= 1.0 - (((dist - falloffStartRange) / (falloffEndRange - falloffStartRange)) * falloffMax);
+				}
+				
+				//If the weapon is valid and the victim is a building or prop_physics, deal damage multiplied by building damage attributes:
+				if (IsValidEntity(weapon))
+				{
+					char classname[255];
+					GetEntityClassname(victim, classname, sizeof(classname));
+
+					if (GetEntSendPropOffs(weapon, "m_AttributeList") > 0 && (StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_dispenser")
+					|| StrEqual(classname, "obj_teleporter") || StrContains(classname, "prop_physics") != -1))
+					{
+						realDMG *= GetAttributeValue(weapon, 137, 1.0) * GetAttributeValue(weapon, 775, 1.0);
+					}
+				}
+				
+				SDKHooks_TakeDamage(victim, inflictor, attacker, realDMG, damageType, weapon, _, pos, false);
+
+				if (hitFunction != INVALID_FUNCTION && !StrEqual(hitPlugin, ""))
+				{
+					Call_StartFunction(GetPluginHandle(hitPlugin), hitFunction);
+					Call_PushCell(victim);
+					Call_PushCell(attacker);
+					Call_PushCell(inflictor);
+					Call_PushCell(weapon);
+					Call_PushFloat(damage);
+					Call_Finish();
+				}
+			}
+		}
+	}
+	
+	delete CFNPC_HitByBlast;
+
+	return 0;
+}
+
+public bool CFNPC_BlastTrace(int entity, int attacker)
+{
+	//If the victim does not have a team affiliation: never hit.
+	if (!HasEntProp(entity, Prop_Send, "m_iTeamNum"))
+		return true;
+	
+	//If the attacker is not a valid entity or is the console: always hit.
+	if (!IsValidEntity(attacker) || attacker <= 0)
+	{
+		PushArrayCell(CFNPC_HitByBlast, EntIndexToEntRef(entity));
+		return true;
+	}
+
+	//If the attacker does not have a team affiliation: always hit.
+	if (!HasEntProp(attacker, Prop_Send, "m_iTeamNum"))
+	{
+		PushArrayCell(CFNPC_HitByBlast, EntIndexToEntRef(entity));
+		return true;
+	}
+
+	//If the victim is not on the attacker's team, or the victim IS the attacker: always hit.
+	if (GetEntProp(entity, Prop_Send, "m_iTeamNum") != GetEntProp(attacker, Prop_Send, "m_iTeamNum") || (entity == attacker))
+	{
+		PushArrayCell(CFNPC_HitByBlast, EntIndexToEntRef(entity));
+		return true;
+	}
+	
+	return true;
+}
+
+public bool CFNPC_AOETrace(entity, contentsmask, target)
+{
+	if (!CFNPC_LOSCheck(entity, contentsmask))
+		return false;
+		
+	return entity != target;
+}
+
+public bool CFNPC_LOSCheck(entity, contentsMask)
+{
+	if (entity <= MaxClients || view_as<CFNPC>(entity).b_Exists)
+		return false;
+	
+	char classname[255];
+	GetEntityClassname(entity, classname, sizeof(classname));
+	
+	if (StrContains(classname, "tf_projectile") != -1 || StrContains(classname, "info_") != -1 || StrContains(classname, "trigger_") != -1)
+		return false;
+		
+	if (StrContains(classname, "func_") != -1)
+	{
+		if (!StrEqual("func_brush", classname)
+			&& !StrEqual("func_door", classname) && !StrEqual("func_detail", classname) && !StrEqual("func_wall", classname) && !StrEqual("func_rotating", classname)
+			&& !StrEqual("func_reflective_glass", classname) && !StrEqual("func_physbox", classname) && !StrEqual("func_movelinear", classname) && !StrEqual("func_door_rotating", classname)
+			&& !StrEqual("func_breakable", classname))
+		{
+			return false;
+		}
+	}
+		
+	return true;
 }

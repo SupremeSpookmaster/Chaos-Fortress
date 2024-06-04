@@ -2167,3 +2167,33 @@ native CF_SimulateSpellbookCast(int client, char[] attributes = "", CF_SpellInde
  * @note	Weapons that are physically part of the user's hands, such as the gunslinger, are not hidden by hideWeapon.
  */
 native CF_ForceViewmodelAnimation(int client, char[] sequence, bool hideWeapon = true, bool blockAttack = true, bool blockWeaponSwitch = true);
+
+/**
+ * Triggers an instance of area-of-effect damage at the given location. Guaranteed to be compatible with NPCs, as well as the engineer's buildings.
+ *
+ * @param pos					The location of the explosion.
+ * @param radius				The radius of the explosion.
+ * @param damage				The base damage of the explosion.
+ * @param falloffStartRange		The distance at which radius-based damage falloff begins. If less than 0.0: radius falloff is skipped.
+ * @param falloffEndRange		The distance at which radius-based damage falloff reaches its peak.
+ * @param falloffMax			The maximum percentage of damage to subtract from the explosion based on radius falloff. IE: 0.25 will subtract up to a maximum of 25% of the damage based on the victim's distance from the center of the explosion.
+ * @param inflictor				The entity which will inflict the damage, such as a rocket or a grenade.
+ * @param weapon				The weapon which will inflict the damage, such as a rocket launcher or a grenade launcher.
+ * @param attacker				The entity which will be credited for the damage, such as a client index.
+ * @param damagetype			The damage flags to use.
+ * @param skipLOS				If true: line of sight is not required for this explosion to hit its victims.
+ * @param ignoreInvuln			If true: the explosion will still hit victims even if they are invulnerable. This does not necessarily mean they will take damage, but it WILL trigger damage events.
+ * @param hitAttacker			If true: this explosion can hit the "attacker" entity.
+ * @param filterFunction		The function to call to check if a given entity can be hit by this explosion.
+ * 								This function must take the following parameters: victim (int), attacker (int), inflictor (int), weapon (int), damage (float).
+ * 								It must also return a bool (true to allow the victim to be hit, false otherwise).
+ * 								EXAMPLE: bool MyFilter(int victim, int attacker, int inflictor, int weapon, float damage)
+ * @param filterPlugin			The name of the plugin which contains filterFunction.
+ * @param hitFunction			The function to call when this explosion hits a victim.
+ * 								This function must take all of the same parameters as filterFunction, in the same order, but does not need to return a value.
+ * 								EXAMPLE: void OnHit(int victim, int attacker, int inflictor, int weapon, float damage)
+ * @param hitPlugin				The name of the plugin which contains hitFunction.
+ */
+native CFNPC_Explosion(float pos[3], float radius, float damage, float falloffStartRange = 0.0, float falloffEndRange = 0.0, float falloffMax = 0.5, int inflictor = 0, 
+						int weapon = 0, int attacker = 0, int damagetype = DMG_GENERIC, bool skipLOS = false, bool ignoreInvuln = false, bool hitAttacker = true, 
+						Function filterFunction = INVALID_FUNCTION, char filterPlugin[255] = "", Function hitFunction = INVALID_FUNCTION, char hitPlugin[255] = "");
