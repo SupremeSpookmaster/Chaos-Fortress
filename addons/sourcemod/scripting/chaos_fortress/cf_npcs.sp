@@ -28,6 +28,7 @@ Handle CFNPC_LogicPlugin[2049] = { null, ... };
 int i_TotalNPCs[2049] = { -1, ... };
 int i_AfterburnAttacker[2049] = { -1, ... };
 int i_BleedStacks[2049] = { 0, ... };
+int i_Milker[2049] = { -1, ... };
 
 float CFNPC_Speed[2049] = { 0.0, ... };
 float CFNPC_ThinkRate[2049] = { 0.0, ... };
@@ -37,6 +38,7 @@ float f_AfterburnEndTime[2049] = { 0.0, ... };
 float f_AfterburnDMG[2049] = { 0.0, ... };
 float f_NextBurn[2049] = { 0.0, ... };
 float f_NextFlinch[2049] = { 0.0, ... };
+float f_MilkEndTime[2049] = { 0.0, ... };
 float f_PunchForce[2049][3];
 
 bool IExist[2049] = { false, ... };
@@ -340,7 +342,7 @@ void CFNPC_MakeNatives()
 	CreateNative("CFNPC.RemoveMilk", Native_CFNPCRemoveMilk);
 
 	//Jarate:
-	CreateNative("CFNPC.b_Jarated.get", Native_CFNPCGetJarated);
+	/*CreateNative("CFNPC.b_Jarated.get", Native_CFNPCGetJarated);
 	CreateNative("CFNPC.f_JarateEndTime.get", Native_CFNPCGetJarateEndTime);
 	CreateNative("CFNPC.f_JarateEndTime.set", Native_CFNPCSetJarateEndTime);
 	CreateNative("CFNPC.i_JarateApplicant.get", Native_CFNPCGetJarateApplicant);
@@ -355,7 +357,7 @@ void CFNPC_MakeNatives()
 	CreateNative("CFNPC.i_GasApplicant.get", Native_CFNPCGetGasApplicant);
 	CreateNative("CFNPC.i_GasApplicant.set", Native_CFNPCSetGasApplicant);
 	CreateNative("CFNPC.ApplyGas", Native_CFNPCApplyGas);
-	CreateNative("CFNPC.RemoveGas", Native_CFNPCRemoveGas);
+	CreateNative("CFNPC.RemoveGas", Native_CFNPCRemoveGas);*/
 
 	//Bleed:
 	CreateNative("CFNPC.Bleed", Native_CFNPCBleed);
@@ -364,6 +366,7 @@ void CFNPC_MakeNatives()
 	//Global (not specific to the CFNPC methodmap) Natives:
 	CreateNative("CFNPC_Explosion", Native_CFNPCExplosion);
 	CreateNative("CFNPC_IsNPC", Native_CFNPCIsThisAnNPC);
+	CreateNative("CFNPC_HealEntity", Native_CFNPCHealEntity);
 }
 
 public void CFNPC_OnEntityCreated(int entity, const char[] classname)
@@ -2483,4 +2486,118 @@ public any Native_CFNPCIsThisAnNPC(Handle plugin, int numParams)
 		return true;
 
 	return view_as<CFNPC>(ent).b_Exists;
+}
+
+public any Native_CFNPCGetMilked(Handle plugin, int numParams) { return f_MilkEndTime[GetNativeCell(1)] > GetGameTime(); }
+
+public any Native_CFNPCGetMilkEndTime(Handle plugin, int numParams) { return f_MilkEndTime[GetNativeCell(1)]; }
+
+public int Native_CFNPCSetMilkEndTime(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	float endTime = GetNativeCell(2);
+
+	if (endTime > GetGameTime())
+	{
+		if (!npc.b_Milked)
+		{
+			AttachParticle_TE(npc.Index, VFX_MILK);
+		}
+
+		f_MilkEndTime[npc.Index] = endTime;
+	}
+	else
+	{
+		if (npc.b_Milked)
+		{
+			RemoveParticle_TE(npc.Index, VFX_MILK);
+		}
+
+		f_MilkEndTime[npc.Index] = 0.0;
+	}
+
+	return 0;
+}
+
+public int Native_CFNPCGetMilker(Handle plugin, int numParams) { return EntRefToEntIndex(i_Milker[GetNativeCell(1)]); }
+
+public int Native_CFNPCSetMilker(Handle plugin, int numParams)
+{
+	int victim = GetNativeCell(1);
+	int milker = GetNativeCell(2);
+
+	if (IsValidEntity(milker))
+		i_Milker[victim] = EntIndexToEntRef(milker);
+	else
+		i_Milker[victim] = milker;
+
+	return 0;
+}
+
+public any Native_CFNPCApplyMilk(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	float duration = GetNativeCell(2);
+	int attacker = GetNativeCell(3);
+	float gt = GetGameTime();
+
+	bool success = true;
+	Action result;
+
+	Call_StartForward(g_OnCFNPCMilked);
+
+	Call_PushCell(npc);
+	Call_PushFloatRef(duration);
+	Call_PushCellRef(attacker);
+
+	Call_Finish(result);
+	success = result != Plugin_Stop && result != Plugin_Handled;
+
+	if (success)
+	{
+		if (gt > npc.f_MilkEndTime)
+			npc.f_MilkEndTime = gt + duration;
+		else
+			npc.f_MilkEndTime += duration;
+		
+		npc.i_Milker = attacker;
+	}
+
+	return success;
+}
+
+public any Native_CFNPCRemoveMilk(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	bool forced = GetNativeCell(2);
+
+	bool success = true;
+
+	Call_StartForward(g_OnCFNPCMilkRemoved);
+
+	Call_PushCell(npc);
+	Call_PushCell(npc.i_Milker);
+
+	Call_Finish(success);
+
+	if (!success)
+		success = forced;
+
+	if (success)
+	{
+		npc.f_MilkEndTime = 0.0;
+		npc.i_Milker = -1;
+	}
+
+	return success;
+}
+
+public any Native_CFNPCHealEntity(Handle plugin, int numParams)
+{
+	int target = GetNativeCell(1);
+	float amount = float(GetNativeCell(2));
+	float maxHeal = GetNativeCell(3);
+	int healer = GetNativeCell(4);
+
+	//TODO
 }

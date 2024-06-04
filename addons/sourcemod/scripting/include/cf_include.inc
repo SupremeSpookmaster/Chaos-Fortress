@@ -2366,7 +2366,7 @@ native CF_ForceViewmodelAnimation(int client, char[] sequence, bool hideWeapon =
  * @param hitPlugin				The name of the plugin which contains hitFunction.
  */
 native CFNPC_Explosion(float pos[3], float radius, float damage, float falloffStartRange = 0.0, float falloffEndRange = 0.0, float falloffMax = 0.5, int inflictor = 0, 
-						int weapon = 0, int attacker = 0, int damagetype = DMG_GENERIC, bool skipLOS = false, bool ignoreInvuln = false, bool hitAttacker = true, 
+						int weapon = 0, int attacker = 0, int damagetype = 0, bool skipLOS = false, bool ignoreInvuln = false, bool hitAttacker = true, 
 						Function filterFunction = INVALID_FUNCTION, char filterPlugin[255] = "", Function hitFunction = INVALID_FUNCTION, char hitPlugin[255] = "");
 
 /**
@@ -2377,3 +2377,15 @@ native CFNPC_Explosion(float pos[3], float radius, float damage, float falloffSt
  * @return	True if the entity is a CFNPC or base_boss, false otherwise.
  */
 native bool CFNPC_IsNPC(int entity);
+
+/**
+ * Heals an entity.
+ * 
+ * @param entity	The entity to heal.
+ * @param amount	The amount of healing to give.
+ * @param maxHeal	The maximum percentage of the target entity to which this effect can heal. EX: 1.5 means this effect can provide up to 50% overheal.
+ * @param healer	The entity credited for the heal.
+ * 
+ * @return	True if the heal was successful, false if it was blocked by something.
+ */
+native bool CFNPC_HealEntity(int entity, int amount, float maxHeal = 1.0, int healer = 0);
