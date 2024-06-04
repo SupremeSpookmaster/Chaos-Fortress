@@ -57,6 +57,12 @@ GlobalForward g_OnCFNPCKilled;
 GlobalForward g_OnCFNPCExtinguished;
 GlobalForward g_OnCFNPCIgnited;
 GlobalForward g_OnCFNPCBleed;
+GlobalForward g_OnCFNPCMilkRemoved;
+GlobalForward g_OnCFNPCJarateRemoved;
+GlobalForward g_OnCFNPCGasRemoved;
+GlobalForward g_OnCFNPCMilked;
+GlobalForward g_OnCFNPCJarated;
+GlobalForward g_OnCFNPCGassed;
 
 Handle g_hLookupActivity;
 Handle SDK_Ragdoll;
@@ -149,6 +155,12 @@ void CFNPC_MakeForwards()
 	g_OnCFNPCExtinguished = new GlobalForward("CF_OnCFNPCExtinguished", ET_Single, Param_Any);
 	g_OnCFNPCIgnited = new GlobalForward("CF_OnCFNPCIgnited", ET_Event, Param_Any, Param_FloatByRef, Param_FloatByRef, Param_FloatByRef, Param_CellByRef, Param_CellByRef, Param_FloatByRef);
 	g_OnCFNPCBleed = new GlobalForward("CF_OnCFNPCBleed", ET_Event, Param_Any, Param_FloatByRef, Param_FloatByRef, Param_CellByRef);
+	g_OnCFNPCMilkRemoved = new GlobalForward("CF_OnCFNPCMilkRemoved", ET_Single, Param_Cell, Param_Cell);
+	g_OnCFNPCJarateRemoved = new GlobalForward("CF_OnCFNPCJarateRemoved", ET_Single, Param_Cell, Param_Cell);
+	g_OnCFNPCGasRemoved = new GlobalForward("CF_OnCFNPCGasRemoved", ET_Single, Param_Cell, Param_Cell);
+	g_OnCFNPCMilked = new GlobalForward("CF_OnCFNPCMilked", ET_Event, Param_Cell, Param_FloatByRef, Param_CellByRef);
+	g_OnCFNPCJarated = new GlobalForward("CF_OnCFNPCJarated", ET_Event, Param_Cell, Param_FloatByRef, Param_CellByRef);
+	g_OnCFNPCGassed = new GlobalForward("CF_OnCFNPCGassed", ET_Event, Param_Cell, Param_FloatByRef, Param_CellByRef);
 
 	/*NextBotActionFactory AcFac = new NextBotActionFactory("CFNPCMainAction");
 	AcFac.SetEventCallback(EventResponderType_OnActorEmoted, PluginBot_OnActorEmoted);*/
@@ -317,6 +329,33 @@ void CFNPC_MakeNatives()
 	CreateNative("CFNPC.b_AfterburnIsHaunted.set", Native_CFNPCSetAfterburnHaunted);
 	CreateNative("CFNPC.Ignite", Native_CFNPCIgnite);
 	CreateNative("CFNPC.Extinguish", Native_CFNPCExtinguish);
+
+	//Milk:
+	CreateNative("CFNPC.b_Milked.get", Native_CFNPCGetMilked);
+	CreateNative("CFNPC.f_MilkEndTime.get", Native_CFNPCGetMilkEndTime);
+	CreateNative("CFNPC.f_MilkEndTime.set", Native_CFNPCSetMilkEndTime);
+	CreateNative("CFNPC.i_Milker.get", Native_CFNPCGetMilker);
+	CreateNative("CFNPC.i_Milker.set", Native_CFNPCSetMilker);
+	CreateNative("CFNPC.ApplyMilk", Native_CFNPCApplyMilk);
+	CreateNative("CFNPC.RemoveMilk", Native_CFNPCRemoveMilk);
+
+	//Jarate:
+	CreateNative("CFNPC.b_Jarated.get", Native_CFNPCGetJarated);
+	CreateNative("CFNPC.f_JarateEndTime.get", Native_CFNPCGetJarateEndTime);
+	CreateNative("CFNPC.f_JarateEndTime.set", Native_CFNPCSetJarateEndTime);
+	CreateNative("CFNPC.i_JarateApplicant.get", Native_CFNPCGetJarateApplicant);
+	CreateNative("CFNPC.i_JarateApplicant.set", Native_CFNPCSetJarateApplicant);
+	CreateNative("CFNPC.ApplyJarate", Native_CFNPCApplyJarate);
+	CreateNative("CFNPC.RemoveJarate", Native_CFNPCRemoveJarate);
+
+	//Gas:
+	CreateNative("CFNPC.b_Gassed.get", Native_CFNPCGetGassed);
+	CreateNative("CFNPC.f_GasEndTime.get", Native_CFNPCGetGasEndTime);
+	CreateNative("CFNPC.f_GasEndTime.set", Native_CFNPCSetGasEndTime);
+	CreateNative("CFNPC.i_GasApplicant.get", Native_CFNPCGetGasApplicant);
+	CreateNative("CFNPC.i_GasApplicant.set", Native_CFNPCSetGasApplicant);
+	CreateNative("CFNPC.ApplyGas", Native_CFNPCApplyGas);
+	CreateNative("CFNPC.RemoveGas", Native_CFNPCRemoveGas);
 
 	//Bleed:
 	CreateNative("CFNPC.Bleed", Native_CFNPCBleed);

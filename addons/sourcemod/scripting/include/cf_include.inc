@@ -350,6 +350,63 @@ methodmap CFNPC < CBaseCombatCharacter
 	public native bool Bleed(float duration, float damage, int attacker = 0);
 
 	/**
+	 * Coats the CFNPC in Mad Milk.
+	 * 
+	 * @param duration		The duration for which to apply Mad Milk.
+	 * @param attacker		The entity which is responsible for the coating.
+	 * 
+	 * @return	True if the CFNPC was successfully coated, false if something prevented it.
+	 */
+	public native bool ApplyMilk(float duration, int attacker = 0);
+
+	/**
+	 * Coats the CFNPC in Jarate.
+	 * 
+	 * @param duration		The duration for which to apply Jarate.
+	 * @param attacker		The entity which is responsible for the coating.
+	 * 
+	 * @return	True if the CFNPC was successfully coated, false if something prevented it.
+	 */
+	public native bool ApplyJarate(float duration, int attacker = 0);
+
+	/**
+	 * Coats the CFNPC in Gas Passer gas.
+	 * 
+	 * @param duration		The duration for which to apply gas.
+	 * @param attacker		The entity which is responsible for the coating.
+	 * 
+	 * @return	True if the CFNPC was successfully coated, false if something prevented it.
+	 */
+	public native bool ApplyGas(float duration, int attacker = 0);
+
+	/**
+	 * Removes the CFNPC's Mad Milk.
+	 * 
+	 * @param forced	If true, the return value of CF_OnCFNPCMilkRemoved is completely ignored, forcing the removal to go through no matter what.
+	 * 
+	 * @return	True if the CFNPC was successfully un-milked, false otherwise.
+	 */
+	public native bool RemoveMilk(bool forced = false);
+
+	/**
+	 * Removes the CFNPC's Jarate.
+	 * 
+	 * @param forced	If true, the return value of CF_OnCFNPCJarateRemoved is completely ignored, forcing the removal to go through no matter what.
+	 * 
+	 * @return	True if the CFNPC was successfully un-jarated, false otherwise.
+	 */
+	public native bool RemoveJarate(bool forced = false);
+
+	/**
+	 * Removes the CFNPC's Gas Passer gas.
+	 * 
+	 * @param forced	If true, the return value of CF_OnCFNPCGasRemoved is completely ignored, forcing the removal to go through no matter what.
+	 * 
+	 * @return	True if the CFNPC was successfully un-gassed, false otherwise.
+	 */
+	public native bool RemoveGas(bool forced = false);
+
+	/**
 	 * Extinguishes the CFNPC's afterburn.
 	 * 
 	 * @param forced	If true, the return value of CF_OnCFNPCExtinguished is completely ignored, forcing the extinguish to go through no matter what.
@@ -405,6 +462,21 @@ methodmap CFNPC < CBaseCombatCharacter
 	{
 		public native get();
 		public native set(bool value);
+	}
+
+	property bool b_Milked
+	{
+		public native get();
+	}
+
+	property bool b_Jarated
+	{
+		public native get();
+	}
+
+	property bool b_Gassed
+	{
+		public native get();
 	}
 
 	property Function g_Logic
@@ -470,6 +542,24 @@ methodmap CFNPC < CBaseCombatCharacter
 		public native set(int value);
 	}
 
+	property int i_Milker
+	{
+		public native get();
+		public native set(int value);
+	}
+
+	property int i_JarateApplicant
+	{
+		public native get();
+		public native set(int value);
+	}
+
+	property int i_GasApplicant
+	{
+		public native get();
+		public native set(int value);
+	}
+
 	property float f_Scale
 	{
 		public native get();
@@ -513,6 +603,24 @@ methodmap CFNPC < CBaseCombatCharacter
 	}
 
 	property float f_AfterburnDMG
+	{
+		public native get();
+		public native set(float value);
+	}
+
+	property float f_MilkEndTime
+	{
+		public native get();
+		public native set(float value);
+	}
+
+	property float f_JarateEndTime
+	{
+		public native get();
+		public native set(float value);
+	}
+
+	property float f_GasEndTime
 	{
 		public native get();
 		public native set(float value);
@@ -651,6 +759,36 @@ forward Action CF_OnCFNPCKilled(CFNPC npc, float damage, int weapon, int inflict
 forward bool CF_OnCFNPCExtinguished(CFNPC npc);
 
 /**
+ * Called when a CFNPC's Mad Milk is removed via the CFNPC.RemoveMilk native.
+ * 
+ * @param npc			The CFNPC.
+ * @param applicant		The entity which initially applied the Mad Milk.
+ * 
+ * @return	False to prevent the removal, otherwise return true. Note that this value is ignored if the "forced" parameter of CFNPC.RemoveMilk was set to true.
+ */
+forward bool CF_OnCFNPCMilkRemoved(CFNPC npc, int applicant);
+
+/**
+ * Called when a CFNPC's Jarate is removed via the CFNPC.RemoveJarate native.
+ * 
+ * @param npc			The CFNPC.
+ * @param applicant		The entity which initially applied the Jarate.
+ * 
+ * @return	False to prevent the removal, otherwise return true. Note that this value is ignored if the "forced" parameter of CFNPC.RemoveJarate was set to true.
+ */
+forward bool CF_OnCFNPCJarateRemoved(CFNPC npc, int applicant);
+
+/**
+ * Called when a CFNPC's Gas Passer gas is removed via the CFNPC.RemoveGas native.
+ * 
+ * @param npc			The CFNPC.
+ * @param applicant		The entity which initially applied the gas.
+ * 
+ * @return	False to prevent the removal, otherwise return true. Note that this value is ignored if the "forced" parameter of CFNPC.RemoveGas was set to true.
+ */
+forward bool CF_OnCFNPCGasRemoved(CFNPC npc, int applicant);
+
+/**
  * Called when a CFNPC is ignited.
  * 
  * @param npc		The CFNPC.
@@ -664,6 +802,39 @@ forward bool CF_OnCFNPCExtinguished(CFNPC npc);
  * @return 			Plugin_Changed if you changed any values, Plugin_Handled or Plugin_Stop to prevent the afterburn, or Plugin_Continue to do nothing.
  */
 forward Action CF_OnCFNPCIgnited(CFNPC npc, float &burnTime, float &minBurnTime, float &maxBurnTime, int &attacker, bool &haunted, float &burnDMG);
+
+/**
+ * Called when a CFNPC is coated in Mad Milk milk.
+ * 
+ * @param npc			The CFNPC.
+ * @param duration		The duration of the effect.
+ * @param applicant		The entity responsible for the milking.
+ * 
+ * @return				Plugin_Changed if you changed any values, Plugin_Handled or Plugin_Stop to prevent the coating, or Plugin_Continue to do nothing.
+ */
+forward Action CF_OnCFNPCMilked(CFNPC npc, float &duration, int &applicant);
+
+/**
+ * Called when a CFNPC is coated in Jarate.
+ * 
+ * @param npc			The CFNPC.
+ * @param duration		The duration of the effect.
+ * @param applicant		The entity responsible for the jarate.
+ * 
+ * @return				Plugin_Changed if you changed any values, Plugin_Handled or Plugin_Stop to prevent the coating, or Plugin_Continue to do nothing.
+ */
+forward Action CF_OnCFNPCJarated(CFNPC npc, float &duration, int &applicant);
+
+/**
+ * Called when a CFNPC is coated in Gas Passer gas.
+ * 
+ * @param npc			The CFNPC.
+ * @param duration		The duration of the effect.
+ * @param applicant		The entity responsible for the gassing.
+ * 
+ * @return				Plugin_Changed if you changed any values, Plugin_Handled or Plugin_Stop to prevent the coating, or Plugin_Continue to do nothing.
+ */
+forward Action CF_OnCFNPCGassed(CFNPC npc, float &duration, int &applicant);
 
 /**
  * Called when bleed is applied to a CFNPC.
