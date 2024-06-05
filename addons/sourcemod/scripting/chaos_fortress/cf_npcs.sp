@@ -30,6 +30,7 @@ int i_AfterburnAttacker[2049] = { -1, ... };
 int i_BleedStacks[2049] = { 0, ... };
 int i_Milker[2049] = { -1, ... };
 int i_Jarater[2049] = { -1, ... };
+int i_Gasser[2049] = { -1, ... };
 
 float CFNPC_Speed[2049] = { 0.0, ... };
 float CFNPC_ThinkRate[2049] = { 0.0, ... };
@@ -41,6 +42,7 @@ float f_NextBurn[2049] = { 0.0, ... };
 float f_NextFlinch[2049] = { 0.0, ... };
 float f_MilkEndTime[2049] = { 0.0, ... };
 float f_JarateEndTime[2049] = { 0.0, ... };
+float f_GasEndTime[2049] = { 0.0, ... };
 float f_PunchForce[2049][3];
 
 bool IExist[2049] = { false, ... };
@@ -359,13 +361,13 @@ void CFNPC_MakeNatives()
 	CreateNative("CFNPC.RemoveJarate", Native_CFNPCRemoveJarate);
 
 	//Gas:
-	/*CreateNative("CFNPC.b_Gassed.get", Native_CFNPCGetGassed);
+	CreateNative("CFNPC.b_Gassed.get", Native_CFNPCGetGassed);
 	CreateNative("CFNPC.f_GasEndTime.get", Native_CFNPCGetGasEndTime);
 	CreateNative("CFNPC.f_GasEndTime.set", Native_CFNPCSetGasEndTime);
 	CreateNative("CFNPC.i_GasApplicant.get", Native_CFNPCGetGasApplicant);
 	CreateNative("CFNPC.i_GasApplicant.set", Native_CFNPCSetGasApplicant);
 	CreateNative("CFNPC.ApplyGas", Native_CFNPCApplyGas);
-	CreateNative("CFNPC.RemoveGas", Native_CFNPCRemoveGas);*/
+	CreateNative("CFNPC.RemoveGas", Native_CFNPCRemoveGas);
 
 	//Bleed:
 	CreateNative("CFNPC.Bleed", Native_CFNPCBleed);
@@ -685,14 +687,68 @@ public Action CFNPC_JarTouch(int entity, int other)
 
 			float radius = 400.0 * radMult;
 
-			//TODO: Spawn gas cloud. Use RequestFrame recursion to detect whenever an entity enters the cloud's radius, then
-			//apply the gas effect to them if they aren't already gassed. Radius and duration need to be calculated based on attributes.
+			DataPack pack = new DataPack();
+			RequestFrame(CFNPC_GasCloudLogic, pack);
+			WritePackCell(pack, IsValidEntity(owner) ? EntIndexToEntRef(owner) : -1)
+			WritePackFloat(pack, radius);
+			WritePackFloatArray(pack, pos, sizeof(pos));
+			WritePackFloat(pack, GetGameTime() + 5.0);
 		}
 
 		RemoveEntity(entity);
 	}
 
 	return Plugin_Continue;
+}
+
+int Gas_Owner = -1;
+
+public void CFNPC_GasCloudLogic(DataPack pack)
+{
+	ResetPack(pack);
+
+	int owner = EntRefToEntIndex(ReadPackCell(pack));
+	float radius = ReadPackFloat(pack);
+	float pos[3];
+	ReadPackFloatArray(pack, pos, sizeof(pos));
+	float endTime = ReadPackFloat(pack);
+
+	if (GetGameTime() >= endTime)
+	{
+		delete pack;
+		return;
+	}
+
+	Gas_Owner = owner;
+	CFNPC_Explosion(pos, radius, 0.0, -1.0, _, _, _, _, _, _, _, _, _, CFNPC_GasCloudFilter, PLUGIN_NAME, CFNPC_OnGasHit, PLUGIN_NAME);
+
+	RequestFrame(CFNPC_GasCloudLogic, pack);
+}
+
+public bool CFNPC_GasCloudFilter(int victim, int attacker, int inflictor, int weapon, float damage)
+{
+	if (IsValidClient(victim))
+		return !TF2_IsPlayerInCondition(victim, TFCond_Gas);
+	else if (CFNPC_IsNPC(victim))
+		return !view_as<CFNPC>(victim).b_Gassed;
+
+	return false;
+}
+
+public void CFNPC_OnGasHit(int victim, int attacker, int inflictor, int weapon, float damage)
+{
+	attacker = EntRefToEntIndex(Gas_Owner);
+	if (!IsValidEntity(attacker))
+		attacker = 0;
+
+	if (CFNPC_IsNPC(victim))
+	{
+		view_as<CFNPC>(victim).ApplyGas(10.0, attacker);
+	}
+	else if (IsValidMulti(victim))
+	{
+		TF2_AddCondition(victim, TFCond_Gas, 10.0, attacker);
+	}
 }
 
 public bool CFNPC_GenericNonBuildingFilter(int victim, int attacker, int inflictor, int weapon, float damage)
@@ -2816,6 +2872,107 @@ public any Native_CFNPCRemoveJarate(Handle plugin, int numParams)
 	{
 		npc.f_JarateEndTime = 0.0;
 		npc.i_JarateApplicant = -1;
+	}
+
+	return success;
+}
+
+public any Native_CFNPCGetGassed(Handle plugin, int numParams) { return f_GasEndTime[GetNativeCell(1)] > GetGameTime(); }
+
+public any Native_CFNPCGetGasEndTime(Handle plugin, int numParams) { return f_GasEndTime[GetNativeCell(1)]; }
+
+public int Native_CFNPCSetGasEndTime(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	float endTime = GetNativeCell(2);
+
+	if (endTime > GetGameTime())
+	{
+		if (!npc.b_Gassed)
+		{
+			AttachParticle_TE(npc.Index, npc.i_Team == TFTeam_Red ? VFX_GAS_RED : VFX_GAS_BLUE);
+		}
+
+		f_GasEndTime[npc.Index] = endTime;
+	}
+	else
+	{
+		RemoveParticle_TE(npc.Index, VFX_GAS_RED);
+		RemoveParticle_TE(npc.Index, VFX_GAS_BLUE);
+		f_GasEndTime[npc.Index] = 0.0;
+	}
+
+	return 0;
+}
+
+public int Native_CFNPCGetGasApplicant(Handle plugin, int numParams) { return EntRefToEntIndex(i_Gasser[GetNativeCell(1)]); }
+
+public int Native_CFNPCSetGasApplicant(Handle plugin, int numParams)
+{
+	int victim = GetNativeCell(1);
+	int gasser = GetNativeCell(2);
+
+	if (IsValidEntity(gasser))
+		i_Gasser[victim] = EntIndexToEntRef(gasser);
+	else
+		i_Gasser[victim] = gasser;
+
+	return 0;
+}
+
+public any Native_CFNPCApplyGas(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	float duration = GetNativeCell(2);
+	int attacker = GetNativeCell(3);
+	float gt = GetGameTime();
+
+	bool success = true;
+	Action result;
+
+	Call_StartForward(g_OnCFNPCGassed);
+
+	Call_PushCell(npc);
+	Call_PushFloatRef(duration);
+	Call_PushCellRef(attacker);
+
+	Call_Finish(result);
+	success = result != Plugin_Stop && result != Plugin_Handled;
+
+	if (success)
+	{
+		if (gt > npc.f_GasEndTime)
+			npc.f_GasEndTime = gt + duration;
+		else
+			npc.f_GasEndTime += duration;
+		
+		npc.i_GasApplicant = attacker;
+	}
+
+	return success;
+}
+
+public any Native_CFNPCRemoveGas(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	bool forced = GetNativeCell(2);
+
+	bool success = true;
+
+	Call_StartForward(g_OnCFNPCGasRemoved);
+
+	Call_PushCell(npc);
+	Call_PushCell(npc.i_GasApplicant);
+
+	Call_Finish(success);
+
+	if (!success)
+		success = forced;
+
+	if (success)
+	{
+		npc.f_GasEndTime = 0.0;
+		npc.i_GasApplicant = -1;
 	}
 
 	return success;
