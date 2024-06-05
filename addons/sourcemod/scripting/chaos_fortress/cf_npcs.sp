@@ -992,7 +992,7 @@ public void CFNPC_PostDamage(int victim, int attacker, int inflictor, float dama
 		event.Fire();
 	}
 
-	CFNPC_AttemptIgnite(victim, attacker, inflictor, weapon);
+	CFNPC_AttemptIgnite(victim, attacker, inflictor, weapon, damage);
 	CFNPC_AttemptBleed(victim, attacker, inflictor, weapon);
 
 	if (IsValidEntity(attacker) && attacker > 0 && !IsABuilding(attacker) && npc.b_Milked)
@@ -1027,7 +1027,7 @@ public void CFNPC_PostDamage(int victim, int attacker, int inflictor, float dama
 	}
 }
 
-public void CFNPC_AttemptIgnite(int victim, int attacker, int inflictor, int weapon)
+public void CFNPC_AttemptIgnite(int victim, int attacker, int inflictor, int weapon, float damage)
 {
 	CFNPC npc = view_as<CFNPC>(victim);
 	bool burn = false;
@@ -1087,6 +1087,27 @@ public void CFNPC_AttemptIgnite(int victim, int attacker, int inflictor, int wea
 			burn = true;
 			burnDMG = 4.0;
 		}
+	}
+
+	if (npc.b_Gassed && damage > 0.0)
+	{
+		if (minBurnTime < 10.0)
+			minBurnTime = 10.0;
+
+		if (maxBurnTime > 10.0)
+			maxBurnTime = 10.0;
+
+		if (burnTime < 10.0)
+			burnTime = 10.0;
+
+		if (burnDMG < 4.0)
+			burnDMG = 4.0;
+
+		haunted = false;
+		attacker = npc.i_GasApplicant;
+
+		burn = true;
+		npc.RemoveGas(true);
 	}
 
 	if (burn)
@@ -1278,6 +1299,7 @@ public void CFNPC_InternalLogic(int ref)
 	CFNPC_BurnLogic(npc, gt);
 	CFNPC_MilkLogic(npc, gt);
 	CFNPC_JarateLogic(npc, gt);
+	CFNPC_GasLogic(npc, gt);
 	CFNPC_SetMovePose(npc);
 	CFNPC_CheckTriggerHurt(npc);
 
@@ -1334,8 +1356,17 @@ public void CFNPC_JarateLogic(CFNPC npc, float gt)
 {
 	if (!npc.b_Jarated)
 	{
-		if (gt - 0.1 <= npc.f_JarateEndTime)	//Milk ended naturally within the last 0.1s, remove the particle effect.
+		if (gt - 0.1 <= npc.f_JarateEndTime)	//Jarate ended naturally within the last 0.1s, remove the particle effect.
 			npc.RemoveJarate(true);
+	}
+}
+
+public void CFNPC_GasLogic(CFNPC npc, float gt)
+{
+	if (!npc.b_Gassed)
+	{
+		if (gt - 0.1 <= npc.f_GasEndTime)	//Gas ended naturally within the last 0.1s, remove the particle effect.
+			npc.RemoveGas(true);
 	}
 }
 
