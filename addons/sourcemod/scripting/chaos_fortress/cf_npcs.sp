@@ -740,6 +740,12 @@ public void CFNPC_OnGasHit(int victim, int attacker, int inflictor, int weapon, 
 	attacker = EntRefToEntIndex(Gas_Owner);
 	if (!IsValidEntity(attacker))
 		attacker = 0;
+	else if (HasEntProp(victim, Prop_Send, "m_iTeamNum") && HasEntProp(attacker, Prop_Send, "m_iTeamNum"))
+	{
+		//Don't gas allies...
+		if (GetEntProp(victim, Prop_Send, "m_iTeamNum") == GetEntProp(attacker, Prop_Send, "m_iTeamNum"))
+			return;
+	}
 
 	if (CFNPC_IsNPC(victim))
 	{
