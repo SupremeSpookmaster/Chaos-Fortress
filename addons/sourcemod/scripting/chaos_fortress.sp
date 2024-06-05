@@ -38,6 +38,7 @@
 //		- The Gambler:
 //			- Begin work.
 //		- NPCs:
+//			- Fix CFNPC_Explosion not working most of the time if it triggers on a wall.
 //			- Figure out why rapidly hitting NPCs in the legs with projectiles or closing spawn doors on them causes them to teleport out of the map.
 //				- Console error that may have something to do with this: "INTERPENETRATING ENTITIES"
 //			- Make NPCs collide with all of the following entities, and make them work as intended when they collide:

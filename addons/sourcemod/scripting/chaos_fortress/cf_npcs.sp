@@ -29,6 +29,7 @@ int i_TotalNPCs[2049] = { -1, ... };
 int i_AfterburnAttacker[2049] = { -1, ... };
 int i_BleedStacks[2049] = { 0, ... };
 int i_Milker[2049] = { -1, ... };
+int i_Jarater[2049] = { -1, ... };
 
 float CFNPC_Speed[2049] = { 0.0, ... };
 float CFNPC_ThinkRate[2049] = { 0.0, ... };
@@ -39,6 +40,7 @@ float f_AfterburnDMG[2049] = { 0.0, ... };
 float f_NextBurn[2049] = { 0.0, ... };
 float f_NextFlinch[2049] = { 0.0, ... };
 float f_MilkEndTime[2049] = { 0.0, ... };
+float f_JarateEndTime[2049] = { 0.0, ... };
 float f_PunchForce[2049][3];
 
 bool IExist[2049] = { false, ... };
@@ -348,7 +350,7 @@ void CFNPC_MakeNatives()
 	CreateNative("CFNPC.RemoveMilk", Native_CFNPCRemoveMilk);
 
 	//Jarate:
-	/*CreateNative("CFNPC.b_Jarated.get", Native_CFNPCGetJarated);
+	CreateNative("CFNPC.b_Jarated.get", Native_CFNPCGetJarated);
 	CreateNative("CFNPC.f_JarateEndTime.get", Native_CFNPCGetJarateEndTime);
 	CreateNative("CFNPC.f_JarateEndTime.set", Native_CFNPCSetJarateEndTime);
 	CreateNative("CFNPC.i_JarateApplicant.get", Native_CFNPCGetJarateApplicant);
@@ -357,7 +359,7 @@ void CFNPC_MakeNatives()
 	CreateNative("CFNPC.RemoveJarate", Native_CFNPCRemoveJarate);
 
 	//Gas:
-	CreateNative("CFNPC.b_Gassed.get", Native_CFNPCGetGassed);
+	/*CreateNative("CFNPC.b_Gassed.get", Native_CFNPCGetGassed);
 	CreateNative("CFNPC.f_GasEndTime.get", Native_CFNPCGetGasEndTime);
 	CreateNative("CFNPC.f_GasEndTime.set", Native_CFNPCSetGasEndTime);
 	CreateNative("CFNPC.i_GasApplicant.get", Native_CFNPCGetGasApplicant);
@@ -661,9 +663,7 @@ public Action CFNPC_JarTouch(int entity, int other)
 
 			float radius = 200.0 * radMult;
 
-			//Calculate radius based on vanilla jarate radius + attributes, then use the explosion native to cover all surrounding victims in jarate.
-			//Duration will need to be calculated from attributes as well.
-			//Explosion native needs to be expanded to allow devs to hit allies as well. Then, use that to extinguish burning allies within the radius.
+			CFNPC_Explosion(pos, radius, 0.0, -1.0, _, _, entity, launcher, owner, _, _, _, false, CFNPC_GenericNonBuildingFilter, PLUGIN_NAME, CFNPC_OnJarateHit, PLUGIN_NAME);
 		}
 		else if (StrEqual(classname, "tf_projectile_jar_milk"))
 		{
@@ -709,6 +709,18 @@ public void CFNPC_OnMilkHit(int victim, int attacker, int inflictor, int weapon,
 	else if (IsValidMulti(victim))
 	{
 		TF2_AddCondition(victim, TFCond_Milked, 10.0, attacker);
+	}
+}
+
+public void CFNPC_OnJarateHit(int victim, int attacker, int inflictor, int weapon, float damage)
+{
+	if (CFNPC_IsNPC(victim))
+	{
+		view_as<CFNPC>(victim).ApplyJarate(10.0, attacker);
+	}
+	else if (IsValidMulti(victim))
+	{
+		TF2_AddCondition(victim, TFCond_Jarated, 10.0, attacker);
 	}
 }
 
@@ -883,6 +895,7 @@ public void CFNPC_OnKilled(int victim, int attacker, int inflictor, float damage
 		
 		npc.Extinguish();
 		npc.RemoveMilk();
+		npc.RemoveJarate();
 		I_AM_DEAD[victim] = true;
 
 		if (shouldGib)
@@ -1127,17 +1140,23 @@ public Action CFNPC_OnDamage(int victim, int &attacker, int &inflictor, float &d
 	bool crit = (damagetype & DMG_ACID) == DMG_ACID;
 	if (crit && GetAttributeValue(weapon, 869, 0.0) == 0.0)
 	{
-		CFNPC_SpawnCritParticle(view_as<CFNPC>(victim), false, damagePosition);
-		if (IsValidClient(attacker))
-			PlayCritSound(attacker);
+		if (damage > 0.0)
+		{
+			CFNPC_SpawnCritParticle(view_as<CFNPC>(victim), false, damagePosition);
+			if (IsValidClient(attacker))
+				PlayCritSound(attacker);
+		}
 
 		damage *= 3.0;
 	}
-	else if (b_MiniCrit[victim] || GetAttributeValue(weapon, 869, 0.0) != 0.0)
+	else if (b_MiniCrit[victim] || (crit && GetAttributeValue(weapon, 869, 0.0) != 0.0) || npc.b_Jarated)
 	{
-		CFNPC_SpawnCritParticle(view_as<CFNPC>(victim), true, damagePosition);
-		if (IsValidClient(attacker))
-			PlayMiniCritSound(attacker);
+		if (damage > 0.0)
+		{
+			CFNPC_SpawnCritParticle(view_as<CFNPC>(victim), true, damagePosition);
+			if (IsValidClient(attacker))
+				PlayMiniCritSound(attacker);
+		}
 
 		damage *= 1.35;
 	}
@@ -1196,6 +1215,7 @@ public void CFNPC_InternalLogic(int ref)
 
 	CFNPC_BurnLogic(npc, gt);
 	CFNPC_MilkLogic(npc, gt);
+	CFNPC_JarateLogic(npc, gt);
 	CFNPC_SetMovePose(npc);
 	CFNPC_CheckTriggerHurt(npc);
 
@@ -1245,6 +1265,15 @@ public void CFNPC_MilkLogic(CFNPC npc, float gt)
 	{
 		if (gt - 0.1 <= npc.f_MilkEndTime)	//Milk ended naturally within the last 0.1s, remove the particle effect.
 			npc.RemoveMilk(true);
+	}
+}
+
+public void CFNPC_JarateLogic(CFNPC npc, float gt)
+{
+	if (!npc.b_Jarated)
+	{
+		if (gt - 0.1 <= npc.f_JarateEndTime)	//Milk ended naturally within the last 0.1s, remove the particle effect.
+			npc.RemoveJarate(true);
 	}
 }
 
@@ -2687,6 +2716,106 @@ public any Native_CFNPCHealEntity(Handle plugin, int numParams)
 		}
 		
 		SetEntProp(target, Prop_Send, "m_iHealth", newHP);
+	}
+
+	return success;
+}
+
+public any Native_CFNPCGetJarated(Handle plugin, int numParams) { return f_JarateEndTime[GetNativeCell(1)] > GetGameTime(); }
+
+public any Native_CFNPCGetJarateEndTime(Handle plugin, int numParams) { return f_JarateEndTime[GetNativeCell(1)]; }
+
+public int Native_CFNPCSetJarateEndTime(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	float endTime = GetNativeCell(2);
+
+	if (endTime > GetGameTime())
+	{
+		if (!npc.b_Jarated)
+		{
+			AttachParticle_TE(npc.Index, VFX_JARATE);
+		}
+
+		f_JarateEndTime[npc.Index] = endTime;
+	}
+	else
+	{
+		RemoveParticle_TE(npc.Index, VFX_JARATE);
+		f_JarateEndTime[npc.Index] = 0.0;
+	}
+
+	return 0;
+}
+
+public int Native_CFNPCGetJarateApplicant(Handle plugin, int numParams) { return EntRefToEntIndex(i_Jarater[GetNativeCell(1)]); }
+
+public int Native_CFNPCSetJarateApplicant(Handle plugin, int numParams)
+{
+	int victim = GetNativeCell(1);
+	int jarater = GetNativeCell(2);
+
+	if (IsValidEntity(jarater))
+		i_Jarater[victim] = EntIndexToEntRef(jarater);
+	else
+		i_Jarater[victim] = jarater;
+
+	return 0;
+}
+
+public any Native_CFNPCApplyJarate(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	float duration = GetNativeCell(2);
+	int attacker = GetNativeCell(3);
+	float gt = GetGameTime();
+
+	bool success = true;
+	Action result;
+
+	Call_StartForward(g_OnCFNPCJarated);
+
+	Call_PushCell(npc);
+	Call_PushFloatRef(duration);
+	Call_PushCellRef(attacker);
+
+	Call_Finish(result);
+	success = result != Plugin_Stop && result != Plugin_Handled;
+
+	if (success)
+	{
+		if (gt > npc.f_JarateEndTime)
+			npc.f_JarateEndTime = gt + duration;
+		else
+			npc.f_JarateEndTime += duration;
+		
+		npc.i_JarateApplicant = attacker;
+	}
+
+	return success;
+}
+
+public any Native_CFNPCRemoveJarate(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	bool forced = GetNativeCell(2);
+
+	bool success = true;
+
+	Call_StartForward(g_OnCFNPCJarateRemoved);
+
+	Call_PushCell(npc);
+	Call_PushCell(npc.i_JarateApplicant);
+
+	Call_Finish(success);
+
+	if (!success)
+		success = forced;
+
+	if (success)
+	{
+		npc.f_JarateEndTime = 0.0;
+		npc.i_JarateApplicant = -1;
 	}
 
 	return success;
