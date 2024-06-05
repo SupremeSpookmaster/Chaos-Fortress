@@ -621,6 +621,16 @@ public Action CFNPC_JarTouch(int entity, int other)
 	int owner = GetEntPropEnt(entity, Prop_Send, "m_hThrower");
 	int launcher = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
 
+	float radMult = 1.0;
+
+	if (IsValidEntity(launcher))
+	{
+		if (GetEntSendPropOffs(launcher, "m_AttributeList") > 0)
+		{
+			radMult *= GetAttributeValue(launcher, 99, 1.0) * GetAttributeValue(launcher, 100, 1.0);
+		}
+	}
+
 	float pos[3];
 
 	if (StrEqual(classname, "tf_projectile_jar"))
@@ -629,6 +639,8 @@ public Action CFNPC_JarTouch(int entity, int other)
 
 		SpawnParticle(pos, PARTICLE_JAR_EXPLODE_JARATE, 2.0);
 		EmitSoundToAll(SND_JAR_EXPLODE, entity);
+
+		float radius = 200.0 * radMult;
 
 		//Calculate radius based on vanilla jarate radius + attributes, then use the explosion native to cover all surrounding victims in jarate.
 		//Duration will need to be calculated from attributes as well.
@@ -641,9 +653,9 @@ public Action CFNPC_JarTouch(int entity, int other)
 		SpawnParticle(pos, PARTICLE_JAR_EXPLODE_MILK, 2.0);
 		EmitSoundToAll(SND_JAR_EXPLODE, entity);
 
-		CFNPC_Explosion(pos, 80.0, 9999.0, -1.0, _, _, entity, launcher, owner, DMG_ACID);
+		float radius = 200.0 * radMult;
 
-		//TODO: Same process as jarate, but for milk instead.
+		CFNPC_Explosion(pos, radius, 0.0, -1.0, _, _, entity, launcher, owner, _, _, _, false, CFNPC_GenericNonBuildingFilter, PLUGIN_NAME, CFNPC_OnMilkHit, PLUGIN_NAME);
 	}
 	else if (StrEqual(classname, "tf_projectile_jar_gas"))
 	{
@@ -652,6 +664,8 @@ public Action CFNPC_JarTouch(int entity, int other)
 		SpawnParticle(pos, isRed ? PARTICLE_JAR_EXPLODE_GAS_RED : PARTICLE_JAR_EXPLODE_GAS_BLUE, 2.0);
 		EmitSoundToAll(SND_GAS_EXPLODE, entity);
 
+		float radius = 400.0 * radMult;
+
 		//TODO: Spawn gas cloud. Use RequestFrame recursion to detect whenever an entity enters the cloud's radius, then
 		//apply the gas effect to them if they aren't already gassed. Radius and duration need to be calculated based on attributes.
 	}
@@ -659,6 +673,23 @@ public Action CFNPC_JarTouch(int entity, int other)
 	RemoveEntity(entity);
 
 	return Plugin_Continue;
+}
+
+public bool CFNPC_GenericNonBuildingFilter(int victim, int attacker, int inflictor, int weapon, float damage)
+{
+	return !IsABuilding(victim);
+}
+
+public void CFNPC_OnMilkHit(int victim, int attacker, int inflictor, int weapon, float damage)
+{
+	if (CFNPC_IsNPC(victim))
+	{
+		view_as<CFNPC>(victim).ApplyMilk(10.0, attacker);
+	}
+	else if (IsValidMulti(victim))
+	{
+		TF2_AddCondition(victim, TFCond_Milked, 10.0, attacker);
+	}
 }
 
 public Action CFNPC_TraceAttack(int victim, int& attacker, int& inflictor, float& damage, int& damagetype, int& ammotype, int hitbox, int hitgroup)
@@ -831,6 +862,7 @@ public void CFNPC_OnKilled(int victim, int attacker, int inflictor, float damage
 		}
 		
 		npc.Extinguish();
+		npc.RemoveMilk();
 		I_AM_DEAD[victim] = true;
 
 		if (shouldGib)
@@ -868,7 +900,12 @@ public void CFNPC_PostDamage(int victim, int attacker, int inflictor, float dama
 	CFNPC_AttemptIgnite(victim, attacker, inflictor, weapon);
 	CFNPC_AttemptBleed(victim, attacker, inflictor, weapon);
 
-	if (!StrEqual(CFNPC_BleedParticle[victim], ""))
+	if (IsValidEntity(attacker) && attacker > 0 && !IsABuilding(attacker) && npc.b_Milked)
+	{
+		CFNPC_HealEntity(attacker, RoundToFloor(damage * 0.6), 1.0, npc.i_Milker);
+	}
+
+	if (!StrEqual(CFNPC_BleedParticle[victim], "") && damage > 0.0)
 	{
 		float dPos[3];
 		dPos = damagePosition;
@@ -1138,6 +1175,7 @@ public void CFNPC_InternalLogic(int ref)
 	}
 
 	CFNPC_BurnLogic(npc, gt);
+	CFNPC_MilkLogic(npc, gt);
 	CFNPC_SetMovePose(npc);
 	CFNPC_CheckTriggerHurt(npc);
 
@@ -1178,6 +1216,15 @@ public void CFNPC_BurnLogic(CFNPC npc, float gametime)
 				}
 			}
 		}
+	}
+}
+
+public void CFNPC_MilkLogic(CFNPC npc, float gt)
+{
+	if (!npc.b_Milked)
+	{
+		if (gt - 0.1 <= npc.f_MilkEndTime)	//Milk ended naturally within the last 0.1s, remove the particle effect.
+			npc.RemoveMilk(true);
 	}
 }
 
@@ -2508,11 +2555,7 @@ public int Native_CFNPCSetMilkEndTime(Handle plugin, int numParams)
 	}
 	else
 	{
-		if (npc.b_Milked)
-		{
-			RemoveParticle_TE(npc.Index, VFX_MILK);
-		}
-
+		RemoveParticle_TE(npc.Index, VFX_MILK);
 		f_MilkEndTime[npc.Index] = 0.0;
 	}
 
@@ -2595,9 +2638,29 @@ public any Native_CFNPCRemoveMilk(Handle plugin, int numParams)
 public any Native_CFNPCHealEntity(Handle plugin, int numParams)
 {
 	int target = GetNativeCell(1);
-	float amount = float(GetNativeCell(2));
+	int amount = GetNativeCell(2);
 	float maxHeal = GetNativeCell(3);
 	int healer = GetNativeCell(4);
 
-	//TODO
+	int maxHP = TF2Util_GetEntityMaxHealth(target);
+	int totalMax = RoundFloat(float(maxHP) * maxHeal);
+	int current = GetEntProp(target, Prop_Send, "m_iHealth");
+	
+	bool success = true;
+
+	//TODO: Call forward to decide what to do
+
+	if (current < totalMax && success)
+	{
+		int newHP = current + amount;
+		if (newHP > totalMax)
+		{
+			int diff = newHP - totalMax;
+			newHP -= diff;
+		}
+		
+		SetEntProp(target, Prop_Send, "m_iHealth", newHP);
+	}
+
+	return success;
 }

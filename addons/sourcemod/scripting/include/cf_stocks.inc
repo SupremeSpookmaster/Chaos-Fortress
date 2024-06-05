@@ -3009,3 +3009,14 @@ public bool TraceEntityEnumerator_EnumerateTriggers(int entity, int client)
 	
 	return true;
 }
+
+stock bool IsABuilding(int entity)
+{
+	if (!IsValidEntity(entity))
+		return false;
+
+	char classname[255];
+	GetEntityClassname(entity, classname, sizeof(classname));
+
+	return StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_dispenser") || StrEqual(classname, "obj_teleporter");
+}
