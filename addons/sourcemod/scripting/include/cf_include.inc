@@ -849,6 +849,41 @@ forward Action CF_OnCFNPCGassed(CFNPC npc, float &duration, int &applicant);
 forward Action CF_OnCFNPCBleed(CFNPC npc, float &bleedTime, float &bleedDMG, int &attacker);
 
 /**
+ * Called when a jar (Mad Milk, Jarate, Gas Passer) collides with something.
+ * 
+ * @param jar		The jar.
+ * @param owner		The entity which owns the jar.
+ * @param launcher	The weapon which launched the jar.
+ * @param entity	The entity which the jar collided with.
+ * 
+ * @return			Return true to run the Portable NPC System's custom jar logic, otherwise return false to prevent it.
+ */
+forward bool CF_OnCFNPCJarCollide(int jar, int owner, int launcher, int entity);
+
+/**
+ * Called when any default explosive projectile (rocket, grenade, etc) explodes.
+ * 
+ * @param entity	The projectile.
+ * @param owner		The entity which owns the projectile.
+ * @param launcher	The weapon which launched the projectile.
+ * 
+ * @return			Return true to run the Portable NPC System's custom explosion simulation, otherwise return false to prevent it.
+ */
+forward bool CF_OnCFNPCProjectileExplode(int rocket, int owner, int launcher);
+
+/**
+ * Called when an entity is healed via CFNPC_HealEntity.
+ * 
+ * @param target		The entity being healed.
+ * @param amount		The amount of healing to provide.
+ * @param maxHeal		The maximum percentage of the target's max health to which this event can heal them. EX: If this is 1.5, then this heal event can provide up to 50% overheal.
+ * @param healer		The entity responsible for the healing.
+ * 
+ * @return	Plugin_Changed if you changed any values, Plugin_Continue to continue with the heal event as normal, Plugin_Stop or Plugin_Handled to prevent the heal.
+ */
+forward Action CF_OnCFNPCHeal(int target, int &amount, float &maxHeal, int &healer);
+
+/**
  * Called when a character runs any command.
  *
  * @param client			The client who ran the command.

@@ -65,6 +65,9 @@ GlobalForward g_OnCFNPCGasRemoved;
 GlobalForward g_OnCFNPCMilked;
 GlobalForward g_OnCFNPCJarated;
 GlobalForward g_OnCFNPCGassed;
+GlobalForward g_OnJarCollide;
+GlobalForward g_OnProjectileExplode;
+GlobalForward g_OnHeal;
 
 Handle g_hLookupActivity;
 Handle SDK_Ragdoll;
@@ -163,6 +166,9 @@ void CFNPC_MakeForwards()
 	g_OnCFNPCMilked = new GlobalForward("CF_OnCFNPCMilked", ET_Event, Param_Cell, Param_FloatByRef, Param_CellByRef);
 	g_OnCFNPCJarated = new GlobalForward("CF_OnCFNPCJarated", ET_Event, Param_Cell, Param_FloatByRef, Param_CellByRef);
 	g_OnCFNPCGassed = new GlobalForward("CF_OnCFNPCGassed", ET_Event, Param_Cell, Param_FloatByRef, Param_CellByRef);
+	g_OnJarCollide = new GlobalForward("CF_OnCFNPCJarCollide", ET_Single, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
+	g_OnProjectileExplode = new GlobalForward("CF_OnCFNPCProjectileExplode", ET_Single, Param_Cell, Param_Cell, Param_Cell);
+	g_OnHeal = new GlobalForward("CF_OnCFNPCHeal", ET_Event, Param_Cell, Param_CellByRef, Param_FloatByRef, Param_CellByRef);
 
 	/*NextBotActionFactory AcFac = new NextBotActionFactory("CFNPCMainAction");
 	AcFac.SetEventCallback(EventResponderType_OnActorEmoted, PluginBot_OnActorEmoted);*/
@@ -621,56 +627,70 @@ public Action CFNPC_JarTouch(int entity, int other)
 	int owner = GetEntPropEnt(entity, Prop_Send, "m_hThrower");
 	int launcher = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
 
-	float radMult = 1.0;
+	bool allow = true;
 
-	if (IsValidEntity(launcher))
+	Call_StartForward(g_OnJarCollide);
+
+	Call_PushCell(entity);
+	Call_PushCell(owner);
+	Call_PushCell(launcher);
+	Call_PushCell(other);
+
+	Call_Finish(allow);
+
+	if (allow)
 	{
-		if (GetEntSendPropOffs(launcher, "m_AttributeList") > 0)
+		float radMult = 1.0;
+
+		if (IsValidEntity(launcher))
 		{
-			radMult *= GetAttributeValue(launcher, 99, 1.0) * GetAttributeValue(launcher, 100, 1.0);
+			if (GetEntSendPropOffs(launcher, "m_AttributeList") > 0)
+			{
+				radMult *= GetAttributeValue(launcher, 99, 1.0) * GetAttributeValue(launcher, 100, 1.0);
+			}
 		}
+
+		float pos[3];
+
+		if (StrEqual(classname, "tf_projectile_jar"))
+		{
+			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+
+			SpawnParticle(pos, PARTICLE_JAR_EXPLODE_JARATE, 2.0);
+			EmitSoundToAll(SND_JAR_EXPLODE, entity);
+
+			float radius = 200.0 * radMult;
+
+			//Calculate radius based on vanilla jarate radius + attributes, then use the explosion native to cover all surrounding victims in jarate.
+			//Duration will need to be calculated from attributes as well.
+			//Explosion native needs to be expanded to allow devs to hit allies as well. Then, use that to extinguish burning allies within the radius.
+		}
+		else if (StrEqual(classname, "tf_projectile_jar_milk"))
+		{
+			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+
+			SpawnParticle(pos, PARTICLE_JAR_EXPLODE_MILK, 2.0);
+			EmitSoundToAll(SND_JAR_EXPLODE, entity);
+
+			float radius = 200.0 * radMult;
+
+			CFNPC_Explosion(pos, radius, 0.0, -1.0, _, _, entity, launcher, owner, _, _, _, false, CFNPC_GenericNonBuildingFilter, PLUGIN_NAME, CFNPC_OnMilkHit, PLUGIN_NAME);
+		}
+		else if (StrEqual(classname, "tf_projectile_jar_gas"))
+		{
+			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
+
+			SpawnParticle(pos, isRed ? PARTICLE_JAR_EXPLODE_GAS_RED : PARTICLE_JAR_EXPLODE_GAS_BLUE, 2.0);
+			EmitSoundToAll(SND_GAS_EXPLODE, entity);
+
+			float radius = 400.0 * radMult;
+
+			//TODO: Spawn gas cloud. Use RequestFrame recursion to detect whenever an entity enters the cloud's radius, then
+			//apply the gas effect to them if they aren't already gassed. Radius and duration need to be calculated based on attributes.
+		}
+
+		RemoveEntity(entity);
 	}
-
-	float pos[3];
-
-	if (StrEqual(classname, "tf_projectile_jar"))
-	{
-		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
-
-		SpawnParticle(pos, PARTICLE_JAR_EXPLODE_JARATE, 2.0);
-		EmitSoundToAll(SND_JAR_EXPLODE, entity);
-
-		float radius = 200.0 * radMult;
-
-		//Calculate radius based on vanilla jarate radius + attributes, then use the explosion native to cover all surrounding victims in jarate.
-		//Duration will need to be calculated from attributes as well.
-		//Explosion native needs to be expanded to allow devs to hit allies as well. Then, use that to extinguish burning allies within the radius.
-	}
-	else if (StrEqual(classname, "tf_projectile_jar_milk"))
-	{
-		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
-
-		SpawnParticle(pos, PARTICLE_JAR_EXPLODE_MILK, 2.0);
-		EmitSoundToAll(SND_JAR_EXPLODE, entity);
-
-		float radius = 200.0 * radMult;
-
-		CFNPC_Explosion(pos, radius, 0.0, -1.0, _, _, entity, launcher, owner, _, _, _, false, CFNPC_GenericNonBuildingFilter, PLUGIN_NAME, CFNPC_OnMilkHit, PLUGIN_NAME);
-	}
-	else if (StrEqual(classname, "tf_projectile_jar_gas"))
-	{
-		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
-
-		SpawnParticle(pos, isRed ? PARTICLE_JAR_EXPLODE_GAS_RED : PARTICLE_JAR_EXPLODE_GAS_BLUE, 2.0);
-		EmitSoundToAll(SND_GAS_EXPLODE, entity);
-
-		float radius = 400.0 * radMult;
-
-		//TODO: Spawn gas cloud. Use RequestFrame recursion to detect whenever an entity enters the cloud's radius, then
-		//apply the gas effect to them if they aren't already gassed. Radius and duration need to be calculated based on attributes.
-	}
-
-	RemoveEntity(entity);
 
 	return Plugin_Continue;
 }
@@ -2648,7 +2668,14 @@ public any Native_CFNPCHealEntity(Handle plugin, int numParams)
 	
 	bool success = true;
 
-	//TODO: Call forward to decide what to do
+	Call_StartForward(g_OnHeal);
+
+	Call_PushCell(target);
+	Call_PushCellRef(amount);
+	Call_PushFloatRef(maxHeal);
+	Call_PushCellRef(healer);
+
+	Call_Finish(success);
 
 	if (current < totalMax && success)
 	{

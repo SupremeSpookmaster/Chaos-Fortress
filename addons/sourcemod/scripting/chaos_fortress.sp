@@ -41,7 +41,7 @@
 //			- Figure out why rapidly hitting NPCs in the legs with projectiles or closing spawn doors on them causes them to teleport out of the map.
 //				- Console error that may have something to do with this: "INTERPENETRATING ENTITIES"
 //			- Make NPCs collide with all of the following entities, and make them work as intended when they collide:
-//				- Jars (jarate and gas) - should apply milk/jarate effects. Milk and jarate should be able to extinguish friendly entities.
+//				- Jars (jarate and gas) - should apply jarate/gas effects. Milk and jarate should be able to extinguish friendly entities.
 //			- Add natives for basic attacks (should have generic melee, generic projectile, and generic bullets).
 //			- Add an option to make NPCs use the body_pitch and body_yaw pose parameters to automatically look towards their target destination.
 //			- Add SetGoalEntity.
@@ -49,7 +49,6 @@
 //			- Make custom melee hitreg so it doesn't sound like you're hitting a wall every time you hit an NPC with melee.
 //				- Instead of a custom attribute, just grab the 263 and 264 attributes from all melee weapons at the moment they attack and apply those to a global array, then set the attributes to 0.0 and restore them after running our custom melee logic.
 //			- Manually simulate explosions. Can be done by detecting when an explosive entity spawns (rockets, pills, sentry rockets, stickies), then calculating its radius and falloff based on attributes from the thing that fired it. When the entity despawns or collides with something, simulate the explosion manually using those stats. Damage can be grabbed at the time of the explosion. Pills will need to check if they're colliding with a valid enemy. Also don't forget the Loch-n-Load's "disappear on hitting walls" attribute.
-//				- Add a forward to let devs prevent this manual simulation from occurring and/or change its stats, so that custom abilities that use rockets/pills/etc as a base aren't broken by this.
 //			- Add lag compensation.
 //			- Fix collision (likely related to lag comp).
 //			- Add an option to make NPCs automatically enter their air/swim animations if airborne or in the water.
