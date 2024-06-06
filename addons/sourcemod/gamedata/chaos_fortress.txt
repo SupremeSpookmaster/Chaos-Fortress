@@ -2,6 +2,22 @@
 {
 	"tf"
 	{
+		"Addresses"
+		{
+			"CTFProjectile_Flare::Explode_Air()::SelfDamageRadius"
+			{
+				// validate that this location has the immediate 100.f (0x42C80000)
+				"signature"		"CTFProjectile_Flare::Explode_Air()"
+				"linux"
+				{
+					"offset"	"1128" // 0x459
+				}
+				"windows"
+				{
+					"offset"	"559" // 0x231
+				}
+			}
+		}
 		"Signatures"
 		{
 			"CTFProjectile_Arrow::Create" //both tf_projectile_grapplinghook and tf_projectile_arrow in the same function.
@@ -16,6 +32,13 @@
 				"library"	"server"
 				"windows"	"\x55\x8B\xEC\x57\x8B\x7D\x08\x85\xFF\x75\x2A\x33\xC0\x5F\x5D\xC3\x53"
 				"linux"		"@_Z14LookupActivityP10CStudioHdrPKc"
+			}
+			"CTFProjectile_Flare::Explode_Air()"
+			{
+				// contains unique xref "ExplosionCore_MidAir_Flare"
+				"library"	"server"
+				"linux"		"@_ZN19CTFProjectile_Flare11Explode_AirEP10CGameTraceib"
+				"windows"	"\x55\x8B\xEC\x81\xEC\xCC\x00\x00\x00\x53\x56"
 			}
 		}
 		"Functions"
@@ -74,6 +97,28 @@
 					"pTrace"
 					{
 						"type"	"objectptr"
+					}
+				}
+			}
+			"CTFProjectile_Flare::Explode_Air()"
+			{
+				"signature"		"CTFProjectile_Flare::Explode_Air()"
+				"callconv"		"thiscall"
+				"return"		"void"
+				"this"			"entity"
+				"arguments"
+				{
+					"trace"
+					{
+						"type"	"int"
+					}
+					"damagetype"
+					{
+						"type"	"int"
+					}
+					"self"
+					{
+						"type"	"bool"
 					}
 				}
 			}

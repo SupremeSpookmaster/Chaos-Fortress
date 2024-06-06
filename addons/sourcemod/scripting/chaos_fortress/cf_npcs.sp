@@ -85,6 +85,10 @@ ArrayList g_GibAttachments[2049];
 ArrayList g_AttachedModels[2049];
 ArrayList g_AttachedWeaponModels[2049];
 
+DynamicHook g_DHookGrenadeExplode;
+DynamicHook g_DHookStickyExplode;
+DynamicHook g_DHookFireballExplode;
+
 enum //hitgroup_t
 {
 	HITGROUP_GENERIC,
@@ -206,6 +210,21 @@ void CFNPC_MakeForwards()
 	SDK_Ragdoll = EndPrepSDKCall();
 	if(!SDK_Ragdoll)
 		LogError("[Gamedata] Could not find CBaseAnimating::BecomeRagdollOnClient");
+
+	g_DHookGrenadeExplode = DHook_CreateVirtual(gd, "CBaseGrenade::Explode");
+	g_DHookStickyExplode = DHook_CreateVirtual(gd, "CBaseGrenade::Detonate");
+	g_DHookFireballExplode = DHook_CreateVirtual(gd, "CTFProjectile_SpellFireball::Explode");
+	g_DHookFlareExplode = DHook_CreateVirtual(gd, "CTFProjectile_Flare::Explode_Air()");
+
+	if (!g_DHookGrenadeExplode)
+		LogError("Failed to hook grenades.");
+	if (!g_DHookStickyExplode)
+		LogError("Failed to hook stickies.");
+	if (!g_DHookFireballExplode)
+		LogError("Failed to hook fireballs.");
+	if (!g_DHookFlareExplode)
+		LogError("Failed to hook flares.");
+	
 
 	delete gd;
 }
