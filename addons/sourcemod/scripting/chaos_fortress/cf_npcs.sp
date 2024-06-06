@@ -13,11 +13,13 @@
 #define PARTICLE_JAR_EXPLODE_JARATE		"peejar_impact"
 #define PARTICLE_JAR_EXPLODE_GAS_RED	"gas_can_impact_red"
 #define PARTICLE_JAR_EXPLODE_GAS_BLUE	"gas_can_impact_blue"
+#define PARTICLE_EXTINGUISH				"doublejump_smoke"
 
 #define SND_SANDMAN_HIT			")player/pl_impact_stun.wav"
 #define SND_CLEAVER_HIT			")weapons/cleaver_hit_03.wav"
 #define SND_JAR_EXPLODE			")weapons/jar_explode.wav"
 #define SND_GAS_EXPLODE			")weapons/gas_can_explode.wav"
+#define SND_EXTINGUISH			")player/flame_out.wav"
 
 static float DEFAULT_MINS[3] = { -24.0, -24.0, 0.0 };
 static float DEFAULT_MAXS[3] = { 24.0, 24.0, 82.0 };
@@ -106,6 +108,10 @@ void CFNPC_MapStart()
 	PrecacheParticleEffect(VFX_AFTERBURN_BLUE);
 	PrecacheParticleEffect(VFX_AFTERBURN_HAUNTED);
 	PrecacheParticleEffect(VFX_DEFAULT_BLEED);
+	PrecacheParticleEffect(VFX_MILK);
+	PrecacheParticleEffect(VFX_JARATE);
+	PrecacheParticleEffect(VFX_GAS_RED);
+	PrecacheParticleEffect(VFX_GAS_BLUE);
 
 	PrecacheEffect("ParticleEffect");
 	PrecacheEffect("ParticleEffectStop");
@@ -114,6 +120,7 @@ void CFNPC_MapStart()
 	PrecacheSound(SND_CLEAVER_HIT);
 	PrecacheSound(SND_JAR_EXPLODE);
 	PrecacheSound(SND_GAS_EXPLODE);
+	PrecacheSound(SND_EXTINGUISH);
 }
 
 void CFNPC_MapEnd()
@@ -614,6 +621,8 @@ public void CFNPC_Touch(int entity, int other)
 		RemoveEntity(other);
 }
 
+int Jar_Thrower = -1;
+
 public Action CFNPC_JarTouch(int entity, int other)
 {
 	char classname[255];
@@ -665,7 +674,8 @@ public Action CFNPC_JarTouch(int entity, int other)
 
 			float radius = 200.0 * radMult;
 
-			CFNPC_Explosion(pos, radius, 0.0, -1.0, _, _, entity, launcher, owner, _, _, _, false, CFNPC_GenericNonBuildingFilter, PLUGIN_NAME, CFNPC_OnJarateHit, PLUGIN_NAME);
+			Jar_Thrower = (IsValidEntity(owner) ? EntIndexToEntRef(owner) : -1);
+			CFNPC_Explosion(pos, radius, 0.0, -1.0, _, _, entity, launcher, 0, _, _, _, false, CFNPC_GenericNonBuildingFilter, PLUGIN_NAME, CFNPC_OnJarateHit, PLUGIN_NAME);
 		}
 		else if (StrEqual(classname, "tf_projectile_jar_milk"))
 		{
@@ -676,7 +686,8 @@ public Action CFNPC_JarTouch(int entity, int other)
 
 			float radius = 200.0 * radMult;
 
-			CFNPC_Explosion(pos, radius, 0.0, -1.0, _, _, entity, launcher, owner, _, _, _, false, CFNPC_GenericNonBuildingFilter, PLUGIN_NAME, CFNPC_OnMilkHit, PLUGIN_NAME);
+			Jar_Thrower = (IsValidEntity(owner) ? EntIndexToEntRef(owner) : -1);
+			CFNPC_Explosion(pos, radius, 0.0, -1.0, _, _, entity, launcher, 0, _, _, _, false, CFNPC_GenericNonBuildingFilter, PLUGIN_NAME, CFNPC_OnMilkHit, PLUGIN_NAME);
 		}
 		else if (StrEqual(classname, "tf_projectile_jar_gas"))
 		{
@@ -719,7 +730,7 @@ public void CFNPC_GasCloudLogic(DataPack pack)
 		return;
 	}
 
-	Gas_Owner = owner;
+	Gas_Owner = (IsValidEntity(owner) ? EntIndexToEntRef(owner) : -1);
 	CFNPC_Explosion(pos, radius, 0.0, -1.0, _, _, _, _, _, _, _, _, _, CFNPC_GasCloudFilter, PLUGIN_NAME, CFNPC_OnGasHit, PLUGIN_NAME);
 
 	RequestFrame(CFNPC_GasCloudLogic, pack);
@@ -764,6 +775,18 @@ public bool CFNPC_GenericNonBuildingFilter(int victim, int attacker, int inflict
 
 public void CFNPC_OnMilkHit(int victim, int attacker, int inflictor, int weapon, float damage)
 {
+	attacker = EntRefToEntIndex(Jar_Thrower);
+	if (!IsValidEntity(attacker))
+		attacker = 0;
+	else if (HasEntProp(victim, Prop_Send, "m_iTeamNum") && HasEntProp(attacker, Prop_Send, "m_iTeamNum"))
+	{
+		if (GetEntProp(victim, Prop_Send, "m_iTeamNum") == GetEntProp(attacker, Prop_Send, "m_iTeamNum"))
+		{
+			CFNPC_ExtinguishViaJar(victim);
+			return;
+		}
+	}
+
 	if (CFNPC_IsNPC(victim))
 	{
 		view_as<CFNPC>(victim).ApplyMilk(10.0, attacker);
@@ -776,6 +799,18 @@ public void CFNPC_OnMilkHit(int victim, int attacker, int inflictor, int weapon,
 
 public void CFNPC_OnJarateHit(int victim, int attacker, int inflictor, int weapon, float damage)
 {
+	attacker = EntRefToEntIndex(Jar_Thrower);
+	if (!IsValidEntity(attacker))
+		attacker = 0;
+	else if (HasEntProp(victim, Prop_Send, "m_iTeamNum") && HasEntProp(attacker, Prop_Send, "m_iTeamNum"))
+	{
+		if (GetEntProp(victim, Prop_Send, "m_iTeamNum") == GetEntProp(attacker, Prop_Send, "m_iTeamNum"))
+		{
+			CFNPC_ExtinguishViaJar(victim);
+			return;
+		}
+	}
+
 	if (CFNPC_IsNPC(victim))
 	{
 		view_as<CFNPC>(victim).ApplyJarate(10.0, attacker);
@@ -783,6 +818,34 @@ public void CFNPC_OnJarateHit(int victim, int attacker, int inflictor, int weapo
 	else if (IsValidMulti(victim))
 	{
 		TF2_AddCondition(victim, TFCond_Jarated, 10.0, attacker);
+	}
+}
+
+public void CFNPC_ExtinguishViaJar(int victim)
+{
+	bool success = false;
+
+	if (CFNPC_IsNPC(victim) && view_as<CFNPC>(victim).b_Burning)
+	{
+		view_as<CFNPC>(victim).Extinguish();
+		success = true;
+	}
+	else if (IsValidMulti(victim))
+	{
+		if (TF2_IsPlayerInCondition(victim, TFCond_OnFire) || TF2_IsPlayerInCondition(victim, TFCond_BurningPyro))
+		{
+			TF2_RemoveCondition(victim, TFCond_OnFire);
+			TF2_RemoveCondition(victim, TFCond_BurningPyro);
+			success = true;
+		}
+	}
+
+	if (success)
+	{
+		EmitSoundToAll(SND_EXTINGUISH, victim);
+		float pos[3];
+		CF_WorldSpaceCenter(victim, pos);
+		SpawnParticle(pos, PARTICLE_EXTINGUISH, 2.0);
 	}
 }
 
@@ -2638,13 +2701,13 @@ public bool CFNPC_AOETrace(entity, contentsmask, target)
 
 public bool CFNPC_LOSCheck(entity, contentsMask)
 {
-	if (entity <= MaxClients || view_as<CFNPC>(entity).b_Exists)
+	if (entity <= MaxClients || CFNPC_IsNPC(entity) || contentsMask & CONTENTS_SOLID == 0)
 		return false;
 	
 	char classname[255];
 	GetEntityClassname(entity, classname, sizeof(classname));
 	
-	if (StrContains(classname, "tf_projectile") != -1 || StrContains(classname, "info_") != -1 || StrContains(classname, "trigger_") != -1)
+	if (StrContains(classname, "tf_projectile") != -1 || StrContains(classname, "info_") != -1 || StrContains(classname, "trigger_") != -1 || StrContains(classname, "prop_physics") != -1)
 		return false;
 		
 	if (StrContains(classname, "func_") != -1)

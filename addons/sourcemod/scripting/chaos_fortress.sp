@@ -41,8 +41,6 @@
 //			- Fix CFNPC_Explosion not working most of the time if it triggers on a surface.
 //			- Figure out why rapidly hitting NPCs in the legs with projectiles or closing spawn doors on them causes them to teleport out of the map.
 //				- Console error that may have something to do with this: "INTERPENETRATING ENTITIES"
-//			- Make NPCs collide with all of the following entities, and make them work as intended when they collide:
-//				- Jars - Milk and jarate should be able to extinguish friendly entities that are on fire.
 //			- Add natives for basic attacks (should have generic melee, generic projectile, and generic bullets).
 //			- Add an option to make NPCs use the body_pitch and body_yaw pose parameters to automatically look towards their target destination.
 //			- Add SetGoalEntity.
