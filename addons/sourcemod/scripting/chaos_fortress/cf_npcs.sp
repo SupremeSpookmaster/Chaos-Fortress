@@ -104,7 +104,7 @@ ArrayList g_AttachedWeaponModels[2049];
 DynamicHook g_DHookGrenadeExplode;
 DynamicHook g_DHookStickyExplode;
 DynamicHook g_DHookFireballExplode;
-DynamicHook g_DHookFlareExplode;
+//DynamicHook g_DHookFlareExplode;
 
 enum //hitgroup_t
 {
@@ -448,7 +448,8 @@ MRESReturn CFNPC_OnFlareExplodePre(int entity, Handle hParams)
 {
 	CPrintToChatAll("Flare exploded!");
 
-	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, 100.0, SND_EXPLOSION_FLARE, PARTICLE_EXPLOSION_FLARE_RED, PARTICLE_EXPLOSION_FLARE_BLUE, true, 10.0))
+	float damage = GetEntPropFloat(entity, Prop_Send, "m_flDamage");	//TODO: This is almost certainly incorrect, won't know until we get the flare explosion logic working in the first place.
+	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, damage, SND_EXPLOSION_FLARE, PARTICLE_EXPLOSION_FLARE_RED, PARTICLE_EXPLOSION_FLARE_BLUE, true, 10.0, 0.0, 146.0, 0.5))
 		return MRES_Supercede;
 	
 	return MRES_Ignored;
@@ -456,9 +457,8 @@ MRESReturn CFNPC_OnFlareExplodePre(int entity, Handle hParams)
 
 public MRESReturn CFNPC_GrenadeExplode(int entity)
 {
-	CPrintToChatAll("Grenade exploded!");
-
-	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, 100.0, SFX_GenericExplosion[GetRandomInt(0, sizeof(SFX_GenericExplosion) - 1)], PARTICLE_EXPLOSION_GENERIC, PARTICLE_EXPLOSION_GENERIC, true, 0.0))
+	float damage = GetEntPropFloat(entity, Prop_Send, "m_flDamage");
+	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, damage, SFX_GenericExplosion[GetRandomInt(0, sizeof(SFX_GenericExplosion) - 1)], PARTICLE_EXPLOSION_GENERIC, PARTICLE_EXPLOSION_GENERIC, true, 0.0, 0.0, 146.0, 0.5))
 		return MRES_Supercede;
 
 	return MRES_Ignored;
@@ -466,9 +466,8 @@ public MRESReturn CFNPC_GrenadeExplode(int entity)
 
 public MRESReturn CFNPC_StickyExplode(int entity)
 {
-	CPrintToChatAll("Sticky exploded!");
-
-	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, 100.0, SFX_GenericExplosion[GetRandomInt(0, sizeof(SFX_GenericExplosion) - 1)], PARTICLE_EXPLOSION_GENERIC, PARTICLE_EXPLOSION_GENERIC, true, 0.0))
+	float damage = GetEntPropFloat(entity, Prop_Send, "m_flDamage");
+	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, damage, SFX_GenericExplosion[GetRandomInt(0, sizeof(SFX_GenericExplosion) - 1)], PARTICLE_EXPLOSION_GENERIC, PARTICLE_EXPLOSION_GENERIC, true, 0.0, 0.0, 146.0, 0.5))
 		return MRES_Supercede;
 
 	return MRES_Ignored;
@@ -478,7 +477,7 @@ public MRESReturn CFNPC_FireballExplode(int entity)
 {
 	CPrintToChatAll("Fireball exploded!");
 
-	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, 100.0, SND_EXPLOSION_FIREBALL, PARTICLE_EXPLOSION_FIREBALL_RED, PARTICLE_EXPLOSION_FIREBALL_BLUE, false, 10.0))
+	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, 100.0, SND_EXPLOSION_FIREBALL, PARTICLE_EXPLOSION_FIREBALL_RED, PARTICLE_EXPLOSION_FIREBALL_BLUE, false, 5.0, -1.0, 0.0, 0.0))
 		return MRES_Supercede;
 	
 	return MRES_Ignored;
@@ -486,21 +485,21 @@ public MRESReturn CFNPC_FireballExplode(int entity)
 
 public MRESReturn CFNPC_RocketExplode(int entity)
 {
-	CPrintToChatAll("Rocket exploded!");
-
-	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, 100.0, SFX_GenericExplosion[GetRandomInt(0, sizeof(SFX_GenericExplosion) - 1)], PARTICLE_EXPLOSION_GENERIC, PARTICLE_EXPLOSION_GENERIC, true, 0.0))
+	float damage = GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_Rocket", "m_iDeflected") + 4);
+	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, damage, SFX_GenericExplosion[GetRandomInt(0, sizeof(SFX_GenericExplosion) - 1)], PARTICLE_EXPLOSION_GENERIC, PARTICLE_EXPLOSION_GENERIC, true, 0.0, 0.0, 146.0, 0.5))
 		return MRES_Supercede;
 	
 	return MRES_Ignored;
 }
 
-public bool CFNPC_TriggerProjectileExplosion(int entity, float radius, float damage, char[] sound, char redParticle[255], char blueParticle[255], bool hitOwner, float igniteTime)
+float currentIgniteTime = 0.0;
+public bool CFNPC_TriggerProjectileExplosion(int entity, float radius, float damage, char[] sound, char redParticle[255], char blueParticle[255], bool hitOwner, float igniteTime, float falloffStart, float falloffEnd, float falloffMax)
 {
 	int launcher = -1;
 	int owner = -1;
 	if (CFNPC_CheckAllowCustomExplosionLogic(entity, owner, launcher))
 	{
-		CPrintToChatAll("Custom explosion is permitted, owner is %i, launcher is %i.", owner, launcher);
+		CPrintToChatAll("Custom explosion is permitted, owner is %i, launcher is %i, damage is %.2f.", owner, launcher, damage);
 
 		CFNPC_CalculateExplosionBaseStats(launcher, damage, radius);
 
@@ -517,13 +516,39 @@ public bool CFNPC_TriggerProjectileExplosion(int entity, float radius, float dam
 		if (!StrEqual(sound, ""))
 			EmitSoundToAll(sound, entity);
 
-		//TODO: Explosion. Need to factor in direct hits for grenades, and afterburn for flares and fireballs.
+		int damagetype = DMG_BLAST;
+
+		if (damage > 100.0)
+			damagetype |= DMG_ALWAYSGIB;
+		if (GetEntProp(entity, Prop_Send, "m_bCritical") > 0)
+			damagetype |= DMG_ACID;
+
+		currentIgniteTime = igniteTime;
+		if (igniteTime > 0.0)
+			CFNPC_Explosion(pos, radius, damage, falloffStart, falloffEnd, falloffMax, entity, launcher, owner, damagetype, _, true, hitOwner, _, _, CFNPC_IgniteOnHit, PLUGIN_NAME);
+		else
+			CFNPC_Explosion(pos, radius, damage, falloffStart, falloffEnd, falloffMax, entity, launcher, owner, damagetype, _, true, hitOwner);
+
+		//TODO: Need to factor in direct hits for grenades.
 
 		RemoveEntity(entity);
+
 		return true;
 	}
 
 	return false;
+}
+
+public void CFNPC_IgniteOnHit(int victim, int attacker, int inflictor, int weapon, float damage)
+{
+	if (CFNPC_IsNPC(victim))
+	{
+		view_as<CFNPC>(victim).Ignite(currentIgniteTime, currentIgniteTime, currentIgniteTime, _, _, attacker)
+	}
+	else if (IsValidMulti(victim))
+	{
+		TF2_IgnitePlayer(victim, attacker, currentIgniteTime);
+	}
 }
 
 bool CFNPC_CheckAllowCustomExplosionLogic(int entity, int &owner = -1, int &launcher = -1)
@@ -532,6 +557,9 @@ bool CFNPC_CheckAllowCustomExplosionLogic(int entity, int &owner = -1, int &laun
 		return false;
 
 	owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
+	if (!IsValidEntity(owner) && HasEntProp(entity, Prop_Send, "m_hThrower"))
+		owner = GetEntPropEnt(entity, Prop_Send, "m_hThrower");
+
 	launcher = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
 
 	bool success = true;
