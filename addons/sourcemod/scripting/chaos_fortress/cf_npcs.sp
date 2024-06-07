@@ -9,17 +9,33 @@
 #define VFX_GAS_RED				"gas_can_drips_red"
 #define VFX_GAS_BLUE			"gas_can_drips_blue"
 
-#define PARTICLE_JAR_EXPLODE_MILK		"peejar_impact_milk"
-#define PARTICLE_JAR_EXPLODE_JARATE		"peejar_impact"
-#define PARTICLE_JAR_EXPLODE_GAS_RED	"gas_can_impact_red"
-#define PARTICLE_JAR_EXPLODE_GAS_BLUE	"gas_can_impact_blue"
-#define PARTICLE_EXTINGUISH				"doublejump_smoke"
+#define PARTICLE_JAR_EXPLODE_MILK			"peejar_impact_milk"
+#define PARTICLE_JAR_EXPLODE_JARATE			"peejar_impact"
+#define PARTICLE_JAR_EXPLODE_GAS_RED		"gas_can_impact_red"
+#define PARTICLE_JAR_EXPLODE_GAS_BLUE		"gas_can_impact_blue"
+#define PARTICLE_EXTINGUISH					"doublejump_smoke"
+#define PARTICLE_EXPLOSION_GENERIC			"ExplosionCore_MidAir"
+#define PARTICLE_EXPLOSION_FIREBALL_RED		"spell_fireball_tendril_parent_red"
+#define PARTICLE_EXPLOSION_FIREBALL_BLUE	"spell_fireball_tendril_parent_blue"
+#define PARTICLE_EXPLOSION_FLARE_RED		"ExplosionCore_MidAir_Flare"
+#define PARTICLE_EXPLOSION_FLARE_BLUE		"ExplosionCore_MidAir_Flare"
 
 #define SND_SANDMAN_HIT			")player/pl_impact_stun.wav"
 #define SND_CLEAVER_HIT			")weapons/cleaver_hit_03.wav"
 #define SND_JAR_EXPLODE			")weapons/jar_explode.wav"
 #define SND_GAS_EXPLODE			")weapons/gas_can_explode.wav"
 #define SND_EXTINGUISH			")player/flame_out.wav"
+#define SND_EXPLOSION_FLARE		")weapons/flare_detonator_explode.wav"
+#define SND_EXPLOSION_GENERIC_1	")weapons/explode1.wav"
+#define SND_EXPLOSION_GENERIC_2	")weapons/explode2.wav"
+#define SND_EXPLOSION_GENERIC_3	")weapons/explode3.wav"
+#define SND_EXPLOSION_FIREBALL	")misc/halloween/spell_fireball_impact.wav"
+
+static char SFX_GenericExplosion[][] = {
+	SND_EXPLOSION_GENERIC_1,
+	SND_EXPLOSION_GENERIC_2,
+	SND_EXPLOSION_GENERIC_3
+};
 
 static float DEFAULT_MINS[3] = { -24.0, -24.0, 0.0 };
 static float DEFAULT_MAXS[3] = { 24.0, 24.0, 82.0 };
@@ -126,6 +142,11 @@ void CFNPC_MapStart()
 	PrecacheSound(SND_JAR_EXPLODE);
 	PrecacheSound(SND_GAS_EXPLODE);
 	PrecacheSound(SND_EXTINGUISH);
+	PrecacheSound(SND_EXPLOSION_FLARE);
+	PrecacheSound(SND_EXPLOSION_GENERIC_1);
+	PrecacheSound(SND_EXPLOSION_GENERIC_2);
+	PrecacheSound(SND_EXPLOSION_GENERIC_3);
+	PrecacheSound(SND_EXPLOSION_FIREBALL);
 }
 
 void CFNPC_MapEnd()
@@ -215,10 +236,11 @@ void CFNPC_MakeForwards()
 	g_DHookGrenadeExplode = DHook_CreateVirtual(gd, "CBaseGrenade::Explode");
 	g_DHookStickyExplode = DHook_CreateVirtual(gd, "CBaseGrenade::Detonate");
 	g_DHookFireballExplode = DHook_CreateVirtual(gd, "CTFProjectile_SpellFireball::Explode");
-	g_DHookFlareExplode = DHook_CreateVirtual(gd, "CTFProjectile_Flare::Explode_Air()");
+	//g_DHookFlareExplode = DHook_CreateVirtual(gd, "CTFProjectile_Flare::Explode_Air()");
 
 	DHook_CreateDetour(gd, "JarExplode()", CFNPC_OnJarExplodePre);
-	
+	DHook_CreateDetour(gd, "CTFProjectile_Flare::Explode_Air()", CFNPC_OnFlareExplodePre);
+
 	delete gd;
 }
 
@@ -401,11 +423,6 @@ void CFNPC_MakeNatives()
 public void CFNPC_OnEntityCreated(int entity, const char[] classname)
 {
 	//All projectiles that have any sort of explosion (not including wrap assassin) need to have custom explosion logic so that they work seamlessly with NPCs:
-	if (StrContains(classname, "tf_projectile_flare") != -1)
-	{
-		g_DHookFlareExplode.HookEntity(Hook_Pre, entity, CFNPC_FlareExplode);
-	}
-	
 	if (StrEqual(classname, "tf_projectile_pipe"))
 	{
 		g_DHookGrenadeExplode.HookEntity(Hook_Pre, entity, CFNPC_GrenadeExplode);
@@ -427,16 +444,12 @@ public void CFNPC_OnEntityCreated(int entity, const char[] classname)
 	}
 }
 
-public MRESReturn CFNPC_FlareExplode(int entity)
+MRESReturn CFNPC_OnFlareExplodePre(int entity, Handle hParams) 
 {
 	CPrintToChatAll("Flare exploded!");
 
-	int launcher = -1;
-	int owner = -1;
-	if (CFNPC_CheckAllowCustomExplosionLogic(entity, owner, launcher))
-	{
-		CPrintToChatAll("Custom explosion is permitted, owner is %i, launcher is %i.", owner, launcher);
-	}
+	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, 100.0, SND_EXPLOSION_FLARE, PARTICLE_EXPLOSION_FLARE_RED, PARTICLE_EXPLOSION_FLARE_BLUE, true, 10.0))
+		return MRES_Supercede;
 	
 	return MRES_Ignored;
 }
@@ -445,13 +458,9 @@ public MRESReturn CFNPC_GrenadeExplode(int entity)
 {
 	CPrintToChatAll("Grenade exploded!");
 
-	int launcher = -1;
-	int owner = -1;
-	if (CFNPC_CheckAllowCustomExplosionLogic(entity, owner, launcher))
-	{
-		CPrintToChatAll("Custom explosion is permitted, owner is %i, launcher is %i.", owner, launcher);
-	}
-	
+	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, 100.0, SFX_GenericExplosion[GetRandomInt(0, sizeof(SFX_GenericExplosion) - 1)], PARTICLE_EXPLOSION_GENERIC, PARTICLE_EXPLOSION_GENERIC, true, 0.0))
+		return MRES_Supercede;
+
 	return MRES_Ignored;
 }
 
@@ -459,12 +468,8 @@ public MRESReturn CFNPC_StickyExplode(int entity)
 {
 	CPrintToChatAll("Sticky exploded!");
 
-	int launcher = -1;
-	int owner = -1;
-	if (CFNPC_CheckAllowCustomExplosionLogic(entity, owner, launcher))
-	{
-		CPrintToChatAll("Custom explosion is permitted, owner is %i, launcher is %i.", owner, launcher);
-	}
+	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, 100.0, SFX_GenericExplosion[GetRandomInt(0, sizeof(SFX_GenericExplosion) - 1)], PARTICLE_EXPLOSION_GENERIC, PARTICLE_EXPLOSION_GENERIC, true, 0.0))
+		return MRES_Supercede;
 
 	return MRES_Ignored;
 }
@@ -473,28 +478,52 @@ public MRESReturn CFNPC_FireballExplode(int entity)
 {
 	CPrintToChatAll("Fireball exploded!");
 
-	int launcher = -1;
-	int owner = -1;
-	if (CFNPC_CheckAllowCustomExplosionLogic(entity, owner, launcher))
-	{
-		CPrintToChatAll("Custom explosion is permitted, owner is %i, launcher is %i.", owner, launcher);
-	}
+	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, 100.0, SND_EXPLOSION_FIREBALL, PARTICLE_EXPLOSION_FIREBALL_RED, PARTICLE_EXPLOSION_FIREBALL_BLUE, false, 10.0))
+		return MRES_Supercede;
 	
 	return MRES_Ignored;
 }
 
 public MRESReturn CFNPC_RocketExplode(int entity)
 {
-	CPrintToChatAll("Fireball exploded!");
+	CPrintToChatAll("Rocket exploded!");
 
+	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, 100.0, SFX_GenericExplosion[GetRandomInt(0, sizeof(SFX_GenericExplosion) - 1)], PARTICLE_EXPLOSION_GENERIC, PARTICLE_EXPLOSION_GENERIC, true, 0.0))
+		return MRES_Supercede;
+	
+	return MRES_Ignored;
+}
+
+public bool CFNPC_TriggerProjectileExplosion(int entity, float radius, float damage, char[] sound, char redParticle[255], char blueParticle[255], bool hitOwner, float igniteTime)
+{
 	int launcher = -1;
 	int owner = -1;
 	if (CFNPC_CheckAllowCustomExplosionLogic(entity, owner, launcher))
 	{
 		CPrintToChatAll("Custom explosion is permitted, owner is %i, launcher is %i.", owner, launcher);
+
+		CFNPC_CalculateExplosionBaseStats(launcher, damage, radius);
+
+		float pos[3];
+		GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", pos);
+
+		int team = GetEntProp(entity, Prop_Send, "m_iTeamNum");
+
+		if (!StrEqual(redParticle, "") && view_as<int>(TFTeam_Red) == team)
+			SpawnParticle(pos, redParticle, 2.0);
+		else if (!StrEqual(blueParticle, "") && view_as<int>(TFTeam_Blue) == team)
+			SpawnParticle(pos, blueParticle, 2.0);
+
+		if (!StrEqual(sound, ""))
+			EmitSoundToAll(sound, entity);
+
+		//TODO: Explosion. Need to factor in direct hits for grenades, and afterburn for flares and fireballs.
+
+		RemoveEntity(entity);
+		return true;
 	}
-	
-	return MRES_Ignored;
+
+	return false;
 }
 
 bool CFNPC_CheckAllowCustomExplosionLogic(int entity, int &owner = -1, int &launcher = -1)
@@ -516,6 +545,15 @@ bool CFNPC_CheckAllowCustomExplosionLogic(int entity, int &owner = -1, int &laun
 	Call_Finish(success);
 
 	return success;
+}
+
+void CFNPC_CalculateExplosionBaseStats(int launcher, float &damage, float &radius)
+{
+	if (IsValidEntity(launcher))
+	{
+		radius *= GetAttributeValue(launcher, 99, 1.0) * GetAttributeValue(launcher, 100, 1.0);
+		damage *= GetAttributeValue(launcher, 1, 1.0) * GetAttributeValue(launcher, 2, 1.0);
+	}
 }
 
 void CFNPC_OnCreate(int npc)
