@@ -854,11 +854,10 @@ forward Action CF_OnCFNPCBleed(CFNPC npc, float &bleedTime, float &bleedDMG, int
  * @param jar		The jar.
  * @param owner		The entity which owns the jar.
  * @param launcher	The weapon which launched the jar.
- * @param entity	The entity which the jar collided with.
  * 
  * @return			Return true to run the Portable NPC System's custom jar logic, otherwise return false to prevent it.
  */
-forward bool CF_OnCFNPCJarCollide(int jar, int owner, int launcher, int entity);
+forward bool CF_OnCFNPCJarCollide(int jar, int owner, int launcher);
 
 /**
  * Called when any default explosive projectile (rocket, grenade, etc) explodes.

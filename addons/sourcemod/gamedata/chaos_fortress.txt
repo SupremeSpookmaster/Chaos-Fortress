@@ -40,6 +40,13 @@
 				"linux"		"@_ZN19CTFProjectile_Flare11Explode_AirEP10CGameTraceib"
 				"windows"	"\x55\x8B\xEC\x81\xEC\xCC\x00\x00\x00\x53\x56"
 			}
+			"JarExplode()"
+			{
+				// find xref "extinguish_reduces_cooldown"
+				"library"	"server"
+				"linux"		"@_Z10JarExplodeiP9CTFPlayerP11CBaseEntityS2_RK6Vectorif7ETFCondfPKcS8_"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x83\xE4\xF0\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\x81\xEC\xE8\x02\x00\x00"
+			}
 		}
 		"Functions"
 		{
@@ -119,6 +126,59 @@
 					"self"
 					{
 						"type"	"bool"
+					}
+				}
+			}
+			"JarExplode()"
+			{
+				"signature"		"JarExplode()"
+				"callconv"		"cdecl"
+				"return"		"void"
+				"arguments"
+				{
+					"filter"
+					{
+						"type"	"int" // IRecipientFilter*
+					}
+					"thrower"
+					{
+						"type"	"cbaseentity"
+					}
+					"original_launcher"
+					{
+						"type"	"cbaseentity"
+					}
+					"launcher"
+					{
+						"type"	"cbaseentity"
+					}
+					"position"
+					{
+						"type"	"vectorptr"
+					}
+					"team_num"
+					{
+						"type"	"int"
+					}
+					"radius"
+					{
+						"type"	"float"
+					}
+					"condition"
+					{
+						"type"	"int"
+					}
+					"duration"
+					{
+						"type"	"float"
+					}
+					"particle_effect"
+					{
+						"type"	"charptr"
+					}
+					"sound_effect"
+					{
+						"type"	"charptr"
 					}
 				}
 			}

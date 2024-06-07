@@ -88,6 +88,7 @@ ArrayList g_AttachedWeaponModels[2049];
 DynamicHook g_DHookGrenadeExplode;
 DynamicHook g_DHookStickyExplode;
 DynamicHook g_DHookFireballExplode;
+DynamicHook g_DHookFlareExplode;
 
 enum //hitgroup_t
 {
@@ -181,7 +182,7 @@ void CFNPC_MakeForwards()
 	g_OnCFNPCMilked = new GlobalForward("CF_OnCFNPCMilked", ET_Event, Param_Cell, Param_FloatByRef, Param_CellByRef);
 	g_OnCFNPCJarated = new GlobalForward("CF_OnCFNPCJarated", ET_Event, Param_Cell, Param_FloatByRef, Param_CellByRef);
 	g_OnCFNPCGassed = new GlobalForward("CF_OnCFNPCGassed", ET_Event, Param_Cell, Param_FloatByRef, Param_CellByRef);
-	g_OnJarCollide = new GlobalForward("CF_OnCFNPCJarCollide", ET_Single, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
+	g_OnJarCollide = new GlobalForward("CF_OnCFNPCJarCollide", ET_Single, Param_Cell, Param_Cell, Param_Cell);
 	g_OnProjectileExplode = new GlobalForward("CF_OnCFNPCProjectileExplode", ET_Single, Param_Cell, Param_Cell, Param_Cell);
 	g_OnHeal = new GlobalForward("CF_OnCFNPCHeal", ET_Event, Param_Cell, Param_CellByRef, Param_FloatByRef, Param_CellByRef);
 
@@ -216,16 +217,8 @@ void CFNPC_MakeForwards()
 	g_DHookFireballExplode = DHook_CreateVirtual(gd, "CTFProjectile_SpellFireball::Explode");
 	g_DHookFlareExplode = DHook_CreateVirtual(gd, "CTFProjectile_Flare::Explode_Air()");
 
-	if (!g_DHookGrenadeExplode)
-		LogError("Failed to hook grenades.");
-	if (!g_DHookStickyExplode)
-		LogError("Failed to hook stickies.");
-	if (!g_DHookFireballExplode)
-		LogError("Failed to hook fireballs.");
-	if (!g_DHookFlareExplode)
-		LogError("Failed to hook flares.");
+	DHook_CreateDetour(gd, "JarExplode()", CFNPC_OnJarExplodePre);
 	
-
 	delete gd;
 }
 
@@ -408,10 +401,10 @@ void CFNPC_MakeNatives()
 public void CFNPC_OnEntityCreated(int entity, const char[] classname)
 {
 	//All projectiles that have any sort of explosion (not including wrap assassin) need to have custom explosion logic so that they work seamlessly with NPCs:
-	if (StrContains(classname, "tf_projectile_jar") != -1)
+	/*if (StrContains(classname, "tf_projectile_jar") != -1)
 	{
 		SDKHook(entity, SDKHook_TouchPost, CFNPC_JarTouch);
-	}
+	}*/
 }
 
 void CFNPC_OnCreate(int npc)
@@ -640,21 +633,24 @@ public void CFNPC_Touch(int entity, int other)
 		RemoveEntity(other);
 }
 
+MRESReturn CFNPC_OnJarExplodePre(Handle hParams) 
+{
+	int jar = DHookGetParam(hParams, 1);
+	if (CFNPC_JarTouch(jar))
+		return MRES_Supercede;
+
+	return MRES_Ignored;
+}
+
 int Jar_Thrower = -1;
 
-public Action CFNPC_JarTouch(int entity, int other)
+public bool CFNPC_JarTouch(int entity)
 {
 	char classname[255];
 	GetEntityClassname(entity, classname, sizeof(classname));
 
 	int team = GetEntProp(entity, Prop_Send, "m_iTeamNum");
 	bool isRed = team == view_as<int>(TFTeam_Red);
-
-	if (HasEntProp(other, Prop_Send, "m_iTeamNum"))
-	{
-		if (GetEntProp(other, Prop_Send, "m_iTeamNum") == team)
-			return Plugin_Handled;
-	}
 
 	int owner = GetEntPropEnt(entity, Prop_Send, "m_hThrower");
 	int launcher = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
@@ -666,7 +662,6 @@ public Action CFNPC_JarTouch(int entity, int other)
 	Call_PushCell(entity);
 	Call_PushCell(owner);
 	Call_PushCell(launcher);
-	Call_PushCell(other);
 
 	Call_Finish(allow);
 
@@ -728,7 +723,7 @@ public Action CFNPC_JarTouch(int entity, int other)
 		RemoveEntity(entity);
 	}
 
-	return Plugin_Continue;
+	return allow;
 }
 
 int Gas_Owner = -1;
@@ -2598,7 +2593,7 @@ public int Native_CFNPCExplosion(Handle plugin, int numParams)
 	CFNPC_HitByBlast = CreateArray(255);
 	
 	TR_EnumerateEntitiesSphere(pos, radius, PARTITION_NON_STATIC_EDICTS, CFNPC_BlastTrace, attacker);
-	
+
 	for (int i = 0; i < GetArraySize(CFNPC_HitByBlast); i++)
 	{
 		int victim = EntRefToEntIndex(GetArrayCell(CFNPC_HitByBlast, i));
@@ -2617,14 +2612,7 @@ public int Native_CFNPCExplosion(Handle plugin, int numParams)
 			CF_WorldSpaceCenter(victim, vicLoc);
 			
 			bool passed = true;
-					
-			if (!skipLOS)
-			{
-				Handle trace = TR_TraceRayFilterEx(pos, vicLoc, MASK_PLAYERSOLID_BRUSHONLY, RayType_EndPoint, CFNPC_AOETrace, victim);
-				passed = !TR_DidHit(trace);
-				delete trace;
-			}
-			
+
 			if (filterFunction != INVALID_FUNCTION && !StrEqual(filterPlugin, ""))
 			{
 				Call_StartFunction(GetPluginHandle(filterPlugin), filterFunction);
@@ -2634,6 +2622,13 @@ public int Native_CFNPCExplosion(Handle plugin, int numParams)
 				Call_PushCell(weapon);
 				Call_PushFloat(damage);
 				Call_Finish(passed);
+			}
+
+			if (!skipLOS && passed)
+			{
+				Handle trace = TR_TraceRayFilterEx(pos, vicLoc, MASK_PLAYERSOLID_BRUSHONLY, RayType_EndPoint, CFNPC_AOETrace, victim);
+				passed = !TR_DidHit(trace);
+				delete trace;
 			}
 					
 			if (passed)
@@ -2720,7 +2715,7 @@ public bool CFNPC_AOETrace(entity, contentsmask, target)
 
 public bool CFNPC_LOSCheck(entity, contentsMask)
 {
-	if (entity <= MaxClients || CFNPC_IsNPC(entity) || contentsMask & CONTENTS_SOLID == 0)
+	if (entity <= MaxClients || CFNPC_IsNPC(entity))
 		return false;
 	
 	char classname[255];
