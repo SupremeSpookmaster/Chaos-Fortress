@@ -401,10 +401,121 @@ void CFNPC_MakeNatives()
 public void CFNPC_OnEntityCreated(int entity, const char[] classname)
 {
 	//All projectiles that have any sort of explosion (not including wrap assassin) need to have custom explosion logic so that they work seamlessly with NPCs:
-	/*if (StrContains(classname, "tf_projectile_jar") != -1)
+	if (StrContains(classname, "tf_projectile_flare") != -1)
 	{
-		SDKHook(entity, SDKHook_TouchPost, CFNPC_JarTouch);
-	}*/
+		g_DHookFlareExplode.HookEntity(Hook_Pre, entity, CFNPC_FlareExplode);
+	}
+	
+	if (StrEqual(classname, "tf_projectile_pipe"))
+	{
+		g_DHookGrenadeExplode.HookEntity(Hook_Pre, entity, CFNPC_GrenadeExplode);
+	}
+
+	if (StrEqual(classname, "tf_projectile_pipe_remote"))
+	{
+		g_DHookStickyExplode.HookEntity(Hook_Pre, entity, CFNPC_StickyExplode);
+	}
+
+	if (StrContains(classname, "tf_projectile_spellfireball") != -1)
+	{
+		g_DHookFireballExplode.HookEntity(Hook_Pre, entity, CFNPC_FireballExplode);
+	}
+
+	if (StrContains(classname, "tf_projectile_rocket") != -1 || StrContains(classname, "tf_projectile_sentryrocket") != -1)
+	{
+		g_DHookRocketExplode.HookEntity(Hook_Pre, entity, CFNPC_RocketExplode);
+	}
+}
+
+public MRESReturn CFNPC_FlareExplode(int entity)
+{
+	CPrintToChatAll("Flare exploded!");
+
+	int launcher = -1;
+	int owner = -1;
+	if (CFNPC_CheckAllowCustomExplosionLogic(entity, owner, launcher))
+	{
+		CPrintToChatAll("Custom explosion is permitted, owner is %i, launcher is %i.", owner, launcher);
+	}
+	
+	return MRES_Ignored;
+}
+
+public MRESReturn CFNPC_GrenadeExplode(int entity)
+{
+	CPrintToChatAll("Grenade exploded!");
+
+	int launcher = -1;
+	int owner = -1;
+	if (CFNPC_CheckAllowCustomExplosionLogic(entity, owner, launcher))
+	{
+		CPrintToChatAll("Custom explosion is permitted, owner is %i, launcher is %i.", owner, launcher);
+	}
+	
+	return MRES_Ignored;
+}
+
+public MRESReturn CFNPC_StickyExplode(int entity)
+{
+	CPrintToChatAll("Sticky exploded!");
+
+	int launcher = -1;
+	int owner = -1;
+	if (CFNPC_CheckAllowCustomExplosionLogic(entity, owner, launcher))
+	{
+		CPrintToChatAll("Custom explosion is permitted, owner is %i, launcher is %i.", owner, launcher);
+	}
+
+	return MRES_Ignored;
+}
+
+public MRESReturn CFNPC_FireballExplode(int entity)
+{
+	CPrintToChatAll("Fireball exploded!");
+
+	int launcher = -1;
+	int owner = -1;
+	if (CFNPC_CheckAllowCustomExplosionLogic(entity, owner, launcher))
+	{
+		CPrintToChatAll("Custom explosion is permitted, owner is %i, launcher is %i.", owner, launcher);
+	}
+	
+	return MRES_Ignored;
+}
+
+public MRESReturn CFNPC_RocketExplode(int entity)
+{
+	CPrintToChatAll("Fireball exploded!");
+
+	int launcher = -1;
+	int owner = -1;
+	if (CFNPC_CheckAllowCustomExplosionLogic(entity, owner, launcher))
+	{
+		CPrintToChatAll("Custom explosion is permitted, owner is %i, launcher is %i.", owner, launcher);
+	}
+	
+	return MRES_Ignored;
+}
+
+bool CFNPC_CheckAllowCustomExplosionLogic(int entity, int &owner = -1, int &launcher = -1)
+{
+	if (!IsValidEntity(entity))
+		return false;
+
+	owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
+	launcher = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
+
+	bool success = true;
+
+	Call_StartForward(g_OnProjectileExplode);
+
+	Call_PushCell(entity);
+	Call_PushCell(owner);
+	Call_PushCell(launcher);
+
+	Call_Finish(success);
+
+	return success;
 }
 
 void CFNPC_OnCreate(int npc)
