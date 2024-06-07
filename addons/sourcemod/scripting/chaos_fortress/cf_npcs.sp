@@ -475,8 +475,6 @@ public MRESReturn CFNPC_StickyExplode(int entity)
 
 public MRESReturn CFNPC_FireballExplode(int entity)
 {
-	CPrintToChatAll("Fireball exploded!");
-
 	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, 100.0, SND_EXPLOSION_FIREBALL, PARTICLE_EXPLOSION_FIREBALL_RED, PARTICLE_EXPLOSION_FIREBALL_BLUE, false, 5.0, -1.0, 0.0, 0.0))
 		return MRES_Supercede;
 	
@@ -2765,6 +2763,10 @@ public int Native_CFNPCExplosion(Handle plugin, int numParams)
 	GetNativeString(15, filterPlugin, sizeof(filterPlugin));
 	Function hitFunction = GetNativeFunction(16);
 	GetNativeString(17, hitPlugin, sizeof(hitPlugin));
+
+	//Always assume invalid attacker entities are the console, otherwise we crash the server.
+	if (attacker < 0)
+		attacker = 0;
 
 	delete CFNPC_HitByBlast;
 	CFNPC_HitByBlast = CreateArray(255);
