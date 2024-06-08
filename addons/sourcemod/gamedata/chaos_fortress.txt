@@ -182,6 +182,21 @@
 					}
 				}
 			}
+			"CTFGrenadePipebombProjectile::PipebombTouch" 
+			{
+				// virtual void PipebombTouch( CBaseEntity *pOther )
+				"offset" 		"CTFGrenadePipebombProjectile::PipebombTouch"
+				"hooktype" 		"entity"
+				"return" 		"void"
+				"this" 			"entity"
+				"arguments"
+				{
+					"other"
+					{
+						"type" "cbaseentity"
+					}
+				}
+			}
 		}
 		"Offsets"
 		{
@@ -214,6 +229,11 @@
 			{
 				"linux"		"250"
 				"windows"	"247"
+			}
+			"CTFGrenadePipebombProjectile::PipebombTouch" 
+			{
+				"windows" 	"260"
+				"linux" 	"261"
 			}
 		}
 	}

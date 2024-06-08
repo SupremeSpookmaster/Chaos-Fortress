@@ -49,6 +49,7 @@ int i_BleedStacks[2049] = { 0, ... };
 int i_Milker[2049] = { -1, ... };
 int i_Jarater[2049] = { -1, ... };
 int i_Gasser[2049] = { -1, ... };
+int i_PillCollideTarget[2049] = { -1, ... };
 
 float CFNPC_Speed[2049] = { 0.0, ... };
 float CFNPC_ThinkRate[2049] = { 0.0, ... };
@@ -68,6 +69,7 @@ bool ForcedToGib[2049] = { false, ... };
 bool b_AfterburnHaunted[2049] = { false, ... };
 bool b_MiniCrit[2049] = { false, ... };
 bool I_AM_DEAD[2049] = { false, ... };
+bool b_PillAlreadyBounced[2049] = { false, ... };
 
 char CFNPC_Model[2049][255];
 char CFNPC_BleedParticle[2049][255];
@@ -104,6 +106,8 @@ ArrayList g_AttachedWeaponModels[2049];
 DynamicHook g_DHookGrenadeExplode;
 DynamicHook g_DHookStickyExplode;
 DynamicHook g_DHookFireballExplode;
+
+Handle g_DHookPillCollide;
 //DynamicHook g_DHookFlareExplode;
 
 enum //hitgroup_t
@@ -240,6 +244,8 @@ void CFNPC_MakeForwards()
 
 	DHook_CreateDetour(gd, "JarExplode()", CFNPC_OnJarExplodePre);
 	DHook_CreateDetour(gd, "CTFProjectile_Flare::Explode_Air()", CFNPC_OnFlareExplodePre);
+
+	g_DHookPillCollide = CheckedDHookCreateFromConf(gd, "CTFGrenadePipebombProjectile::PipebombTouch");
 
 	delete gd;
 }
@@ -426,6 +432,7 @@ public void CFNPC_OnEntityCreated(int entity, const char[] classname)
 	if (StrEqual(classname, "tf_projectile_pipe"))
 	{
 		g_DHookGrenadeExplode.HookEntity(Hook_Pre, entity, CFNPC_GrenadeExplode);
+		DHookEntity(g_DHookPillCollide, false, entity, _, CFNPC_GrenadeCollide);
 	}
 
 	if (StrEqual(classname, "tf_projectile_pipe_remote"))
@@ -444,21 +451,46 @@ public void CFNPC_OnEntityCreated(int entity, const char[] classname)
 	}
 }
 
+public void CFNPC_OnEntityDestroyed(int entity)
+{
+	i_PillCollideTarget[entity] = -1;
+	b_PillAlreadyBounced[entity] = false;
+}
+
 MRESReturn CFNPC_OnFlareExplodePre(int entity, Handle hParams) 
 {
 	CPrintToChatAll("Flare exploded!");
 
 	float damage = GetEntPropFloat(entity, Prop_Send, "m_flDamage");	//TODO: This is almost certainly incorrect, won't know until we get the flare explosion logic working in the first place.
-	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, damage, SND_EXPLOSION_FLARE, PARTICLE_EXPLOSION_FLARE_RED, PARTICLE_EXPLOSION_FLARE_BLUE, true, 10.0, 0.0, 146.0, 0.5))
+	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, damage, SND_EXPLOSION_FLARE, PARTICLE_EXPLOSION_FLARE_RED, PARTICLE_EXPLOSION_FLARE_BLUE, true, 10.0, 0.0, 146.0, 0.5, -1))
 		return MRES_Supercede;
 	
+	return MRES_Ignored;
+}
+
+static MRESReturn CFNPC_GrenadeCollide(int self, Handle params) 
+{
+	int other = DHookGetParam(params, 1);
+
+	TFTeam team = view_as<TFTeam>(GetEntProp(self, Prop_Send, "m_iTeamNum"));
+	if (team == TFTeam_Red)
+		team = TFTeam_Blue;
+	else
+		team = TFTeam_Red;
+
+	if (CF_IsValidTarget(other, team) && !b_PillAlreadyBounced[self])
+		i_PillCollideTarget[self] = EntIndexToEntRef(other);
+
+	b_PillAlreadyBounced[self] = true;
+
 	return MRES_Ignored;
 }
 
 public MRESReturn CFNPC_GrenadeExplode(int entity)
 {
 	float damage = GetEntPropFloat(entity, Prop_Send, "m_flDamage");
-	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, damage, SFX_GenericExplosion[GetRandomInt(0, sizeof(SFX_GenericExplosion) - 1)], PARTICLE_EXPLOSION_GENERIC, PARTICLE_EXPLOSION_GENERIC, true, 0.0, 0.0, 146.0, 0.5))
+
+	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, damage, SFX_GenericExplosion[GetRandomInt(0, sizeof(SFX_GenericExplosion) - 1)], PARTICLE_EXPLOSION_GENERIC, PARTICLE_EXPLOSION_GENERIC, true, 0.0, 0.0, 146.0, 0.5, EntRefToEntIndex(i_PillCollideTarget[entity])))
 		return MRES_Supercede;
 
 	return MRES_Ignored;
@@ -467,7 +499,7 @@ public MRESReturn CFNPC_GrenadeExplode(int entity)
 public MRESReturn CFNPC_StickyExplode(int entity)
 {
 	float damage = GetEntPropFloat(entity, Prop_Send, "m_flDamage");
-	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, damage, SFX_GenericExplosion[GetRandomInt(0, sizeof(SFX_GenericExplosion) - 1)], PARTICLE_EXPLOSION_GENERIC, PARTICLE_EXPLOSION_GENERIC, true, 0.0, 0.0, 146.0, 0.5))
+	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, damage, SFX_GenericExplosion[GetRandomInt(0, sizeof(SFX_GenericExplosion) - 1)], PARTICLE_EXPLOSION_GENERIC, PARTICLE_EXPLOSION_GENERIC, true, 0.0, 0.0, 146.0, 0.5, -1))
 		return MRES_Supercede;
 
 	return MRES_Ignored;
@@ -475,7 +507,7 @@ public MRESReturn CFNPC_StickyExplode(int entity)
 
 public MRESReturn CFNPC_FireballExplode(int entity)
 {
-	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, 100.0, SND_EXPLOSION_FIREBALL, PARTICLE_EXPLOSION_FIREBALL_RED, PARTICLE_EXPLOSION_FIREBALL_BLUE, false, 5.0, -1.0, 0.0, 0.0))
+	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, 100.0, SND_EXPLOSION_FIREBALL, PARTICLE_EXPLOSION_FIREBALL_RED, PARTICLE_EXPLOSION_FIREBALL_BLUE, false, 5.0, -1.0, 0.0, 0.0, -1))
 		return MRES_Supercede;
 	
 	return MRES_Ignored;
@@ -484,21 +516,21 @@ public MRESReturn CFNPC_FireballExplode(int entity)
 public MRESReturn CFNPC_RocketExplode(int entity)
 {
 	float damage = GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_Rocket", "m_iDeflected") + 4);
-	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, damage, SFX_GenericExplosion[GetRandomInt(0, sizeof(SFX_GenericExplosion) - 1)], PARTICLE_EXPLOSION_GENERIC, PARTICLE_EXPLOSION_GENERIC, true, 0.0, 0.0, 146.0, 0.5))
+	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, damage, SFX_GenericExplosion[GetRandomInt(0, sizeof(SFX_GenericExplosion) - 1)], PARTICLE_EXPLOSION_GENERIC, PARTICLE_EXPLOSION_GENERIC, true, 0.0, 0.0, 146.0, 0.5, -1))
 		return MRES_Supercede;
 	
 	return MRES_Ignored;
 }
 
 float currentIgniteTime = 0.0;
-public bool CFNPC_TriggerProjectileExplosion(int entity, float radius, float damage, char[] sound, char redParticle[255], char blueParticle[255], bool hitOwner, float igniteTime, float falloffStart, float falloffEnd, float falloffMax)
+float currentFullDMG = 0.0;
+int currentDirectVictim = -1;
+public bool CFNPC_TriggerProjectileExplosion(int entity, float radius, float damage, char[] sound, char redParticle[255], char blueParticle[255], bool hitOwner, float igniteTime, float falloffStart, float falloffEnd, float falloffMax, int directTarget)
 {
 	int launcher = -1;
 	int owner = -1;
 	if (CFNPC_CheckAllowCustomExplosionLogic(entity, owner, launcher))
 	{
-		CPrintToChatAll("Custom explosion is permitted, owner is %i, launcher is %i, damage is %.2f.", owner, launcher, damage);
-
 		CFNPC_CalculateExplosionBaseStats(launcher, damage, radius);
 
 		float pos[3];
@@ -522,12 +554,13 @@ public bool CFNPC_TriggerProjectileExplosion(int entity, float radius, float dam
 			damagetype |= DMG_ACID;
 
 		currentIgniteTime = igniteTime;
+		currentFullDMG = damage;
+		currentDirectVictim = directTarget;
+
 		if (igniteTime > 0.0)
 			CFNPC_Explosion(pos, radius, damage, falloffStart, falloffEnd, falloffMax, entity, launcher, owner, damagetype, _, true, hitOwner, _, _, CFNPC_IgniteOnHit, PLUGIN_NAME);
 		else
-			CFNPC_Explosion(pos, radius, damage, falloffStart, falloffEnd, falloffMax, entity, launcher, owner, damagetype, _, true, hitOwner);
-
-		//TODO: Need to factor in direct hits for grenades.
+			CFNPC_Explosion(pos, radius, damage, falloffStart, falloffEnd, falloffMax, entity, launcher, owner, damagetype, _, true, hitOwner, _, _, CFNPC_DirectHitCheck, PLUGIN_NAME);
 
 		RemoveEntity(entity);
 
@@ -537,7 +570,7 @@ public bool CFNPC_TriggerProjectileExplosion(int entity, float radius, float dam
 	return false;
 }
 
-public void CFNPC_IgniteOnHit(int victim, int attacker, int inflictor, int weapon, float damage)
+public void CFNPC_IgniteOnHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
 {
 	if (CFNPC_IsNPC(victim))
 	{
@@ -547,6 +580,15 @@ public void CFNPC_IgniteOnHit(int victim, int attacker, int inflictor, int weapo
 	{
 		TF2_IgnitePlayer(victim, attacker, currentIgniteTime);
 	}
+
+	if (victim == currentDirectVictim)
+		damage = currentFullDMG;
+}
+
+public void CFNPC_DirectHitCheck(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
+{
+	if (victim == currentDirectVictim)
+		damage = currentFullDMG;
 }
 
 bool CFNPC_CheckAllowCustomExplosionLogic(int entity, int &owner = -1, int &launcher = -1)
@@ -925,7 +967,7 @@ public void CFNPC_GasCloudLogic(DataPack pack)
 	RequestFrame(CFNPC_GasCloudLogic, pack);
 }
 
-public bool CFNPC_GasCloudFilter(int victim, int attacker, int inflictor, int weapon, float damage)
+public bool CFNPC_GasCloudFilter(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
 {
 	if (IsValidClient(victim))
 		return !TF2_IsPlayerInCondition(victim, TFCond_Gas);
@@ -935,7 +977,7 @@ public bool CFNPC_GasCloudFilter(int victim, int attacker, int inflictor, int we
 	return false;
 }
 
-public void CFNPC_OnGasHit(int victim, int attacker, int inflictor, int weapon, float damage)
+public void CFNPC_OnGasHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
 {
 	attacker = EntRefToEntIndex(Gas_Owner);
 	if (!IsValidEntity(attacker))
@@ -957,12 +999,12 @@ public void CFNPC_OnGasHit(int victim, int attacker, int inflictor, int weapon, 
 	}
 }
 
-public bool CFNPC_GenericNonBuildingFilter(int victim, int attacker, int inflictor, int weapon, float damage)
+public bool CFNPC_GenericNonBuildingFilter(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
 {
 	return !IsABuilding(victim);
 }
 
-public void CFNPC_OnMilkHit(int victim, int attacker, int inflictor, int weapon, float damage)
+public void CFNPC_OnMilkHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
 {
 	attacker = EntRefToEntIndex(Jar_Thrower);
 	if (!IsValidEntity(attacker))
@@ -986,7 +1028,7 @@ public void CFNPC_OnMilkHit(int victim, int attacker, int inflictor, int weapon,
 	}
 }
 
-public void CFNPC_OnJarateHit(int victim, int attacker, int inflictor, int weapon, float damage)
+public void CFNPC_OnJarateHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
 {
 	attacker = EntRefToEntIndex(Jar_Thrower);
 	if (!IsValidEntity(attacker))
@@ -2796,10 +2838,10 @@ public int Native_CFNPCExplosion(Handle plugin, int numParams)
 			{
 				Call_StartFunction(GetPluginHandle(filterPlugin), filterFunction);
 				Call_PushCell(victim);
-				Call_PushCell(attacker);
-				Call_PushCell(inflictor);
-				Call_PushCell(weapon);
-				Call_PushFloat(damage);
+				Call_PushCellRef(attacker);
+				Call_PushCellRef(inflictor);
+				Call_PushCellRef(weapon);
+				Call_PushFloatRef(damage);
 				Call_Finish(passed);
 			}
 
@@ -2832,19 +2874,19 @@ public int Native_CFNPCExplosion(Handle plugin, int numParams)
 						realDMG *= GetAttributeValue(weapon, 137, 1.0) * GetAttributeValue(weapon, 775, 1.0);
 					}
 				}
-				
-				SDKHooks_TakeDamage(victim, inflictor, attacker, realDMG, damageType, weapon, _, pos, false);
 
 				if (hitFunction != INVALID_FUNCTION && !StrEqual(hitPlugin, ""))
 				{
 					Call_StartFunction(GetPluginHandle(hitPlugin), hitFunction);
 					Call_PushCell(victim);
-					Call_PushCell(attacker);
-					Call_PushCell(inflictor);
-					Call_PushCell(weapon);
-					Call_PushFloat(damage);
+					Call_PushCellRef(attacker);
+					Call_PushCellRef(inflictor);
+					Call_PushCellRef(weapon);
+					Call_PushFloatRef(realDMG);
 					Call_Finish();
 				}
+
+				SDKHooks_TakeDamage(victim, inflictor, attacker, realDMG, damageType, weapon, _, pos, false);
 			}
 		}
 	}

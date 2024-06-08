@@ -44,8 +44,6 @@
 //			- Add an option to make NPCs use the body_pitch and body_yaw pose parameters to automatically look towards their target destination.
 //			- Add SetGoalEntity.
 //			- Do the following to finish the explosion rewrites:
-//				- Dhook pills for collision, reduce damage by 40% if they collide with something that is NOT a valid enemy.
-//				- Make pills deal full damage to whatever they collide with if a direct hit happens.
 //				- Make flare explosion detection actually work.
 //			//////// EVERYTHING BELOW HERE REQUIRES THE PORTABLE NPC SYSTEM TO BE A STANDALONE PLUGIN, PORT NPCS TO THE PORTABLE NPC SYSTEM ONCE THE ABOVE ARE FINISHED: //////// 
 //			- Port all of the "GetClosestTarget/Ally/Whatever" natives from CF.

@@ -460,7 +460,9 @@ public void Core_OnEntityDestroyed(int entity)
 	if (entity >= 0 && entity < 2049)
 	{
 		for (int i = 0; i < 4; i++)
-		b_InSpawn[entity][i] = false;
+			b_InSpawn[entity][i] = false;
+
+		CFNPC_OnEntityDestroyed(entity);
 	}
 }
 

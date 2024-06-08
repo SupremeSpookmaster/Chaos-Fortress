@@ -3039,3 +3039,13 @@ stock void DHook_CreateDetour(GameData gamedata, const char[] name, DHookCallbac
 		LogError("[Gamedata] Could not find %s", name);
 	}
 }
+
+stock Handle CheckedDHookCreateFromConf(Handle game_config, const char[] name) {
+    Handle res = DHookCreateFromConf(game_config, name);
+
+    if (res == INVALID_HANDLE) {
+        SetFailState("Failed to create detour for %s", name);
+    }
+
+    return res;
+}

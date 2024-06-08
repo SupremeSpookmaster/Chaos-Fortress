@@ -2390,13 +2390,13 @@ native CF_ForceViewmodelAnimation(int client, char[] sequence, bool hideWeapon =
  * @param ignoreInvuln			If true: the explosion will still hit victims even if they are invulnerable. This does not necessarily mean they will take damage, but it WILL trigger damage events.
  * @param hitAttacker			If true: this explosion can hit the "attacker" entity.
  * @param filterFunction		The function to call to check if a given entity can be hit by this explosion.
- * 								This function must take the following parameters: victim (int), attacker (int), inflictor (int), weapon (int), damage (float).
+ * 								This function must take the following parameters by reference (not including victim): victim (int), attacker (int), inflictor (int), weapon (int), damage (float).
  * 								It must also return a bool (true to allow the victim to be hit, false otherwise).
- * 								EXAMPLE: bool MyFilter(int victim, int attacker, int inflictor, int weapon, float damage)
+ * 								EXAMPLE: bool MyFilter(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
  * @param filterPlugin			The name of the plugin which contains filterFunction.
  * @param hitFunction			The function to call when this explosion hits a victim.
- * 								This function must take all of the same parameters as filterFunction, in the same order, but does not need to return a value.
- * 								EXAMPLE: void OnHit(int victim, int attacker, int inflictor, int weapon, float damage)
+ * 								This function must take all of the same parameters as filterFunction, in the same order, and does not need to return a value.
+ * 								EXAMPLE: void OnHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
  * @param hitPlugin				The name of the plugin which contains hitFunction.
  */
 native CFNPC_Explosion(float pos[3], float radius, float damage, float falloffStartRange = 0.0, float falloffEndRange = 0.0, float falloffMax = 0.5, int inflictor = 0, 
