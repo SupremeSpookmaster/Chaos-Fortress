@@ -240,7 +240,6 @@ void CFNPC_MakeForwards()
 	g_DHookGrenadeExplode = DHook_CreateVirtual(gd, "CBaseGrenade::Explode");
 	g_DHookStickyExplode = DHook_CreateVirtual(gd, "CBaseGrenade::Detonate");
 	g_DHookFireballExplode = DHook_CreateVirtual(gd, "CTFProjectile_SpellFireball::Explode");
-	//g_DHookFlareExplode = DHook_CreateVirtual(gd, "CTFProjectile_Flare::Explode_Air()");
 
 	DHook_CreateDetour(gd, "JarExplode()", CFNPC_OnJarExplodePre);
 	DHook_CreateDetour(gd, "CTFProjectile_Flare::Explode_Air()", CFNPC_OnFlareExplodePre);
@@ -462,7 +461,7 @@ MRESReturn CFNPC_OnFlareExplodePre(int entity, Handle hParams)
 	CPrintToChatAll("Flare exploded!");
 
 	float damage = GetEntPropFloat(entity, Prop_Send, "m_flDamage");	//TODO: This is almost certainly incorrect, won't know until we get the flare explosion logic working in the first place.
-	if (CFNPC_TriggerProjectileExplosion(entity, 146.0, damage, SND_EXPLOSION_FLARE, PARTICLE_EXPLOSION_FLARE_RED, PARTICLE_EXPLOSION_FLARE_BLUE, true, 10.0, 0.0, 146.0, 0.5, -1))
+	if (CFNPC_TriggerProjectileExplosion(entity, 110.0, damage, SND_EXPLOSION_FLARE, PARTICLE_EXPLOSION_FLARE_RED, PARTICLE_EXPLOSION_FLARE_BLUE, true, 10.0, 0.0, 146.0, 0.5, -1))
 		return MRES_Supercede;
 	
 	return MRES_Ignored;

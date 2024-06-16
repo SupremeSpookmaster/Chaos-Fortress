@@ -40,11 +40,7 @@
 //		- NPCs:
 //			- Figure out why rapidly hitting NPCs in the legs with projectiles or closing spawn doors on them causes them to teleport out of the map.
 //				- Console error that may have something to do with this: "INTERPENETRATING ENTITIES"
-//			- Add natives for basic attacks (should have generic melee, generic projectile, and generic bullets).
-//			- Add an option to make NPCs use the body_pitch and body_yaw pose parameters to automatically look towards their target destination.
 //			- Add SetGoalEntity.
-//			- Do the following to finish the explosion rewrites:
-//				- Make flare explosion detection actually work.
 //			//////// EVERYTHING BELOW HERE REQUIRES THE PORTABLE NPC SYSTEM TO BE A STANDALONE PLUGIN, PORT NPCS TO THE PORTABLE NPC SYSTEM ONCE THE ABOVE ARE FINISHED: //////// 
 //			- Port all of the "GetClosestTarget/Ally/Whatever" natives from CF.
 //			- Make custom melee hitreg so it doesn't sound like you're hitting a wall every time you hit an NPC with melee.
@@ -55,7 +51,7 @@
 //			- Add customizable sounds for any number of custom triggers.
 //				- Should include: sound_damaged, sound_impact, sound_kill, and sound_killed as officially supported sound cues, then have "CFNPC.PlaySound" as a native to play custom cues.
 //			- NPC CFGs should function like FF2 boss CFGs, with sections for equipped models, name, etc. One of these sections should be called "functionality", where devs can add and tweak AI modifiers to control how the NPC behaves.
-//			//THE FOLLOWING DO NOT NEED TO BE DONE PRE-CF BETA, AND SHOULD BE SKIPPED FOR NOW FOR THE SAKE OF TIME:
+//			//////// THE FOLLOWING DO NOT NEED TO BE DONE PRE-CF BETA, AND SHOULD BE SKIPPED FOR NOW FOR THE SAKE OF TIME:
 //			- Make a few basic AI templates. These should be split into categories governing movement and combat.
 //				- Chaser (movement): chases the nearest player. Can be customized to specify the target's team as well as whether or not it will predict their movement.
 //				- Zoner (movement): runs away from players if they are too close, but will chase them if they are too far. Can be customized to specify the team to flee from/chase, as well as whether it turns away or strafes backwards when fleeing.
@@ -71,6 +67,11 @@
 //			- Allow server owners to configure several settings:
 //				- Max NPCs, max gibs, max model attachments per NPC, whether or not NPCs should have visible health bars, whether or not the NPC's remaining HP should be displayed on the user's HUD when the NPC is damaged.
 //			- Some day down the road (not immediately), add the Fake Player Model system. Should actually be fairly easy to implement given all of the control we have over animations; we just copy the user's current sequence, pose parameters, and gestures to the NPC every frame, then when we animate the NPC we stop copying until the animation is done.
+//			- Do the following to finish the explosion rewrites:
+//				- Make the Loose Cannon work as intended against NPCs, maybe?
+//				- Make flare explosion detection actually work.
+//			- Add an option to make NPCs use the body_pitch and body_yaw pose parameters to automatically look towards their target destination.
+//			- Add natives for basic attacks (should have generic melee, generic projectile, and generic bullets).
 //
 //	- BALANCE CHANGES (things to keep in mind for balancing)
 //		////////////////////////////////////////////
