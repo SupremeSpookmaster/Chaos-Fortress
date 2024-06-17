@@ -38,7 +38,6 @@
 //		- The Gambler:
 //			- Begin work.
 //		- NPCs:
-//			- Add SetGoalEntity.
 //			//////// EVERYTHING BELOW HERE REQUIRES THE PORTABLE NPC SYSTEM TO BE A STANDALONE PLUGIN, PORT NPCS TO THE PORTABLE NPC SYSTEM ONCE THE ABOVE ARE FINISHED: //////// 
 //			- Port all of the "GetClosestTarget/Ally/Whatever" natives from CF.
 //			- Make custom melee hitreg so it doesn't sound like you're hitting a wall every time you hit an NPC with melee.
