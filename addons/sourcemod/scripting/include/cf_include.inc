@@ -252,11 +252,22 @@ methodmap CFNPC < CBaseCombatCharacter
 	public native void StopPathing();
 
 	/**
-	 * Sets the vector coordinates for this CFNPC's target destination. This DOES NOT make them start moving, you must use CFNPC.StartPathing for that.
+	 * Sets the vector coordinates for this CFNPC's target destination. This will automatically make them start moving, call CFNPC.StopPathing after this to prevent that.
+	 * Note that if this CFNPC's i_PathTarget property is a valid entity, that will completely override this. To prevent this from happening, just clear i_PathTarget before 
+	 * calling this method.
 	 * 
 	 * @param pos		The location to target.
 	 */
 	public native void SetGoalVector(float pos[3]);
+
+	/**
+	 * Sets the entity that this CFNPC will attempt to path to. This will automatically make them start moving, call CFNPC.StopPathing after this to prevent that.
+	 * The CFNPC will stop pathing automatically if that entity is invalid or dead. If the entity was a player who died, pathing will automatically restart once the target respawns.
+	 * This can also be done by setting the CFNPC.i_PathTarget property to a valid entity.
+	 * 
+	 * @param entity	The entity to target.
+	 */
+	public native void SetGoalEntity(int entity);
 
 	/**
 	 * Retrieves the CFNPC's ground speed.
@@ -555,6 +566,12 @@ methodmap CFNPC < CBaseCombatCharacter
 	}
 
 	property int i_GasApplicant
+	{
+		public native get();
+		public native set(int value);
+	}
+
+	property int i_PathTarget
 	{
 		public native get();
 		public native set(int value);

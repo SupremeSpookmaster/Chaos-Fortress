@@ -50,6 +50,7 @@ int i_Milker[2049] = { -1, ... };
 int i_Jarater[2049] = { -1, ... };
 int i_Gasser[2049] = { -1, ... };
 int i_PillCollideTarget[2049] = { -1, ... };
+int i_PathTarget[2049] = { -1, ... };
 
 float CFNPC_Speed[2049] = { 0.0, ... };
 float CFNPC_ThinkRate[2049] = { 0.0, ... };
@@ -346,8 +347,11 @@ void CFNPC_MakeNatives()
 	CreateNative("CFNPC.StartPathing", Native_CFNPCStartPathing);
 	CreateNative("CFNPC.StopPathing", Native_CFNPCStopPathing);
 	CreateNative("CFNPC.SetGoalVector", Native_CFNPCSetGoalVector);
+	CreateNative("CFNPC.SetGoalEntity", Native_CFNPCSetGoalEntity);
 	CreateNative("CFNPC.GetGroundSpeed", Native_CFNPCGetGroundSpeed);
 	CreateNative("CFNPC.ApplyTemporarySpeedChange", Native_CFNPCModifySpeed);
+	CreateNative("CFNPC.i_PathTarget.get", Native_CFNPCGetPathTarget);
+	CreateNative("CFNPC.i_PathTarget.set", Native_CFNPCSetPathTarget);
 
 	//CBaseNPC Base Values:
 	CreateNative("CFNPC.f_YawRate.get", Native_CFNPCGetYawRate);
@@ -1615,6 +1619,11 @@ public void CFNPC_InternalLogic(int ref)
 	CFNPC_SetMovePose(npc);
 	CFNPC_CheckTriggerHurt(npc);
 
+	if (IsValidEntity(npc.i_PathTarget))
+	{
+		npc.SetGoalEntity(npc.i_PathTarget);
+	}
+
 	npc.GetPathFollower().Update(npc.GetBot());
 
 	RequestFrame(CFNPC_InternalLogic, ref);
@@ -2171,6 +2180,48 @@ public int Native_CFNPCSetGoalVector(Handle plugin, int numParams)
 	float pos[3];
 	GetNativeArray(2, pos, sizeof(pos));
 	npc.GetPathFollower().ComputeToPos(npc.GetBot(), pos);
+	npc.StartPathing();
+
+	return 0;
+}
+
+public int Native_CFNPCSetGoalEntity(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	int target = GetNativeCell(2);
+	npc.i_PathTarget = target;
+
+	return 0;
+}
+
+public int Native_CFNPCGetPathTarget(Handle plugin, int numParams) { return EntRefToEntIndex(i_PathTarget[GetNativeCell(1)]); }
+
+public int Native_CFNPCSetPathTarget(Handle plugin, int numParams)
+{
+	CFNPC npc = view_as<CFNPC>(GetNativeCell(1));
+	int target = GetNativeCell(2);
+
+	if (IsValidEntity(target))
+	{
+		if (I_AM_DEAD[target] || (IsValidClient(target) && !IsPlayerAlive(target)))
+		{
+			npc.StopPathing();
+		}
+		else
+		{
+			float pos[3];
+			GetEntPropVector(target, Prop_Data, "m_vecOrigin", pos);
+			npc.SetGoalVector(pos);
+			npc.StartPathing();
+		}
+
+		i_PathTarget[npc.Index] = EntIndexToEntRef(target);
+	}
+	else
+	{
+		i_PathTarget[npc.Index] = target;
+		npc.StopPathing();
+	}
 
 	return 0;
 }
