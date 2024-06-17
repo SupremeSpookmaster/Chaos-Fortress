@@ -15,7 +15,7 @@
 #include "chaos_fortress/cf_weapons.sp"
 #include "chaos_fortress/cf_abilities.sp"
 #include "chaos_fortress/cf_animator.sp"
-#include "chaos_fortress/cf_npcs.sp"
+//#include "chaos_fortress/cf_npcs.sp"
 
 int i_CFRoundState = 0; //The current round state.
 
@@ -49,7 +49,6 @@ public void CF_MakeNatives()
 	CFW_MakeNatives();
 	CFA_MakeNatives();
 	CFS_MakeNatives();
-	CFNPC_MakeNatives();
 	
 	CreateNative("CF_IsEntityInSpawn", Native_CF_IsEntityInSpawn);
 }
@@ -67,7 +66,6 @@ public void CF_OnPluginStart()
 	CFA_MakeForwards();
 	CFS_OnPluginStart();
 	CFW_MakeForwards();
-	CFNPC_MakeForwards();
 	
 	g_OnPlayerKilled = new GlobalForward("CF_OnPlayerKilled", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	g_OnPlayerKilled_Pre = new GlobalForward("CF_OnPlayerKilled_Pre", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_String, Param_String, Param_CellByRef, Param_Cell, Param_CellByRef, Param_CellByRef);
@@ -133,16 +131,9 @@ public void CF_MapStart()
 	CFW_MapStart();
 	
 	CFA_MapStart();
-
-	CFNPC_MapStart();
 	
 	PrecacheSound(SOUND_PHYSTOUCH_HIT);
 	PrecacheSound(SOUND_PHYSTOUCH_BLAST);
-}
-
-public void OnMapEnd()
-{
-	CFNPC_MapEnd();
 }
 
 /**
@@ -419,7 +410,6 @@ public void OnGameFrame()
 public void OnEntityCreated(int entity, const char[] classname)
 {
 	CFA_OnEntityCreated(entity, classname);
-	CFNPC_OnEntityCreated(entity, classname);
 	
 	//Don't let players drop Mannpower powerups on death:
 	if (StrContains(classname, "powerup") != -1)
@@ -461,8 +451,6 @@ public void Core_OnEntityDestroyed(int entity)
 	{
 		for (int i = 0; i < 4; i++)
 			b_InSpawn[entity][i] = false;
-
-		CFNPC_OnEntityDestroyed(entity);
 	}
 }
 

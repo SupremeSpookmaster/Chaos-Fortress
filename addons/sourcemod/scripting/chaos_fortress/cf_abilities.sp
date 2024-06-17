@@ -2727,14 +2727,6 @@ public Action CH_ShouldCollide(int ent1, int ent2, bool &result)
 			CallForward = false;
 		}
 	}
-
-	//Third test: don't allow players to collide with friendly NPCs.
-	if ((view_as<CFNPC>(ent1).b_Exists || view_as<CFNPC>(ent2).b_Exists) && IsAlly(ent1, ent2))
-	{
-		result = false;
-		ReturnVal = Plugin_Changed;
-		CallForward = false;
-	}
 	
 	if (CallForward)
 	{
@@ -2836,17 +2828,6 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 			CallForward = false;
 		}
 	}
-
-	//Fourth test: don't allow players to collide with friendly NPCs.
-	if ((view_as<CFNPC>(ent1).b_Exists || view_as<CFNPC>(ent2).b_Exists) && IsAlly(ent1, ent2))
-	{
-		result = false;
-		ReturnVal = Plugin_Changed;
-		CallForward = false;
-	}
-
-	if (ReturnVal == Plugin_Continue)
-		ReturnVal = CFNPC_PassFilter(ent1, ent2, result);
 		
 	if (CallForward)
 	{
