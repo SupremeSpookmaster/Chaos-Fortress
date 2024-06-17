@@ -2844,7 +2844,10 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 		ReturnVal = Plugin_Changed;
 		CallForward = false;
 	}
-	
+
+	if (ReturnVal == Plugin_Continue)
+		ReturnVal = CFNPC_PassFilter(ent1, ent2, result);
+		
 	if (CallForward)
 	{
 		Call_StartForward(g_PassFilter);

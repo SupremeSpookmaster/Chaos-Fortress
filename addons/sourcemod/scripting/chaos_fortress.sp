@@ -38,8 +38,6 @@
 //		- The Gambler:
 //			- Begin work.
 //		- NPCs:
-//			- Figure out why rapidly hitting NPCs in the legs with projectiles or closing spawn doors on them causes them to teleport out of the map.
-//				- Console error that may have something to do with this: "INTERPENETRATING ENTITIES"
 //			- Add SetGoalEntity.
 //			//////// EVERYTHING BELOW HERE REQUIRES THE PORTABLE NPC SYSTEM TO BE A STANDALONE PLUGIN, PORT NPCS TO THE PORTABLE NPC SYSTEM ONCE THE ABOVE ARE FINISHED: //////// 
 //			- Port all of the "GetClosestTarget/Ally/Whatever" natives from CF.

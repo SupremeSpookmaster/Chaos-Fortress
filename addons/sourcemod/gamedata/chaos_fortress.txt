@@ -2,22 +2,6 @@
 {
 	"tf"
 	{
-		"Addresses"
-		{
-			"CTFProjectile_Flare::Explode_Air()::SelfDamageRadius"
-			{
-				// validate that this location has the immediate 100.f (0x42C80000)
-				"signature"		"CTFProjectile_Flare::Explode_Air()"
-				"linux"
-				{
-					"offset"	"1128" // 0x459
-				}
-				"windows"
-				{
-					"offset"	"559" // 0x231
-				}
-			}
-		}
 		"Signatures"
 		{
 			"CTFProjectile_Arrow::Create" //both tf_projectile_grapplinghook and tf_projectile_arrow in the same function.
@@ -25,27 +9,6 @@
 				"library"	"server"
 				"linux"		"@_ZN19CTFProjectile_Arrow6CreateERK6VectorRK6QAngleff16ProjectileType_tP11CBaseEntityS8_"
 				"windows"	"\x55\x8B\xEC\x56\x8B\x75\x18\x57\x83\xFE\x0B"
-			}
-			"LookupActivity" //random guessing.
-			{
-				//this function looks nothing like the one in linux, its littearlly guessing good luck.
-				"library"	"server"
-				"windows"	"\x55\x8B\xEC\x57\x8B\x7D\x08\x85\xFF\x75\x2A\x33\xC0\x5F\x5D\xC3\x53"
-				"linux"		"@_Z14LookupActivityP10CStudioHdrPKc"
-			}
-			"CTFProjectile_Flare::Explode_Air()"
-			{
-				// contains unique xref "ExplosionCore_MidAir_Flare"
-				"library"	"server"
-				"linux"		"@_ZN19CTFProjectile_Flare11Explode_AirEP10CGameTraceib"
-				"windows"	"\x55\x8B\xEC\x81\xEC\xCC\x00\x00\x00\x53\x56"
-			}
-			"JarExplode()"
-			{
-				// find xref "extinguish_reduces_cooldown"
-				"library"	"server"
-				"linux"		"@_Z10JarExplodeiP9CTFPlayerP11CBaseEntityS2_RK6Vectorif7ETFCondfPKcS8_"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x83\xE4\xF0\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\x81\xEC\xE8\x02\x00\x00"
 			}
 		}
 		"Functions"
@@ -68,135 +31,6 @@
 					}
 				}
 			}	
-			"CBaseGrenade::Detonate"
-			{
-				"offset"	"CBaseGrenade::Detonate"
-				"hooktype"	"entity"
-				"return"	"void"
-				"this"		"entity"
-			}
-			"CBaseGrenade::Explode"
-			{
-				"offset"	"CBaseGrenade::Explode"
-				"hooktype"	"entity"
-				"return"	"void"
-				"this"		"entity"
-				"arguments"
-				{
-					"pTrace"
-					{
-						"type"	"objectptr"
-					}
-					"bitsDamageType"
-					{
-						"type"	"int"
-					}
-				}
-			}
-			"CTFProjectile_SpellFireball::Explode"
-			{
-				"offset"	"CTFProjectile_SpellFireball::Explode"
-				"hooktype"	"entity"
-				"return"	"void"
-				"this"		"entity"
-				"arguments"
-				{
-					"pTrace"
-					{
-						"type"	"objectptr"
-					}
-				}
-			}
-			"CTFProjectile_Flare::Explode_Air()"
-			{
-				"signature"		"CTFProjectile_Flare::Explode_Air()"
-				"callconv"		"thiscall"
-				"return"		"void"
-				"this"			"entity"
-				"arguments"
-				{
-					"trace"
-					{
-						"type"	"int"
-					}
-					"damagetype"
-					{
-						"type"	"int"
-					}
-					"self"
-					{
-						"type"	"bool"
-					}
-				}
-			}
-			"JarExplode()"
-			{
-				"signature"		"JarExplode()"
-				"callconv"		"cdecl"
-				"return"		"void"
-				"arguments"
-				{
-					"filter"
-					{
-						"type"	"int" // IRecipientFilter*
-					}
-					"thrower"
-					{
-						"type"	"cbaseentity"
-					}
-					"original_launcher"
-					{
-						"type"	"cbaseentity"
-					}
-					"launcher"
-					{
-						"type"	"cbaseentity"
-					}
-					"position"
-					{
-						"type"	"vectorptr"
-					}
-					"team_num"
-					{
-						"type"	"int"
-					}
-					"radius"
-					{
-						"type"	"float"
-					}
-					"condition"
-					{
-						"type"	"int"
-					}
-					"duration"
-					{
-						"type"	"float"
-					}
-					"particle_effect"
-					{
-						"type"	"charptr"
-					}
-					"sound_effect"
-					{
-						"type"	"charptr"
-					}
-				}
-			}
-			"CTFGrenadePipebombProjectile::PipebombTouch" 
-			{
-				// virtual void PipebombTouch( CBaseEntity *pOther )
-				"offset" 		"CTFGrenadePipebombProjectile::PipebombTouch"
-				"hooktype" 		"entity"
-				"return" 		"void"
-				"this" 			"entity"
-				"arguments"
-				{
-					"other"
-					{
-						"type" "cbaseentity"
-					}
-				}
-			}
 		}
 		"Offsets"
 		{
@@ -209,31 +43,6 @@
 			{
 				"linux"		"240"
 				"windows"	"239"
-			}
-			"CBaseAnimating::BecomeRagdollOnClient"
-			{
-				"windows"	"205"
-				"linux"		"206"
-			}
-			"CBaseGrenade::Explode"
-			{
-				"linux"		"236"
-				"windows"	"235"
-			}
-			"CBaseGrenade::Detonate"
-			{
-				"linux"		"237"
-				"windows"	"236"
-			}
-			"CTFProjectile_SpellFireball::Explode"
-			{
-				"linux"		"250"
-				"windows"	"247"
-			}
-			"CTFGrenadePipebombProjectile::PipebombTouch" 
-			{
-				"windows" 	"260"
-				"linux" 	"261"
 			}
 		}
 	}

@@ -64,12 +64,14 @@ float f_JarateEndTime[2049] = { 0.0, ... };
 float f_GasEndTime[2049] = { 0.0, ... };
 float f_PunchForce[2049][3];
 
+bool b_IsInUpdateGroundConstraint = false;
 bool IExist[2049] = { false, ... };
 bool ForcedToGib[2049] = { false, ... };
 bool b_AfterburnHaunted[2049] = { false, ... };
 bool b_MiniCrit[2049] = { false, ... };
 bool I_AM_DEAD[2049] = { false, ... };
 bool b_PillAlreadyBounced[2049] = { false, ... };
+bool b_IsProjectile[2049] = { false, ... };
 
 char CFNPC_Model[2049][255];
 char CFNPC_BleedParticle[2049][255];
@@ -220,7 +222,7 @@ void CFNPC_MakeForwards()
 	CFNPC_Factory.BeginDataMapDesc().DefineIntField("cf_pPath").EndDataMapDesc();
 	CFNPC_Factory.Install();
 
-	GameData gd = LoadGameConfigFile("chaos_fortress");
+	GameData gd = LoadGameConfigFile("portable_npc_system");
 
 	//LookupActivity:
 	StartPrepSDKCall(SDKCall_Static);
@@ -243,10 +245,23 @@ void CFNPC_MakeForwards()
 
 	DHook_CreateDetour(gd, "JarExplode()", CFNPC_OnJarExplodePre);
 	DHook_CreateDetour(gd, "CTFProjectile_Flare::Explode_Air()", CFNPC_OnFlareExplodePre);
+	DHook_CreateDetour(gd, "NextBotGroundLocomotion::UpdateGroundConstraint", CFNPC_UpdateGroundConstraint_Pre, CFNPC_UpdateGroundConstraint_Post);
 
 	g_DHookPillCollide = CheckedDHookCreateFromConf(gd, "CTFGrenadePipebombProjectile::PipebombTouch");
 
 	delete gd;
+}
+
+public MRESReturn CFNPC_UpdateGroundConstraint_Pre(DHookParam param)
+{
+	b_IsInUpdateGroundConstraint = true;
+	return MRES_Ignored;
+}
+
+public MRESReturn CFNPC_UpdateGroundConstraint_Post(DHookParam param)
+{
+	b_IsInUpdateGroundConstraint = false;
+	return MRES_Ignored;
 }
 
 void CFNPC_MakeNatives()
@@ -427,6 +442,9 @@ void CFNPC_MakeNatives()
 
 public void CFNPC_OnEntityCreated(int entity, const char[] classname)
 {
+	if (StrContains(classname, "tf_projectile") != -1)
+		b_IsProjectile[entity] = true;
+
 	//All projectiles that have any sort of explosion (not including wrap assassin) need to have custom explosion logic so that they work seamlessly with NPCs:
 	if (StrEqual(classname, "tf_projectile_pipe"))
 	{
@@ -454,6 +472,7 @@ public void CFNPC_OnEntityDestroyed(int entity)
 {
 	i_PillCollideTarget[entity] = -1;
 	b_PillAlreadyBounced[entity] = false;
+	b_IsProjectile[entity] = false;
 }
 
 MRESReturn CFNPC_OnFlareExplodePre(int entity, Handle hParams) 
@@ -3310,4 +3329,15 @@ public any Native_CFNPCRemoveGas(Handle plugin, int numParams)
 	}
 
 	return success;
+}
+
+public Action CFNPC_PassFilter(int ent1, int ent2, bool &result)
+{
+	if (b_IsInUpdateGroundConstraint && (b_IsProjectile[ent1] || b_IsProjectile[ent2]))
+	{
+		result = false;
+		return Plugin_Changed;
+	}
+
+	return Plugin_Continue;
 }
