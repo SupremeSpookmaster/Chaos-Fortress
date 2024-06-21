@@ -32,6 +32,7 @@
 //				- Finds the ally closest to the user's cursor, within 100 HU. If this ally is valid, the Support Drone will immediately drop what it is doing and prioritize that ally.
 //			- Write the code for Automation Annihilation.
 //		- ALL:
+//			- Expand the "OnTakeDamageAlive" natives to include NPCs.
 //			- Add parameters for weapons which allow custom weapon models. These will need to cooperate with generic_abilities and CF_ForceViewmodelAnimation. This removes a dependency and allows easier customization.
 //			- Fix the weird super-long delay with ForceViewmodelAnimation on SB's Soul Discard. This is most likely an issue with SB's viewmodel anims themselves.
 //			- Convert SpawnParticle and AttachParticleToEntity to work via temp ents EVENTUALLY, then recompile all plugins. This will reduce edict usage by a ton. Doesn't need to be done immediately as edict crashes are not a huge concern as of the Fake Particle System fix.
