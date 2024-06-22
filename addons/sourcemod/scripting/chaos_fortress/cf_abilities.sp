@@ -3463,7 +3463,7 @@ public Action Medigun_PreThink(int client)
 	}
 	
 	int target = GetEntPropEnt(medigun, Prop_Send, "m_hHealingTarget");
-	if (IsValidMulti(target))
+	if (IsValidEntity(target) && target > 0)
 	{
 		float amt = Medigun_CalculateHealRate(medigun, client) / 63.0;
 		CFA_GiveChargesForHealing(client, amt);
