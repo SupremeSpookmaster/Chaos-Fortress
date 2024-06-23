@@ -124,7 +124,13 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 	
 	char snd[255] = ""; char checkFile[255];
 	KeyValType kvType = CF_GetRandomSound(ourConf, Sound, snd, sizeof(snd));
-	Format(checkFile, sizeof(checkFile), "sound/%s", snd);
+	Format(checkFile, sizeof(checkFile), "sound/");
+	for (int i = 0; i < sizeof(snd); i++)
+	{
+		char character = snd[i];
+		if (!IsCharSoundscript(character))
+			Format(checkFile, sizeof(checkFile), "%s%c", checkFile, character);
+	}
 	
 	if (!CheckFile(checkFile))
 		return false;

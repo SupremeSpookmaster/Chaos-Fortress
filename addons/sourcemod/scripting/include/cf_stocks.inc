@@ -970,6 +970,14 @@ stock bool GetBoolFromConfigMap(ConfigMap map, char[] path, bool defaultValue)
 	return (StringToInt(value) != 0);
 }
 
+stock bool IsCharSoundscript(char character)
+{
+	if (IsCharAlpha(character) || IsCharNumeric(character) || character == '_' || character == '/' || character == '\\' || character == '.')
+		return false;
+	
+	return true;
+}
+
 /**
  * Attaches a particle to an entity, and returns the entity index of the particle.
  *
