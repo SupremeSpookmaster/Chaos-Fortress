@@ -3496,6 +3496,9 @@ float Medigun_CalculateHealRate(int medigun, int client)
 		
 	if (TF2_IsPlayerInCondition(client, TFCond_KingAura) || TF2_IsPlayerInCondition(client, TFCond_KingRune))
 		BaseHealingRate *= 1.5;
+
+	if (GetAttributeValue(medigun, 231, 0.0) > 0.0 && TF2_IsPlayerInCondition(client, TFCond_MegaHeal))
+		BaseHealingRate *= 3.0;
 		
 	return BaseHealingRate;
 }
