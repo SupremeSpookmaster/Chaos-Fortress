@@ -84,7 +84,6 @@
 //				- Turns at a rate of 2 degrees per frame (126 per second).
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
-//	- TODO: Write the worldtext helper plugin and use it for Gadgeteer's Drones and MAYBE medigun shields.
 //	- TODO: Make Demopan's fancy ult delay an officially supported feature that you can enable or disable by setting "warning_delay" in the ultimate stats section.
 //	- TODO: Disable random crits on the beta test server (melee characters like Spookmaster and Demopan are utterly busted with random crits).
 //	- TODO: Test all game modes (except for CTF which won't be officially supported):
@@ -92,7 +91,7 @@
 //		- [ ] Payload Race
 //		- [ ] Control Points
 //		- [ ] King of the Hill
-//	- TODO: Finalize the wiki by updating each page with all of the changes. This will take several days at the bare minimum.
+//	- TODO: Rewrite the wiki.
 //		- May end up just scrapping the wiki. It adds way too much upkeep for next to no benefit.
 //	- TODO: Make sure plugin variables automatically get reset on map change. I imagine this will not be a problem, but if it's like ZR and variables don't get reset automatically, it's going to be a nightmare to deal with.
 //	- TODO: The following plugins are mandatory for CF to run, and need to be added to the GitHub's prerequisites:
@@ -117,6 +116,7 @@
 //	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This feature may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //			- Scrap this feature entirely and remove all mentions of it from the code. This will be a giant pain in the ass but does not need to be done until public release.
 //	- ALL: All projectiles are affected by every instance of CF_OnGenericProjectileTeamChanged (excluding Gadgeteer) because I forgot to add a filter. Oops.
+//	- ALL: Characters get stuck in each other if either of them has a different model scale than 1.0. Ask Artvin, he probably knows what to do.
 //
 //	- PRESUMED UNFIXABLE (major bugs which I don't believe can be fixed with my current SourceMod expertise. The best thing you can do is classify these as exploits and punish them as such):
 //	- DEMOPAN: Enemies can get stuck in his shield if they walk into it while it is held. Demopans can abuse this to intentionally get enemies stuck for free kills. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.
