@@ -187,8 +187,75 @@ bool Toss_IsSupportDrone[2049] = { false, ... };
 Queue Toss_Sentries[MAXPLAYERS + 1] = { null, ... };
 
 CustomSentry Toss_SentryStats[2049];
+SupportDroneStats Toss_SupportStats[2049];
 
 float scan_sound_time = 3.1;
+
+enum struct SupportDroneStats
+{
+	float buildTime;
+	float maxHealth;
+	float speed;
+	float healRadius;
+	float healRate_Direct;
+	float healRate_Others;
+	float healRate_Self;
+	float superchargeDuration;
+	float superchargeBuildSpeed;
+	float superchargeMovementSpeed;
+	float superchargeHealRate;
+	float superchargeDurationHitscan;
+	float superchargeBuildSpeedHitscan;
+	float superchargeMovementSpeedHitscan;
+	float superchargeHealRateHitscan;
+	float buildHealBucket;
+
+	int lastBuildHealth;
+	int superchargeType;
+	int owner;
+
+	bool isBuilding;
+
+	void CreateFromArgs(int client, char abilityName[255])
+	{
+		this.buildTime = CF_GetArgF(client, GADGETEER, abilityName, "build_time");
+		this.maxHealth = CF_GetArgF(client, GADGETEER, abilityName, "max_health");
+		this.speed = CF_GetArgF(client, GADGETEER, abilityName, "speed");
+		this.healRadius = CF_GetArgF(client, GADGETEER, abilityName, "heal_radius");
+		this.healRate_Direct = CF_GetArgF(client, GADGETEER, abilityName, "heal_rate_target");
+		this.healRate_Others = CF_GetArgF(client, GADGETEER, abilityName, "heal_rate_other");
+		this.healRate_Self = CF_GetArgF(client, GADGETEER, abilityName, "heal_rate_self");
+
+		this.superchargeDuration = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_duration");
+		this.superchargeBuildSpeed = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_build");
+		this.superchargeMovementSpeed = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_movement");
+		this.superchargeHealRate = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_heal");
+		this.superchargeDurationHitscan = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_duration_hitscan");
+		this.superchargeBuildSpeedHitscan = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_build_hitscan");
+		this.superchargeMovementSpeedHitscan = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_movement_hitscan");
+		this.superchargeHealRateHitscan = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_heal_hitscan");
+	}
+
+	void Copy(SupportDroneStats other)
+	{
+		this.buildTime = other.buildTime;
+		this.maxHealth = other.maxHealth;
+		this.speed = other.speed;
+		this.healRadius = other.healRadius;
+		this.healRate_Direct = other.healRate_Direct;
+		this.healRate_Others = other.healRate_Others;
+		this.healRate_Self = other.healRate_Self;
+
+		this.superchargeDuration = other.superchargeDuration;
+		this.superchargeBuildSpeed = other.superchargeBuildSpeed;
+		this.superchargeMovementSpeed = other.superchargeMovementSpeed;
+		this.superchargeHealRate = other.superchargeHealRate;
+		this.superchargeDurationHitscan = other.superchargeDurationHitscan;
+		this.superchargeBuildSpeedHitscan = other.superchargeBuildSpeedHitscan;
+		this.superchargeMovementSpeedHitscan = other.superchargeMovementSpeedHitscan;
+		this.superchargeHealRateHitscan = other.superchargeHealRateHitscan;
+	}
+}
 
 enum struct CustomSentry
 {
@@ -1670,13 +1737,43 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 	SpawnParticle(pos, PARTICLE_TOSS_BUILD_1, 2.0);
 	SpawnParticle(pos, PARTICLE_TOSS_BUILD_2, 2.0);
 
-	//TODO: Set attributes based on what we read from the CFG
 	char SupportName[255];
 	Format(SupportName, sizeof(SupportName), "Support Drone (%N)", owner);
 
-	int drone = PNPC(MODEL_SUPPORT_DRONE, view_as<TFTeam>(team), 1, 200, team - 2, 0.75, 300.0, Support_Logic, GADGETEER, _, pos, Toss_FacingAng[toolbox], _, _, SupportName).Index;
-	view_as<PNPC>(drone).i_PathTarget = owner;
-	view_as<PNPC>(drone).StartPathing();
+	int drone = PNPC(MODEL_SUPPORT_DRONE, view_as<TFTeam>(team), 1, RoundFloat(Toss_SupportStats[toolbox].maxHealth), team - 2, 0.75, Toss_SupportStats[toolbox].speed, Support_Logic, GADGETEER, 0.1, pos, Toss_FacingAng[toolbox], _, _, SupportName).Index;
+
+	Toss_SupportStats[drone].Copy(Toss_SupportStats[toolbox]);
+	Toss_SupportStats[drone].isBuilding = true;
+	Toss_SupportStats[drone].lastBuildHealth = 1;
+	Toss_SupportStats[drone].owner = GetClientUserId(owner);
+
+	SetEntityRenderMode(drone, RENDER_TRANSALPHA);
+	SetEntityRenderColor(drone, _, _, _, 120);
+
+	RemoveEntity(toolbox);
+}
+
+public void Support_Logic(int drone)
+{
+	if (Toss_SupportStats[drone].isBuilding)
+	{
+		float healsPerSecond = Toss_SupportStats[drone].maxHealth / Toss_SupportStats[drone].buildTime;
+		Toss_SupportStats[drone].buildHealBucket += healsPerSecond * 0.1;
+		if (Toss_SupportStats[drone].buildHealBucket >= 1.0)
+		{
+			int heals = RoundToFloor(Toss_SupportStats[drone].buildHealBucket);
+			PNPC_HealEntity(drone, heals);
+			Toss_SupportStats[drone].lastBuildHealth += heals;
+			Toss_SupportStats[drone].buildHealBucket -= float(heals);
+
+			if (Toss_SupportStats[drone].lastBuildHealth >= RoundFloat(Toss_SupportStats[drone].maxHealth))
+			{
+				view_as<PNPC>(drone).i_PathTarget = GetClientOfUserId(Toss_SupportStats[drone].owner);
+				view_as<PNPC>(drone).StartPathing();
+				SetEntityRenderColor(drone, _, _, _, 255);
+			}
+		}
+	}
 }
 
 public void Support_Activate(int client, char abilityName[255])
@@ -1685,10 +1782,6 @@ public void Support_Activate(int client, char abilityName[255])
 	if (IsValidEntity(toolbox))
 	{
 		Toss_IsSupportDrone[toolbox] = true;
+		Toss_SupportStats[toolbox].CreateFromArgs(client, abilityName);
 	}
-}
-
-public void Support_Logic(int drone)
-{
-	//TODO: hooboy
 }
