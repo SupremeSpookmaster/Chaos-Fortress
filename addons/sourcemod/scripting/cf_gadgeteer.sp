@@ -5,9 +5,12 @@
 #include <math>
 #include <worldtext>
 #include <fakeparticles>
+#include <pnpc>
 
 #define GADGETEER		"cf_gadgeteer"
 #define TOSS			"gadgeteer_sentry_toss"
+#define SUPPORTDRONE	"gadgeteer_support_drone"
+#define COMMAND			"gadgeteer_command_support_drone"
 
 #define MODEL_TOSS		"models/weapons/w_models/w_toolbox.mdl"
 #define MODEL_HOOK		"models/props_mining/cranehook001.mdl"
@@ -21,6 +24,7 @@
 #define MODEL_TOSS_GIB_3	"models/player/gibs/gibs_gear4.mdl"
 #define MODEL_TOSS_GIB_4	"models/player/gibs/gibs_spring1.mdl"
 #define MODEL_TOSS_GIB_5	"models/player/gibs/gibs_spring2.mdl"
+#define MODEL_SUPPORT_DRONE	"models/bots/bot_worker/bot_worker_a.mdl"
 
 #define SOUND_TOSS_BUILD_1	"weapons/neon_sign_hit_01.wav"
 #define SOUND_TOSS_BUILD_2	"weapons/neon_sign_hit_02.wav"
@@ -90,6 +94,7 @@ public void OnMapStart()
 	PrecacheModel(MODEL_TOSS_GIB_4);
 	PrecacheModel(MODEL_TOSS_GIB_5);
 	PrecacheModel(MODEL_TARGETING);
+	PrecacheModel(MODEL_SUPPORT_DRONE);
 	
 	PrecacheSound(SOUND_TOSS_BUILD_1);
 	PrecacheSound(SOUND_TOSS_BUILD_2);
@@ -154,6 +159,9 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	
 	if (StrContains(abilityName, TOSS) != -1)
 		Toss_Activate(client, abilityName);
+
+	if (StrContains(abilityName, SUPPORTDRONE) != -1)
+		Support_Activate(client, abilityName);
 }
 
 int Toss_Owner[2049] = { -1, ... };
@@ -174,6 +182,7 @@ float Toss_FacingAng[2049][3];
 
 bool Toss_IsToolbox[2049] = { false, ... };
 bool Toss_WasHittingSomething[2049] = { false, ... };
+bool Toss_IsSupportDrone[2049] = { false, ... };
 
 Queue Toss_Sentries[MAXPLAYERS + 1] = { null, ... };
 
@@ -834,86 +843,11 @@ bool b_ToolboxVM[MAXPLAYERS + 1] = { false, ... };
 public void Toss_Activate(int client, char abilityName[255])
 {
 	Toss_Max[client] = CF_GetArgI(client, GADGETEER, abilityName, "sentry_max");
-	float velocity = CF_GetArgF(client, GADGETEER, abilityName, "velocity");
 	
-	float pos[3], ang[3], vel[3];
-	GetClientEyePosition(client, pos);
-	GetClientEyeAngles(client, ang);
-	GetVelocityInDirection(ang, velocity, vel);
-	
-	TFTeam team = TF2_GetClientTeam(client);
-	
-	float throwOffset = 45.0;
-	float fLen = throwOffset * Sine( DegToRad( ang[0] + 90.0 ) );
-	pos[0] = pos[0] + fLen * Cosine( DegToRad( ang[1] + 0.0) );
-	pos[1] = pos[1] + fLen * Sine( DegToRad( ang[1] + 0.0) );
-	pos[2] = pos[2] + throwOffset * Sine( DegToRad( -1 * (ang[0] + 0.0)) );
-	
-	int toolbox = CreateEntityByName("prop_physics_override");
+	int toolbox = MakeToolbox(client, abilityName);
 	if (IsValidEntity(toolbox))
 	{
-		float gravity = CF_GetArgF(client, GADGETEER, abilityName, "gravity");
-		SetEntityMoveType(toolbox, MOVETYPE_FLYGRAVITY);
-		SetEntityGravity(toolbox, gravity);
-		
-		Toss_DMG[toolbox] = CF_GetArgF(client, GADGETEER, abilityName, "damage");
-		Toss_KB[toolbox] = CF_GetArgF(client, GADGETEER, abilityName, "knockback");
-		Toss_UpVel[toolbox] = CF_GetArgF(client, GADGETEER, abilityName, "up_vel");
-		float CoolMult = CF_GetArgF(client, GADGETEER, abilityName, "trickshot_mult");
-		float massScale = CF_GetArgF(client, GADGETEER, abilityName, "mass_scale");
-		float intertiaScale = CF_GetArgF(client, GADGETEER, abilityName, "intertia_scale");
-		float autoDet = CF_GetArgF(client, GADGETEER, abilityName, "auto_deploy");
-		Toss_AutoDetTime[toolbox] = GetGameTime() + autoDet;
-		Toss_MinVel[toolbox] = CF_GetArgF(client, GADGETEER, abilityName, "minimum_speed");
-		
 		Toss_SentryStats[toolbox].CreateFromArgs(client, abilityName, toolbox);
-		
-		GetClientEyeAngles(client, Toss_FacingAng[toolbox]);
-		Toss_FacingAng[toolbox][0] = 0.0;
-		Toss_FacingAng[toolbox][2] = 0.0;
-		
-		//SET MODEL:
-		SetEntityModel(toolbox, MODEL_TOSS);
-		DispatchKeyValue(toolbox, "skin", team == TFTeam_Red ? "0" : "1");
-		
-		//SET SCALE:
-		char scale[255];
-		Format(scale, sizeof(scale), "%f", CoolMult);
-		DispatchKeyValue(toolbox, "modelscale", scale);
-		
-		//COLLISION RULES:
-		DispatchKeyValue(toolbox, "solid", "6");
-		DispatchKeyValue(toolbox, "spawnflags", "12288");
-		SetEntProp(toolbox, Prop_Send, "m_usSolidFlags", 8);
-		SetEntProp(toolbox, Prop_Data, "m_nSolidType", 2);
-		SetEntityCollisionGroup(toolbox, 23);
-		
-		//ACTIVATION:
-		DispatchKeyValueFloat(toolbox, "massScale", massScale);
-		DispatchKeyValueFloat(toolbox, "intertiascale", intertiaScale);
-		DispatchSpawn(toolbox);
-		ActivateEntity(toolbox);
-		
-		//DAMAGE AND TEAM:
-		SetEntProp(toolbox, Prop_Data, "m_takedamage", 1, 1);
-		SetEntProp(toolbox, Prop_Send, "m_iTeamNum", view_as<int>(team));
-		
-		//HOOKS:
-		SDKHook(toolbox, SDKHook_OnTakeDamage, Toss_ToolboxDamaged);
-		SDKHook(toolbox, SDKHook_Touch, Toss_ToolboxTouch);
-		RequestFrame(Toss_CheckForCollision, EntIndexToEntRef(toolbox));
-
-		Toss_IsToolbox[toolbox] = true;
-		Toss_ToolboxOwner[toolbox] = GetClientUserId(client);
-	
-		TeleportEntity(toolbox, pos, ang, vel);
-		
-		CF_ForceViewmodelAnimation(client, "spell_fire");
-		b_ToolboxVM[client] = true;
-		
-		Toss_ToolboxParticle[toolbox] = EntIndexToEntRef(AttachParticleToEntity(toolbox, team == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, "", autoDet));
-		
-		EmitSoundToAll(SOUND_TOOLBOX_FIZZING, toolbox);
 	}
 }
 
@@ -1257,6 +1191,12 @@ public Action Drone_Damaged(int prop, int &attacker, int &inflictor, float &dama
 //1: Hitscan, 2: Projectile
 public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType)
 {
+	if (Toss_IsSupportDrone[toolbox])
+	{
+		Toss_SpawnSupportDrone(toolbox, supercharged, superchargeType);
+		return;
+	}
+
 	int owner = GetClientOfUserId(Toss_ToolboxOwner[toolbox]);
 	int team = GetEntProp(toolbox, Prop_Send, "m_iTeamNum");
 	
@@ -1525,6 +1465,7 @@ public void OnEntityDestroyed(int entity)
 		
 		Toss_ToolboxOwner[entity] = -1;
 		Toss_IsToolbox[entity] = false;
+		Toss_IsSupportDrone[entity] = false;
 	}
 }
 
@@ -1619,4 +1560,135 @@ public Action CF_OnPhysPropHitByProjectile(int prop, int entity, TFTeam propTeam
 	}
 	
 	return Plugin_Continue;
+}
+
+public int MakeToolbox(int owner, char abilityName[255])
+{
+	float velocity = CF_GetArgF(owner, GADGETEER, abilityName, "velocity");
+	
+	float pos[3], ang[3], vel[3];
+	GetClientEyePosition(owner, pos);
+	GetClientEyeAngles(owner, ang);
+	GetVelocityInDirection(ang, velocity, vel);
+	
+	TFTeam team = TF2_GetClientTeam(owner);
+	
+	float throwOffset = 45.0;
+	float fLen = throwOffset * Sine( DegToRad( ang[0] + 90.0 ) );
+	pos[0] = pos[0] + fLen * Cosine( DegToRad( ang[1] + 0.0) );
+	pos[1] = pos[1] + fLen * Sine( DegToRad( ang[1] + 0.0) );
+	pos[2] = pos[2] + throwOffset * Sine( DegToRad( -1 * (ang[0] + 0.0)) );
+
+	int toolbox = CreateEntityByName("prop_physics_override");
+	if (IsValidEntity(toolbox))
+	{
+		float gravity = CF_GetArgF(owner, GADGETEER, abilityName, "gravity");
+		SetEntityMoveType(toolbox, MOVETYPE_FLYGRAVITY);
+		SetEntityGravity(toolbox, gravity);
+		
+		Toss_DMG[toolbox] = CF_GetArgF(owner, GADGETEER, abilityName, "damage");
+		Toss_KB[toolbox] = CF_GetArgF(owner, GADGETEER, abilityName, "knockback");
+		Toss_UpVel[toolbox] = CF_GetArgF(owner, GADGETEER, abilityName, "up_vel");
+		float CoolMult = CF_GetArgF(owner, GADGETEER, abilityName, "trickshot_mult");
+		float massScale = CF_GetArgF(owner, GADGETEER, abilityName, "mass_scale");
+		float intertiaScale = CF_GetArgF(owner, GADGETEER, abilityName, "intertia_scale");
+		float autoDet = CF_GetArgF(owner, GADGETEER, abilityName, "auto_deploy");
+		Toss_AutoDetTime[toolbox] = GetGameTime() + autoDet;
+		Toss_MinVel[toolbox] = CF_GetArgF(owner, GADGETEER, abilityName, "minimum_speed");
+		
+		GetClientEyeAngles(owner, Toss_FacingAng[toolbox]);
+		Toss_FacingAng[toolbox][0] = 0.0;
+		Toss_FacingAng[toolbox][2] = 0.0;
+		
+		//SET MODEL:
+		SetEntityModel(toolbox, MODEL_TOSS);
+		DispatchKeyValue(toolbox, "skin", team == TFTeam_Red ? "0" : "1");
+		
+		//SET SCALE:
+		char scale[255];
+		Format(scale, sizeof(scale), "%f", CoolMult);
+		DispatchKeyValue(toolbox, "modelscale", scale);
+		
+		//COLLISION RULES:
+		DispatchKeyValue(toolbox, "solid", "6");
+		DispatchKeyValue(toolbox, "spawnflags", "12288");
+		SetEntProp(toolbox, Prop_Send, "m_usSolidFlags", 8);
+		SetEntProp(toolbox, Prop_Data, "m_nSolidType", 2);
+		SetEntityCollisionGroup(toolbox, 23);
+		
+		//ACTIVATION:
+		DispatchKeyValueFloat(toolbox, "massScale", massScale);
+		DispatchKeyValueFloat(toolbox, "intertiascale", intertiaScale);
+		DispatchSpawn(toolbox);
+		ActivateEntity(toolbox);
+		
+		//DAMAGE AND TEAM:
+		SetEntProp(toolbox, Prop_Data, "m_takedamage", 1, 1);
+		SetEntProp(toolbox, Prop_Send, "m_iTeamNum", view_as<int>(team));
+		
+		//HOOKS:
+		SDKHook(toolbox, SDKHook_OnTakeDamage, Toss_ToolboxDamaged);
+		SDKHook(toolbox, SDKHook_Touch, Toss_ToolboxTouch);
+		RequestFrame(Toss_CheckForCollision, EntIndexToEntRef(toolbox));
+
+		Toss_IsToolbox[toolbox] = true;
+		Toss_ToolboxOwner[toolbox] = GetClientUserId(owner);
+	
+		TeleportEntity(toolbox, pos, ang, vel);
+		
+		CF_ForceViewmodelAnimation(owner, "spell_fire");
+		b_ToolboxVM[owner] = true;
+		
+		Toss_ToolboxParticle[toolbox] = EntIndexToEntRef(AttachParticleToEntity(toolbox, team == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, "", autoDet));
+		
+		EmitSoundToAll(SOUND_TOOLBOX_FIZZING, toolbox);
+
+		return toolbox;
+	}
+
+	return -1;
+}
+
+public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchargeType)
+{
+	int owner = GetClientOfUserId(Toss_ToolboxOwner[toolbox]);
+	int team = GetEntProp(toolbox, Prop_Send, "m_iTeamNum");
+	
+	if (!IsValidClient(owner))
+	{
+		RemoveEntity(toolbox);
+		return;
+	}
+
+	float pos[3];
+	GetEntPropVector(toolbox, Prop_Send, "m_vecOrigin", pos);
+	
+	int chosen = GetRandomInt(0, sizeof(Toss_BuildSFX) - 1);
+	EmitSoundToAll(Toss_BuildSFX[chosen], toolbox, _, _, _, _, GetRandomInt(90, 110), -1);
+	EmitSoundToAll(Toss_BuildSFX[chosen], toolbox, _, _, _, _, GetRandomInt(90, 110), -1);
+	EmitSoundToAll(SOUND_TOSS_BUILD_EXTRA, toolbox, _, _, _, _, GetRandomInt(90, 110), -1);
+	SpawnParticle(pos, PARTICLE_TOSS_BUILD_1, 2.0);
+	SpawnParticle(pos, PARTICLE_TOSS_BUILD_2, 2.0);
+
+	//TODO: Set attributes based on what we read from the CFG
+	char SupportName[255];
+	Format(SupportName, sizeof(SupportName), "Support Drone (%N)", owner);
+
+	int drone = PNPC(MODEL_SUPPORT_DRONE, view_as<TFTeam>(team), 1, 200, team - 2, 0.75, 300.0, Support_Logic, GADGETEER, _, pos, Toss_FacingAng[toolbox], _, _, SupportName).Index;
+	view_as<PNPC>(drone).i_PathTarget = owner;
+	view_as<PNPC>(drone).StartPathing();
+}
+
+public void Support_Activate(int client, char abilityName[255])
+{
+	int toolbox = MakeToolbox(client, abilityName);
+	if (IsValidEntity(toolbox))
+	{
+		Toss_IsSupportDrone[toolbox] = true;
+	}
+}
+
+public void Support_Logic(int drone)
+{
+	//TODO: hooboy
 }
