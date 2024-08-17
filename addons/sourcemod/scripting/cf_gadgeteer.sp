@@ -209,10 +209,16 @@ enum struct SupportDroneStats
 	float superchargeMovementSpeedHitscan;
 	float superchargeHealRateHitscan;
 	float buildHealBucket;
+	float findNewTargetTime;
+	float minHealTime;
+	float scanRadius;
 
 	int lastBuildHealth;
 	int superchargeType;
+	int targetOverride;
 	int owner;
+	int autoTarget;
+	int self;
 
 	bool isBuilding;
 
@@ -225,6 +231,8 @@ enum struct SupportDroneStats
 		this.healRate_Direct = CF_GetArgF(client, GADGETEER, abilityName, "heal_rate_target");
 		this.healRate_Others = CF_GetArgF(client, GADGETEER, abilityName, "heal_rate_other");
 		this.healRate_Self = CF_GetArgF(client, GADGETEER, abilityName, "heal_rate_self");
+		this.minHealTime = CF_GetArgF(client, GADGETEER, abilityName, "min_heal_time");
+		this.scanRadius = CF_GetArgF(client, GADGETEER, abilityName, "scan_radius");
 
 		this.superchargeDuration = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_duration");
 		this.superchargeBuildSpeed = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_build");
@@ -245,6 +253,8 @@ enum struct SupportDroneStats
 		this.healRate_Direct = other.healRate_Direct;
 		this.healRate_Others = other.healRate_Others;
 		this.healRate_Self = other.healRate_Self;
+		this.minHealTime = other.minHealTime;
+		this.scanRadius = other.scanRadius;
 
 		this.superchargeDuration = other.superchargeDuration;
 		this.superchargeBuildSpeed = other.superchargeBuildSpeed;
@@ -254,6 +264,88 @@ enum struct SupportDroneStats
 		this.superchargeBuildSpeedHitscan = other.superchargeBuildSpeedHitscan;
 		this.superchargeMovementSpeedHitscan = other.superchargeMovementSpeedHitscan;
 		this.superchargeHealRateHitscan = other.superchargeHealRateHitscan;
+	}
+
+	int GetTarget()
+	{
+		int owner = GetClientOfUserId(this.owner);
+		int drone = EntRefToEntIndex(this.self);
+		
+		//Check 1: Have we commanded the Support Drone to target a specific player, and if we have, is that player still valid?
+		int target = GetClientOfUserId(this.targetOverride);
+		if (IsValidMulti(target, true, true, true, TF2_GetClientTeam(owner)))
+			return target;
+
+		//Check 2: We have not commanded the Support Drone to target a specific player, check to see if we have a valid target already chosen.
+		//If we do, make sure we haven't reached the minimum healing duration yet.
+		target = GetClientOfUserId(this.autoTarget);
+		if (IsValidMulti(target, true, true, true, TF2_GetClientTeam(owner)) && GetGameTime() < this.findNewTargetTime)
+			return target;
+
+		//Check 3: We either do not have a target, or have surpassed the minimum healing duration on our current target.
+		//Find the ally with the lowest HP within range (range becomes infinite if there are no allies within range) and target them.
+		float selfPos[3];
+		GetEntPropVector(drone, Prop_Send, "m_vecOrigin", selfPos);
+
+		ArrayList allies = new ArrayList(255);
+		for (int i = 0; i <= MaxClients; i++)
+		{
+			if (IsValidMulti(i, true, true, true, TF2_GetClientTeam(owner)))
+			{
+				float otherPos[3];
+				GetClientAbsOrigin(i, otherPos);
+
+				if (GetVectorDistance(selfPos, otherPos) <= this.scanRadius)
+					PushArrayCell(allies, i);
+			}
+		}
+
+		//There are no allies in range, make range global so the drone doesn't just stand there and do nothing.
+		if (GetArraySize(allies) < 1)
+		{
+			delete allies;
+			allies = new ArrayList(255);
+			for (int i = 0; i <= MaxClients; i++)
+			{
+				if (IsValidMulti(i, true, true, true, TF2_GetClientTeam(owner)))
+					PushArrayCell(allies, i);
+			}
+		}
+		
+		if (GetArraySize(allies) > 0) //Double-check to make sure we still have living allies to scan through.
+		{
+			float lowestPercent = -1.0;
+			for (int i = 0; i < GetArraySize(allies); i++)
+			{
+				int ally = GetArrayCell(allies, i);
+
+				//We act based on the lowest percentage of current health instead of just the lowest current health in general, that way light classes/characters don't hog all the support drone priority.
+				float hp = float(GetEntProp(ally, Prop_Send, "m_iHealth"));
+				float maxHP = float(TF2Util_GetEntityMaxHealth(ally));
+				float percent = hp / maxHP;
+
+				if (percent < lowestPercent || lowestPercent == -1.0)
+				{
+					lowestPercent = percent;
+					target = ally;
+				}
+			}
+		}
+
+		delete allies;
+
+		//Check 4: If we automatically found a valid target, set autoTarget to them and begin targeting them. Otherwise, target the owner as a last resort.
+		if (IsValidMulti(target, true, true, true, TF2_GetClientTeam(owner)))
+		{
+			this.autoTarget = target;
+			this.findNewTargetTime = GetGameTime() + this.minHealTime;
+		}
+		else
+		{
+			target = owner;
+		}
+
+		return target;
 	}
 }
 
@@ -1755,6 +1847,9 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 
 public void Support_Logic(int drone)
 {
+	int owner = GetClientOfUserId(Toss_SupportStats[drone].owner);
+	int target = Toss_SupportStats[drone].GetTarget();
+
 	if (Toss_SupportStats[drone].isBuilding)
 	{
 		float healsPerSecond = Toss_SupportStats[drone].maxHealth / Toss_SupportStats[drone].buildTime;
@@ -1768,11 +1863,15 @@ public void Support_Logic(int drone)
 
 			if (Toss_SupportStats[drone].lastBuildHealth >= RoundFloat(Toss_SupportStats[drone].maxHealth))
 			{
-				view_as<PNPC>(drone).i_PathTarget = GetClientOfUserId(Toss_SupportStats[drone].owner);
+				view_as<PNPC>(drone).i_PathTarget = target;
 				view_as<PNPC>(drone).StartPathing();
 				SetEntityRenderColor(drone, _, _, _, 255);
 			}
 		}
+	}
+	else
+	{
+		view_as<PNPC>(drone).i_PathTarget = target;
 	}
 }
 
