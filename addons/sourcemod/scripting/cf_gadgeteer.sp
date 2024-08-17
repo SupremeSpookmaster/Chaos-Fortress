@@ -51,6 +51,7 @@
 #define SOUND_TOSS_HIT_WORLD		")weapons/metal_gloves_hit.wav"
 #define SOUND_DRONE_SCANNING			")weapons/sentry_scan.wav"
 #define SOUND_DRONES_TARGETING		"misc/doomsday_lift_warning.wav"
+#define SOUND_SUPPORT_DESTROYED		")weapons/dispenser_explode.wav"
 
 #define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
 #define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
@@ -121,6 +122,7 @@ public void OnMapStart()
 	PrecacheSound(SOUND_TOSS_HIT_WORLD);
 	PrecacheSound(SOUND_DRONE_SCANNING);
 	PrecacheSound(SOUND_DRONES_TARGETING);
+	PrecacheSound(SOUND_SUPPORT_DESTROYED);
 }
 
 public const char Toss_BuildSFX[][] =
@@ -152,24 +154,13 @@ public void OnPluginStart()
 {
 }
 
-public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
-{
-	if (!StrEqual(pluginName, GADGETEER))
-		return;
-	
-	if (StrContains(abilityName, TOSS) != -1)
-		Toss_Activate(client, abilityName);
-
-	if (StrContains(abilityName, SUPPORTDRONE) != -1)
-		Support_Activate(client, abilityName);
-}
-
 int Toss_Owner[2049] = { -1, ... };
 int Toss_Max[MAXPLAYERS + 1] = { 0, ... };
 int Toss_ToolboxOwner[2049] = { -1, ... };
 int Text_Owner[2049] = { -1, ... };
 int Toss_ToolboxParticle[2049] = { -1, ... };
 int Toss_Marked[MAXPLAYERS + 1] = { -1, ... };
+int Toss_SupportDrone[MAXPLAYERS + 1] = { -1, ... };
 
 float Toss_DMG[2049] = { 0.0, ... };
 float Toss_KB[2049] = { 0.0, ... };
@@ -215,6 +206,7 @@ enum struct SupportDroneStats
 	float healBucket_Target;
 	float healBucket_Others;
 	float healBucket_Self;
+	float superchargeEndTime;
 
 	int lastBuildHealth;
 	int superchargeType;
@@ -349,6 +341,71 @@ enum struct SupportDroneStats
 		}
 
 		return target;
+	}
+
+	bool IsSupercharged()
+	{
+		return GetGameTime() <= this.superchargeEndTime;
+	}
+
+	float GetMaxSpeed()
+	{
+		if (this.IsSupercharged())
+		{
+			if (this.superchargeType == 1)
+			{
+				return this.superchargeMovementSpeedHitscan;
+			}
+			else
+			{
+				return this.superchargeMovementSpeed;
+			}
+		}
+
+		return this.speed;
+	}
+
+	float GetHealRate(int healType)
+	{
+		float mult = 1.0;
+		if (this.IsSupercharged())
+		{
+			if (this.superchargeType == 1)
+			{
+				mult = this.superchargeHealRateHitscan;
+			}
+			else
+			{
+				mult = this.superchargeHealRate;
+			}
+		}
+
+		switch(healType)
+		{
+			case 0:
+				return this.healRate_Direct * mult;
+			case 1:
+				return this.healRate_Others * mult;
+			default:
+				return this.healRate_Self * mult;
+		}
+	}
+
+	float GetBuildTime()
+	{
+		if (this.IsSupercharged())
+		{
+			if (this.superchargeType == 1)
+			{
+				return this.superchargeBuildSpeedHitscan;
+			}
+			else
+			{
+				return this.superchargeBuildSpeed;
+			}
+		}
+
+		return this.buildTime;
 	}
 }
 
@@ -620,6 +677,18 @@ enum struct CustomSentry
 		this.shooting = false;
 		this.text = 0;
 	}
+}
+
+public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
+{
+	if (!StrEqual(pluginName, GADGETEER))
+		return;
+	
+	if (StrContains(abilityName, TOSS) != -1)
+		Toss_Activate(client, abilityName);
+
+	if (StrContains(abilityName, SUPPORTDRONE) != -1)
+		Support_Activate(client, abilityName);
 }
 
 //Prevents a point_worldtext entity from being seen by anyone other than its owner.
@@ -1594,6 +1663,13 @@ public void Toss_DeleteSentries(int client)
 	}
 	
 	delete Toss_Sentries[client];
+
+	int support = EntRefToEntIndex(Toss_SupportDrone[client]);
+	if (PNPC_IsNPC(support))
+	{
+		view_as<PNPC>(support).i_Health = 1;
+		SDKHooks_TakeDamage(support, 0, 0, 999999.0, _, _, _, _, false);
+	}
 }
 
 //Resets global variables associated with given entities when they are destroyed.
@@ -1824,30 +1900,60 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 
 	float pos[3];
 	GetEntPropVector(toolbox, Prop_Send, "m_vecOrigin", pos);
-	
 	int chosen = GetRandomInt(0, sizeof(Toss_BuildSFX) - 1);
 	EmitSoundToAll(Toss_BuildSFX[chosen], toolbox, _, _, _, _, GetRandomInt(90, 110), -1);
 	EmitSoundToAll(Toss_BuildSFX[chosen], toolbox, _, _, _, _, GetRandomInt(90, 110), -1);
 	EmitSoundToAll(SOUND_TOSS_BUILD_EXTRA, toolbox, _, _, _, _, GetRandomInt(90, 110), -1);
 	SpawnParticle(pos, PARTICLE_TOSS_BUILD_1, 2.0);
 	SpawnParticle(pos, PARTICLE_TOSS_BUILD_2, 2.0);
+	
+	if (!TF2Util_IsPointInRespawnRoom(pos))
+	{
+		char SupportName[255];
+		Format(SupportName, sizeof(SupportName), "Support Drone (%N)", owner);
 
-	char SupportName[255];
-	Format(SupportName, sizeof(SupportName), "Support Drone (%N)", owner);
+		int oldDrone = EntRefToEntIndex(Toss_SupportDrone[owner]);
+		if (IsValidEntity(oldDrone))
+		{
+			view_as<PNPC>(oldDrone).i_Health = 1;
+			SDKHooks_TakeDamage(oldDrone, 0, 0, 99999.0, _, _, _, _, false);
+		}
 
-	int drone = PNPC(MODEL_SUPPORT_DRONE, view_as<TFTeam>(team), 1, RoundFloat(Toss_SupportStats[toolbox].maxHealth), team - 2, 0.75, Toss_SupportStats[toolbox].speed, Support_Logic, GADGETEER, 0.1, pos, Toss_FacingAng[toolbox], _, _, SupportName).Index;
-	view_as<PNPC>(drone).SetSequence("spawn");
-	view_as<PNPC>(drone).SetPlaybackRate(1.0);
-	Toss_SupportStats[drone].Copy(Toss_SupportStats[toolbox]);
-	Toss_SupportStats[drone].isBuilding = true;
-	Toss_SupportStats[drone].lastBuildHealth = 1;
-	Toss_SupportStats[drone].owner = GetClientUserId(owner);
-	//TODO: Add gibs, set blood type to sparks. Also, make the drone explode when it dies, no matter what kills it. 
-	//Also, when the owner disconnects or changes their character, destroy the drone.
-	//Also also, block the ability from being used if a drone is already active.
+		int drone = PNPC(MODEL_SUPPORT_DRONE, view_as<TFTeam>(team), 1, RoundFloat(Toss_SupportStats[toolbox].maxHealth), team - 2, 0.75, Toss_SupportStats[toolbox].speed, Support_Logic, GADGETEER, 0.1, pos, Toss_FacingAng[toolbox], _, _, SupportName).Index;
+		
+		Toss_SupportStats[drone].superchargeType = superchargeType;
+		switch(superchargeType)
+		{
+			case 1:
+			{
+				Toss_SupportStats[drone].superchargeEndTime = GetGameTime() + Toss_SupportStats[drone].superchargeDurationHitscan;
+				AttachParticleToEntity(drone, TF2_GetClientTeam(owner) == TFTeam_Red ? PARTICLE_TOSS_SUPERCHARGE_HITSCAN_RED : PARTICLE_TOSS_SUPERCHARGE_HITSCAN_BLUE, "root", Toss_SupportStats[drone].superchargeDurationHitscan);
+			}
+			case 2:
+			{
+				Toss_SupportStats[drone].superchargeEndTime = GetGameTime() + Toss_SupportStats[drone].superchargeDuration;
+				AttachParticleToEntity(drone, TF2_GetClientTeam(owner) == TFTeam_Red ? PARTICLE_TOSS_SUPERCHARGE_RED : PARTICLE_TOSS_SUPERCHARGE_BLUE, "root", Toss_SupportStats[drone].superchargeDuration);
+			}
+		}
+		
+		view_as<PNPC>(drone).SetSequence("spawn");
+		view_as<PNPC>(drone).SetPlaybackRate(1.0);
+		view_as<PNPC>(drone).SetBleedParticle("buildingdamage_sparks2");
+		Toss_SupportStats[drone].Copy(Toss_SupportStats[toolbox]);
+		Toss_SupportStats[drone].isBuilding = true;
+		Toss_SupportStats[drone].lastBuildHealth = 1;
+		Toss_SupportStats[drone].owner = GetClientUserId(owner);
+		Toss_SupportDrone[owner] = EntIndexToEntRef(drone);
+		Toss_IsSupportDrone[drone] = true;
+		//TODO: Add gibs.
+		//Also: intro animation should scale with the build speed.
+		//Also also: Supercharge stats seem to be broken...?
+		//Also also also: Finalize panic sequence
+		//Also also also also: Dispenser effects for healing
 
-	SetEntityRenderMode(drone, RENDER_TRANSALPHA);
-	SetEntityRenderColor(drone, _, _, _, 120);
+		SetEntityRenderMode(drone, RENDER_TRANSALPHA);
+		SetEntityRenderColor(drone, _, _, _, 120);
+	}
 
 	RemoveEntity(toolbox);
 }
@@ -1855,10 +1961,18 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 public void Support_Logic(int drone)
 {
 	PNPC support = view_as<PNPC>(drone);
+	
+	float selfPos[3];
+	PNPC_WorldSpaceCenter(drone, selfPos);
+	if (TF2Util_IsPointInRespawnRoom(selfPos))
+	{
+		support.i_Health = 1;
+		SDKHooks_TakeDamage(drone, 0, 0, 99999.0, _, _, _, _, false);
+	}
 
 	if (Toss_SupportStats[drone].isBuilding)
 	{
-		float healsPerSecond = Toss_SupportStats[drone].maxHealth / Toss_SupportStats[drone].buildTime;
+		float healsPerSecond = Toss_SupportStats[drone].maxHealth / Toss_SupportStats[drone].GetBuildTime();
 		Toss_SupportStats[drone].buildHealBucket += healsPerSecond * 0.1;
 		if (Toss_SupportStats[drone].buildHealBucket >= 1.0)
 		{
@@ -1872,6 +1986,7 @@ public void Support_Logic(int drone)
 				support.i_PathTarget = Toss_SupportStats[drone].GetTarget();
 				support.StartPathing();
 				support.SetSequence("idle");
+				support.SetFlinchSequence("ACT_BOT_GESTURE_FLINCH");
 				SetEntityRenderColor(drone, _, _, _, 255);
 				Toss_SupportStats[drone].isBuilding = false;
 				support.i_Health -= 50;
@@ -1884,33 +1999,34 @@ public void Support_Logic(int drone)
 		int target = Toss_SupportStats[drone].GetTarget();
 		support.i_PathTarget = target;
 
-		float selfPos[3], targPos[3];
+		float targPos[3];
 		PNPC_WorldSpaceCenter(drone, selfPos);
 		PNPC_WorldSpaceCenter(target, targPos);
 
 		//Slow down to match the target's speed if we are within range of them, that way we don't run into them.
 		float dist = GetVectorDistance(selfPos, targPos);
+		float speed = Toss_SupportStats[drone].GetMaxSpeed();
 		if (dist <= Toss_SupportStats[drone].healRadius)
 		{
 			float vel[3];
 			GetEntPropVector(target, Prop_Data, "m_vecAbsVelocity", vel);
 			float targSpeed = GetVectorLength(vel);
 
-			if (targSpeed > Toss_SupportStats[drone].speed)
-				targSpeed = Toss_SupportStats[drone].speed;
+			if (targSpeed > speed)
+				targSpeed = speed;
 
 			support.f_Speed = targSpeed;
 		}
-		else if (support.f_Speed < Toss_SupportStats[drone].speed)
+		else if (support.f_Speed < speed)
 		{
-			support.f_Speed += Toss_SupportStats[drone].speed * 0.33;
-			if (support.f_Speed > Toss_SupportStats[drone].speed)
-				support.f_Speed = Toss_SupportStats[drone].speed;
+			support.f_Speed += speed * 0.33;
+			if (support.f_Speed > speed)
+				support.f_Speed = speed;
 		}
 		
-		int targHeals = RoundFloat(AddToBucket(Toss_SupportStats[drone].healBucket_Target, Toss_SupportStats[drone].healRate_Direct * 0.1, 1.0));
-		int otherHeals = RoundFloat(AddToBucket(Toss_SupportStats[drone].healBucket_Others, Toss_SupportStats[drone].healRate_Others * 0.1, 1.0));
-		int selfHeals = RoundFloat(AddToBucket(Toss_SupportStats[drone].healBucket_Self, Toss_SupportStats[drone].healRate_Self * 0.1, 1.0));
+		int targHeals = RoundFloat(AddToBucket(Toss_SupportStats[drone].healBucket_Target, Toss_SupportStats[drone].GetHealRate(0) * 0.1, 1.0));
+		int otherHeals = RoundFloat(AddToBucket(Toss_SupportStats[drone].healBucket_Others, Toss_SupportStats[drone].GetHealRate(1) * 0.1, 1.0));
+		int selfHeals = RoundFloat(AddToBucket(Toss_SupportStats[drone].healBucket_Self, Toss_SupportStats[drone].GetHealRate(2) * 0.1, 1.0));
 		
 		for (int i = 1; i <= MaxClients; i++)
 		{
@@ -1942,5 +2058,35 @@ public void Support_Activate(int client, char abilityName[255])
 		Toss_IsSupportDrone[toolbox] = true;
 		Toss_SupportStats[toolbox].CreateFromArgs(client, abilityName);
 		//TODO: The toolbox needs a different model if it is used for a support drone, so players can differentiate
+	}
+}
+
+public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inflictor, int attacker, int &damagetype, int &damagecustom)
+{
+	if (Toss_IsSupportDrone[npc.Index])
+	{
+		damagetype |= DMG_ALWAYSGIB;
+
+		int halfHP = RoundFloat(npc.i_MaxHealth * 0.5);
+		if (npc.i_Health > halfHP && npc.i_Health - RoundFloat(damage) <= halfHP)
+		{
+			npc.SetSequence("panic_start_A");
+			//TODO: Force panic sequence after this anim ends, also play a sound here
+		}
+
+		return Plugin_Changed;
+	}
+
+	return Plugin_Continue;
+}
+
+public void PNPC_OnPNPCDestroyed(int entity)
+{
+	if (Toss_IsSupportDrone[entity])
+	{
+		float pos[3];
+		PNPC_WorldSpaceCenter(entity, pos);
+		SpawnParticle(pos, PARTICLE_TOSS_DESTROYED);
+		EmitSoundToAll(SOUND_SUPPORT_DESTROYED, entity, _, 120);
 	}
 }
