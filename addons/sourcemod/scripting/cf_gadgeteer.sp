@@ -1847,9 +1847,6 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 
 public void Support_Logic(int drone)
 {
-	int owner = GetClientOfUserId(Toss_SupportStats[drone].owner);
-	int target = Toss_SupportStats[drone].GetTarget();
-
 	if (Toss_SupportStats[drone].isBuilding)
 	{
 		float healsPerSecond = Toss_SupportStats[drone].maxHealth / Toss_SupportStats[drone].buildTime;
@@ -1863,7 +1860,8 @@ public void Support_Logic(int drone)
 
 			if (Toss_SupportStats[drone].lastBuildHealth >= RoundFloat(Toss_SupportStats[drone].maxHealth))
 			{
-				view_as<PNPC>(drone).i_PathTarget = target;
+				view_as<PNPC>(drone).SetActivity("ACT_BOT_PRIMARY_MOVEMENT");
+				view_as<PNPC>(drone).i_PathTarget = Toss_SupportStats[drone].GetTarget();
 				view_as<PNPC>(drone).StartPathing();
 				SetEntityRenderColor(drone, _, _, _, 255);
 			}
@@ -1871,7 +1869,23 @@ public void Support_Logic(int drone)
 	}
 	else
 	{
+		int owner = GetClientOfUserId(Toss_SupportStats[drone].owner);
+		int target = Toss_SupportStats[drone].GetTarget();
 		view_as<PNPC>(drone).i_PathTarget = target;
+
+		float selfPos[3], targPos[3];
+		GetEntPropVector(drone, Prop_Send, "m_vecOrigin", selfPos);
+		GetClientAbsOrigin(target, targPos);
+
+		//Slow down and eventually stop if our target is within the heal radius, that way we don't roll into them.
+		float dist = GetVectorDistance(selfPos, targPos);
+		if (dist <= Toss_SupportStats[drone].healRadius)
+		{
+			float speedMod = dist / (2.0 * Toss_SupportStats[drone].healRadius);
+			view_as<PNPC>(drone).f_Speed = Toss_SupportStats[drone].speed * speedMod;
+		}
+		else
+			view_as<PNPC>(drone).f_Speed = Toss_SupportStats[drone].speed;
 	}
 }
 
