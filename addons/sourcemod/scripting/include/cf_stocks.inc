@@ -3057,3 +3057,18 @@ stock Handle CheckedDHookCreateFromConf(Handle game_config, const char[] name) {
 
     return res;
 }
+
+stock float AddToBucket(float &currentValue, float amtToAdd, float overflowPoint)
+{
+	currentValue += amtToAdd;
+
+	if (currentValue > overflowPoint)
+	{
+		float timesOver = float(RoundToFloor(currentValue / overflowPoint));
+		float excess = timesOver * overflowPoint;
+		currentValue -= excess;
+		return excess;
+	}
+
+	return 0.0;
+}

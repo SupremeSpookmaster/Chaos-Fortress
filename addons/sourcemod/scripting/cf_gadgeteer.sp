@@ -212,6 +212,9 @@ enum struct SupportDroneStats
 	float findNewTargetTime;
 	float minHealTime;
 	float scanRadius;
+	float healBucket_Target;
+	float healBucket_Others;
+	float healBucket_Self;
 
 	int lastBuildHealth;
 	int superchargeType;
@@ -662,7 +665,7 @@ public bool Toss_IgnoreAllButTarget(entity, contentsMask)
 //A trace which returns true as long as the entity is not a Drone or a client.
 public bool Toss_IgnoreDrones(entity, contentsMask, target)
 {	
-	return !Toss_SentryStats[entity].exists && (entity == 0 || entity > MaxClients) && Brush_Is_Solid(entity) && entity != target;
+	return !Toss_SentryStats[entity].exists && (entity == 0 || entity > MaxClients) && !PNPC_IsNPC(entity) && Brush_Is_Solid(entity) && entity != target;
 }
 
 //A trace which returns true as long as the entity can be shot and is on the opposite of a specified team (Toss_TraceTeam).
@@ -1848,6 +1851,8 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 
 public void Support_Logic(int drone)
 {
+	PNPC support = view_as<PNPC>(drone);
+
 	if (Toss_SupportStats[drone].isBuilding)
 	{
 		float healsPerSecond = Toss_SupportStats[drone].maxHealth / Toss_SupportStats[drone].buildTime;
@@ -1861,11 +1866,12 @@ public void Support_Logic(int drone)
 
 			if (Toss_SupportStats[drone].lastBuildHealth >= RoundFloat(Toss_SupportStats[drone].maxHealth))
 			{
-				view_as<PNPC>(drone).i_PathTarget = Toss_SupportStats[drone].GetTarget();
-				view_as<PNPC>(drone).StartPathing();
-				view_as<PNPC>(drone).SetSequence("idle");
+				support.i_PathTarget = Toss_SupportStats[drone].GetTarget();
+				support.StartPathing();
+				support.SetSequence("idle");
 				SetEntityRenderColor(drone, _, _, _, 255);
 				Toss_SupportStats[drone].isBuilding = false;
+				support.i_Health -= 50;
 			}
 		}
 	}
@@ -1873,29 +1879,55 @@ public void Support_Logic(int drone)
 	{
 		int owner = GetClientOfUserId(Toss_SupportStats[drone].owner);
 		int target = Toss_SupportStats[drone].GetTarget();
-		view_as<PNPC>(drone).i_PathTarget = target;
+		support.i_PathTarget = target;
 
 		float selfPos[3], targPos[3];
-		GetEntPropVector(drone, Prop_Send, "m_vecOrigin", selfPos);
-		GetClientAbsOrigin(target, targPos);
+		PNPC_WorldSpaceCenter(drone, selfPos);
+		PNPC_WorldSpaceCenter(target, targPos);
 
-		//Slow down and eventually stop if our target is within the heal radius, that way we don't roll into them.
+		//Slow down to match the target's speed if we are within range of them, that way we don't run into them.
 		float dist = GetVectorDistance(selfPos, targPos);
 		if (dist <= Toss_SupportStats[drone].healRadius)
 		{
-			if (view_as<PNPC>(drone).f_Speed > 0.0)
+			float vel[3];
+			GetEntPropVector(target, Prop_Data, "m_vecAbsVelocity", vel);
+			float targSpeed = GetVectorLength(vel);
+
+			if (targSpeed > Toss_SupportStats[drone].speed)
+				targSpeed = Toss_SupportStats[drone].speed;
+
+			support.f_Speed = targSpeed;
+		}
+		else if (support.f_Speed < Toss_SupportStats[drone].speed)
+		{
+			support.f_Speed += Toss_SupportStats[drone].speed * 0.33;
+			if (support.f_Speed > Toss_SupportStats[drone].speed)
+				support.f_Speed = Toss_SupportStats[drone].speed;
+		}
+		
+		int targHeals = RoundFloat(AddToBucket(Toss_SupportStats[drone].healBucket_Target, Toss_SupportStats[drone].healRate_Direct * 0.1, 1.0));
+		int otherHeals = RoundFloat(AddToBucket(Toss_SupportStats[drone].healBucket_Others, Toss_SupportStats[drone].healRate_Others * 0.1, 1.0));
+		int selfHeals = RoundFloat(AddToBucket(Toss_SupportStats[drone].healBucket_Self, Toss_SupportStats[drone].healRate_Self * 0.1, 1.0));
+		
+		for (int i = 1; i <= MaxClients; i++)
+		{
+			if (IsValidMulti(i, true, true, true, TF2_GetClientTeam(owner)))
 			{
-				view_as<PNPC>(drone).f_Speed -= Toss_SupportStats[drone].speed * 0.2;
-				if (view_as<PNPC>(drone).f_Speed < 0.0)
-					view_as<PNPC>(drone).f_Speed = 0.0;
+				PNPC_WorldSpaceCenter(i, targPos);
+				if (GetVectorDistance(selfPos, targPos) <= Toss_SupportStats[drone].healRadius && Toss_HasLineOfSight(drone, i))
+				{
+					CF_HealPlayer(i, owner, (target == i ? targHeals : otherHeals), 1.0);
+					//TODO: Attach dispenser beam if not already healing
+				}
+				else
+				{
+					//TODO: Remove dispenser beam if healing, this also needs to be done if the Drone is destroyed or the client dies
+				}
 			}
 		}
-		else if (view_as<PNPC>(drone).f_Speed < Toss_SupportStats[drone].speed)
-		{
-			view_as<PNPC>(drone).f_Speed += Toss_SupportStats[drone].speed * 0.2;
-			if (view_as<PNPC>(drone).f_Speed > Toss_SupportStats[drone].speed)
-				view_as<PNPC>(drone).f_Speed = Toss_SupportStats[drone].speed;
-		}
+
+		if (selfHeals >= 1 && support.i_Health < support.i_MaxHealth)
+			PNPC_HealEntity(drone, selfHeals);
 	}
 }
 
@@ -1906,5 +1938,6 @@ public void Support_Activate(int client, char abilityName[255])
 	{
 		Toss_IsSupportDrone[toolbox] = true;
 		Toss_SupportStats[toolbox].CreateFromArgs(client, abilityName);
+		//TODO: The toolbox needs a different model if it is used for a support drone, so players can differentiate
 	}
 }
