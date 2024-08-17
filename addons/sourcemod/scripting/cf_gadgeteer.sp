@@ -1833,7 +1833,8 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 	Format(SupportName, sizeof(SupportName), "Support Drone (%N)", owner);
 
 	int drone = PNPC(MODEL_SUPPORT_DRONE, view_as<TFTeam>(team), 1, RoundFloat(Toss_SupportStats[toolbox].maxHealth), team - 2, 0.75, Toss_SupportStats[toolbox].speed, Support_Logic, GADGETEER, 0.1, pos, Toss_FacingAng[toolbox], _, _, SupportName).Index;
-
+	view_as<PNPC>(drone).SetSequence("spawn");
+	view_as<PNPC>(drone).SetPlaybackRate(1.0);
 	Toss_SupportStats[drone].Copy(Toss_SupportStats[toolbox]);
 	Toss_SupportStats[drone].isBuilding = true;
 	Toss_SupportStats[drone].lastBuildHealth = 1;
@@ -1860,10 +1861,11 @@ public void Support_Logic(int drone)
 
 			if (Toss_SupportStats[drone].lastBuildHealth >= RoundFloat(Toss_SupportStats[drone].maxHealth))
 			{
-				view_as<PNPC>(drone).SetActivity("ACT_BOT_PRIMARY_MOVEMENT");
 				view_as<PNPC>(drone).i_PathTarget = Toss_SupportStats[drone].GetTarget();
 				view_as<PNPC>(drone).StartPathing();
+				view_as<PNPC>(drone).SetSequence("idle");
 				SetEntityRenderColor(drone, _, _, _, 255);
+				Toss_SupportStats[drone].isBuilding = false;
 			}
 		}
 	}
@@ -1881,11 +1883,19 @@ public void Support_Logic(int drone)
 		float dist = GetVectorDistance(selfPos, targPos);
 		if (dist <= Toss_SupportStats[drone].healRadius)
 		{
-			float speedMod = dist / (2.0 * Toss_SupportStats[drone].healRadius);
-			view_as<PNPC>(drone).f_Speed = Toss_SupportStats[drone].speed * speedMod;
+			if (view_as<PNPC>(drone).f_Speed > 0.0)
+			{
+				view_as<PNPC>(drone).f_Speed -= Toss_SupportStats[drone].speed * 0.2;
+				if (view_as<PNPC>(drone).f_Speed < 0.0)
+					view_as<PNPC>(drone).f_Speed = 0.0;
+			}
 		}
-		else
-			view_as<PNPC>(drone).f_Speed = Toss_SupportStats[drone].speed;
+		else if (view_as<PNPC>(drone).f_Speed < Toss_SupportStats[drone].speed)
+		{
+			view_as<PNPC>(drone).f_Speed += Toss_SupportStats[drone].speed * 0.2;
+			if (view_as<PNPC>(drone).f_Speed > Toss_SupportStats[drone].speed)
+				view_as<PNPC>(drone).f_Speed = Toss_SupportStats[drone].speed;
+		}
 	}
 }
 
