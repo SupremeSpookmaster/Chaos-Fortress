@@ -1842,6 +1842,9 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 	Toss_SupportStats[drone].isBuilding = true;
 	Toss_SupportStats[drone].lastBuildHealth = 1;
 	Toss_SupportStats[drone].owner = GetClientUserId(owner);
+	//TODO: Add gibs, set blood type to sparks. Also, make the drone explode when it dies, no matter what kills it. 
+	//Also, when the owner disconnects or changes their character, destroy the drone.
+	//Also also, block the ability from being used if a drone is already active.
 
 	SetEntityRenderMode(drone, RENDER_TRANSALPHA);
 	SetEntityRenderColor(drone, _, _, _, 120);
@@ -1921,7 +1924,7 @@ public void Support_Logic(int drone)
 				}
 				else
 				{
-					//TODO: Remove dispenser beam if healing, this also needs to be done if the Drone is destroyed or the client dies
+					//TODO: Remove dispenser beam if we were healing, this also needs to be done if the Drone is destroyed or the client dies
 				}
 			}
 		}
