@@ -25,6 +25,11 @@
 #define MODEL_TOSS_GIB_4	"models/player/gibs/gibs_spring1.mdl"
 #define MODEL_TOSS_GIB_5	"models/player/gibs/gibs_spring2.mdl"
 #define MODEL_SUPPORT_DRONE	"models/bots/bot_worker/bot_worker_a.mdl"
+#define MODEL_SUPPORT_GIB_1	"models/bots/bot_worker/bot_worker_a_body_gib_l.mdl"
+#define MODEL_SUPPORT_GIB_2	"models/bots/bot_worker/bot_worker_a_body_gib_r.mdl"
+#define MODEL_SUPPORT_GIB_3	"models/bots/bot_worker/bot_worker_a_head_gib_l.mdl"
+#define MODEL_SUPPORT_GIB_4	"models/bots/bot_worker/bot_worker_a_head_gib_r.mdl"
+#define MODEL_SUPPORT_GIB_5	"models/bots/bot_worker/bot_worker_arm_gib.mdl"
 
 #define SOUND_TOSS_BUILD_1	"weapons/neon_sign_hit_01.wav"
 #define SOUND_TOSS_BUILD_2	"weapons/neon_sign_hit_02.wav"
@@ -96,6 +101,11 @@ public void OnMapStart()
 	PrecacheModel(MODEL_TOSS_GIB_5);
 	PrecacheModel(MODEL_TARGETING);
 	PrecacheModel(MODEL_SUPPORT_DRONE);
+	PrecacheModel(MODEL_SUPPORT_GIB_1);
+	PrecacheModel(MODEL_SUPPORT_GIB_2);
+	PrecacheModel(MODEL_SUPPORT_GIB_3);
+	PrecacheModel(MODEL_SUPPORT_GIB_4);
+	PrecacheModel(MODEL_SUPPORT_GIB_5);
 	
 	PrecacheSound(SOUND_TOSS_BUILD_1);
 	PrecacheSound(SOUND_TOSS_BUILD_2);
@@ -319,7 +329,7 @@ enum struct SupportDroneStats
 				float maxHP = float(TF2Util_GetEntityMaxHealth(ally));
 				float percent = hp / maxHP;
 
-				if (percent < lowestPercent || lowestPercent == -1.0)
+				if ((percent < lowestPercent || lowestPercent == -1.0) && percent < 1.0)
 				{
 					lowestPercent = percent;
 					target = ally;
@@ -329,7 +339,7 @@ enum struct SupportDroneStats
 
 		delete allies;
 
-		//Check 4: If we automatically found a valid target, set autoTarget to them and begin targeting them. Otherwise, target the owner as a last resort.
+		//Check 4: If we automatically found a valid target, set autoTarget to them and begin targeting them. Otherwise, target the owner by default.
 		if (IsValidMulti(target, true, true, true, TF2_GetClientTeam(owner)))
 		{
 			this.autoTarget = target;
@@ -393,19 +403,20 @@ enum struct SupportDroneStats
 
 	float GetBuildTime()
 	{
+		float divAmt = 1.0;
 		if (this.IsSupercharged())
 		{
 			if (this.superchargeType == 1)
 			{
-				return this.superchargeBuildSpeedHitscan;
+				divAmt = this.superchargeBuildSpeedHitscan;
 			}
 			else
 			{
-				return this.superchargeBuildSpeed;
+				divAmt = this.superchargeBuildSpeed;
 			}
 		}
 
-		return this.buildTime;
+		return this.buildTime / divAmt;
 	}
 }
 
@@ -1920,7 +1931,8 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 		}
 
 		int drone = PNPC(MODEL_SUPPORT_DRONE, view_as<TFTeam>(team), 1, RoundFloat(Toss_SupportStats[toolbox].maxHealth), team - 2, 0.75, Toss_SupportStats[toolbox].speed, Support_Logic, GADGETEER, 0.1, pos, Toss_FacingAng[toolbox], _, _, SupportName).Index;
-		
+		Toss_SupportStats[drone].Copy(Toss_SupportStats[toolbox]);
+
 		Toss_SupportStats[drone].superchargeType = superchargeType;
 		switch(superchargeType)
 		{
@@ -1939,20 +1951,20 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 		view_as<PNPC>(drone).SetSequence("spawn");
 		view_as<PNPC>(drone).SetPlaybackRate(1.0);
 		view_as<PNPC>(drone).SetBleedParticle("buildingdamage_sparks2");
-		Toss_SupportStats[drone].Copy(Toss_SupportStats[toolbox]);
+		view_as<PNPC>(drone).AddGib(MODEL_SUPPORT_GIB_1, "laser_bone");
+		view_as<PNPC>(drone).AddGib(MODEL_SUPPORT_GIB_2, "laser_bone");
+		view_as<PNPC>(drone).AddGib(MODEL_SUPPORT_GIB_3, "bip_base");
+		view_as<PNPC>(drone).AddGib(MODEL_SUPPORT_GIB_4, "bip_base");
+		view_as<PNPC>(drone).AddGib(MODEL_SUPPORT_GIB_5, "laser_bone");
 		Toss_SupportStats[drone].isBuilding = true;
 		Toss_SupportStats[drone].lastBuildHealth = 1;
 		Toss_SupportStats[drone].owner = GetClientUserId(owner);
 		Toss_SupportDrone[owner] = EntIndexToEntRef(drone);
 		Toss_IsSupportDrone[drone] = true;
-		//TODO: Add gibs.
-		//Also: intro animation should scale with the build speed.
-		//Also also: Supercharge stats seem to be broken...?
-		//Also also also: Finalize panic sequence
-		//Also also also also: Dispenser effects for healing
 
-		SetEntityRenderMode(drone, RENDER_TRANSALPHA);
-		SetEntityRenderColor(drone, _, _, _, 120);
+		//TODO: intro animation should scale with the build speed.
+		//Also also: Finalize panic sequence
+		//Also also also: Dispenser effects for healing
 	}
 
 	RemoveEntity(toolbox);
@@ -1987,9 +1999,7 @@ public void Support_Logic(int drone)
 				support.StartPathing();
 				support.SetSequence("idle");
 				support.SetFlinchSequence("ACT_BOT_GESTURE_FLINCH");
-				SetEntityRenderColor(drone, _, _, _, 255);
 				Toss_SupportStats[drone].isBuilding = false;
-				support.i_Health -= 50;
 			}
 		}
 	}
