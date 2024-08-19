@@ -1692,6 +1692,101 @@ stock bool IsInvuln(int client) //Borrowed from Batfoxkid. Checks if the client 
 		!GetEntProp(client, Prop_Data, "m_takedamage"));
 }
 
+/**
+ * Spawns a 2-point particle (IE medigun beam, dispenser beam, etc) and connects it through 2 entities.
+ * 
+ * @param startEnt		The entity to start from.
+ * @param startPoint	Attachment point to attach the start of the particle to.
+ * @param startZOff		Optional Z-axis offset for the start point.
+ * @param endEnt		The entity to end at.
+ * @param endPoint		Attachment point to attach the end of the particle to.
+ * @param endZOff		Optional Z-axis offset for the end point.
+ * @param particle		The particle to connect.
+ * @param duration		The duration of the effect. <= 0.0: infinite.
+ * 
+ * @return An ArrayList containing the references of all entities used to create this effect. Use the "RemoveArrayList" stock to easily remove all of these entities and delete the ArrayList when you want to stop the effect.
+ */
+stock ArrayList AttachParticle_ControlPoints(int startEnt, char startPoint[255], float startZOff, int endEnt, char endPoint[255], float endZOff, char particle[255], float duration = 0.0)
+{
+	ArrayList returnVal = new ArrayList(255);
+
+	int root = CreateEntityByName("info_particle_system");
+	int tail = CreateEntityByName("info_particle_system");
+	int start = AttachParticleToEntity(startEnt, "", startPoint, _, _, _, startZOff);
+	int end = AttachParticleToEntity(endEnt, "", endPoint, _, _, _, endZOff);
+
+	if (IsValidEdict(root) && IsValidEdict(tail) && IsValidEdict(start) && IsValidEdict(end))
+	{
+		float StartPos[3], EndPos[3];
+		GetEntPropVector(start, Prop_Data, "m_vecAbsOrigin", StartPos);
+		GetEntPropVector(end, Prop_Data, "m_vecAbsOrigin", EndPos);
+
+		TeleportEntity(root, StartPos, NULL_VECTOR, NULL_VECTOR); 
+		TeleportEntity(tail, EndPos, NULL_VECTOR, NULL_VECTOR);
+		  
+		char tName[128];
+		Format(tName, sizeof(tName), "target%i", start);
+		DispatchKeyValue(start, "targetname", tName);
+		  
+		char cpName[128];
+		Format(cpName, sizeof(cpName), "Xtarget%i", end);
+		  
+		DispatchKeyValue(tail, "targetname", cpName);
+		  
+		DispatchKeyValue(root, "targetname", "tf2particle");
+		DispatchKeyValue(root, "parentname", tName);
+		DispatchKeyValue(root, "effect_name", particle);
+		DispatchKeyValue(root, "cpoint1", cpName);
+		  
+		DispatchSpawn(root);
+		SetVariantString(tName);
+		AcceptEntityInput(root, "SetParent", root, root, 0);
+		  
+		SetVariantString("flag");
+		AcceptEntityInput(root, "SetParentAttachment", root, root, 0);
+		  
+		ActivateEntity(root);
+		AcceptEntityInput(root, "start");
+
+		PushArrayCell(returnVal, EntIndexToEntRef(root));
+		PushArrayCell(returnVal, EntIndexToEntRef(tail));
+		PushArrayCell(returnVal, EntIndexToEntRef(start));
+		PushArrayCell(returnVal, EntIndexToEntRef(end));
+
+		if (duration > 0.0)
+			CreateTimer(duration, APCP_Delete, returnVal, TIMER_FLAG_NO_MAPCHANGE);
+	}
+
+	return returnVal;
+}
+
+public Action APCP_Delete(Handle timer, ArrayList list)
+{
+	RemoveArrayList(list);
+	return Plugin_Continue;
+}
+
+/**
+ * Removes all entities from an ArrayList, and then deletes the ArrayList.
+ * All cells must contain entity references, not just indices, or this will not work.
+ * 
+ * @param list		The ArrayList.
+ */
+stock void RemoveArrayList(ArrayList list)
+{
+	if (list == null)
+		return;
+
+	for (int i = 0; i < GetArraySize(list); i++)
+	{
+		int ent = EntRefToEntIndex(GetArrayCell(list, i));
+		if (IsValidEntity(ent))
+			RemoveEntity(ent);
+	}
+
+	delete list;
+}
+
 stock void SpawnParticle_ControlPoints(float StartPos[3], float EndPos[3], char particleType[255], float duration)
 {
 	 int particle  = CreateEntityByName("info_particle_system");

@@ -82,8 +82,13 @@
 #define PARTICLE_MUZZLE_BLUE_2	"muzzle_raygun_blue"
 #define PARTICLE_LASER_RED		"bullet_tracer_raygun_red_bits"
 #define PARTICLE_LASER_BLUE		"bullet_tracer_raygun_blue_bits"
+#define PARTICLE_SUPPORT_HEAL_RED	"dispenser_heal_red"
+#define PARTICLE_SUPPORT_HEAL_BLUE	"dispenser_heal_blue"
 
 #define MODEL_TARGETING		"models/fake_particles/plane.mdl"
+
+int LASER_MODEL = -1;
+int GLOW_MODEL = -1;
 
 public void OnMapStart()
 {
@@ -106,6 +111,10 @@ public void OnMapStart()
 	PrecacheModel(MODEL_SUPPORT_GIB_3);
 	PrecacheModel(MODEL_SUPPORT_GIB_4);
 	PrecacheModel(MODEL_SUPPORT_GIB_5);
+
+	LASER_MODEL = PrecacheModel("materials/sprites/laser.vmt", false);
+	GLOW_MODEL = PrecacheModel("sprites/glow02.vmt", true);
+
 	
 	PrecacheSound(SOUND_TOSS_BUILD_1);
 	PrecacheSound(SOUND_TOSS_BUILD_2);
@@ -163,6 +172,8 @@ public const char Drone_DamageSFX[][255] =
 public void OnPluginStart()
 {
 }
+
+ArrayList Support_HealParticles[2049][MAXPLAYERS + 1];
 
 int Toss_Owner[2049] = { -1, ... };
 int Toss_Max[MAXPLAYERS + 1] = { 0, ... };
@@ -1968,7 +1979,8 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 		Toss_IsSupportDrone[drone] = true;
 
 		//TODO: Finalize panic sequence
-		//Also: Dispenser effects for healing
+		//Also: Dispenser effects for healing (don't forget sound)
+		//Also also: Find a new model to use for the toolbox
 	}
 
 	RemoveEntity(toolbox);
@@ -2047,6 +2059,14 @@ public void Support_Logic(int drone)
 		int otherHeals = RoundFloat(AddToBucket(Toss_SupportStats[drone].healBucket_Others, Toss_SupportStats[drone].GetHealRate(1) * 0.1, 1.0));
 		int selfHeals = RoundFloat(AddToBucket(Toss_SupportStats[drone].healBucket_Self, Toss_SupportStats[drone].GetHealRate(2) * 0.1, 1.0));
 		
+		int r = 255;
+		int b = 120;
+		if (support.i_Team == TFTeam_Blue)
+		{
+			b = 255;
+			r = 120;
+		}
+
 		for (int i = 1; i <= MaxClients; i++)
 		{
 			if (IsValidMulti(i, true, true, true, TF2_GetClientTeam(owner)))
@@ -2055,11 +2075,8 @@ public void Support_Logic(int drone)
 				if (GetVectorDistance(selfPos, targPos) <= Toss_SupportStats[drone].healRadius && Toss_HasLineOfSight(drone, i))
 				{
 					CF_HealPlayer(i, owner, (target == i ? targHeals : otherHeals), 1.0);
-					//TODO: Attach dispenser beam if not already healing
-				}
-				else
-				{
-					//TODO: Remove dispenser beam if we were healing, this also needs to be done if the Drone is destroyed or the client dies
+					SpawnBeam_Vectors(selfPos, targPos, 0.1, r, 120, b, 120, LASER_MODEL, 6.0, 6.0, _, 1.0);
+					SpawnBeam_Vectors(selfPos, targPos, 0.1, 255, 255, 255, 80, GLOW_MODEL, 9.0, 9.0, _, 1.0);
 				}
 			}
 		}
