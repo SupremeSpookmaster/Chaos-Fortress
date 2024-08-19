@@ -418,6 +418,11 @@ enum struct SupportDroneStats
 
 		return this.buildTime / divAmt;
 	}
+
+	float CalculateBuildAnimSpeed()
+	{
+		return 2.33 / this.GetBuildTime();
+	}
 }
 
 enum struct CustomSentry
@@ -1949,7 +1954,7 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 		}
 		
 		view_as<PNPC>(drone).SetSequence("spawn");
-		view_as<PNPC>(drone).SetPlaybackRate(1.0);
+		view_as<PNPC>(drone).SetPlaybackRate(Toss_SupportStats[drone].CalculateBuildAnimSpeed());
 		view_as<PNPC>(drone).SetBleedParticle("buildingdamage_sparks2");
 		view_as<PNPC>(drone).AddGib(MODEL_SUPPORT_GIB_1, "laser_bone");
 		view_as<PNPC>(drone).AddGib(MODEL_SUPPORT_GIB_2, "laser_bone");
@@ -1962,9 +1967,8 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 		Toss_SupportDrone[owner] = EntIndexToEntRef(drone);
 		Toss_IsSupportDrone[drone] = true;
 
-		//TODO: intro animation should scale with the build speed.
-		//Also also: Finalize panic sequence
-		//Also also also: Dispenser effects for healing
+		//TODO: Finalize panic sequence
+		//Also: Dispenser effects for healing
 	}
 
 	RemoveEntity(toolbox);
@@ -2000,6 +2004,11 @@ public void Support_Logic(int drone)
 				support.SetSequence("idle");
 				support.SetFlinchSequence("ACT_BOT_GESTURE_FLINCH");
 				Toss_SupportStats[drone].isBuilding = false;
+				support.SetPlaybackRate(1.0);
+			}
+			else
+			{
+				support.SetPlaybackRate(Toss_SupportStats[drone].CalculateBuildAnimSpeed());
 			}
 		}
 	}
