@@ -112,10 +112,6 @@ public void OnMapStart()
 	PrecacheModel(MODEL_SUPPORT_GIB_4);
 	PrecacheModel(MODEL_SUPPORT_GIB_5);
 
-	LASER_MODEL = PrecacheModel("materials/sprites/laser.vmt", false);
-	GLOW_MODEL = PrecacheModel("sprites/glow02.vmt", true);
-
-	
 	PrecacheSound(SOUND_TOSS_BUILD_1);
 	PrecacheSound(SOUND_TOSS_BUILD_2);
 	PrecacheSound(SOUND_TOSS_BUILD_3);
@@ -142,6 +138,9 @@ public void OnMapStart()
 	PrecacheSound(SOUND_DRONE_SCANNING);
 	PrecacheSound(SOUND_DRONES_TARGETING);
 	PrecacheSound(SOUND_SUPPORT_DESTROYED);
+
+	LASER_MODEL = PrecacheModel("materials/sprites/laser.vmt", false);
+	GLOW_MODEL = PrecacheModel("sprites/glow02.vmt", true);
 }
 
 public const char Toss_BuildSFX[][] =
@@ -168,10 +167,6 @@ public const char Drone_DamageSFX[][255] =
 	SOUND_DRONE_DAMAGED_3,
 	SOUND_DRONE_DAMAGED_4
 };
-
-public void OnPluginStart()
-{
-}
 
 ArrayList Support_HealParticles[2049][MAXPLAYERS + 1];
 

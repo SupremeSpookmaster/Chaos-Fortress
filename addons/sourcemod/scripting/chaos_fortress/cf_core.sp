@@ -17,8 +17,6 @@
 #include "chaos_fortress/cf_animator.sp"
 //#include "chaos_fortress/cf_npcs.sp"
 
-int i_CFRoundState = 0; //The current round state.
-
 bool b_InSpawn[2049][4];
 
 GlobalForward g_OnPlayerKilled;
@@ -371,8 +369,6 @@ void CF_RoundEnd()
  */
 void CF_SetRoundState(int state)
 {
-	i_CFRoundState = state;
-	
 	if (state == 0)
 	{
 		for (int i = 1; i <= MaxClients; i++)
@@ -395,7 +391,13 @@ void CF_SetRoundState(int state)
 
 public Native_CF_GetRoundState(Handle plugin, int numParams)
 {
-	return i_CFRoundState;
+	RoundState state = GameRules_GetRoundState();
+	if (state == RoundState_RoundRunning || state == RoundState_Bonus)
+		return 1;
+	else if (state == RoundState_GameOver || state == RoundState_TeamWin || state == RoundState_Restart || state == RoundState_Stalemate)
+		return 2;
+	
+	return 0;
 }
 
 public void OnGameFrame()
