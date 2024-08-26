@@ -621,9 +621,9 @@ Handle g_ReloadStockTimer[MAXPLAYERS + 1] = { null, ... };
 
 void DeleteStockTimers(int client)
 {
-	delete g_M2StockTimer[client];
-	delete g_M3StockTimer[client];
-	delete g_ReloadStockTimer[client];
+	g_M2StockTimer[client] = null;
+	g_M3StockTimer[client] = null;
+	g_ReloadStockTimer[client] = null;
 }
 
 void CreateStockTimerNextFrame(int client, CF_AbilityType type, float duration)
@@ -685,9 +685,10 @@ public Action Stock_GiveM2(Handle stocky, int id)
 	if (i_M2Stocks[client] < i_M2MaxStocks[client])
 		i_M2Stocks[client]++;
 
+	g_M2StockTimer[client] = null;
+
 	if (i_M2Stocks[client] < i_M2MaxStocks[client])
 	{
-		g_M2StockTimer[client] = null;
 		CreateStockTimerNextFrame(client, CF_AbilityType_M2, f_M2CD[client]);
 	}
 
@@ -703,11 +704,10 @@ public Action Stock_GiveM3(Handle stocky, int id)
 	if (i_M3Stocks[client] < i_M3MaxStocks[client])
 		i_M3Stocks[client]++;
 
+	g_M3StockTimer[client] = null;
+
 	if (i_M3Stocks[client] < i_M3MaxStocks[client])
-	{
-		g_M3StockTimer[client] = null;
 		CreateStockTimerNextFrame(client, CF_AbilityType_M3, f_M3CD[client]);
-	}
 
 	return Plugin_Continue;
 }
@@ -721,11 +721,10 @@ public Action Stock_GiveReload(Handle stocky, int id)
 	if (i_ReloadStocks[client] < i_ReloadMaxStocks[client])
 		i_ReloadStocks[client]++;
 
+	g_ReloadStockTimer[client] = null;
+
 	if (i_ReloadStocks[client] < i_ReloadMaxStocks[client])
-	{
-		g_ReloadStockTimer[client] = null;
 		CreateStockTimerNextFrame(client, CF_AbilityType_Reload, f_ReloadCD[client]);
-	}
 
 	return Plugin_Continue;
 }
