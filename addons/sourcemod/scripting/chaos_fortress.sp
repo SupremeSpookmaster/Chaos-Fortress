@@ -120,6 +120,7 @@
 //
 //	- PRESUMED UNFIXABLE (major bugs which I don't believe can be fixed with my current SourceMod expertise. The best thing you can do is classify these as exploits and punish them as such):
 //	- DEMOPAN: Enemies can get stuck in his shield if they walk into it while it is held. Demopans can abuse this to intentionally get enemies stuck for free kills. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.
+//	- ALL: Resized characters do not have accurate hitboxes, IE trying to snipe Heavnich in the head does not register as a hit.
 //
 //	- THINGS TO KEEP IN MIND FOR FUTURE REFERENCE:
 //		- Cool and/or Frequently-Used Particle Effects:

@@ -602,6 +602,18 @@ forward void CF_OnSimulatedSpellUsed(int client, int entity);
  */
 forward void CF_OnForcedVMAnimEnd(int client, char sequence[255]);
 
+/**
+ * Called when a character's HUD is about to be displayed.
+ * 
+ * @param client		The client whose HUD is about to be displayed.
+ * @param HUDText		The text to be displayed. Can be altered. Any instances of [PERCENT] are automatically replaced with %.
+ * @param r				R value of the HUD's color. Can be altered.
+ * @param g				G value of the HUD's color. Can be altered.
+ * @param b				B value of the HUD's color. Can be altered.
+ * @param a				A value of the HUD's color. Can be altered.
+ */
+forward void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, int &b, int &a);
+
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
 ///////////////////////////////////////

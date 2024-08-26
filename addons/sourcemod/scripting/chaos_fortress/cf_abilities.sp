@@ -97,6 +97,7 @@ GlobalForward g_FakeMediShieldDamaged;
 GlobalForward g_AttemptAbility;
 GlobalForward g_SimulatedSpellCast;
 GlobalForward g_ForcedVMAnimEnd;
+GlobalForward g_OnHUDDisplayed;
 
 int i_GenericProjectileOwner[2049] = { -1, ... };
 int i_HealingDone[MAXPLAYERS + 1] = { 0, ... };
@@ -112,6 +113,7 @@ int i_HUDR[MAXPLAYERS + 1] = { 255, ... };
 int i_HUDG[MAXPLAYERS + 1] = { 255, ... };
 int i_HUDB[MAXPLAYERS + 1] = { 255, ... };
 int i_HUDA[MAXPLAYERS + 1] = { 255, ... };
+int i_
 
 char s_ProjectileLogicPlugin[2049][255];
 Function g_ProjectileLogic[2049] = { INVALID_FUNCTION, ... };
@@ -200,6 +202,7 @@ public void CFA_MakeForwards()
 	g_AttemptAbility = new GlobalForward("CF_OnAbilityCheckCanUse", ET_Event, Param_Cell, Param_String, Param_String, Param_Cell, Param_CellByRef);
 	g_SimulatedSpellCast = new GlobalForward("CF_OnSimulatedSpellUsed", ET_Ignore, Param_Cell, Param_Cell);
 	g_ForcedVMAnimEnd = new GlobalForward("CF_OnForcedVMAnimEnd", ET_Ignore, Param_Cell, Param_String);
+	g_OnHUDDisplayed = new GlobalForward("CF_OnHUDDisplayed", ET_Ignore, Param_Cell, Param_String, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);
 	
 	GameData gd = LoadGameConfigFile("chaos_fortress");
 	
@@ -358,15 +361,15 @@ public Action CFA_HUDTimer(Handle timer)
 						
 						if ((!CanUse && !tooPoor && !wouldBeStuck) || CF_GetRoundState() != 1)
 						{
-							Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE [BLOCKED]\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0));
+							Format(HUDText, sizeof(HUDText), "%s: %i[PERCENT] [BLOCKED]\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0));
 						}
 						else if (wouldBeStuck && !tooPoor)
 						{
-							Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE [BLOCKED; YOU WOULD GET STUCK]\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0));
+							Format(HUDText, sizeof(HUDText), "%s: %i[PERCENT] [BLOCKED; YOU WOULD GET STUCK]\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0));
 						}
 						else
 						{
-							Format(HUDText, sizeof(HUDText), "%s: %iPUTAPERCENTAGEHERE %s\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0), f_UltCharge[client] >= f_UltChargeRequired[client] ? "(READY, CALL FOR MEDIC)" : "");
+							Format(HUDText, sizeof(HUDText), "%s: %i[PERCENT] %s\n", s_UltName[client], RoundToFloor((f_UltCharge[client]/f_UltChargeRequired[client]) * 100.0), f_UltCharge[client] >= f_UltChargeRequired[client] ? "(READY, CALL FOR MEDIC)" : "");
 						}
 					}
 				}
@@ -384,7 +387,7 @@ public Action CFA_HUDTimer(Handle timer)
 						if (f_ResourceMax[client] > 0.0)
 						{
 							if (b_ResourceIsPercentage[client])
-								Format(HUDText, sizeof(HUDText), "%s\n%s: %iPUTAPERCENTAGEHERE\n", HUDText, CF_GetSpecialResource(client) != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundToFloor((CF_GetSpecialResource(client)/f_ResourceMax[client]) * 100.0));
+								Format(HUDText, sizeof(HUDText), "%s\n%s: %i[PERCENT]\n", HUDText, CF_GetSpecialResource(client) != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundToFloor((CF_GetSpecialResource(client)/f_ResourceMax[client]) * 100.0));
 							else
 								Format(HUDText, sizeof(HUDText), "%s\n%s: %i/%i\n", HUDText, CF_GetSpecialResource(client) != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client], RoundToFloor(CF_GetSpecialResource(client)), RoundToFloor(f_ResourceMax[client]));
 						}
@@ -415,12 +418,12 @@ public Action CFA_HUDTimer(Handle timer)
 							{
 								if (b_ResourceIsUlt[client])
 								{
-									Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult.]", HUDText, (f_M2Cost[client]/f_UltChargeRequired[client]) * 100.0);
+									Format(HUDText, sizeof(HUDText), "%s[%.2f[PERCENT] Ult.]", HUDText, (f_M2Cost[client]/f_UltChargeRequired[client]) * 100.0);
 								}
 								else
 								{
 									if (b_ResourceIsPercentage[client] && f_ResourceMax[client] > 0.0)
-										Format(HUDText, sizeof(HUDText), "%s[%iPUTAPERCENTAGEHERE %s]", HUDText, RoundToFloor((f_M2Cost[client]/f_ResourceMax[client]) * 100.0), f_M2Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+										Format(HUDText, sizeof(HUDText), "%s[%i[PERCENT] %s]", HUDText, RoundToFloor((f_M2Cost[client]/f_ResourceMax[client]) * 100.0), f_M2Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
 									else
 										Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_M2Cost[client]), f_M2Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
 								}
@@ -456,12 +459,12 @@ public Action CFA_HUDTimer(Handle timer)
 							{
 								if (b_ResourceIsUlt[client])
 								{
-									Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult.]", HUDText, (f_M3Cost[client]/f_UltChargeRequired[client]) * 100.0);
+									Format(HUDText, sizeof(HUDText), "%s[%.2f[PERCENT] Ult.]", HUDText, (f_M3Cost[client]/f_UltChargeRequired[client]) * 100.0);
 								}
 								else
 								{
 									if (b_ResourceIsPercentage[client] && f_ResourceMax[client] > 0.0)
-										Format(HUDText, sizeof(HUDText), "%s[%iPUTAPERCENTAGEHERE %s]", HUDText, RoundToFloor((f_M3Cost[client]/f_ResourceMax[client]) * 100.0), f_M3Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+										Format(HUDText, sizeof(HUDText), "%s[%i[PERCENT] %s]", HUDText, RoundToFloor((f_M3Cost[client]/f_ResourceMax[client]) * 100.0), f_M3Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
 									else
 										Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_M3Cost[client]), f_M3Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
 								}
@@ -497,12 +500,12 @@ public Action CFA_HUDTimer(Handle timer)
 							{
 								if (b_ResourceIsUlt[client])
 								{
-									Format(HUDText, sizeof(HUDText), "%s[%.2fPUTAPERCENTAGEHERE Ult.]", HUDText, (f_ReloadCost[client]/f_UltChargeRequired[client]) * 100.0);
+									Format(HUDText, sizeof(HUDText), "%s[%.2f[PERCENT] Ult.]", HUDText, (f_ReloadCost[client]/f_UltChargeRequired[client]) * 100.0);
 								}
 								else
 								{
 									if (b_ResourceIsPercentage[client] && f_ResourceMax[client] > 0.0)
-										Format(HUDText, sizeof(HUDText), "%s[%iPUTAPERCENTAGEHERE %s]", HUDText, RoundToFloor((f_ReloadCost[client]/f_ResourceMax[client]) * 100.0), f_ReloadCost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+										Format(HUDText, sizeof(HUDText), "%s[%i[PERCENT] %s]", HUDText, RoundToFloor((f_ReloadCost[client]/f_ResourceMax[client]) * 100.0), f_ReloadCost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
 									else
 										Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_ReloadCost[client]), f_ReloadCost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
 								}
@@ -520,8 +523,22 @@ public Action CFA_HUDTimer(Handle timer)
 						}
 					}
 					
-					ReplaceString(HUDText, sizeof(HUDText), "PUTAPERCENTAGEHERE", "%%");
-					SetHudTextParams(-1.0, 0.8, 0.1, i_HUDR[client], i_HUDG[client], i_HUDB[client], i_HUDA[client]);
+					int r = i_HUDR[client];
+					int g = i_HUDG[client];
+					int b = i_HUDB[client];
+					int a = i_HUDA[client];
+
+					Call_StartForward(g_OnHUDDisplayed);
+
+					Call_PushCell(client);
+					Call_PushStringEx(HUDText, sizeof(HUDText), SM_PARAM_STRING_UTF8|SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
+					Call_PushCellRef(r);
+					Call_PushCellRef(g);
+					Call_PushCellRef(b);
+					Call_PushCellRef(a);
+
+					ReplaceString(HUDText, sizeof(HUDText), "[PERCENT]", "%%");
+					SetHudTextParams(-1.0, 0.8, 0.1, r, g, b, a);
 					ShowSyncHudText(client, HudSync, HUDText);
 				}
 			}
