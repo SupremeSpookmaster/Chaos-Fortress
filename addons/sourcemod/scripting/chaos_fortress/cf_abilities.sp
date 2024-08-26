@@ -179,6 +179,8 @@ public void CFA_MakeNatives()
 	CreateNative("CF_ForceViewmodelAnimation", Native_CF_ForceViewmodelAnimation);
 	CreateNative("CF_SetAbilityStocks", Native_CF_SetAbilityStocks);
 	CreateNative("CF_SetAbilityMaxStocks", Native_CF_SetAbilityMaxStocks);
+	CreateNative("CF_GetAbilityStocks", Native_CF_GetAbilityStocks);
+	CreateNative("CF_GetAbilityMaxStocks", Native_CF_GetAbilityMaxStocks);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -4198,6 +4200,50 @@ public Native_CF_SetAbilityMaxStocks(Handle plugin, int numParams)
 		{
 			i_ReloadMaxStocks[client] = numStocks;
 			CreateStockTimer(client, type, f_ReloadCD[client]);
+		}
+	}
+}
+
+public Native_CF_GetAbilityStocks(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	CF_AbilityType type = GetNativeCell(2);
+
+	switch(type)
+	{
+		case CF_AbilityType_M2:
+		{
+			return i_M2Stocks[client];
+		}
+		case CF_AbilityType_M3:
+		{
+			return i_M3Stocks[client];
+		}
+		case CF_AbilityType_Reload:
+		{
+			return i_ReloadStocks[client];
+		}
+	}
+}
+
+public Native_CF_GetAbilityMaxStocks(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	CF_AbilityType type = GetNativeCell(2);
+
+	switch(type)
+	{
+		case CF_AbilityType_M2:
+		{
+			return i_M2MaxStocks[client];
+		}
+		case CF_AbilityType_M3:
+		{
+			return i_M3MaxStocks[client];
+		}
+		case CF_AbilityType_Reload:
+		{
+			return i_ReloadMaxStocks[client];
 		}
 	}
 }

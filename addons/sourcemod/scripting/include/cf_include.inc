@@ -1626,3 +1626,23 @@ native void CF_SetAbilityStocks(int client, CF_AbilityType type, int stocks, boo
  * @param maxStocks		Max stocks held.
  */
 native void CF_SetAbilityMaxStocks(int client, CF_AbilityType type, int maxStocks);
+
+/**
+ * Retrieves the current remaining number of uses a character has on an ability slot.
+ * 
+ * @param client		The client.
+ * @param type			The ability slot to retrieve uses for.
+ * 
+ * @return		The number of remaining uses the client has for the given ability slot.
+ */
+native int CF_GetAbilityStocks(int client, CF_AbilityType type);
+
+/**
+ * Retrieves the current maximum number of uses a character has on an ability slot.
+ * 
+ * @param client		The client.
+ * @param type			The ability slot to retrieve uses for.
+ * 
+ * @return		The maximum number of uses the client can stockpile for the given ability slot.
+ */
+native int CF_GetAbilityMaxStocks(int client, CF_AbilityType type);
