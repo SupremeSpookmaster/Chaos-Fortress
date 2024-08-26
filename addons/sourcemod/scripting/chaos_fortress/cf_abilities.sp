@@ -113,7 +113,13 @@ int i_HUDR[MAXPLAYERS + 1] = { 255, ... };
 int i_HUDG[MAXPLAYERS + 1] = { 255, ... };
 int i_HUDB[MAXPLAYERS + 1] = { 255, ... };
 int i_HUDA[MAXPLAYERS + 1] = { 255, ... };
-int i_
+
+int i_M2Stocks[MAXPLAYERS + 1] = { 0, ... };
+int i_M2MaxStocks[MAXPLAYERS + 1] = { 0, ... };
+int i_M3Stocks[MAXPLAYERS + 1] = { 0, ... };
+int i_M3MaxStocks[MAXPLAYERS + 1] = { 0, ... };
+int i_ReloadStocks[MAXPLAYERS + 1] = { 0, ... };
+int i_ReloadMaxStocks[MAXPLAYERS + 1] = { 0, ... };
 
 char s_ProjectileLogicPlugin[2049][255];
 Function g_ProjectileLogic[2049] = { INVALID_FUNCTION, ... };
@@ -403,14 +409,18 @@ public Action CFA_HUDTimer(Handle timer)
 					if (b_HasM2[client])
 					{
 						CanUse = CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M2, wouldBeStuck, tooPoor, remCD);
-						
+
+						char prefix[255], suffix[255];
+						if (AbilityUsesStocks(client, CF_AbilityType_M2))
+							Format(suffix, sizeof(suffix), "[%i/%i]", i_M2Stocks[client], i_M2MaxStocks[client]);
+
 						if (!CanUse && !tooPoor && !wouldBeStuck && remCD < 0.1)
 						{
-							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M2Name[client]);
+							Format(prefix, sizeof(prefix), "[BLOCKED]");
 						}
 						else if (wouldBeStuck && !tooPoor)
 						{
-							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED; YOU WOULD GET STUCK]\n", HUDText, s_M2Name[client]);
+							Format(prefix, sizeof(prefix), "[BLOCKED; YOU WOULD GET STUCK]");
 						}
 						else
 						{
@@ -418,40 +428,42 @@ public Action CFA_HUDTimer(Handle timer)
 							{
 								if (b_ResourceIsUlt[client])
 								{
-									Format(HUDText, sizeof(HUDText), "%s[%.2f[PERCENT] Ult.]", HUDText, (f_M2Cost[client]/f_UltChargeRequired[client]) * 100.0);
+									Format(suffix, sizeof(suffix), "%s [%.2f[PERCENT] Ult.]", suffix, (f_M2Cost[client]/f_UltChargeRequired[client]) * 100.0);
 								}
 								else
 								{
 									if (b_ResourceIsPercentage[client] && f_ResourceMax[client] > 0.0)
-										Format(HUDText, sizeof(HUDText), "%s[%i[PERCENT] %s]", HUDText, RoundToFloor((f_M2Cost[client]/f_ResourceMax[client]) * 100.0), f_M2Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+										Format(suffix, sizeof(suffix), "%s [%i[PERCENT] %s]", suffix, RoundToFloor((f_M2Cost[client]/f_ResourceMax[client]) * 100.0), f_M2Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
 									else
-										Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_M2Cost[client]), f_M2Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+										Format(suffix, sizeof(suffix), "%s [%i %s]", suffix, RoundToFloor(f_M2Cost[client]), f_M2Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
 								}
 							}
 							
 							remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M2);
 							if (remCD > 0.0)
-							{
-								Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_M2Name[client], remCD);
-							}
-							else
-							{
-								Format(HUDText, sizeof(HUDText), "%s %s %s\n", HUDText, s_M2Name[client], b_M2IsHeld[client] ? (b_HoldingM2[client] ? "[ACTIVE]" : "[Hold M2]") : "[M2]");
-							}
+								Format(suffix, sizeof(suffix), "%s (%.1f)", suffix, remCD);
+
+							Format(prefix, sizeof(prefix), "%s", b_M2IsHeld[client] ? (b_HoldingM2[client] ? "[ACTIVE]" : "[Hold M2]") : "[M2]");
 						}
+
+						Format(HUDText, sizeof(HUDText), "%s %s %s %s\n", HUDText, prefix, s_M2Name[client], suffix);
 					}
 					
 					if (b_HasM3[client])
 					{
 						CanUse = CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M3, wouldBeStuck, tooPoor, remCD);
-						
+
+						char prefix[255], suffix[255];
+						if (AbilityUsesStocks(client, CF_AbilityType_M3))
+							Format(suffix, sizeof(suffix), "[%i/%i]", i_M3Stocks[client], i_M3MaxStocks[client]);
+
 						if (!CanUse && !tooPoor && !wouldBeStuck && remCD < 0.1)
 						{
-							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_M3Name[client]);
+							Format(prefix, sizeof(prefix), "[BLOCKED]");
 						}
 						else if (wouldBeStuck && !tooPoor)
 						{
-							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED; YOU WOULD GET STUCK]\n", HUDText, s_M3Name[client]);
+							Format(prefix, sizeof(prefix), "[BLOCKED; YOU WOULD GET STUCK]");
 						}
 						else
 						{
@@ -459,40 +471,42 @@ public Action CFA_HUDTimer(Handle timer)
 							{
 								if (b_ResourceIsUlt[client])
 								{
-									Format(HUDText, sizeof(HUDText), "%s[%.2f[PERCENT] Ult.]", HUDText, (f_M3Cost[client]/f_UltChargeRequired[client]) * 100.0);
+									Format(suffix, sizeof(suffix), "%s [%.2f[PERCENT] Ult.]", suffix, (f_M3Cost[client]/f_UltChargeRequired[client]) * 100.0);
 								}
 								else
 								{
 									if (b_ResourceIsPercentage[client] && f_ResourceMax[client] > 0.0)
-										Format(HUDText, sizeof(HUDText), "%s[%i[PERCENT] %s]", HUDText, RoundToFloor((f_M3Cost[client]/f_ResourceMax[client]) * 100.0), f_M3Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+										Format(suffix, sizeof(suffix), "%s [%i[PERCENT] %s]", suffix, RoundToFloor((f_M3Cost[client]/f_ResourceMax[client]) * 100.0), f_M3Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
 									else
-										Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_M3Cost[client]), f_M3Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+										Format(suffix, sizeof(suffix), "%s [%i %s]", suffix, RoundToFloor(f_M3Cost[client]), f_M3Cost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
 								}
 							}
 							
 							remCD = CF_GetAbilityCooldown(client, CF_AbilityType_M3);
 							if (remCD > 0.0)
-							{
-								Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_M3Name[client], remCD);
-							}
-							else
-							{
-								Format(HUDText, sizeof(HUDText), "%s %s %s\n", HUDText, s_M3Name[client], b_M3IsHeld[client] ? (b_HoldingM3[client] ? "[ACTIVE]" : "[Hold M3]") : "[M3]");
-							}
+								Format(suffix, sizeof(suffix), "%s (%.1f)", suffix, remCD);
+
+							Format(prefix, sizeof(prefix), "%s", b_M3IsHeld[client] ? (b_HoldingM3[client] ? "[ACTIVE]" : "[Hold M3]") : "[M3]");
 						}
+
+						Format(HUDText, sizeof(HUDText), "%s %s %s %s\n", HUDText, prefix, s_M3Name[client], suffix);
 					}
 					
 					if (b_HasReload[client])
 					{
 						CanUse = CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_Reload, wouldBeStuck, tooPoor, remCD);
-						
+
+						char prefix[255], suffix[255];
+						if (AbilityUsesStocks(client, CF_AbilityType_Reload))
+							Format(suffix, sizeof(suffix), "[%i/%i]", i_ReloadStocks[client], i_ReloadMaxStocks[client]);
+
 						if (!CanUse && !tooPoor && !wouldBeStuck && remCD < 0.1)
 						{
-							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED]\n", HUDText, s_ReloadName[client]);
+							Format(prefix, sizeof(prefix), "[BLOCKED]");
 						}
 						else if (wouldBeStuck && !tooPoor)
 						{
-							Format(HUDText, sizeof(HUDText), "%s %s [BLOCKED; YOU WOULD GET STUCK]\n", HUDText, s_ReloadName[client]);
+							Format(prefix, sizeof(prefix), "[BLOCKED; YOU WOULD GET STUCK]");
 						}
 						else
 						{
@@ -500,27 +514,25 @@ public Action CFA_HUDTimer(Handle timer)
 							{
 								if (b_ResourceIsUlt[client])
 								{
-									Format(HUDText, sizeof(HUDText), "%s[%.2f[PERCENT] Ult.]", HUDText, (f_ReloadCost[client]/f_UltChargeRequired[client]) * 100.0);
+									Format(suffix, sizeof(suffix), "%s [%.2f[PERCENT] Ult.]", suffix, (f_ReloadCost[client]/f_UltChargeRequired[client]) * 100.0);
 								}
 								else
 								{
 									if (b_ResourceIsPercentage[client] && f_ResourceMax[client] > 0.0)
-										Format(HUDText, sizeof(HUDText), "%s[%i[PERCENT] %s]", HUDText, RoundToFloor((f_ReloadCost[client]/f_ResourceMax[client]) * 100.0), f_ReloadCost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+										Format(suffix, sizeof(suffix), "%s [%i[PERCENT] %s]", suffix, RoundToFloor((f_ReloadCost[client]/f_ResourceMax[client]) * 100.0), f_ReloadCost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
 									else
-										Format(HUDText, sizeof(HUDText), "%s[%i %s]", HUDText, RoundToFloor(f_ReloadCost[client]), f_ReloadCost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
+										Format(suffix, sizeof(suffix), "%s [%i %s]", suffix, RoundToFloor(f_ReloadCost[client]), f_ReloadCost[client] != 1.0 ? s_ResourceName_Plural[client] : s_ResourceName[client]);
 								}
 							}
 							
 							remCD = CF_GetAbilityCooldown(client, CF_AbilityType_Reload);
 							if (remCD > 0.0)
-							{
-								Format(HUDText, sizeof(HUDText), "%s %s [%.1f]\n", HUDText, s_ReloadName[client], remCD);
-							}
-							else
-							{
-								Format(HUDText, sizeof(HUDText), "%s %s %s\n", HUDText, s_ReloadName[client], b_ReloadIsHeld[client] ? (b_HoldingReload[client] ? "[ACTIVE]" : "[Hold R]") : "[R]");
-							}
+								Format(suffix, sizeof(suffix), "%s (%.1f)", suffix, remCD);
+
+							Format(prefix, sizeof(prefix), "%s", b_ReloadIsHeld[client] ? (b_HoldingReload[client] ? "[ACTIVE]" : "[Hold Reload]") : "[Reload]");
 						}
+
+						Format(HUDText, sizeof(HUDText), "%s %s %s %s\n", HUDText, prefix, s_ReloadName[client], suffix);
 					}
 					
 					int r = i_HUDR[client];
@@ -536,6 +548,8 @@ public Action CFA_HUDTimer(Handle timer)
 					Call_PushCellRef(g);
 					Call_PushCellRef(b);
 					Call_PushCellRef(a);
+
+					Call_Finish();
 
 					ReplaceString(HUDText, sizeof(HUDText), "[PERCENT]", "%%");
 					SetHudTextParams(-1.0, 0.8, 0.1, r, g, b, a);
@@ -599,6 +613,121 @@ public bool CFA_InitializeUltimate(int client, ConfigMap map)
 	return b_CharacterHasUlt[client];
 }
 
+Handle g_M2StockTimer[MAXPLAYERS + 1] = { null, ... };
+Handle g_M3StockTimer[MAXPLAYERS + 1] = { null, ... };
+Handle g_ReloadStockTimer[MAXPLAYERS + 1] = { null, ... };
+
+void DeleteStockTimers(int client)
+{
+	delete g_M2StockTimer[client];
+	delete g_M3StockTimer[client];
+	delete g_ReloadStockTimer[client];
+}
+
+void CreateStockTimerNextFrame(int client, CF_AbilityType type, float duration)
+{
+	DataPack pack = new DataPack();
+	RequestFrame(CreateIt, pack);
+	WritePackCell(pack, GetClientUserId(client));
+	WritePackCell(pack, type);
+	WritePackFloat(pack, duration);
+}
+
+void CreateIt(DataPack pack)
+{
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	CF_AbilityType type = ReadPackCell(pack);
+	float duration = ReadPackFloat(pack);
+	if (CF_IsPlayerCharacter(client))
+		CreateStockTimer(client, type, duration);
+}
+
+void CreateStockTimer(int client, CF_AbilityType type, float duration)
+{
+	switch(type)
+	{
+		case CF_AbilityType_M2:
+		{
+			if (g_M2StockTimer[client] == null)
+			{
+				g_M2StockTimer[client] = CreateTimer(duration, Stock_GiveM2, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+				f_M2CDEndTime[client] = GetGameTime() + duration;
+			}
+		}
+		case CF_AbilityType_M3:
+		{
+			if (g_M3StockTimer[client] == null)
+			{
+				g_M3StockTimer[client] = CreateTimer(duration, Stock_GiveM3, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+				f_M3CDEndTime[client] = GetGameTime() + duration;
+			}
+		}
+		case CF_AbilityType_Reload:
+		{
+			if (g_M2StockTimer[client] == null)
+			{
+				g_ReloadStockTimer[client] = CreateTimer(duration, Stock_GiveReload, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+				f_ReloadCDEndTime[client] = GetGameTime() + duration;
+			}
+		}
+	}
+}
+
+public Action Stock_GiveM2(Handle stocky, int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!CF_IsPlayerCharacter(client))
+		return Plugin_Continue;
+
+	if (i_M2Stocks[client] < i_M2MaxStocks[client])
+		i_M2Stocks[client]++;
+
+	if (i_M2Stocks[client] < i_M2MaxStocks[client])
+	{
+		g_M2StockTimer[client] = null;
+		CreateStockTimerNextFrame(client, CF_AbilityType_M2, f_M2CD[client]);
+	}
+
+	return Plugin_Continue;
+}
+
+public Action Stock_GiveM3(Handle stocky, int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!CF_IsPlayerCharacter(client))
+		return Plugin_Continue;
+
+	if (i_M3Stocks[client] < i_M3MaxStocks[client])
+		i_M3Stocks[client]++;
+
+	if (i_M3Stocks[client] < i_M3MaxStocks[client])
+	{
+		g_M3StockTimer[client] = null;
+		CreateStockTimerNextFrame(client, CF_AbilityType_M3, f_M3CD[client]);
+	}
+
+	return Plugin_Continue;
+}
+
+public Action Stock_GiveReload(Handle stocky, int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!CF_IsPlayerCharacter(client))
+		return Plugin_Continue;
+
+	if (i_ReloadStocks[client] < i_ReloadMaxStocks[client])
+		i_ReloadStocks[client]++;
+
+	if (i_ReloadStocks[client] < i_ReloadMaxStocks[client])
+	{
+		g_ReloadStockTimer[client] = null;
+		CreateStockTimerNextFrame(client, CF_AbilityType_Reload, f_ReloadCD[client]);
+	}
+
+	return Plugin_Continue;
+}
+
 public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 {
 	CFA_InitializeResources(client, map, NewChar);
@@ -611,7 +740,8 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 	{
 		subsection.Get("name", s_M2Name[client], 255);
 		f_M2CD[client] = GetFloatFromConfigMap(subsection, "cooldown", 0.0);
-		CF_ApplyAbilityCooldown(client, GetFloatFromConfigMap(subsection, "starting_cd", 0.0), CF_AbilityType_M2, true, false);
+		float startingCD = GetFloatFromConfigMap(subsection, "starting_cd", 0.0)
+		CF_ApplyAbilityCooldown(client, startingCD, CF_AbilityType_M2, true, false);
 		b_M2IsHeld[client] = GetBoolFromConfigMap(subsection, "held", false);
 		if (b_UsingResources[client])
 		{
@@ -623,6 +753,16 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		b_HeldM2BlocksOthers[client] = GetBoolFromConfigMap(subsection, "held_block", false) && b_M2IsHeld[client];
 		i_M2WeaponSlot[client] = GetIntFromConfigMap(subsection, "weapon_slot", -1);
 		i_M2Ammo[client] = GetIntFromConfigMap(subsection, "ammo", 0);
+
+		if (NewChar)
+		{
+			i_M2Stocks[client] = GetIntFromConfigMap(subsection, "starting_stocks", 0);
+			i_M2MaxStocks[client] = GetIntFromConfigMap(subsection, "max_stocks", 0);
+			if (i_M2MaxStocks[client] > 0 && i_M2Stocks[client] < i_M2MaxStocks[client])
+			{
+				CreateStockTimer(client, CF_AbilityType_M2, startingCD);
+			}
+		}
 		
 		CFC_StoreAbilities(client, CF_AbilityType_M2, abilities);
 		
@@ -639,7 +779,8 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 	{
 		subsection.Get("name", s_M3Name[client], 255);
 		f_M3CD[client] = GetFloatFromConfigMap(subsection, "cooldown", 0.0);
-		CF_ApplyAbilityCooldown(client, GetFloatFromConfigMap(subsection, "starting_cd", 0.0), CF_AbilityType_M3, true, false);
+		float startingCD = GetFloatFromConfigMap(subsection, "starting_cd", 0.0)
+		CF_ApplyAbilityCooldown(client, startingCD, CF_AbilityType_M3, true, false);
 		b_M3IsHeld[client] = GetBoolFromConfigMap(subsection, "held", false);
 		if (b_UsingResources[client])
 		{
@@ -653,6 +794,16 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		i_M3WeaponSlot[client] = GetIntFromConfigMap(subsection, "weapon_slot", -1);
 		i_M3Ammo[client] = GetIntFromConfigMap(subsection, "ammo", 0);
 		
+		if (NewChar)
+		{
+			i_M3Stocks[client] = GetIntFromConfigMap(subsection, "starting_stocks", 0);
+			i_M3MaxStocks[client] = GetIntFromConfigMap(subsection, "max_stocks", 0);
+			if (i_M3MaxStocks[client] > 0 && i_M3Stocks[client] < i_M3MaxStocks[client])
+			{
+				CreateStockTimer(client, CF_AbilityType_M3, startingCD);
+			}
+		}
+
 		CFC_StoreAbilities(client, CF_AbilityType_M3, abilities);
 		
 		b_HasM3[client] = true;
@@ -668,7 +819,8 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 	{
 		subsection.Get("name", s_ReloadName[client], 255);
 		f_ReloadCD[client] = GetFloatFromConfigMap(subsection, "cooldown", 0.0);
-		CF_ApplyAbilityCooldown(client, GetFloatFromConfigMap(subsection, "starting_cd", 0.0), CF_AbilityType_Reload, true, false);
+		float startingCD = GetFloatFromConfigMap(subsection, "starting_cd", 0.0)
+		CF_ApplyAbilityCooldown(client, startingCD, CF_AbilityType_Reload, true, false);
 		b_ReloadIsHeld[client] = GetBoolFromConfigMap(subsection, "held", false);
 		if (b_UsingResources[client])
 		{
@@ -682,6 +834,16 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		i_ReloadWeaponSlot[client] = GetIntFromConfigMap(subsection, "weapon_slot", -1);
 		i_ReloadAmmo[client] = GetIntFromConfigMap(subsection, "ammo", 0);
 		
+		if (NewChar)
+		{
+			i_ReloadStocks[client] = GetIntFromConfigMap(subsection, "starting_stocks", 0);
+			i_ReloadMaxStocks[client] = GetIntFromConfigMap(subsection, "max_stocks", 0);
+			if (i_ReloadMaxStocks[client] > 0 && i_ReloadStocks[client] < i_ReloadMaxStocks[client])
+			{
+				CreateStockTimer(client, CF_AbilityType_Reload, startingCD);
+			}
+		}
+
 		CFC_StoreAbilities(client, CF_AbilityType_Reload, abilities);
 		
 		b_HasReload[client] = true;
@@ -923,6 +1085,21 @@ public void CF_AttemptHeldAbility(int client, CF_AbilityType type, int button)
 	}
 }
 
+bool AbilityUsesStocks(int client, CF_AbilityType slot)
+{
+	switch (slot)
+	{
+		case CF_AbilityType_M2:
+			return i_M2MaxStocks[client] > 0;
+		case CF_AbilityType_M3:
+			return i_M3MaxStocks[client] > 0;
+		case CF_AbilityType_Reload:
+			return i_ReloadMaxStocks[client] > 0;
+	}
+
+	return false;
+}
+
 public Action CFA_HeldM2PreThink(int client)
 {
 	b_HoldingM2[client] = (GetClientButtons(client) & IN_ATTACK2 != 0) && !b_ForceEndHeldM2[client] && CF_CanPlayerUseAbilitySlot(client, CF_AbilityType_M2);
@@ -948,7 +1125,9 @@ void EndHeldM2(int client, bool TriggerCallback, bool resupply = false)
 	}
 	else
 	{
-		CF_ApplyAbilityCooldown(client, f_M2CD[client], CF_AbilityType_M2, true, false);
+		if (!AbilityUsesStocks(client, CF_AbilityType_M2))
+			CF_ApplyAbilityCooldown(client, f_M2CD[client], CF_AbilityType_M2, true, false);
+			
 		if (b_UsingResources[client] && !resupply)
 		{
 			if (b_ResourceIsUlt[client])
@@ -962,13 +1141,16 @@ void EndHeldM2(int client, bool TriggerCallback, bool resupply = false)
 		}
 			
 		if (!resupply)
+		{
 			CF_PlayRandomSound(client, "", "sound_heldend_m2");
+			SubtractStock(client, CF_AbilityType_M2);
+		}
 			
 		b_ForceEndHeldM2[client] = false;
 		b_HoldingM2[client] = false;
 		if (b_HeldM2BlocksOthers[client])
 			i_HeldBlocked[client] = CF_AbilityType_None;
-			
+
 		Call_StartForward(g_OnHeldEnd);
 			
 		Call_PushCell(client);
@@ -976,6 +1158,40 @@ void EndHeldM2(int client, bool TriggerCallback, bool resupply = false)
 		Call_PushCell(resupply);
 			
 		Call_Finish();
+	}
+}
+
+void SubtractStock(int client, CF_AbilityType type)
+{
+	if (!AbilityUsesStocks(client, type))
+		return;
+
+	switch (type)
+	{
+		case CF_AbilityType_M2:
+		{
+			if (i_M2Stocks[client] > 0)
+			{
+				i_M2Stocks[client]--;
+				CreateStockTimer(client, CF_AbilityType_M2, f_M2CD[client]);
+			}
+		}
+		case CF_AbilityType_M3:
+		{
+			if (i_M3Stocks[client] > 0)
+			{
+				i_M3Stocks[client]--;
+				CreateStockTimer(client, CF_AbilityType_M3, f_M3CD[client]);
+			}
+		}
+		case CF_AbilityType_Reload:
+		{
+			if (i_ReloadStocks[client] > 0)
+			{
+				i_ReloadStocks[client]--;
+				CreateStockTimer(client, CF_AbilityType_Reload, f_ReloadCD[client]);
+			}
+		}
 	}
 }
 
@@ -1004,7 +1220,9 @@ void EndHeldM3(int client, bool TriggerCallback, bool resupply = false)
 	}
 	else
 	{
-		CF_ApplyAbilityCooldown(client, f_M3CD[client], CF_AbilityType_M3, true, false);
+		if (!AbilityUsesStocks(client, CF_AbilityType_M3))
+			CF_ApplyAbilityCooldown(client, f_M3CD[client], CF_AbilityType_M3, true, false);
+
 		if (b_UsingResources[client] && !resupply)
 		{
 			if (b_ResourceIsUlt[client])
@@ -1018,8 +1236,11 @@ void EndHeldM3(int client, bool TriggerCallback, bool resupply = false)
 		}
 		
 		if (!resupply)
+		{
 			CF_PlayRandomSound(client, "", "sound_heldend_m3");
-			
+			SubtractStock(client, CF_AbilityType_M2);
+		}
+
 		b_ForceEndHeldM3[client] = false;
 		b_HoldingM3[client] = false;
 		if (b_HeldM3BlocksOthers[client])
@@ -1060,7 +1281,9 @@ void EndHeldReload(int client, bool TriggerCallback, bool resupply = false)
 	}
 	else
 	{
-		CF_ApplyAbilityCooldown(client, f_ReloadCD[client], CF_AbilityType_Reload, true, false);
+		if (!AbilityUsesStocks(client, CF_AbilityType_Reload))
+			CF_ApplyAbilityCooldown(client, f_ReloadCD[client], CF_AbilityType_Reload, true, false);
+
 		if (b_UsingResources[client] && !resupply)
 		{
 			if (b_ResourceIsUlt[client])
@@ -1074,7 +1297,10 @@ void EndHeldReload(int client, bool TriggerCallback, bool resupply = false)
 		}
 			
 		if (!resupply)
+		{
+			SubtractStock(client, CF_AbilityType_Reload);
 			CF_PlayRandomSound(client, "", "sound_heldend_reload");
+		}
 			
 		b_ForceEndHeldReload[client] = false;
 		b_HoldingReload[client] = false;
@@ -1238,7 +1464,8 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 			CF_GiveSpecialResource(client, -cost);
 		}
 		
-		CF_ApplyAbilityCooldown(client, cooldown, type, true, false);
+		if (!AbilityUsesStocks(client, type))
+			CF_ApplyAbilityCooldown(client, cooldown, type, true, false);
 	}
 	else
 	{
@@ -1250,9 +1477,11 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 {
 	BlockedByResize = false;
 	BlockedByTooFewResources = false;
+
+	bool UsingStocks = AbilityUsesStocks(client, type);
 	remCD = CF_GetAbilityCooldown(client, type);
 	
-	if (remCD > 0.0)
+	if (remCD > 0.0 && !UsingStocks)
 		return false;
 	
 	if (i_HeldBlocked[client] != CF_AbilityType_None && i_HeldBlocked[client] != type)
@@ -1260,7 +1489,7 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 		
 	if (TF2_IsPlayerStunned(client))
 		return false;
-	
+
 	switch(type)
 	{
 		case CF_AbilityType_Ult:
@@ -1270,7 +1499,7 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 				
 			if (b_UltIsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
 				return false;
-				
+
 			int acWep = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
 			
 			if (i_UltWeaponSlot[client] > -1 && (!IsValidEntity(acWep) || GetPlayerWeaponSlot(client, i_UltWeaponSlot[client]) != acWep))
@@ -1290,6 +1519,7 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 				BlockedByResize = true;
 				return false;
 			}
+
 		}
 		case CF_AbilityType_M2:
 		{
@@ -1297,6 +1527,9 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 				return false;
 				
 			if (b_M2IsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
+				return false;
+
+			if (UsingStocks && i_M2Stocks[client] < 1)
 				return false;
 				
 			int acWep = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
@@ -1326,6 +1559,9 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 				
 			if (b_M3IsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
 				return false;
+
+			if (UsingStocks && i_M3Stocks[client] < 1)
+				return false;
 				
 			int acWep = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
 			
@@ -1353,6 +1589,9 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 				return false;
 				
 			if (b_ReloadIsGrounded[client] && GetEntityFlags(client) & FL_ONGROUND == 0)
+				return false;
+
+			if (UsingStocks && i_ReloadStocks[client] < 1)
 				return false;
 				
 			int acWep = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
@@ -1719,6 +1958,9 @@ public Native_CF_ApplyAbilityCooldown(Handle plugin, int numParams)
 				f_ReloadCDEndTime[client] = (override || GetGameTime() >= f_ReloadCDEndTime[client]) ? gameTime + cd : f_ReloadCDEndTime[client] + cd;
 			}
 		}
+
+		if (AbilityUsesStocks(client, type))
+			CreateStockTimer(client, type, override ? cd : (CF_GetAbilityCooldown(client, type) + cd));
 	}
 }
 
@@ -1754,6 +1996,9 @@ public void ApplyCDOnDelay(DataPack pack)
 			f_ReloadCDEndTime[client] = (override || GetGameTime() >= f_ReloadCDEndTime[client]) ? gameTime + cd : f_ReloadCDEndTime[client] + cd;
 		}
 	}
+
+	if (AbilityUsesStocks(client, type))
+		CreateStockTimer(client, type, override ? cd : (CF_GetAbilityCooldown(client, type) + cd));
 }
 
 public any Native_CF_GetAbilityCooldown(Handle plugin, int numParams)
@@ -1762,7 +2007,7 @@ public any Native_CF_GetAbilityCooldown(Handle plugin, int numParams)
 	
 	if (!CF_IsPlayerCharacter(client))
 		return 0.0;
-		
+
 	CF_AbilityType type = GetNativeCell(2);
 	
 	float gameTime = GetGameTime();
@@ -1826,14 +2071,23 @@ public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
 		}
 		case 2:
 		{
+			if (!b_M2IsHeld[client])
+				SubtractStock(client, CF_AbilityType_M2);
+
 			DoAllAbilities(client, g_Characters[client].Abilities_M2);
 		}
 		case 3:
 		{
+			if (!b_M3IsHeld[client])
+				SubtractStock(client, CF_AbilityType_M3);
+
 			DoAllAbilities(client, g_Characters[client].Abilities_M3);
 		}
 		case 4:
 		{
+			if (!b_ReloadIsHeld[client])
+				SubtractStock(client, CF_AbilityType_Reload);
+
 			DoAllAbilities(client, g_Characters[client].Abilities_Reload);
 		}
 	}

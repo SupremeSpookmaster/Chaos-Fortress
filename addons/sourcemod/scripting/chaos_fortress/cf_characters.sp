@@ -1872,7 +1872,9 @@ void CFC_WeaponEquipped(int client, int weapon)
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	b_CharacterApplied[client] = false;
  	g_Characters[client].Destroy();
- 	
+	
+ 	DeleteStockTimers(client);
+
  	CFC_DeleteParticles(client, true);
  	CFA_RemoveAnimator(client);
  }
