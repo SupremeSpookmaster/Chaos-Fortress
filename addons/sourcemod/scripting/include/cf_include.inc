@@ -1605,3 +1605,24 @@ native CF_SimulateSpellbookCast(int client, char[] attributes = "", CF_SpellInde
  * @note	Weapons that are physically part of the user's hands, such as the gunslinger, are not hidden by hideWeapon.
  */
 native CF_ForceViewmodelAnimation(int client, char[] sequence, bool hideWeapon = true, bool blockAttack = true, bool blockWeaponSwitch = true);
+
+/**
+ * Sets the number of uses an ability currently has. Only works if the ability's max stocks > 0.
+ * 
+ * @param client		The client.
+ * @param type			The ability slot to set stocks for.
+ * @param stocks		The number of uses to set.
+ * @param ignoreMax		If true: ignore the maximum number of stocks.
+ */
+native void CF_SetAbilityStocks(int client, CF_AbilityType type, int stocks, bool ignoreMax = true);
+
+/**
+ * Sets the maximum number of uses an ability can hold. If the ability was previously a normal ability and not a stockpile ability, 
+ * this will convert it to a stockpile ability. Similarly, if the ability is a stockpile ability and you set maxStocks to 0, it will be converted
+ * to a normal ability.
+ * 
+ * @param client		The client.
+ * @param type			The ability slot to set max stocks for.
+ * @param maxStocks		Max stocks held.
+ */
+native void CF_SetAbilityMaxStocks(int client, CF_AbilityType type, int maxStocks);

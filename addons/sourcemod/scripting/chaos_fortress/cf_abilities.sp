@@ -177,6 +177,8 @@ public void CFA_MakeNatives()
 	CreateNative("CF_GetClosestTarget", Native_CF_GetClosestTarget);
 	CreateNative("CF_SimulateSpellbookCast", Native_CF_SimulateSpellbookCast);
 	CreateNative("CF_ForceViewmodelAnimation", Native_CF_ForceViewmodelAnimation);
+	CreateNative("CF_SetAbilityStocks", Native_CF_SetAbilityStocks);
+	CreateNative("CF_SetAbilityMaxStocks", Native_CF_SetAbilityMaxStocks);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -4126,3 +4128,77 @@ public Action CFA_WeaponCanSwitch(int client, int weapon)
     	
     return Plugin_Continue;
 } 
+
+public Native_CF_SetAbilityStocks(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	CF_AbilityType type = GetNativeCell(2);
+	int numStocks = GetNativeCell(3);
+	bool ignoreMax = GetNativeCell(4);
+
+	if (!CF_IsPlayerCharacter(client))
+		return;
+
+	if (!AbilityUsesStocks(client, type))
+		return;
+
+	switch(type)
+	{
+		case CF_AbilityType_M2:
+		{
+			i_M2Stocks[client] = numStocks;
+			if (i_M2Stocks[client] > i_M2MaxStocks[client] && !ignoreMax)
+				i_M2Stocks[client] = i_M2MaxStocks[client];
+
+			if (i_M2Stocks[client] < i_M2MaxStocks[client])
+				CreateStockTimer(client, type, f_M2CD[client]);
+		}
+		case CF_AbilityType_M3:
+		{
+			i_M3Stocks[client] = numStocks;
+			if (i_M3Stocks[client] > i_M3MaxStocks[client] && !ignoreMax)
+				i_M3Stocks[client] = i_M3MaxStocks[client];
+
+			if (i_M3Stocks[client] < i_M3MaxStocks[client])
+				CreateStockTimer(client, type, f_M3CD[client]);
+		}
+		case CF_AbilityType_Reload:
+		{
+			i_ReloadStocks[client] = numStocks;
+			if (i_ReloadStocks[client] > i_ReloadMaxStocks[client] && !ignoreMax)
+				i_ReloadStocks[client] = i_ReloadMaxStocks[client];
+
+			if (i_ReloadStocks[client] < i_ReloadMaxStocks[client])
+				CreateStockTimer(client, type, f_ReloadCD[client]);
+		}
+	}
+}
+
+public Native_CF_SetAbilityMaxStocks(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	CF_AbilityType type = GetNativeCell(2);
+	int numStocks = GetNativeCell(3);
+
+	if (!CF_IsPlayerCharacter(client))
+		return;
+
+	switch(type)
+	{
+		case CF_AbilityType_M2:
+		{
+			i_M2MaxStocks[client] = numStocks;
+			CreateStockTimer(client, type, f_M2CD[client]);
+		}
+		case CF_AbilityType_M3:
+		{
+			i_M3MaxStocks[client] = numStocks;
+			CreateStockTimer(client, type, f_M3CD[client]);
+		}
+		case CF_AbilityType_Reload:
+		{
+			i_ReloadMaxStocks[client] = numStocks;
+			CreateStockTimer(client, type, f_ReloadCD[client]);
+		}
+	}
+}

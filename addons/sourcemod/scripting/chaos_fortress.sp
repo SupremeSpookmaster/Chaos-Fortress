@@ -32,7 +32,6 @@
 //				- Finds the ally closest to the user's cursor, within 100 HU. If this ally is valid, the Support Drone will immediately drop what it is doing and prioritize that ally.
 //			- Write the code for Automation Annihilation.
 //		- ALL:
-//			- Add extra natives for the ability stock system (setstocks, getstocks, etc).
 //			- Expand the "OnTakeDamageAlive" natives to include NPCs.
 //			- Add parameters for weapons which allow custom weapon models. These will need to cooperate with generic_abilities and CF_ForceViewmodelAnimation. This removes a dependency and allows easier customization.
 //			- Fix the weird super-long delay with ForceViewmodelAnimation on SB's Soul Discard. This is most likely an issue with SB's viewmodel anims themselves.
