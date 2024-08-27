@@ -29,6 +29,12 @@
 #define MODEL_SUPPORT_GIB_3	"models/bots/bot_worker/bot_worker_a_head_gib_l.mdl"
 #define MODEL_SUPPORT_GIB_4	"models/bots/bot_worker/bot_worker_a_head_gib_r.mdl"
 #define MODEL_SUPPORT_GIB_5	"models/bots/bot_worker/bot_worker_arm_gib.mdl"
+#define MODEL_SUPPORT_BOX	"models/props_junk/wood_crate001a.mdl"
+#define MODEL_SUPPORT_BOX_GIB_1	"models/props_junk/wood_crate001a_chunk04.mdl"
+#define MODEL_SUPPORT_BOX_GIB_2	"models/props_junk/wood_crate001a_chunk02.mdl"
+#define MODEL_SUPPORT_BOX_GIB_3	"models/props_junk/wood_crate001a_chunk03.mdl"
+#define MODEL_SUPPORT_BOX_GIB_4	"models/props_junk/wood_crate001a_chunk07.mdl"
+#define MODEL_SUPPORT_BOX_GIB_5	"models/props_junk/wood_crate001a_chunk01.mdl"
 
 #define SOUND_TOSS_BUILD_1	"weapons/neon_sign_hit_01.wav"
 #define SOUND_TOSS_BUILD_2	"weapons/neon_sign_hit_02.wav"
@@ -61,6 +67,7 @@
 #define SOUND_SUPPORT_AMBIENT_LOOP	")weapons/dispenser_idle.wav"
 #define SOUND_SUPPORT_BUILD_BEGIN	")weapons/sentry_wire_connect.wav"
 #define SOUND_SUPPORT_BUILD_FINISHED	")weapons/sentry_finish.wav"
+#define SOUND_SUPPORT_BOX_BREAK			")physics/wood/wood_crate_break4.wav"
 
 #define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
 #define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
@@ -88,6 +95,8 @@
 #define PARTICLE_LASER_BLUE		"bullet_tracer_raygun_blue_bits"
 #define PARTICLE_SUPPORT_HEAL_RED	"dispenser_heal_red"
 #define PARTICLE_SUPPORT_HEAL_BLUE	"dispenser_heal_blue"
+#define PARTICLE_SUPPORT_BOX_TRAIL_RED 	"healshot_trail_red"
+#define PARTICLE_SUPPORT_BOX_TRAIL_BLUE	"healshot_trail_blue"
 
 #define MODEL_TARGETING		"models/fake_particles/plane.mdl"
 
@@ -115,6 +124,12 @@ public void OnMapStart()
 	PrecacheModel(MODEL_SUPPORT_GIB_3);
 	PrecacheModel(MODEL_SUPPORT_GIB_4);
 	PrecacheModel(MODEL_SUPPORT_GIB_5);
+	PrecacheModel(MODEL_SUPPORT_BOX);
+	PrecacheModel(MODEL_SUPPORT_BOX_GIB_1);
+	PrecacheModel(MODEL_SUPPORT_BOX_GIB_2);
+	PrecacheModel(MODEL_SUPPORT_BOX_GIB_3);
+	PrecacheModel(MODEL_SUPPORT_BOX_GIB_4);
+	PrecacheModel(MODEL_SUPPORT_BOX_GIB_5);
 
 	PrecacheSound(SOUND_TOSS_BUILD_1);
 	PrecacheSound(SOUND_TOSS_BUILD_2);
@@ -147,6 +162,7 @@ public void OnMapStart()
 	PrecacheSound(SOUND_SUPPORT_AMBIENT_LOOP);
 	PrecacheSound(SOUND_SUPPORT_BUILD_BEGIN);
 	PrecacheSound(SOUND_SUPPORT_BUILD_FINISHED);
+	PrecacheSound(SOUND_SUPPORT_BOX_BREAK);
 
 	/*LASER_MODEL = PrecacheModel("materials/sprites/laser.vmt", false);
 	GLOW_MODEL = PrecacheModel("sprites/glow02.vmt", true);*/
@@ -167,6 +183,15 @@ public const char Model_Gears[][255] =
 	MODEL_TOSS_GIB_3,
 	MODEL_TOSS_GIB_4,
 	MODEL_TOSS_GIB_5
+};
+
+public const char Model_BoxGibs[][255] =
+{
+	MODEL_SUPPORT_BOX_GIB_1,
+	MODEL_SUPPORT_BOX_GIB_2,
+	MODEL_SUPPORT_BOX_GIB_3,
+	MODEL_SUPPORT_BOX_GIB_4,
+	MODEL_SUPPORT_BOX_GIB_5
 };
 
 public const char Drone_DamageSFX[][255] =
@@ -1084,7 +1109,12 @@ public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
 	{
 		SetEntData(entity, FindSendPropInfo("CTFProjectile_Rocket", "m_nSkin"), view_as<int>(newTeam) - 2, 1, true);
 		Toss_RemoveParticle(entity);
-		Toss_ToolboxParticle[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, ""));
+		
+		if (!Toss_IsSupportDrone[entity])
+			Toss_ToolboxParticle[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, ""));
+		else
+			Toss_ToolboxParticle[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_SUPPORT_BOX_TRAIL_RED : PARTICLE_SUPPORT_BOX_TRAIL_BLUE, ""));
+
 		Toss_ToolboxOwner[entity] = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
 	}
 }
@@ -1105,7 +1135,7 @@ public void Toss_Activate(int client, char abilityName[255])
 {
 	Toss_Max[client] = CF_GetArgI(client, GADGETEER, abilityName, "sentry_max");
 	
-	int toolbox = MakeToolbox(client, abilityName);
+	int toolbox = MakeToolbox(client, abilityName, false);
 	if (IsValidEntity(toolbox))
 	{
 		Toss_SentryStats[toolbox].CreateFromArgs(client, abilityName, toolbox);
@@ -1261,15 +1291,7 @@ public void Toss_CheckForCollision(int ref)
 	GetEntPropVector(prop, Prop_Send, "m_vecMaxs", maxs);
 	GetEntPropVector(prop, Prop_Data, "m_vecVelocity", vel);
 	
-	bool CanHit = false;
-	for (int i = 0; i < 3 && !CanHit; i++)
-	{
-		if (vel[i] < 0.0)
-			vel[i] *= -1.0;
-			
-		if (vel[i] >= Toss_MinVel[prop])
-			CanHit = true;
-	}
+	bool CanHit = GetVectorLength(vel) >= Toss_MinVel[prop];
 		
 	//We go a tiny bit bigger so that we aren't interfering with normal collisions:
 	ScaleVector(mins, 1.1);
@@ -1452,9 +1474,40 @@ public Action Drone_Damaged(int prop, int &attacker, int &inflictor, float &dama
 //1: Hitscan, 2: Projectile
 public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType)
 {
+	float pos[3];
+	GetEntPropVector(toolbox, Prop_Send, "m_vecOrigin", pos);
+
 	if (Toss_IsSupportDrone[toolbox])
 	{
+		EmitSoundToAll(SOUND_SUPPORT_BOX_BREAK, toolbox, _, _, _, _, GetRandomInt(90, 110));
+
+		for (int i = 0; i < sizeof(Model_BoxGibs); i++)
+		{
+			float randAng[3], randVel[3];
+			for (int vec = 0; vec < 3; vec++)
+			{
+				randAng[vec] = GetRandomFloat(0.0, 360.0);
+					
+				if (vec < 2)
+					randVel[vec] = GetRandomFloat(0.0, 360.0);
+				else
+					randVel[vec] = GetRandomFloat(200.0, 800.0);
+			}
+				
+			int gib = SpawnPhysicsProp(Model_BoxGibs[i], 0, "0", 99999.0, true, 1.0, pos, randAng, randVel, 5.0);
+			
+			if (IsValidEntity(gib))
+			{
+				SetEntityCollisionGroup(gib, 1);
+				SetEntityRenderMode(gib, RENDER_TRANSALPHA);
+				RequestFrame(Toss_FadeOutGib, EntIndexToEntRef(gib));
+				SetEntityCollisionGroup(gib, 1);
+				SetEntProp(gib, Prop_Send, "m_iTeamNum", 0);
+			}
+		}
+
 		Toss_SpawnSupportDrone(toolbox, supercharged, superchargeType);
+
 		return;
 	}
 
@@ -1466,9 +1519,6 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 		RemoveEntity(toolbox);
 		return;
 	}
-
-	float pos[3];
-	GetEntPropVector(toolbox, Prop_Send, "m_vecOrigin", pos);
 	
 	int chosen = GetRandomInt(0, sizeof(Toss_BuildSFX) - 1);
 	EmitSoundToAll(Toss_BuildSFX[chosen], toolbox, _, _, _, _, GetRandomInt(90, 110), -1);
@@ -1835,7 +1885,7 @@ public Action CF_OnPhysPropHitByProjectile(int prop, int entity, TFTeam propTeam
 	return Plugin_Continue;
 }
 
-public int MakeToolbox(int owner, char abilityName[255])
+public int MakeToolbox(int owner, char abilityName[255], bool support)
 {
 	float velocity = CF_GetArgF(owner, GADGETEER, abilityName, "velocity");
 	
@@ -1874,8 +1924,15 @@ public int MakeToolbox(int owner, char abilityName[255])
 		Toss_FacingAng[toolbox][2] = 0.0;
 		
 		//SET MODEL:
-		SetEntityModel(toolbox, MODEL_TOSS);
-		DispatchKeyValue(toolbox, "skin", team == TFTeam_Red ? "0" : "1");
+		if (!support)
+		{
+			SetEntityModel(toolbox, MODEL_TOSS);
+			DispatchKeyValue(toolbox, "skin", team == TFTeam_Red ? "0" : "1");
+		}
+		else
+		{
+			SetEntityModel(toolbox, MODEL_SUPPORT_BOX);
+		}
 		
 		//SET SCALE:
 		char scale[255];
@@ -1912,7 +1969,10 @@ public int MakeToolbox(int owner, char abilityName[255])
 		CF_ForceViewmodelAnimation(owner, "spell_fire");
 		b_ToolboxVM[owner] = true;
 		
-		Toss_ToolboxParticle[toolbox] = EntIndexToEntRef(AttachParticleToEntity(toolbox, team == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, "", autoDet));
+		if (!support)
+			Toss_ToolboxParticle[toolbox] = EntIndexToEntRef(AttachParticleToEntity(toolbox, team == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, "", autoDet));
+		else
+			Toss_ToolboxParticle[toolbox] = EntIndexToEntRef(AttachParticleToEntity(toolbox, team == TFTeam_Red ? PARTICLE_SUPPORT_BOX_TRAIL_RED : PARTICLE_SUPPORT_BOX_TRAIL_BLUE, "", autoDet));
 		
 		EmitSoundToAll(SOUND_TOOLBOX_FIZZING, toolbox);
 
@@ -1988,7 +2048,7 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 		EmitSoundToAll(SOUND_SUPPORT_BUILD_BEGIN, drone);
 
 		//TODO: Finalize panic sequence
-		//Also: Find a new model to use for the toolbox
+		//Also: Fix Drones instantly disappearing if they spawn too close to a wall/player
 	}
 
 	RemoveEntity(toolbox);
@@ -2150,12 +2210,11 @@ public void Support_DeleteBeam(int startPoint, int endPoint)
 
 public void Support_Activate(int client, char abilityName[255])
 {
-	int toolbox = MakeToolbox(client, abilityName);
+	int toolbox = MakeToolbox(client, abilityName, true);
 	if (IsValidEntity(toolbox))
 	{
 		Toss_IsSupportDrone[toolbox] = true;
 		Toss_SupportStats[toolbox].CreateFromArgs(client, abilityName);
-		//TODO: The toolbox needs a different model if it is used for a support drone, so players can differentiate
 	}
 }
 
@@ -2174,8 +2233,8 @@ public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inf
 
 		int chosen = GetRandomInt(0, sizeof(Drone_DamageSFX) - 1);
 		int pitch = GetRandomInt(90, 110);
-		EmitSoundToAll(Drone_DamageSFX[chosen], prop, _, _, _, _, pitch, -1);
-		EmitSoundToAll(Drone_DamageSFX[chosen], prop, _, _, _, _, pitch, -1);
+		EmitSoundToAll(Drone_DamageSFX[chosen], npc.Index, _, _, _, _, pitch, -1);
+		EmitSoundToAll(Drone_DamageSFX[chosen], npc.Index, _, _, _, _, pitch, -1);
 
 		return Plugin_Changed;
 	}
