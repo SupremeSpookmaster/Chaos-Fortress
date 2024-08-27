@@ -1,4 +1,3 @@
-#include <cf_include>
 #include <sdkhooks>
 #include <tf2_stocks>
 #include <cf_stocks>
@@ -57,6 +56,11 @@
 #define SOUND_DRONE_SCANNING			")weapons/sentry_scan.wav"
 #define SOUND_DRONES_TARGETING		"misc/doomsday_lift_warning.wav"
 #define SOUND_SUPPORT_DESTROYED		")weapons/dispenser_explode.wav"
+#define SOUND_SUPPORT_HEALING_START	"weapons/dispenser_heal.wav"
+#define SOUND_SUPPORT_HEALING_STOP	"weapons/medigun_heal_detach.wav"
+#define SOUND_SUPPORT_AMBIENT_LOOP	")weapons/dispenser_idle.wav"
+#define SOUND_SUPPORT_BUILD_BEGIN	")weapons/sentry_wire_connect.wav"
+#define SOUND_SUPPORT_BUILD_FINISHED	")weapons/sentry_finish.wav"
 
 #define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
 #define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
@@ -87,8 +91,8 @@
 
 #define MODEL_TARGETING		"models/fake_particles/plane.mdl"
 
-int LASER_MODEL = -1;
-int GLOW_MODEL = -1;
+//int LASER_MODEL = -1;
+//int GLOW_MODEL = -1;
 
 public void OnMapStart()
 {
@@ -138,9 +142,14 @@ public void OnMapStart()
 	PrecacheSound(SOUND_DRONE_SCANNING);
 	PrecacheSound(SOUND_DRONES_TARGETING);
 	PrecacheSound(SOUND_SUPPORT_DESTROYED);
+	PrecacheSound(SOUND_SUPPORT_HEALING_START);
+	PrecacheSound(SOUND_SUPPORT_HEALING_STOP);
+	PrecacheSound(SOUND_SUPPORT_AMBIENT_LOOP);
+	PrecacheSound(SOUND_SUPPORT_BUILD_BEGIN);
+	PrecacheSound(SOUND_SUPPORT_BUILD_FINISHED);
 
-	LASER_MODEL = PrecacheModel("materials/sprites/laser.vmt", false);
-	GLOW_MODEL = PrecacheModel("sprites/glow02.vmt", true);
+	/*LASER_MODEL = PrecacheModel("materials/sprites/laser.vmt", false);
+	GLOW_MODEL = PrecacheModel("sprites/glow02.vmt", true);*/
 }
 
 public const char Toss_BuildSFX[][] =
@@ -168,8 +177,6 @@ public const char Drone_DamageSFX[][255] =
 	SOUND_DRONE_DAMAGED_4
 };
 
-ArrayList Support_HealParticles[2049][MAXPLAYERS + 1];
-
 int Toss_Owner[2049] = { -1, ... };
 int Toss_Max[MAXPLAYERS + 1] = { 0, ... };
 int Toss_ToolboxOwner[2049] = { -1, ... };
@@ -190,6 +197,7 @@ float Toss_FacingAng[2049][3];
 bool Toss_IsToolbox[2049] = { false, ... };
 bool Toss_WasHittingSomething[2049] = { false, ... };
 bool Toss_IsSupportDrone[2049] = { false, ... };
+bool b_HealingClient[2049][MAXPLAYERS + 1];
 
 Queue Toss_Sentries[MAXPLAYERS + 1] = { null, ... };
 
@@ -1726,6 +1734,11 @@ public void OnEntityDestroyed(int entity)
 		Toss_ToolboxOwner[entity] = -1;
 		Toss_IsToolbox[entity] = false;
 		Toss_IsSupportDrone[entity] = false;
+
+		for (int i = 0; i <= MaxClients; i++)
+		{
+			b_HealingClient[entity][i] = false;
+		}
 	}
 }
 
@@ -1972,10 +1985,10 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 		Toss_SupportStats[drone].owner = GetClientUserId(owner);
 		Toss_SupportDrone[owner] = EntIndexToEntRef(drone);
 		Toss_IsSupportDrone[drone] = true;
+		EmitSoundToAll(SOUND_SUPPORT_BUILD_BEGIN, drone);
 
 		//TODO: Finalize panic sequence
-		//Also: Dispenser effects for healing (don't forget sound)
-		//Also also: Find a new model to use for the toolbox
+		//Also: Find a new model to use for the toolbox
 	}
 
 	RemoveEntity(toolbox);
@@ -2012,6 +2025,8 @@ public void Support_Logic(int drone)
 				support.SetFlinchSequence("ACT_BOT_GESTURE_FLINCH");
 				Toss_SupportStats[drone].isBuilding = false;
 				support.SetPlaybackRate(1.0);
+				EmitSoundToAll(SOUND_SUPPORT_BUILD_FINISHED, drone);
+				EmitSoundToAll(SOUND_SUPPORT_AMBIENT_LOOP, drone);
 			}
 			else
 			{
@@ -2023,7 +2038,9 @@ public void Support_Logic(int drone)
 	{
 		int owner = GetClientOfUserId(Toss_SupportStats[drone].owner);
 		int target = Toss_SupportStats[drone].GetTarget();
-		support.i_PathTarget = target;
+
+		if (IsValidEntity(target))
+			support.i_PathTarget = target;
 
 		float targPos[3];
 		PNPC_WorldSpaceCenter(drone, selfPos);
@@ -2053,32 +2070,82 @@ public void Support_Logic(int drone)
 		int targHeals = RoundFloat(AddToBucket(Toss_SupportStats[drone].healBucket_Target, Toss_SupportStats[drone].GetHealRate(0) * 0.1, 1.0));
 		int otherHeals = RoundFloat(AddToBucket(Toss_SupportStats[drone].healBucket_Others, Toss_SupportStats[drone].GetHealRate(1) * 0.1, 1.0));
 		int selfHeals = RoundFloat(AddToBucket(Toss_SupportStats[drone].healBucket_Self, Toss_SupportStats[drone].GetHealRate(2) * 0.1, 1.0));
-		
-		int r = 255;
-		int b = 120;
-		if (support.i_Team == TFTeam_Blue)
-		{
-			b = 255;
-			r = 120;
-		}
 
 		for (int i = 1; i <= MaxClients; i++)
 		{
-			if (IsValidMulti(i, true, true, true, TF2_GetClientTeam(owner)))
+			if (IsValidMulti(i, true, true, true, support.i_Team))
 			{
 				PNPC_WorldSpaceCenter(i, targPos);
 				if (GetVectorDistance(selfPos, targPos) <= Toss_SupportStats[drone].healRadius && Toss_HasLineOfSight(drone, i))
 				{
 					CF_HealPlayer(i, owner, (target == i ? targHeals : otherHeals), 1.0);
-					SpawnBeam_Vectors(selfPos, targPos, 0.1, r, 120, b, 120, LASER_MODEL, 6.0, 6.0, _, 1.0);
-					SpawnBeam_Vectors(selfPos, targPos, 0.1, 255, 255, 255, 80, GLOW_MODEL, 9.0, 9.0, _, 1.0);
+					if (!b_HealingClient[drone][i])
+					{
+						int startParticle, endParticle;
+						b_HealingClient[drone][i] = true;
+						AttachParticle_ControlPoints(i, "", 0.0, 0.0, 40.0, drone, "", 0.0, 0.0, 30.0, support.i_Team == TFTeam_Red ? PARTICLE_SUPPORT_HEAL_RED : PARTICLE_SUPPORT_HEAL_BLUE, startParticle, endParticle);
+						
+						EmitSoundToClient(i, SOUND_SUPPORT_HEALING_START, _, _, _, _, 0.8, 120);
+
+						DataPack pack = new DataPack();
+						CreateDataTimer(0.1, Support_CheckHealBeam, pack, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+						WritePackCell(pack, EntIndexToEntRef(drone));
+						WritePackCell(pack, GetClientUserId(i));
+						WritePackCell(pack, EntIndexToEntRef(startParticle));
+						WritePackCell(pack, EntIndexToEntRef(endParticle));
+					}
 				}
+				else
+					b_HealingClient[drone][i] = false;
 			}
 		}
 
 		if (selfHeals >= 1 && support.i_Health < support.i_MaxHealth)
 			PNPC_HealEntity(drone, selfHeals);
 	}
+}
+
+public Action Support_CheckHealBeam(Handle timer, DataPack pack)
+{
+	ResetPack(pack);
+	int drone = EntRefToEntIndex(ReadPackCell(pack));
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	int startPoint = EntRefToEntIndex(ReadPackCell(pack));
+	int endPoint = EntRefToEntIndex(ReadPackCell(pack));
+
+	if (!IsValidMulti(client, true, true) || !IsValidEntity(drone))
+	{
+		Support_TerminateEffects(client, startPoint, endPoint);
+		return Plugin_Stop;
+	}
+
+	if (!b_HealingClient[drone][client])
+	{
+		Support_TerminateEffects(client, startPoint, endPoint);
+		return Plugin_Stop;
+	}
+
+	return Plugin_Continue;
+}
+
+public void Support_TerminateEffects(int client, int startPoint, int endPoint)
+{
+	if (IsValidClient(client))
+	{
+		StopSound(client, SNDCHAN_AUTO, SOUND_SUPPORT_HEALING_START);
+		EmitSoundToClient(client, SOUND_SUPPORT_HEALING_STOP, _, _, _, _, 0.9, 120);
+	}
+
+	Support_DeleteBeam(startPoint, endPoint);
+}
+
+public void Support_DeleteBeam(int startPoint, int endPoint)
+{
+	if (IsValidEntity(startPoint))
+		RemoveEntity(startPoint);
+
+	if (IsValidEntity(endPoint))
+		RemoveEntity(endPoint);
 }
 
 public void Support_Activate(int client, char abilityName[255])
@@ -2104,6 +2171,11 @@ public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inf
 			npc.SetSequence("panic_start_A");
 			//TODO: Force panic sequence after this anim ends, also play a sound here
 		}
+
+		int chosen = GetRandomInt(0, sizeof(Drone_DamageSFX) - 1);
+		int pitch = GetRandomInt(90, 110);
+		EmitSoundToAll(Drone_DamageSFX[chosen], prop, _, _, _, _, pitch, -1);
+		EmitSoundToAll(Drone_DamageSFX[chosen], prop, _, _, _, _, pitch, -1);
 
 		return Plugin_Changed;
 	}

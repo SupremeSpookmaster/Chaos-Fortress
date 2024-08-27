@@ -181,10 +181,12 @@ public void CFA_MakeNatives()
 	CreateNative("CF_SetAbilityMaxStocks", Native_CF_SetAbilityMaxStocks);
 	CreateNative("CF_GetAbilityStocks", Native_CF_GetAbilityStocks);
 	CreateNative("CF_GetAbilityMaxStocks", Native_CF_GetAbilityMaxStocks);
+	CreateNative("CF_SetLocalOrigin", Native_CF_SetLocalOrigin);
 }
 
 Handle g_hSDKWorldSpaceCenter;
 DynamicHook g_DHookRocketExplode;
+Handle g_hSetLocalOrigin;
 /*Handle g_hSDKResetSequence;
 Handle g_hSDKLookupSequence;
 Handle g_hSDKGetSequenceDuration;
@@ -224,6 +226,14 @@ public void CFA_MakeForwards()
 	
 	//CTFBaseRocket::Explode:
 	g_DHookRocketExplode = DHook_CreateVirtual(gd, "CTFBaseRocket::Explode");
+
+	//SetLocalOrigin
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(gd, SDKConf_Signature, "CBaseEntity::SetLocalOrigin");
+	PrepSDKCall_AddParameter(SDKType_Vector, SDKPass_ByRef);
+	g_hSetLocalOrigin = EndPrepSDKCall();
+	if(!g_hSetLocalOrigin)
+		LogError("[Gamedata] Could not find CBaseEntity::SetLocalOrigin");
 	
 	delete gd;
 }
@@ -4245,5 +4255,21 @@ public Native_CF_GetAbilityMaxStocks(Handle plugin, int numParams)
 		{
 			return i_ReloadMaxStocks[client];
 		}
+	}
+}
+
+public Native_CF_SetLocalOrigin(Handle plugin, int numParams)
+{
+	int index = GetNativeCell(1);
+	float localOrigin[3];
+	GetNativeArray(2, localOrigin, 3);
+	SDKCall_SetLocalOrigin(index, localOrigin);
+}
+
+stock void SDKCall_SetLocalOrigin(int index, float localOrigin[3])
+{
+	if(g_hSetLocalOrigin)
+	{
+		SDKCall(g_hSetLocalOrigin, index, localOrigin);
 	}
 }
