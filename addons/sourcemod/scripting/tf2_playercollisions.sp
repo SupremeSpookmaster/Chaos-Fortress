@@ -1,10 +1,47 @@
 //TODO: Make this a standalone plugin with its own GitHub page eventually.
 #include <sourcemod>
 #include <tf_player_collisions>
-#include <SetCollisionGroup>
+#include <sdktools>
 
 //The distance in which collisions will be checked.
 #define RANGE	100.0
+
+enum g_Collision_Group
+{
+    COLLISION_GROUP_NONE  = 0,
+    COLLISION_GROUP_DEBRIS,            // Collides with nothing but world and static stuff
+    COLLISION_GROUP_DEBRIS_TRIGGER,        // Same as debris, but hits triggers
+    COLLISION_GROUP_INTERACTIVE_DEBRIS,    // Collides with everything except other interactive debris or debris
+    COLLISION_GROUP_INTERACTIVE,        // Collides with everything except interactive debris or debris    Can be hit by bullets, explosions, players, projectiles, melee
+    COLLISION_GROUP_PLAYER,            // Can be hit by bullets, explosions, players, projectiles, melee
+    COLLISION_GROUP_BREAKABLE_GLASS,
+    COLLISION_GROUP_VEHICLE,
+    COLLISION_GROUP_PLAYER_MOVEMENT,    // For HL2, same as Collision_Group_Player, for TF2, this filters out other players and CBaseObjects
+
+    COLLISION_GROUP_NPC,        // Generic NPC group
+    COLLISION_GROUP_IN_VEHICLE,    // for any entity inside a vehicle    Can be hit by explosions. Melee unknown.
+    COLLISION_GROUP_WEAPON,        // for any weapons that need collision detection
+    COLLISION_GROUP_VEHICLE_CLIP,    // vehicle clip brush to restrict vehicle movement
+    COLLISION_GROUP_PROJECTILE,    // Projectiles!
+    COLLISION_GROUP_DOOR_BLOCKER,    // Blocks entities not permitted to get near moving doors
+    COLLISION_GROUP_PASSABLE_DOOR,    // ** sarysa TF2 note: Must be scripted, not passable on physics prop (Doors that the player shouldn't collide with)
+    COLLISION_GROUP_DISSOLVING,    // Things that are dissolving are in this group
+    COLLISION_GROUP_PUSHAWAY,    // ** sarysa TF2 note: I could swear the collision detection is better for this than NONE. (Nonsolid on client and server, pushaway in player code) // Can be hit by bullets, explosions, projectiles, melee
+    COLLISION_GROUP_NPC_ACTOR,        // Used so NPCs in scripts ignore the player.
+    COLLISION_GROUP_NPC_SCRIPTED = 19,    // Used for NPCs in scripts that should not collide with each other.
+
+    LAST_SHARED_COLLISION_GROUP,
+
+    TF_COLLISIONGROUP_GRENADE = 20,
+    TFCOLLISION_GROUP_OBJECT,
+    TFCOLLISION_GROUP_OBJECT_SOLIDTOPLAYERMOVEMENT,
+    TFCOLLISION_GROUP_COMBATOBJECT,
+    TFCOLLISION_GROUP_ROCKETS,        // Solid to players, but not player movement. ensures touch calls are originating from rocket
+    TFCOLLISION_GROUP_RESPAWNROOMS,
+    TFCOLLISION_GROUP_TANK,
+    TFCOLLISION_GROUP_ROCKET_BUT_NOT_WITH_OTHER_ROCKETS
+	
+};
 
 float f_EndBlockCollisions[MAXPLAYERS + 1] = { 0.0, ... };
 bool b_CollisionsAreBlocked[MAXPLAYERS + 1] = { false, ... };
@@ -32,11 +69,11 @@ public void OnGameFrame()
 			
 			if (f_EndBlockCollisions[i] >= gt)
 			{
-				SetEntProp(i, Prop_Send, "m_CollisionGroup", view_as<int>(COLLISION_GROUP_DEBRIS_TRIGGER));
+				SetEntityCollisionGroup(i, COLLISION_GROUP_DEBRIS_TRIGGER);
 			}
 			else if (b_CollisionsAreBlocked[i])
 			{
-				SetEntProp(i, Prop_Send, "m_CollisionGroup", view_as<int>(COLLISION_GROUP_PLAYER));
+				SetEntityCollisionGroup(i, COLLISION_GROUP_PLAYER);
 				b_CollisionsAreBlocked[i] = false;
 			}
 		}

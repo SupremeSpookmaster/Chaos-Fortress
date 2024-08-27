@@ -4,6 +4,7 @@
 #define _cfinc_included_
 
 #include <cbasenpc>
+#include <cfgmap>
 
 enum CF_ResourceType
 {
@@ -86,15 +87,6 @@ enum CF_SpellIndex
 	CF_Spell_MeteorShower,
 	CF_Spell_Skeletons
 };
-
-#if !defined _cfgmap_included
-enum KeyValType
-{
-	KeyValType_Null,
-	KeyValType_Section,
-	KeyValType_Value
-};
-#endif
 
 //TODO: This will need to be expanded upon to include things like medigun shields
 public bool CF_DefaultTrace(entity, contentsMask)

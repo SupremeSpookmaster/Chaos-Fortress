@@ -8,11 +8,13 @@
 #include <sdkhooks>
 #include <cf_include>
 #include <dhooks>
+#include <tf2utils>
 #include <tf2items>
 
 #define MAXENTITIES	2048
 
-#define SENSAL_LASER_THICKNESS 25
+#define SENSAL_LASER_THICKNESS	25
+#define PARTICLE_ROCKET_MODEL	"models/weapons/w_models/w_drg_ball.mdl"
 
 #define ABILITY_WEAPON			"sensal_special_weapon"
 #define ABILITY_THROW			"sensal_ability_throw"
@@ -47,6 +49,7 @@ char PluginName[255];
 Handle SDKPlayTaunt;
 int Shared_BEAM_Laser;
 int Shared_BEAM_Glow;
+int Shared_ROCKET;
 int KillFeedType = -1;
 
 int VulnStacks[MAXPLAYERS+1];
@@ -97,6 +100,7 @@ public void OnMapStart()
 {
 	Shared_BEAM_Laser = PrecacheModel("materials/sprites/laser.vmt");
 	Shared_BEAM_Glow = PrecacheModel("sprites/glow02.vmt");
+	Shared_ROCKET = PrecacheModel(PARTICLE_ROCKET_MODEL);
 
 	PrecacheSound("misc/halloween/spell_teleport.wav");
 
@@ -142,43 +146,33 @@ public void CF_OnCharacterCreated(int client)
 {
 	if(CF_HasAbility(client, PluginName, ABILITY_WEAPON))
 	{
-		// Sensal Scythe model uses Alpha for skins and Bodygroups for model types
-
-		int weapon = GetPlayerWeaponSlot(client, TFWeaponSlot_Melee);
-		if(weapon != -1)
-		{
-			if(GetEntProp(weapon, Prop_Send, "m_bBeingRepurposedForTaunt"))
-			{
-				// Custom Model Attribute method
-
-				int model = GetEntProp(weapon, Prop_Send, "m_iWorldModelIndex");
-
-				int entity = -1;
-				while((entity = FindEntityByClassname(entity, "tf_wearable_vm")) != -1)
-				{
-					if(GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity") == client
-					   && GetEntProp(entity, Prop_Send, "m_nModelIndex") == model)
-					{
-						SetAlphaBodyGroup(client, entity, ABILITY_WEAPON);
-						break;
-					}
-				}
-			}
-			else
-			{
-				SetAlphaBodyGroup(client, weapon, ABILITY_WEAPON);
-			}
-		}
+		SDKUnhook(client, SDKHook_WeaponSwitchPost, WeaponSwitch);
+		SDKHook(client, SDKHook_WeaponSwitchPost, WeaponSwitch);
+		WeaponSwitch(client, -1);
 	}
 
 	if(CF_HasAbility(client, PluginName, ABILITY_BARRIER_SPAWN))
 	{
-		int health = RoundFloat(CF_GetCharacterMaxHealth(client)) + CF_GetArgI(client, PluginName, ABILITY_BARRIER_SPAWN, "amount");
-		if(health > GetClientHealth(client))
-			SetEntityHealth(client, health);
-		
-		UpdateBarrier(client, ABILITY_BARRIER_SPAWN);
+		CreateTimer(0.2, UpdateHealthTimer, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
 	}
+}
+
+Action UpdateHealthTimer(Handle timer, int userid)
+{
+	int client = GetClientOfUserId(userid);
+	if(client && IsPlayerAlive(client))
+	{
+		if(CF_HasAbility(client, PluginName, ABILITY_BARRIER_SPAWN))
+		{
+			int health = RoundFloat(CF_GetCharacterMaxHealth(client)) + CF_GetArgI(client, PluginName, ABILITY_BARRIER_SPAWN, "amount");
+			if(health > GetClientHealth(client))
+				SetEntityHealth(client, health);
+			
+			UpdateBarrier(client, ABILITY_BARRIER_SPAWN);
+		}
+	}
+
+	return Plugin_Continue;
 }
 
 public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
@@ -192,6 +186,8 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 		ShieldEntRef[client] = -1;
 		SDKUnhook(client, SDKHook_OnTakeDamagePost, BarrierTakeDamagePost);
 	}
+
+	SDKUnhook(client, SDKHook_WeaponSwitchPost, WeaponSwitch);
 }
 
 public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
@@ -236,6 +232,53 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 	return Plugin_Continue;
 }
 
+void WeaponSwitch(int client, int weapon)
+{
+	RequestFrame(WeaponSwitchPost, GetClientUserId(client));
+}
+
+void WeaponSwitchPost(int userid)
+{
+	int client = GetClientOfUserId(userid);
+	if(client)
+	{
+		if(CF_HasAbility(client, PluginName, ABILITY_WEAPON))
+		{
+			// Sensal Scythe model uses Alpha for skins and Bodygroups for model types
+
+			int weapon = GetPlayerWeaponSlot(client, TFWeaponSlot_Melee);
+			if(weapon != -1)
+			{
+				if(GetEntProp(weapon, Prop_Send, "m_bBeingRepurposedForTaunt"))
+				{
+					// Custom Model Attribute method
+
+					int model = GetEntProp(weapon, Prop_Send, "m_iWorldModelIndex");
+
+					int entity = -1;
+					while((entity = FindEntityByClassname(entity, "tf_wearable_vm")) != -1)
+					{
+						if(GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity") == client
+						&& GetEntProp(entity, Prop_Send, "m_nModelIndex") == model)
+						{
+							SetAlphaBodyGroup(client, entity, ABILITY_WEAPON);
+							break;
+						}
+					}
+				}
+				else
+				{
+					SetAlphaBodyGroup(client, weapon, ABILITY_WEAPON);
+				}
+			}
+		}
+		else
+		{
+			SDKUnhook(client, SDKHook_WeaponSwitchPost, WeaponSwitch);
+		}
+	}
+}
+
 Action DissolveRagdoll(Handle timer, int userid)
 {
 	int client = GetClientOfUserId(userid);
@@ -269,18 +312,38 @@ void ScytheThrow(int client, char abilityName[255])
 	FireScythe(client, abilityName, target);
 }
 
-int FireScythe(int client, char abilityName[255], int target)
+int FireScythe(int client, char abilityName[255], int target, const float overridePos[3] = {})
 {
-	int rocket = CF_FireGenericRocket(client, CF_GetArgF(client, PluginName, abilityName, "damage"), CF_GetArgF(client, PluginName, abilityName, "velocity"), _, _, PluginName, OnScytheCollide);
+	float speed = CF_GetArgF(client, PluginName, abilityName, "velocity");
+	int rocket = CF_FireGenericRocket(client, CF_GetArgF(client, PluginName, abilityName, "damage"), speed, _, _, PluginName, OnScytheCollide);
 	if(rocket != -1)
 	{
 		int prop = rocket;
 
-		float ang[3];
-		GetEntPropVector(rocket, Prop_Send, "m_angRotation", ang);
+		float pos[3], ang[3];
+		GetEntPropVector(rocket, Prop_Send, "m_vecOrigin", pos);
 
 		if(target > 0)
 		{
+			if(overridePos[0])
+			{
+				TeleportEntity(rocket, overridePos);
+				pos = overridePos;
+			}
+
+			float targetPos[3];
+			GetEntPropVector(target, Prop_Send, "m_vecOrigin", targetPos);
+
+			MakeVectorFromPoints(pos, targetPos, ang);
+			GetVectorAngles(ang, ang);
+
+			float vel[3];
+			vel[0] = Cosine(DegToRad(ang[0]))*Cosine(DegToRad(ang[1]))*speed;
+			vel[1] = Cosine(DegToRad(ang[0]))*Sine(DegToRad(ang[1]))*speed;
+			vel[2] = Sine(DegToRad(ang[0]))*-speed;
+
+			TeleportEntity(rocket, _, _, vel);
+
 			Initiate_HomingProjectile(rocket,
 				client,
 				CF_GetArgF(client, PluginName, abilityName, "lockon"),			// float lockonAngleMax,
@@ -295,6 +358,13 @@ int FireScythe(int client, char abilityName[255], int target)
 		CF_GetArgS(client, PluginName, abilityName, "model", buffer, sizeof(buffer));
 		if(buffer[0])
 		{
+			for(int i; i < 4; i++)
+			{
+				SetEntProp(rocket, Prop_Send, "m_nModelIndexOverrides", Shared_ROCKET, _, i);
+			}
+
+			SetEntityModel(rocket, PARTICLE_ROCKET_MODEL);
+
 			SetEntityRenderMode(rocket, RENDER_TRANSCOLOR);
 			SetEntityRenderColor(rocket, 255, 255, 255, 0);
 			
@@ -303,7 +373,6 @@ int FireScythe(int client, char abilityName[255], int target)
 			{
 				DispatchKeyValue(prop, "model", buffer);
 
-				float pos[3];
 				GetEntPropVector(rocket, Prop_Send, "m_vecOrigin", pos);
 				GetEntPropVector(rocket, Prop_Data, "m_angRotation", ang);
 
@@ -479,7 +548,7 @@ bool UpdateBarrier(int client, char abilityName[255] = "")
 			return false;	// Update model, no new one
 		
 		// Remove overheal decay along with our shield
-		entity = CF_AttachWearable(client, 57, "tf_wearable", true, 0, 0, _, "68 ; 1 ; 125 ; -9999");
+		entity = CF_AttachWearable(client, 57, "tf_wearable", true, 0, 0, _, "125 ; -9999");
 		if(entity == -1)
 			return false;
 		
@@ -494,11 +563,19 @@ bool UpdateBarrier(int client, char abilityName[255] = "")
 
 			SDKUnhook(client, SDKHook_OnTakeDamagePost, BarrierTakeDamagePost);
 			SDKHook(client, SDKHook_OnTakeDamagePost, BarrierTakeDamagePost);
+
+			// Don't show barrier to ourself
+			SDKHook(entity, SDKHook_SetTransmit, ShieldSetTransmit);
 		}
 	}
 
 	SetEntityRenderColor(entity, 255, 255, 255, alpha);
 	return true;
+}
+
+Action ShieldSetTransmit(int entity, int client)
+{
+	return GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity") == client ? Plugin_Stop : Plugin_Continue;
 }
 
 void BarrierTakeDamagePost(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, const float damageForce[3], const float damagePosition[3], int damagecustom)
@@ -537,7 +614,7 @@ void DoMassLaser(int client, char abilityName[255])
 
 	CF_AttachParticle(client, GetClientTeam(client) == 2 ? "flaregun_trail_red" : "flaregun_trail_blue", "effect_hand_r", _, 1.0);
 
-	TF2_AddCondition(client, TFCond_HalloweenKartCage, delay + 1.1);
+	TF2_AddCondition(client, TFCond_HalloweenKartNoTurn, delay + 1.1);
 	TF2_AddCondition(client, TFCond_MegaHeal, delay + 1.1);
 
 	if(SDKPlayTaunt)
@@ -549,6 +626,8 @@ void DoMassLaser(int client, char abilityName[255])
 			TF2Items_SetClassname(item, "tf_wearable_vm");
 			TF2Items_SetQuality(item, 6);
 			TF2Items_SetLevel(item, 1);
+			TF2Items_SetNumAttributes(item, 1);
+			TF2Items_SetAttribute(item, 0, 2048, 0.0);
 		}
 
 		TF2Items_SetItemIndex(item, 31162);
@@ -579,36 +658,57 @@ void DoMassLaser(int client, char abilityName[255])
 Action MassLaserTimer(Handle timer, DataPack pack)
 {
 	pack.Reset();
-	int attacker = GetClientOfUserId(pack.ReadCell());
+	int userid = pack.ReadCell();
+	int attacker = GetClientOfUserId(userid);
 	ArrayList victims = pack.ReadCell();
 
 	if(attacker && IsPlayerAlive(attacker))
 	{
-		float pos1[3], pos2[3];
-
-		int index = LookupEntityAttachment(attacker, "effect_hand_r");
-		if(!index || !GetEntityAttachment(attacker, index, pos1, pos2))
-		{
-			CF_WorldSpaceCenter(attacker, pos1);
-		}
-		
-		CF_AttachParticle(attacker, GetClientTeam(attacker) == 2 ? "powerup_supernova_explode_red" : "powerup_supernova_explode_blue", "effect_hand_r", _, 1.0);
-
 		int length = victims.Length;
-		for(int i; i < length; i++)
+		if(length)
 		{
-			int victim = EntRefToEntIndex(victims.Get(i));
-			if(victim != -1)
+			float pos1[3], pos2[3];
+
+			int index = LookupEntityAttachment(attacker, "effect_hand_r");
+			if(!index || !GetEntityAttachment(attacker, index, pos1, pos2))
 			{
-				CF_WorldSpaceCenter(victim, pos2);
-				SensalInitiateLaserAttack(attacker, pos2, pos1);
+				CF_WorldSpaceCenter(attacker, pos1);
 			}
+			
+			CF_AttachParticle(attacker, GetClientTeam(attacker) == 2 ? "powerup_supernova_explode_red" : "powerup_supernova_explode_blue", "effect_hand_r", _, 1.0);
+
+			for(int i; i < length; i++)
+			{
+				int victim = EntRefToEntIndex(victims.Get(i));
+				if(victim != -1)
+				{
+					CF_WorldSpaceCenter(victim, pos2);
+					SensalInitiateLaserAttack(attacker, pos2, pos1);
+				}
+			}
+
+			CF_PlayRandomSound(attacker, "", "sound_masslaser");
+		}
+		else
+		{
+			CF_PlayRandomSound(attacker, "", "sound_masslaser_fail");
 		}
 
-		CF_PlayRandomSound(attacker, "", "sound_masslaser");
+		CreateTimer(1.1, ForceUntaunt, userid, TIMER_FLAG_NO_MAPCHANGE);
 	}
 
 	delete victims;
+	return Plugin_Continue;
+}
+
+Action ForceUntaunt(Handle timer, int userid)
+{
+	int client = GetClientOfUserId(userid);
+	if(client && IsPlayerAlive(client))
+	{
+		TF2_RemoveCondition(client, TFCond_Taunting);
+	}
+
 	return Plugin_Continue;
 }
 
@@ -646,11 +746,11 @@ void DoPortalGate(int client, char abilityName[255])
 {
 	float delay = CF_GetArgF(client, PluginName, abilityName, "delay");
 
-	TF2_AddCondition(client, TFCond_HalloweenKartCage, delay);
+	TF2_AddCondition(client, TFCond_HalloweenKartNoTurn, delay);
 	TF2_AddCondition(client, TFCond_MegaHeal, delay);
 
 	// Temp weapon used for taunt animation
-	int weapon = CF_SpawnWeapon(client, "tf_weapon_shovel", 128, 45, 8, TFWeaponSlot_Melee, 0, 0, "252 ; 0.0", _, false, false)
+	int weapon = CF_SpawnWeapon(client, "tf_weapon_shovel", 128, 45, 8, TFWeaponSlot_Melee, 0, 0, "59 ; 0.0 ; 207 ; 0.0 ; 252 ; 0.0 ; 2048 ; 0.0", _, false, false)
 	if(weapon != -1)
 	{
 		SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", weapon);
@@ -692,6 +792,8 @@ Action PortalGateStartTimer(Handle timer, DataPack pack)
 		{
 			// Remove partial refund
 			CF_SetUltCharge(client, 0.0, true);
+
+			TF2Util_SetPlayerActiveWeapon(client, GetPlayerWeaponSlot(client, TFWeaponSlot_Melee));
 
 			float pos[3];
 			GetEntPropVector(client, Prop_Data, "m_vecAbsOrigin", pos);
@@ -754,9 +856,7 @@ Action PortalGateLoopTimer(Handle timer, DataPack pack)
 					{
 						for(int i; i < length; i++)
 						{
-							int rocket = FireScythe(client, abilityName, victims.Get(i));
-							if(rocket != -1)
-								TeleportEntity(rocket, pos);
+							FireScythe(client, abilityName, victims.Get(i), pos);
 						}
 
 						EmitSoundToAll("misc/halloween/spell_teleport.wav", entity, SNDCHAN_STATIC, 90, _, 0.8);
@@ -817,7 +917,8 @@ void SensalInitiateLaserAttack(int entity, float VectorTarget[3], float VectorSt
 	TE_SetupBeamPoints(VectorStart, VectorTarget, Shared_BEAM_Glow, 0, 0, 0, 0.7, ClampBeamWidth(diameter * 0.1), ClampBeamWidth(diameter * 0.1), 0, 0.5, glowColor, 0);
 	TE_SendToAll(0.0);
 
-	DataPack pack = new DataPack();
+	DataPack pack;
+	CreateDataTimer(0.8, SensalInitiateLaserAttack_DamagePart, pack, TIMER_FLAG_NO_MAPCHANGE);
 	pack.WriteCell(EntIndexToEntRef(entity));
 	pack.WriteFloat(VectorTarget[0]);
 	pack.WriteFloat(VectorTarget[1]);
@@ -825,12 +926,11 @@ void SensalInitiateLaserAttack(int entity, float VectorTarget[3], float VectorSt
 	pack.WriteFloat(VectorStart[0]);
 	pack.WriteFloat(VectorStart[1]);
 	pack.WriteFloat(VectorStart[2]);
-	CreateDataTimer(0.8, SensalInitiateLaserAttack_DamagePart, pack, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 ArrayList SensalHitList;
 
-void SensalInitiateLaserAttack_DamagePart(DataPack pack)
+Action SensalInitiateLaserAttack_DamagePart(Handle timer, DataPack pack)
 {
 	pack.Reset();
 	int entity = EntRefToEntIndex(pack.ReadCell());
@@ -846,7 +946,7 @@ void SensalInitiateLaserAttack_DamagePart(DataPack pack)
 	VectorStart[1] = pack.ReadFloat();
 	VectorStart[2] = pack.ReadFloat();
 
-	int team = entity ? 0 : GetClientTeam(entity);
+	int team = entity ? GetClientTeam(entity) : -1;
 	int red = 50;
 	int green = 50;
 	int blue = 255;
@@ -894,7 +994,7 @@ void SensalInitiateLaserAttack_DamagePart(DataPack pack)
 	for(int i; i < length; i++)
 	{
 		int victim = SensalHitList.Get(i);
-		if(GetEntProp(entity, Prop_Data, "m_iTeamNum") != team)
+		if(CF_IsValidTarget(victim, TFTeam_Unassigned) && GetEntProp(victim, Prop_Data, "m_iTeamNum") != team)
 		{
 			GetEntPropVector(victim, Prop_Send, "m_vecOrigin", playerPos, 0);
 			float distance = GetVectorDistance(VectorStart, playerPos, false);
@@ -906,14 +1006,13 @@ void SensalInitiateLaserAttack_DamagePart(DataPack pack)
 				damage *= 0.25;
 			
 			KillFeedType = Kill_Laser;
-			SDKHooks_TakeDamage(victim, entity, entity, damage, DMG_PLASMA, -1, NULL_VECTOR, playerPos, false);	// 2048 is DMG_NOGIB?
+			SDKHooks_TakeDamage(victim, entity, entity, damage, DMG_PLASMA, -1, NULL_VECTOR, playerPos, false);
 			KillFeedType = -1;
 		}
 	}
 
 	delete SensalHitList;
-
-	delete pack;
+	return Plugin_Continue;
 }
 
 bool Sensal_BEAM_TraceUsers(int entity, int contentsMask, int client)
