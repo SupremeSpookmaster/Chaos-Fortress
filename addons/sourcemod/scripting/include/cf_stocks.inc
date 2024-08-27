@@ -14,6 +14,7 @@
 #include <tf2utils>
 #include <dhooks>
 #include <collisionhook>
+#include <cf_include>
 
 #define EXPLOSION_PARTICLE_LARGE_1 "fireSmoke_collumn_mvmAcres"
 #define EXPLOSION_PARTICLE_LARGE_2 "hightower_explosion"
@@ -864,18 +865,21 @@ public void PhysProp_MoveToTargetPosition_Preview(int ent, int client, float ang
 	}
 }
 
-stock int SpawnParticle(float origin[3], char particle[255], float duration = 0.0)
+stock int SpawnParticle(float origin[3], char particle[255], float duration = 0.0, bool start = true)
 {
 	int Effect = CreateEntityByName("info_particle_system");
 	if (IsValidEdict(Effect))
 	{
 		TeleportEntity(Effect, origin, NULL_VECTOR, NULL_VECTOR);
 		DispatchKeyValue(Effect, "effect_name", particle);
-		SetVariantString("!activator");
 		DispatchKeyValue(Effect, "targetname", "present");
 		DispatchSpawn(Effect);
-		ActivateEntity(Effect);
-		AcceptEntityInput(Effect, "Start");
+
+		if (start)
+		{
+			ActivateEntity(Effect);
+			AcceptEntityInput(Effect, "Start");
+		}
 		
 		if (duration > 0.0)
 		{
@@ -1004,26 +1008,6 @@ stock int AttachParticleToEntity(int entity, char type[255], char point[255], fl
 		{
 			ReturnValue = part1;
 			
-			float pos[3];
-			if (IsValidClient(entity))
-			{
-				GetClientAbsOrigin(entity, pos);
-			}
-			else if (HasEntProp(entity, Prop_Data, "m_vecAbsOrigin"))
-			{
-				GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", pos);
-			}
-			else if (HasEntProp(entity, Prop_Send, "m_vecOrigin"))
-			{
-				GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
-			}
-			
-			pos[0] += xOff;
-			pos[1] += yOff;
-			pos[2] += zOff;
-			
-			//TeleportEntity(part1, pos, NULL_VECTOR, NULL_VECTOR);
-			
 			char name[16];
 			FormatEx(name, sizeof(name), "target%d", entity);
 			DispatchKeyValue(entity, "targetname", name);
@@ -1031,25 +1015,20 @@ stock int AttachParticleToEntity(int entity, char type[255], char point[255], fl
 			DispatchKeyValue(part1, "parentname", name);
 			DispatchKeyValue(part1, "effect_name", type);
 			
-			
-			/*SetVariantString("!activator");
-			AcceptEntityInput(part1, "SetParent", entity, part1);
-			SetVariantString(point);
-			AcceptEntityInput(part1, "SetParentAttachmentMaintainOffset", part1, part1);
-			DispatchKeyValue(part1, "targetname", "present");
-			DispatchSpawn(part1);
-			SetVariantString(name);
-			AcceptEntityInput(part1, "SetParent", part1, part1);
-			ActivateEntity(part1);
-			AcceptEntityInput(part1, "Start");*/
-			
-			TeleportEntity(part1, pos, NULL_VECTOR, NULL_VECTOR);
+			/*TeleportEntity(part1, pos, NULL_VECTOR, NULL_VECTOR);
 			DispatchKeyValue(part1, "effect_name", type);
 			SetVariantString("!activator");
 			AcceptEntityInput(part1, "SetParent", entity, part1);
 			SetVariantString(point);
 			AcceptEntityInput(part1, "SetParentAttachmentMaintainOffset", part1, part1);
-			DispatchKeyValue(part1, "targetname", "present");
+			DispatchKeyValue(part1, "targetname", "present");*/
+
+			float offsets[3];
+			offsets[0] = xOff;
+			offsets[1] = yOff;
+			offsets[2] = zOff;
+			SetParent(entity, part1, point, offsets);
+
 			DispatchSpawn(part1);
 			ActivateEntity(part1);
 			AcceptEntityInput(part1, "Start");
@@ -1696,74 +1675,87 @@ stock bool IsInvuln(int client) //Borrowed from Batfoxkid. Checks if the client 
  * Spawns a 2-point particle (IE medigun beam, dispenser beam, etc) and connects it through 2 entities.
  * 
  * @param startEnt		The entity to start from.
- * @param startPoint	Attachment point to attach the start of the particle to.
- * @param startZOff		Optional Z-axis offset for the start point.
+ * @param startPoint	The point to attach the starting entity to.
+ * @param startXOff		Starting point X-axis offset.
+ * @param startYOff		Starting point Y-axis offset.
+ * @param startZOff		Starting point Z-axis offset.
  * @param endEnt		The entity to end at.
- * @param endPoint		Attachment point to attach the end of the particle to.
- * @param endZOff		Optional Z-axis offset for the end point.
- * @param particle		The particle to connect.
+ * @param endPoint		The point to attach the end entity to.
+ * @param endXOff		Ending point X-axis offset.
+ * @param endYOff		Ending point Y-axis offset.
+ * @param endZOff		Ending point Z-axis offset.
+ * @param effect		The particle to connect.
+ * @param returnStart	Return parameter for the particle created at the start of the effect.
+ * @param returnEnd		Return parameter for the particle created at the end of the effect.
  * @param duration		The duration of the effect. <= 0.0: infinite.
- * 
- * @return An ArrayList containing the references of all entities used to create this effect. Use the "RemoveArrayList" stock to easily remove all of these entities and delete the ArrayList when you want to stop the effect.
  */
-stock ArrayList AttachParticle_ControlPoints(int startEnt, char startPoint[255], float startZOff, int endEnt, char endPoint[255], float endZOff, char particle[255], float duration = 0.0)
+stock void AttachParticle_ControlPoints(int startEnt, char startPoint[255], float startXOff, float startYOff, float startZOff, int endEnt, char endPoint[255], float endXOff, float endYOff, float endZOff, char effect[255], int &returnStart, int &returnEnd, float duration = 0.0)
 {
-	ArrayList returnVal = new ArrayList(255);
+	float startPos[3], endPos[3];
+	CF_WorldSpaceCenter(startEnt, startPos);
+	CF_WorldSpaceCenter(endEnt, endPos);
 
-	int root = CreateEntityByName("info_particle_system");
-	int tail = CreateEntityByName("info_particle_system");
-	int start = AttachParticleToEntity(startEnt, "", startPoint, _, _, _, startZOff);
-	int end = AttachParticleToEntity(endEnt, "", endPoint, _, _, _, endZOff);
+	int particle = SpawnParticle(startPos, effect, duration, false);
+	int particle2 = SpawnParticle(endPos, effect, duration, false);
 
-	if (IsValidEdict(root) && IsValidEdict(tail) && IsValidEdict(start) && IsValidEdict(end))
-	{
-		float StartPos[3], EndPos[3];
-		GetEntPropVector(start, Prop_Data, "m_vecAbsOrigin", StartPos);
-		GetEntPropVector(end, Prop_Data, "m_vecAbsOrigin", EndPos);
+	float offsets[3];
+	offsets[0] = startXOff;
+	offsets[1] = startYOff;
+	offsets[2] = startZOff;
+	SetParent(startEnt, particle, startPoint, offsets, true);
 
-		TeleportEntity(root, StartPos, NULL_VECTOR, NULL_VECTOR); 
-		TeleportEntity(tail, EndPos, NULL_VECTOR, NULL_VECTOR);
-		  
-		char tName[128];
-		Format(tName, sizeof(tName), "target%i", start);
-		DispatchKeyValue(start, "targetname", tName);
-		  
-		char cpName[128];
-		Format(cpName, sizeof(cpName), "Xtarget%i", end);
-		  
-		DispatchKeyValue(tail, "targetname", cpName);
-		  
-		DispatchKeyValue(root, "targetname", "tf2particle");
-		DispatchKeyValue(root, "parentname", tName);
-		DispatchKeyValue(root, "effect_name", particle);
-		DispatchKeyValue(root, "cpoint1", cpName);
-		  
-		DispatchSpawn(root);
-		SetVariantString(tName);
-		AcceptEntityInput(root, "SetParent", root, root, 0);
-		  
-		SetVariantString("flag");
-		AcceptEntityInput(root, "SetParentAttachment", root, root, 0);
-		  
-		ActivateEntity(root);
-		AcceptEntityInput(root, "start");
+	offsets[0] = endXOff;
+	offsets[1] = endYOff;
+	offsets[2] = endZOff;
+	SetParent(endEnt, particle2, endPoint, offsets, true);
 
-		PushArrayCell(returnVal, EntIndexToEntRef(root));
-		PushArrayCell(returnVal, EntIndexToEntRef(tail));
-		PushArrayCell(returnVal, EntIndexToEntRef(start));
-		PushArrayCell(returnVal, EntIndexToEntRef(end));
+	char szCtrlParti[128];
+	Format(szCtrlParti, sizeof(szCtrlParti), "tf2ctrlpart%i", EntIndexToEntRef(particle2));
+	DispatchKeyValue(particle, "targetname", szCtrlParti);
 
-		if (duration > 0.0)
-			CreateTimer(duration, APCP_Delete, returnVal, TIMER_FLAG_NO_MAPCHANGE);
-	}
+	DispatchKeyValue(particle2, "cpoint1", szCtrlParti);
 
-	return returnVal;
+	ActivateEntity(particle2);
+	AcceptEntityInput(particle2, "start");
+
+	returnStart = particle;
+	returnEnd = particle2;
 }
 
-public Action APCP_Delete(Handle timer, ArrayList list)
+stock bool AreVectorsEqual(const float vVec1[3], const float vVec2[3])
 {
-	RemoveArrayList(list);
-	return Plugin_Continue;
+	return (vVec1[0] == vVec2[0] && vVec1[1] == vVec2[1] && vVec1[2] == vVec2[2]);
+} 
+
+//Thanks Artvin/BatFox:
+stock void SetParent(int iParent, int iChild, const char[] szAttachment = "", const float vOffsets[3] = {0.0,0.0,0.0}, bool maintain_anyways = false)
+{
+	SetVariantString("!activator");
+	AcceptEntityInput(iChild, "SetParent", iParent, iChild);
+	
+	if (szAttachment[0] != '\0') // Use at least a 0.01 second delay between SetParent and SetParentAttachment inputs.
+	{
+		if (szAttachment[0]) // do i even have anything?
+		{
+			SetVariantString(szAttachment); // "head"
+
+			if (maintain_anyways || !AreVectorsEqual(vOffsets, view_as<float>({0.0,0.0,0.0}))) // NULL_VECTOR
+			{
+				if(!maintain_anyways)
+				{
+					float Vecpos[3];
+
+					Vecpos = vOffsets;
+					CF_SetLocalOrigin(iChild, Vecpos);
+				}
+				AcceptEntityInput(iChild, "SetParentAttachmentMaintainOffset", iParent, iChild);
+			}
+			else
+			{
+				AcceptEntityInput(iChild, "SetParentAttachment", iParent, iChild);
+			}
+		}
+	}
 }
 
 /**

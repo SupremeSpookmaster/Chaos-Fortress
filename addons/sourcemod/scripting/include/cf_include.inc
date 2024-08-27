@@ -1646,3 +1646,11 @@ native int CF_GetAbilityStocks(int client, CF_AbilityType type);
  * @return		The maximum number of uses the client can stockpile for the given ability slot.
  */
 native int CF_GetAbilityMaxStocks(int client, CF_AbilityType type);
+
+/**
+ * Sets the local origin of a given entity.
+ * 
+ * @param entity	The entity.
+ * @param origin	The origin to set.
+ */
+native void CF_SetLocalOrigin(int entity, float origin[3]);

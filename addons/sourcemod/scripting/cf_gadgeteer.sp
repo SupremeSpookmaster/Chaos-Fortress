@@ -1,4 +1,3 @@
-#include <cf_include>
 #include <sdkhooks>
 #include <tf2_stocks>
 #include <cf_stocks>
@@ -87,8 +86,8 @@
 
 #define MODEL_TARGETING		"models/fake_particles/plane.mdl"
 
-int LASER_MODEL = -1;
-int GLOW_MODEL = -1;
+//int LASER_MODEL = -1;
+//int GLOW_MODEL = -1;
 
 public void OnMapStart()
 {
@@ -139,8 +138,8 @@ public void OnMapStart()
 	PrecacheSound(SOUND_DRONES_TARGETING);
 	PrecacheSound(SOUND_SUPPORT_DESTROYED);
 
-	LASER_MODEL = PrecacheModel("materials/sprites/laser.vmt", false);
-	GLOW_MODEL = PrecacheModel("sprites/glow02.vmt", true);
+	/*LASER_MODEL = PrecacheModel("materials/sprites/laser.vmt", false);
+	GLOW_MODEL = PrecacheModel("sprites/glow02.vmt", true);*/
 }
 
 public const char Toss_BuildSFX[][] =
@@ -167,8 +166,6 @@ public const char Drone_DamageSFX[][255] =
 	SOUND_DRONE_DAMAGED_3,
 	SOUND_DRONE_DAMAGED_4
 };
-
-ArrayList Support_HealParticles[2049][MAXPLAYERS + 1];
 
 int Toss_Owner[2049] = { -1, ... };
 int Toss_Max[MAXPLAYERS + 1] = { 0, ... };
@@ -1909,6 +1906,8 @@ public int MakeToolbox(int owner, char abilityName[255])
 	return -1;
 }
 
+bool b_HealingClient[2049][MAXPLAYERS + 1];
+
 public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchargeType)
 {
 	int owner = GetClientOfUserId(Toss_ToolboxOwner[toolbox]);
@@ -2053,25 +2052,21 @@ public void Support_Logic(int drone)
 		int targHeals = RoundFloat(AddToBucket(Toss_SupportStats[drone].healBucket_Target, Toss_SupportStats[drone].GetHealRate(0) * 0.1, 1.0));
 		int otherHeals = RoundFloat(AddToBucket(Toss_SupportStats[drone].healBucket_Others, Toss_SupportStats[drone].GetHealRate(1) * 0.1, 1.0));
 		int selfHeals = RoundFloat(AddToBucket(Toss_SupportStats[drone].healBucket_Self, Toss_SupportStats[drone].GetHealRate(2) * 0.1, 1.0));
-		
-		int r = 255;
-		int b = 120;
-		if (support.i_Team == TFTeam_Blue)
-		{
-			b = 255;
-			r = 120;
-		}
 
 		for (int i = 1; i <= MaxClients; i++)
 		{
-			if (IsValidMulti(i, true, true, true, TF2_GetClientTeam(owner)))
+			if (IsValidMulti(i, true, true, true, support.i_Team))
 			{
 				PNPC_WorldSpaceCenter(i, targPos);
 				if (GetVectorDistance(selfPos, targPos) <= Toss_SupportStats[drone].healRadius && Toss_HasLineOfSight(drone, i))
 				{
 					CF_HealPlayer(i, owner, (target == i ? targHeals : otherHeals), 1.0);
-					SpawnBeam_Vectors(selfPos, targPos, 0.1, r, 120, b, 120, LASER_MODEL, 6.0, 6.0, _, 1.0);
-					SpawnBeam_Vectors(selfPos, targPos, 0.1, 255, 255, 255, 80, GLOW_MODEL, 9.0, 9.0, _, 1.0);
+					if (!b_HealingClient[drone][i])
+					{
+						int startParticle, endParticle;
+						b_HealingClient[drone][i] = true;
+						AttachParticle_ControlPoints(i, "", 0.0, 0.0, 40.0, drone, "", 0.0, 0.0, 30.0, support.i_Team == TFTeam_Red ? PARTICLE_SUPPORT_HEAL_RED : PARTICLE_SUPPORT_HEAL_BLUE, startParticle, endParticle);
+					}
 				}
 			}
 		}
