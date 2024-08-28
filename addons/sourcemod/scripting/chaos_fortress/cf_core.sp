@@ -15,7 +15,6 @@
 #include "chaos_fortress/cf_weapons.sp"
 #include "chaos_fortress/cf_abilities.sp"
 #include "chaos_fortress/cf_animator.sp"
-//#include "chaos_fortress/cf_npcs.sp"
 
 bool b_InSpawn[2049][4];
 
