@@ -98,8 +98,11 @@
 #define PARTICLE_SUPPORT_HEAL_BLUE	"dispenser_heal_blue"
 #define PARTICLE_SUPPORT_BOX_TRAIL_RED 	"healshot_trail_red"
 #define PARTICLE_SUPPORT_BOX_TRAIL_BLUE	"healshot_trail_blue"
+#define PARTICLE_SUPPORT_DAMAGED		"dispenserdamage_3"
 
 #define MODEL_TARGETING		"models/fake_particles/plane.mdl"
+
+//TODO: Add the powerup_supernova_strike tracer to supercharged combat drone shots
 
 //int LASER_MODEL = -1;
 //int GLOW_MODEL = -1;
@@ -2270,6 +2273,8 @@ public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inf
 	return Plugin_Continue;
 }
 
+int i_SupportDroneDamagedParticle[2049] = { -1, ... };
+
 public void Support_CheckEndPanic(PNPC npc)
 {
 	if (!Toss_SupportStats[npc.Index].isPanicked)
@@ -2279,9 +2284,17 @@ public void Support_CheckEndPanic(PNPC npc)
 	if (npc.i_Health > halfHP)
 	{
 		npc.SetSequence("panic_end");
+		Support_RemovePanicParticle(npc.Index);
 		Toss_SupportStats[npc.Index].isPanicked = false;
 		Support_SetSequenceAfterDelay(npc, 0.6, "idle", true);
 	}
+}
+
+void Support_RemovePanicParticle(int ent)
+{
+	int particle = EntRefToEntIndex(i_SupportDroneDamagedParticle[ent]);
+	if (IsValidEntity(particle))
+		RemoveEntity(particle);
 }
 
 public void Support_CheckPanic(PNPC npc)
@@ -2296,6 +2309,7 @@ public void Support_CheckPanic(PNPC npc)
 		Toss_SupportStats[npc.Index].isPanicked = true;
 		EmitSoundToAll(SOUND_SUPPORT_PANIC_BEGIN, npc.Index);
 		Support_SetSequenceAfterDelay(npc, 0.8, "panic", false);
+		i_SupportDroneDamagedParticle[npc.Index] = AttachParticleToEntity(npc.Index, PARTICLE_SUPPORT_DAMAGED, "");
 	}
 }
 
@@ -2347,5 +2361,6 @@ public void PNPC_OnPNPCDestroyed(int entity)
 		PNPC_WorldSpaceCenter(entity, pos);
 		SpawnParticle(pos, PARTICLE_TOSS_DESTROYED);
 		EmitSoundToAll(SOUND_SUPPORT_DESTROYED, entity, _, 120);
+		Support_RemovePanicParticle(entity);
 	}
 }
