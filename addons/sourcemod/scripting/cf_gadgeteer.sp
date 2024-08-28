@@ -2077,6 +2077,7 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 		//TODO: Fix Drones instantly disappearing if they spawn too close to a solid object
 		//	- Maybe add something like "PNPC_ExcludeFromPathing" so devs can choose specific entities that should not block pathing?
 		//ALSO: Fix allied collisions
+		//ALSO ALSO: Allow Support Drones to be healed by friendly Rescue Ranger bolts, but NOTHING ELSE.
 	}
 
 	RemoveEntity(toolbox);
