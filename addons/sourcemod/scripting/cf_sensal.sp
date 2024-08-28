@@ -47,6 +47,7 @@ enum
 
 char PluginName[255];
 Handle SDKPlayTaunt;
+ConVar FriendlyFire;
 int Shared_BEAM_Laser;
 int Shared_BEAM_Glow;
 int Shared_ROCKET;
@@ -78,6 +79,8 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 
 public void OnPluginStart()
 {
+	FriendlyFire = FindConVar("mp_friendlyfire");
+	
 	GameData gameData = new GameData("tf2.tauntem");
 	if(!gameData)
 	{
@@ -197,7 +200,7 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 		float total = Pow(VulnStackMulti[victim], float(VulnStacks[victim]));
 
 		// Marked-for-Death effect already gives a x1.35, and that's our cap
-		if(total > 1.35)
+		if(TF2_IsPlayerInCondition(victim, TFCond_MarkedForDeath))
 			return Plugin_Continue;
 		
 		damage *= total;
@@ -232,6 +235,15 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 	return Plugin_Continue;
 }
 
+public void TF2_OnConditionRemoved(int client, TFCond cond)
+{
+	if(cond == TFCond_Taunting)
+	{
+		if(CF_HasAbility(client, PluginName, ABILITY_WEAPON))
+			RequestFrame(WeaponSwitchPost, GetClientUserId(client));
+	}
+}
+
 void WeaponSwitch(int client, int weapon)
 {
 	RequestFrame(WeaponSwitchPost, GetClientUserId(client));
@@ -256,13 +268,12 @@ void WeaponSwitchPost(int userid)
 					int model = GetEntProp(weapon, Prop_Send, "m_iWorldModelIndex");
 
 					int entity = -1;
-					while((entity = FindEntityByClassname(entity, "tf_wearable_vm")) != -1)
+					while((entity = FindEntityByClassname(entity, "tf_wearable*")) != -1)
 					{
 						if(GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity") == client
 						&& GetEntProp(entity, Prop_Send, "m_nModelIndex") == model)
 						{
 							SetAlphaBodyGroup(client, entity, ABILITY_WEAPON);
-							break;
 						}
 					}
 				}
@@ -304,9 +315,46 @@ Action DissolveRagdoll(Handle timer, int userid)
 	return Plugin_Continue;
 }
 
+bool IsValidTarget(int attacker, int victim)
+{
+	if(victim < 0 || victim > MAXENTITIES || !CF_IsValidTarget(victim, TFTeam_Unassigned))
+		return false;
+	
+	int team = GetClientTeam(attacker);
+	if(victim <= MaxClients)
+	{
+		if(!IsPlayerAlive(victim))
+			return false;
+		
+		if(!FriendlyFire.BoolValue && GetClientTeam(victim) == team)
+			return false;
+	}
+	else
+	{
+		if(!GetEntProp(victim, Prop_Data, "m_takedamage"))
+			return false;
+		
+		//static char classname[64];
+		//if(!GetEntityClassname(victim, classname, sizeof(classname)))
+		//	return false;
+		
+		//if(StrContains(classname, "base_boss") == -1)
+		//	return false;
+
+		int team2 = GetEntProp(victim, Prop_Send, "m_iTeamNum");
+		if(team2 == 0)
+			return false;
+		
+		if(!FriendlyFire.BoolValue && team2 == team)
+			return false;
+	}
+
+	return true;
+}
+
 void ScytheThrow(int client, char abilityName[255])
 {
-	CF_SimulateSpellbookCast(client, _, CF_Spell_Teleport);
+	//CF_SimulateSpellbookCast(client, _, CF_Spell_Teleport);
 
 	int target = GetClientAimTarget(client);
 	FireScythe(client, abilityName, target);
@@ -344,6 +392,8 @@ int FireScythe(int client, char abilityName[255], int target, const float overri
 
 			TeleportEntity(rocket, _, _, vel);
 
+			SetEntPropVector(rocket, Prop_Send, "m_vInitialVelocity", vel);
+
 			Initiate_HomingProjectile(rocket,
 				client,
 				CF_GetArgF(client, PluginName, abilityName, "lockon"),			// float lockonAngleMax,
@@ -352,6 +402,11 @@ int FireScythe(int client, char abilityName[255], int target, const float overri
 				ang,			
 				target); //home onto this enemy
 		}
+
+		// 15 sec lifetime
+		SetVariantString("OnUser4 !self:Kill::15:1,0,1");
+		AcceptEntityInput(rocket, "AddOutput");
+		AcceptEntityInput(rocket, "FireUser4");
 		
 		// Attached Prop
 		char buffer[255];
@@ -459,19 +514,20 @@ MRESReturn OnScytheCollide(int entity, int owner, int team)
 	ArrayList victims = view_as<ArrayList>(CF_GenericAOEDamage(owner, entity, entity, damage, DMG_BULLET|DMG_PREVENT_PHYSICS_FORCE, 50.0, pos, 400.0, 1.0, _, false));
 	KillFeedType = -1;
 	
-	if(victims.Length)
+	int length = victims.Length;
+	for(int i; i < length; i++)
 	{
-		// We only care about our single target
-		int victim = victims.Get(0);
+		int victim = victims.Get(i);
 		if(victim <= MaxClients)
 			ApplyVulnStack(victim, owner, 1.065, 5.0);
-
-		// CF does not feature a way to play a sound from config in another location
-		EmitSoundToAll(SyctheHitSound[GetURandomInt() % sizeof(SyctheHitSound)], entity, SNDCHAN_AUTO, 95);
-
-		TE_Particle(team == 2 ? "spell_batball_impact_red" : "spell_batball_impact_blue", pos);
 	}
+
 	delete victims;
+
+	// CF does not feature a way to play a sound from config in another location
+	EmitSoundToAll(SyctheHitSound[GetURandomInt() % sizeof(SyctheHitSound)], entity, SNDCHAN_AUTO, 95);
+
+	TE_Particle(team == 2 ? "spell_batball_impact_red" : "spell_batball_impact_blue", pos);
 
 	RemoveEntity(entity);
 	return MRES_Supercede;
@@ -508,7 +564,27 @@ Action RemoveVulnStackTimer(Handle timer, int victim)
 
 void ApplyBarrier(int client, char abilityName[255])
 {
-	CF_HealPlayer(client, client, CF_GetArgI(client, PluginName, abilityName, "amount"), CF_GetArgF(client, PluginName, abilityName, "cap"));
+	int amount = CF_GetArgI(client, PluginName, abilityName, "amount");
+	int cap = RoundFloat(CF_GetCharacterMaxHealth(client) * CF_GetArgF(client, PluginName, abilityName, "cap"));
+	
+	int health = GetClientHealth(client);
+	if(health < cap)
+	{
+		health += amount;
+		if(health > cap)
+		{
+			amount -= health - cap;
+			health = cap;
+		}
+		
+		SetEntityHealth(client, health);
+
+		Event event = CreateEvent("player_healonhit", true);
+		event.SetInt("entindex", client);
+		event.SetInt("amount", amount);
+		event.Fire();
+	}
+
 	UpdateBarrier(client, abilityName);
 }
 
@@ -596,6 +672,17 @@ void DoMassLaser(int client, char abilityName[255])
 	ArrayList victims = view_as<ArrayList>(CF_GenericAOEDamage(client, client, client, 0.0, 0, range, pos, range, 1.0, _, false));
 	
 	int length = victims.Length;
+	for(int i; i < length; i++)
+	{
+		// CF_GenericAOEDamage doesn't filter out props
+		int victim = victims.Get(i);
+		if(!IsValidTarget(client, victim))
+		{
+			victims.Erase(i);
+			length--;
+		}
+	}
+
 	while(length > targets)
 	{
 		victims.Erase(0);
@@ -793,7 +880,7 @@ Action PortalGateStartTimer(Handle timer, DataPack pack)
 			// Remove partial refund
 			CF_SetUltCharge(client, 0.0, true);
 
-			TF2Util_SetPlayerActiveWeapon(client, GetPlayerWeaponSlot(client, TFWeaponSlot_Melee));
+			SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", GetPlayerWeaponSlot(client, TFWeaponSlot_Melee));
 
 			float pos[3];
 			GetEntPropVector(client, Prop_Data, "m_vecAbsOrigin", pos);
@@ -854,12 +941,20 @@ Action PortalGateLoopTimer(Handle timer, DataPack pack)
 					int length = victims.Length;
 					if(length)
 					{
+						bool found;
+
 						for(int i; i < length; i++)
 						{
-							FireScythe(client, abilityName, victims.Get(i), pos);
+							int victim = victims.Get(i);
+							if(IsValidTarget(client, victim))
+							{
+								found = true;
+								FireScythe(client, abilityName, victim, pos);
+							}
 						}
 
-						EmitSoundToAll("misc/halloween/spell_teleport.wav", entity, SNDCHAN_STATIC, 90, _, 0.8);
+						if(found)
+							EmitSoundToAll("misc/halloween/spell_teleport.wav", entity, SNDCHAN_STATIC, 90, _, 0.8);
 					}
 
 					delete victims;
@@ -994,7 +1089,7 @@ Action SensalInitiateLaserAttack_DamagePart(Handle timer, DataPack pack)
 	for(int i; i < length; i++)
 	{
 		int victim = SensalHitList.Get(i);
-		if(CF_IsValidTarget(victim, TFTeam_Unassigned) && GetEntProp(victim, Prop_Data, "m_iTeamNum") != team)
+		if(IsValidTarget(entity, victim))
 		{
 			GetEntPropVector(victim, Prop_Send, "m_vecOrigin", playerPos, 0);
 			float distance = GetVectorDistance(VectorStart, playerPos, false);
@@ -1017,7 +1112,7 @@ Action SensalInitiateLaserAttack_DamagePart(Handle timer, DataPack pack)
 
 bool Sensal_BEAM_TraceUsers(int entity, int contentsMask, int client)
 {
-	if (CF_IsValidTarget(entity, TFTeam_Unassigned))
+	if (IsValidTarget(client, entity))
 	{
 		SensalHitList.Push(entity);
 	}
@@ -1198,7 +1293,7 @@ stock int ParticleEffectAt(float position[3], const char[] effectName, float dur
 		{
 			char buffer[64];
 			FormatEx(buffer, sizeof(buffer), "OnUser4 !self:Kill::%.2f:1,0,1", duration);
-			SetVariantString("OnUser4 !self:Kill::30:1,0,1");
+			SetVariantString(buffer);
 			AcceptEntityInput(particle, "AddOutput");
 			AcceptEntityInput(particle, "FireUser4");
 		}
@@ -1255,7 +1350,7 @@ public Action Projectile_NonPerfectHoming(Handle timer, int ref)
 		}
 
 		//The enemy is valid
-		if(CF_IsValidTarget(RMR_CurrentHomingTarget[entity], TFTeam_Unassigned))
+		if(IsValidTarget(EntRefToEntIndex(RMR_RocketOwner[entity]), RMR_CurrentHomingTarget[entity]))
 		{
 			if(HomingProjectile_ValidTargetCheck(entity, RMR_CurrentHomingTarget[entity]))
 			{
