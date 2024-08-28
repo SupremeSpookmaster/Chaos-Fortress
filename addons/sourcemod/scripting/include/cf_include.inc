@@ -4,6 +4,7 @@
 #define _cfinc_included_
 
 #include <cbasenpc>
+#include <cfgmap>
 
 enum CF_ResourceType
 {

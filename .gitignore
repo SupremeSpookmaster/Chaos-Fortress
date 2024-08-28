@@ -43,6 +43,7 @@
 !cf_dokmed.sp
 !cf_gadgeteer.sp
 !cf_npcs.sp
+!cf_sensal.sp
 
 #Include Files
 !cf_include.inc
