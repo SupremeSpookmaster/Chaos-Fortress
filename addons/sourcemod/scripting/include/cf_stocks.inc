@@ -1015,19 +1015,19 @@ stock int AttachParticleToEntity(int entity, char type[255], char point[255], fl
 			DispatchKeyValue(part1, "parentname", name);
 			DispatchKeyValue(part1, "effect_name", type);
 			
-			/*TeleportEntity(part1, pos, NULL_VECTOR, NULL_VECTOR);
+			float pos[3];
+			CF_WorldSpaceCenter(entity, pos);
+			pos[0] += xOff;
+			pos[1] += yOff;
+			pos[2] += zOff;
+
+			TeleportEntity(part1, pos, NULL_VECTOR, NULL_VECTOR);
 			DispatchKeyValue(part1, "effect_name", type);
 			SetVariantString("!activator");
 			AcceptEntityInput(part1, "SetParent", entity, part1);
 			SetVariantString(point);
 			AcceptEntityInput(part1, "SetParentAttachmentMaintainOffset", part1, part1);
-			DispatchKeyValue(part1, "targetname", "present");*/
-
-			float offsets[3];
-			offsets[0] = xOff;
-			offsets[1] = yOff;
-			offsets[2] = zOff;
-			SetParent(entity, part1, point, offsets);
+			DispatchKeyValue(part1, "targetname", "present");
 
 			DispatchSpawn(part1);
 			ActivateEntity(part1);

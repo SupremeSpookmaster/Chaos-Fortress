@@ -29,6 +29,12 @@
 #define MODEL_SUPPORT_GIB_3	"models/bots/bot_worker/bot_worker_a_head_gib_l.mdl"
 #define MODEL_SUPPORT_GIB_4	"models/bots/bot_worker/bot_worker_a_head_gib_r.mdl"
 #define MODEL_SUPPORT_GIB_5	"models/bots/bot_worker/bot_worker_arm_gib.mdl"
+#define MODEL_SUPPORT_BOX	"models/props_junk/wood_crate001a.mdl"
+#define MODEL_SUPPORT_BOX_GIB_1	"models/props_junk/wood_crate001a_chunk04.mdl"
+#define MODEL_SUPPORT_BOX_GIB_2	"models/props_junk/wood_crate001a_chunk02.mdl"
+#define MODEL_SUPPORT_BOX_GIB_3	"models/props_junk/wood_crate001a_chunk03.mdl"
+#define MODEL_SUPPORT_BOX_GIB_4	"models/props_junk/wood_crate001a_chunk07.mdl"
+#define MODEL_SUPPORT_BOX_GIB_5	"models/props_junk/wood_crate001a_chunk01.mdl"
 
 #define SOUND_TOSS_BUILD_1	"weapons/neon_sign_hit_01.wav"
 #define SOUND_TOSS_BUILD_2	"weapons/neon_sign_hit_02.wav"
@@ -61,6 +67,8 @@
 #define SOUND_SUPPORT_AMBIENT_LOOP	")weapons/dispenser_idle.wav"
 #define SOUND_SUPPORT_BUILD_BEGIN	")weapons/sentry_wire_connect.wav"
 #define SOUND_SUPPORT_BUILD_FINISHED	")weapons/sentry_finish.wav"
+#define SOUND_SUPPORT_BOX_BREAK			")physics/wood/wood_crate_break4.wav"
+#define SOUND_SUPPORT_PANIC_BEGIN		")vo/bot_worker/tinybot_crosspaths_06.mp3"
 
 #define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
 #define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
@@ -88,6 +96,8 @@
 #define PARTICLE_LASER_BLUE		"bullet_tracer_raygun_blue_bits"
 #define PARTICLE_SUPPORT_HEAL_RED	"dispenser_heal_red"
 #define PARTICLE_SUPPORT_HEAL_BLUE	"dispenser_heal_blue"
+#define PARTICLE_SUPPORT_BOX_TRAIL_RED 	"healshot_trail_red"
+#define PARTICLE_SUPPORT_BOX_TRAIL_BLUE	"healshot_trail_blue"
 
 #define MODEL_TARGETING		"models/fake_particles/plane.mdl"
 
@@ -115,6 +125,12 @@ public void OnMapStart()
 	PrecacheModel(MODEL_SUPPORT_GIB_3);
 	PrecacheModel(MODEL_SUPPORT_GIB_4);
 	PrecacheModel(MODEL_SUPPORT_GIB_5);
+	PrecacheModel(MODEL_SUPPORT_BOX);
+	PrecacheModel(MODEL_SUPPORT_BOX_GIB_1);
+	PrecacheModel(MODEL_SUPPORT_BOX_GIB_2);
+	PrecacheModel(MODEL_SUPPORT_BOX_GIB_3);
+	PrecacheModel(MODEL_SUPPORT_BOX_GIB_4);
+	PrecacheModel(MODEL_SUPPORT_BOX_GIB_5);
 
 	PrecacheSound(SOUND_TOSS_BUILD_1);
 	PrecacheSound(SOUND_TOSS_BUILD_2);
@@ -147,6 +163,8 @@ public void OnMapStart()
 	PrecacheSound(SOUND_SUPPORT_AMBIENT_LOOP);
 	PrecacheSound(SOUND_SUPPORT_BUILD_BEGIN);
 	PrecacheSound(SOUND_SUPPORT_BUILD_FINISHED);
+	PrecacheSound(SOUND_SUPPORT_BOX_BREAK);
+	PrecacheSound(SOUND_SUPPORT_PANIC_BEGIN);
 
 	/*LASER_MODEL = PrecacheModel("materials/sprites/laser.vmt", false);
 	GLOW_MODEL = PrecacheModel("sprites/glow02.vmt", true);*/
@@ -167,6 +185,15 @@ public const char Model_Gears[][255] =
 	MODEL_TOSS_GIB_3,
 	MODEL_TOSS_GIB_4,
 	MODEL_TOSS_GIB_5
+};
+
+public const char Model_BoxGibs[][255] =
+{
+	MODEL_SUPPORT_BOX_GIB_1,
+	MODEL_SUPPORT_BOX_GIB_2,
+	MODEL_SUPPORT_BOX_GIB_3,
+	MODEL_SUPPORT_BOX_GIB_4,
+	MODEL_SUPPORT_BOX_GIB_5
 };
 
 public const char Drone_DamageSFX[][255] =
@@ -240,6 +267,8 @@ enum struct SupportDroneStats
 	int self;
 
 	bool isBuilding;
+	bool exists;
+	bool isPanicked;
 
 	void CreateFromArgs(int client, char abilityName[255])
 	{
@@ -261,6 +290,8 @@ enum struct SupportDroneStats
 		this.superchargeBuildSpeedHitscan = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_build_hitscan");
 		this.superchargeMovementSpeedHitscan = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_movement_hitscan");
 		this.superchargeHealRateHitscan = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_heal_hitscan");
+		
+		this.exists = true;
 	}
 
 	void Copy(SupportDroneStats other)
@@ -283,6 +314,21 @@ enum struct SupportDroneStats
 		this.superchargeBuildSpeedHitscan = other.superchargeBuildSpeedHitscan;
 		this.superchargeMovementSpeedHitscan = other.superchargeMovementSpeedHitscan;
 		this.superchargeHealRateHitscan = other.superchargeHealRateHitscan;
+
+		this.exists = true;
+	}
+
+	void Destroy()
+	{
+		this.exists = false;
+		this.isBuilding = false;
+		this.isPanicked = false;
+		this.superchargeEndTime = 0.0;
+		this.findNewTargetTime = 0.0;
+		this.healBucket_Others = 0.0;
+		this.healBucket_Self = 0.0;
+		this.healBucket_Target = 0.0;
+		this.buildHealBucket = 0.0;
 	}
 
 	int GetTarget()
@@ -1084,7 +1130,12 @@ public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
 	{
 		SetEntData(entity, FindSendPropInfo("CTFProjectile_Rocket", "m_nSkin"), view_as<int>(newTeam) - 2, 1, true);
 		Toss_RemoveParticle(entity);
-		Toss_ToolboxParticle[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, ""));
+		
+		if (!Toss_IsSupportDrone[entity])
+			Toss_ToolboxParticle[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, ""));
+		else
+			Toss_ToolboxParticle[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_SUPPORT_BOX_TRAIL_RED : PARTICLE_SUPPORT_BOX_TRAIL_BLUE, ""));
+
 		Toss_ToolboxOwner[entity] = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
 	}
 }
@@ -1105,7 +1156,7 @@ public void Toss_Activate(int client, char abilityName[255])
 {
 	Toss_Max[client] = CF_GetArgI(client, GADGETEER, abilityName, "sentry_max");
 	
-	int toolbox = MakeToolbox(client, abilityName);
+	int toolbox = MakeToolbox(client, abilityName, false);
 	if (IsValidEntity(toolbox))
 	{
 		Toss_SentryStats[toolbox].CreateFromArgs(client, abilityName, toolbox);
@@ -1261,15 +1312,7 @@ public void Toss_CheckForCollision(int ref)
 	GetEntPropVector(prop, Prop_Send, "m_vecMaxs", maxs);
 	GetEntPropVector(prop, Prop_Data, "m_vecVelocity", vel);
 	
-	bool CanHit = false;
-	for (int i = 0; i < 3 && !CanHit; i++)
-	{
-		if (vel[i] < 0.0)
-			vel[i] *= -1.0;
-			
-		if (vel[i] >= Toss_MinVel[prop])
-			CanHit = true;
-	}
+	bool CanHit = GetVectorLength(vel) >= Toss_MinVel[prop];
 		
 	//We go a tiny bit bigger so that we aren't interfering with normal collisions:
 	ScaleVector(mins, 1.1);
@@ -1452,9 +1495,40 @@ public Action Drone_Damaged(int prop, int &attacker, int &inflictor, float &dama
 //1: Hitscan, 2: Projectile
 public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType)
 {
+	float pos[3];
+	GetEntPropVector(toolbox, Prop_Send, "m_vecOrigin", pos);
+
 	if (Toss_IsSupportDrone[toolbox])
 	{
+		EmitSoundToAll(SOUND_SUPPORT_BOX_BREAK, toolbox, _, _, _, _, GetRandomInt(90, 110));
+
+		for (int i = 0; i < sizeof(Model_BoxGibs); i++)
+		{
+			float randAng[3], randVel[3];
+			for (int vec = 0; vec < 3; vec++)
+			{
+				randAng[vec] = GetRandomFloat(0.0, 360.0);
+					
+				if (vec < 2)
+					randVel[vec] = GetRandomFloat(0.0, 360.0);
+				else
+					randVel[vec] = GetRandomFloat(200.0, 800.0);
+			}
+				
+			int gib = SpawnPhysicsProp(Model_BoxGibs[i], 0, "0", 99999.0, true, 1.0, pos, randAng, randVel, 5.0);
+			
+			if (IsValidEntity(gib))
+			{
+				SetEntityCollisionGroup(gib, 1);
+				SetEntityRenderMode(gib, RENDER_TRANSALPHA);
+				RequestFrame(Toss_FadeOutGib, EntIndexToEntRef(gib));
+				SetEntityCollisionGroup(gib, 1);
+				SetEntProp(gib, Prop_Send, "m_iTeamNum", 0);
+			}
+		}
+
 		Toss_SpawnSupportDrone(toolbox, supercharged, superchargeType);
+
 		return;
 	}
 
@@ -1466,9 +1540,6 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 		RemoveEntity(toolbox);
 		return;
 	}
-
-	float pos[3];
-	GetEntPropVector(toolbox, Prop_Send, "m_vecOrigin", pos);
 	
 	int chosen = GetRandomInt(0, sizeof(Toss_BuildSFX) - 1);
 	EmitSoundToAll(Toss_BuildSFX[chosen], toolbox, _, _, _, _, GetRandomInt(90, 110), -1);
@@ -1723,6 +1794,11 @@ public void OnEntityDestroyed(int entity)
 		{
 			Toss_SentryStats[entity].Destroy();
 		}
+
+		if (Toss_SupportStats[entity].exists)
+		{
+			Toss_SupportStats[entity].Destroy();
+		}
 		
 		if (Toss_IsToolbox[entity])
 		{
@@ -1835,7 +1911,7 @@ public Action CF_OnPhysPropHitByProjectile(int prop, int entity, TFTeam propTeam
 	return Plugin_Continue;
 }
 
-public int MakeToolbox(int owner, char abilityName[255])
+public int MakeToolbox(int owner, char abilityName[255], bool support)
 {
 	float velocity = CF_GetArgF(owner, GADGETEER, abilityName, "velocity");
 	
@@ -1874,8 +1950,15 @@ public int MakeToolbox(int owner, char abilityName[255])
 		Toss_FacingAng[toolbox][2] = 0.0;
 		
 		//SET MODEL:
-		SetEntityModel(toolbox, MODEL_TOSS);
-		DispatchKeyValue(toolbox, "skin", team == TFTeam_Red ? "0" : "1");
+		if (!support)
+		{
+			SetEntityModel(toolbox, MODEL_TOSS);
+			DispatchKeyValue(toolbox, "skin", team == TFTeam_Red ? "0" : "1");
+		}
+		else
+		{
+			SetEntityModel(toolbox, MODEL_SUPPORT_BOX);
+		}
 		
 		//SET SCALE:
 		char scale[255];
@@ -1912,7 +1995,10 @@ public int MakeToolbox(int owner, char abilityName[255])
 		CF_ForceViewmodelAnimation(owner, "spell_fire");
 		b_ToolboxVM[owner] = true;
 		
-		Toss_ToolboxParticle[toolbox] = EntIndexToEntRef(AttachParticleToEntity(toolbox, team == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, "", autoDet));
+		if (!support)
+			Toss_ToolboxParticle[toolbox] = EntIndexToEntRef(AttachParticleToEntity(toolbox, team == TFTeam_Red ? PARTICLE_TOOLBOX_TRAIL_RED : PARTICLE_TOOLBOX_TRAIL_BLUE, "", autoDet));
+		else
+			Toss_ToolboxParticle[toolbox] = EntIndexToEntRef(AttachParticleToEntity(toolbox, team == TFTeam_Red ? PARTICLE_SUPPORT_BOX_TRAIL_RED : PARTICLE_SUPPORT_BOX_TRAIL_BLUE, "", autoDet));
 		
 		EmitSoundToAll(SOUND_TOOLBOX_FIZZING, toolbox);
 
@@ -1980,6 +2066,7 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 		view_as<PNPC>(drone).AddGib(MODEL_SUPPORT_GIB_3, "bip_base");
 		view_as<PNPC>(drone).AddGib(MODEL_SUPPORT_GIB_4, "bip_base");
 		view_as<PNPC>(drone).AddGib(MODEL_SUPPORT_GIB_5, "laser_bone");
+		view_as<PNPC>(drone).f_HealthBarHeight = 60.0;
 		Toss_SupportStats[drone].isBuilding = true;
 		Toss_SupportStats[drone].lastBuildHealth = 1;
 		Toss_SupportStats[drone].owner = GetClientUserId(owner);
@@ -1987,8 +2074,10 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 		Toss_IsSupportDrone[drone] = true;
 		EmitSoundToAll(SOUND_SUPPORT_BUILD_BEGIN, drone);
 
-		//TODO: Finalize panic sequence
-		//Also: Find a new model to use for the toolbox
+		//TODO: Fix Drones instantly disappearing if they spawn too close to a solid object
+		//	- Maybe add something like "PNPC_ExcludeFromPathing" so devs can choose specific entities that should not block pathing?
+		//ALSO: Fix allied collisions
+		//ALSO ALSO: Allow Support Drones to be healed by friendly Rescue Ranger bolts, but NOTHING ELSE.
 	}
 
 	RemoveEntity(toolbox);
@@ -2027,6 +2116,7 @@ public void Support_Logic(int drone)
 				support.SetPlaybackRate(1.0);
 				EmitSoundToAll(SOUND_SUPPORT_BUILD_FINISHED, drone);
 				EmitSoundToAll(SOUND_SUPPORT_AMBIENT_LOOP, drone);
+				Support_CheckPanic(support);
 			}
 			else
 			{
@@ -2036,6 +2126,8 @@ public void Support_Logic(int drone)
 	}
 	else
 	{
+		Support_CheckEndPanic(support);
+
 		int owner = GetClientOfUserId(Toss_SupportStats[drone].owner);
 		int target = Toss_SupportStats[drone].GetTarget();
 
@@ -2150,12 +2242,11 @@ public void Support_DeleteBeam(int startPoint, int endPoint)
 
 public void Support_Activate(int client, char abilityName[255])
 {
-	int toolbox = MakeToolbox(client, abilityName);
+	int toolbox = MakeToolbox(client, abilityName, true);
 	if (IsValidEntity(toolbox))
 	{
 		Toss_IsSupportDrone[toolbox] = true;
 		Toss_SupportStats[toolbox].CreateFromArgs(client, abilityName);
-		//TODO: The toolbox needs a different model if it is used for a support drone, so players can differentiate
 	}
 }
 
@@ -2165,22 +2256,87 @@ public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inf
 	{
 		damagetype |= DMG_ALWAYSGIB;
 
-		int halfHP = RoundFloat(npc.i_MaxHealth * 0.5);
-		if (npc.i_Health > halfHP && npc.i_Health - RoundFloat(damage) <= halfHP)
-		{
-			npc.SetSequence("panic_start_A");
-			//TODO: Force panic sequence after this anim ends, also play a sound here
-		}
+		if (!Toss_SupportStats[npc.Index].isBuilding)
+			RequestFrame(Support_CheckPanic, npc);
 
 		int chosen = GetRandomInt(0, sizeof(Drone_DamageSFX) - 1);
 		int pitch = GetRandomInt(90, 110);
-		EmitSoundToAll(Drone_DamageSFX[chosen], prop, _, _, _, _, pitch, -1);
-		EmitSoundToAll(Drone_DamageSFX[chosen], prop, _, _, _, _, pitch, -1);
+		EmitSoundToAll(Drone_DamageSFX[chosen], npc.Index, _, _, _, _, pitch, -1);
+		EmitSoundToAll(Drone_DamageSFX[chosen], npc.Index, _, _, _, _, pitch, -1);
 
 		return Plugin_Changed;
 	}
 
 	return Plugin_Continue;
+}
+
+public void Support_CheckEndPanic(PNPC npc)
+{
+	if (!Toss_SupportStats[npc.Index].isPanicked)
+		return;
+
+	int halfHP = RoundFloat(npc.i_MaxHealth * 0.5);
+	if (npc.i_Health > halfHP)
+	{
+		npc.SetSequence("panic_end");
+		Toss_SupportStats[npc.Index].isPanicked = false;
+		Support_SetSequenceAfterDelay(npc, 0.6, "idle", true);
+	}
+}
+
+public void Support_CheckPanic(PNPC npc)
+{
+	if (Toss_SupportStats[npc.Index].isPanicked)
+		return;
+
+	int halfHP = RoundFloat(npc.i_MaxHealth * 0.5);
+	if (npc.i_Health <= halfHP)
+	{
+		npc.SetSequence("panic_start_A");
+		Toss_SupportStats[npc.Index].isPanicked = true;
+		EmitSoundToAll(SOUND_SUPPORT_PANIC_BEGIN, npc.Index);
+		Support_SetSequenceAfterDelay(npc, 0.8, "panic", false);
+	}
+}
+
+//TODO: Make this a PNPCS native, replace endPanic with a function parameter
+public void Support_SetSequenceAfterDelay(PNPC npc, float delay, char sequence[255], bool endPanic)
+{
+	DataPack pack = new DataPack();
+	RequestFrame(Support_DelayedSequence, pack);
+	WritePackCell(pack, EntIndexToEntRef(npc.Index));
+	WritePackFloat(pack, GetGameTime() + delay);
+	WritePackString(pack, sequence);
+	WritePackCell(pack, endPanic);
+}
+
+public void Support_DelayedSequence(DataPack pack)
+{
+	ResetPack(pack);
+	int ent = EntRefToEntIndex(ReadPackCell(pack));
+	if (!PNPC_IsNPC(ent))
+	{
+		delete pack;
+		return;
+	}
+
+	float time = ReadPackFloat(pack);
+	char sequence[255];
+	ReadPackString(pack, sequence, sizeof(sequence));
+	bool endPanic = ReadPackCell(pack);
+
+	if (GetGameTime() >= time)
+	{
+		PNPC npc = view_as<PNPC>(ent);
+
+		if ((endPanic && !Toss_SupportStats[npc.Index].isPanicked) || (!endPanic && Toss_SupportStats[npc.Index].isPanicked))
+			npc.SetSequence(sequence);
+
+		delete pack;
+		return;
+	}
+
+	RequestFrame(Support_DelayedSequence, pack);
 }
 
 public void PNPC_OnPNPCDestroyed(int entity)
