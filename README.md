@@ -1,5 +1,5 @@
 # *NOTICE*
-This game mode is currently incompatible with 64-bit servers. Not much I can do about that. This notice will be deleted when compatibility issues are resolved.
+This game mode is currently incompatible with 64-bit servers. I am in the process of reducing gamedata usage so that everything will remain entirely functional when 32-bit is deprecated, but this will take some time. This notice will be deleted when compatibility issues are resolved.
 
 # *Introducing (eventually because this is not done yet) Chaos Fortress: TF2 with custom classes!*
 ***Chaos Fortress*** is just like normal TF2, but with a twist: instead of playing as one of the nine mercenaries, players step into the shoes of one of many custom characters, each with their own unique kit. Some of these characters are designed to function like suped-up versions of the nine mercenaries, while others act more as wildcards, going their own directions entirely. To top it all off, all of these characters have access to powerful Ultimate Abilities, which charge very slowly over time, or by meeting certain conditions such as dealing damage or healing allies. As for developers, CF is incredibly dev-friendly, coming packed with countless forwards and natives to make the creation of new custom characters a breeze.
