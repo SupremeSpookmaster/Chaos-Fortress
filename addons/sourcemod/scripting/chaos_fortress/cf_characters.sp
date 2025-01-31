@@ -1555,7 +1555,7 @@ void CFC_WeaponEquipped(int client, int weapon)
 				
 				delete snap;
 			}
-			
+
 			EquipPlayerWeapon(client, weapon);
 		}
 		

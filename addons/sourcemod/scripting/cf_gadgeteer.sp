@@ -1518,7 +1518,8 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 					randVel[vec] = GetRandomFloat(200.0, 800.0);
 			}
 				
-			int gib = SpawnPhysicsProp(Model_BoxGibs[i], 0, "0", 99999.0, true, 1.0, pos, randAng, randVel, 5.0);
+			//We can't use this because it fucks up the Drone's spawn and puts it in the map void.
+			/*int gib = SpawnPhysicsProp(Model_BoxGibs[i], 0, "0", 99999.0, true, 1.0, pos, randAng, randVel, 5.0);
 			
 			if (IsValidEntity(gib))
 			{
@@ -1527,7 +1528,7 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 				RequestFrame(Toss_FadeOutGib, EntIndexToEntRef(gib));
 				SetEntityCollisionGroup(gib, 1);
 				SetEntProp(gib, Prop_Send, "m_iTeamNum", 0);
-			}
+			}*/
 		}
 
 		Toss_SpawnSupportDrone(toolbox, supercharged, superchargeType);
@@ -2031,6 +2032,17 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 	SpawnParticle(pos, PARTICLE_TOSS_BUILD_1, 2.0);
 	SpawnParticle(pos, PARTICLE_TOSS_BUILD_2, 2.0);
 	
+	SupportDroneStats stats;
+	stats.Copy(Toss_SupportStats[toolbox]);
+	//Toss_SupportStats[toolbox].Copy(stats);
+	float facingAng[3];
+	facingAng = Toss_FacingAng[toolbox];
+
+	//I have no fucking idea why, but deleting the toolbox BEFORE spawning the support drone instantly crashes the server.
+	//Having the toolbox in the same position as the Drone messes up spawn logic, though, so we need to get rid of it.
+	//Therefore: teleport off the map.
+	TeleportEntity(toolbox, OFF_THE_MAP);
+
 	if (!TF2Util_IsPointInRespawnRoom(pos))
 	{
 		char SupportName[255];
@@ -2043,8 +2055,8 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 			SDKHooks_TakeDamage(oldDrone, 0, 0, 99999.0, _, _, _, _, false);
 		}
 
-		int drone = PNPC(MODEL_SUPPORT_DRONE, view_as<TFTeam>(team), 1, RoundFloat(Toss_SupportStats[toolbox].maxHealth), team - 2, 0.75, Toss_SupportStats[toolbox].speed, Support_Logic, GADGETEER, 0.1, pos, Toss_FacingAng[toolbox], _, _, SupportName).Index;
-		Toss_SupportStats[drone].Copy(Toss_SupportStats[toolbox]);
+		int drone = PNPC(MODEL_SUPPORT_DRONE, view_as<TFTeam>(team), 1, RoundFloat(stats.maxHealth), team - 2, 0.75, stats.speed, Support_Logic, GADGETEER, 0.1, pos, facingAng, _, _, SupportName).Index;
+		Toss_SupportStats[drone] = stats;
 
 		Toss_SupportStats[drone].superchargeType = superchargeType;
 		switch(superchargeType)

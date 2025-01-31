@@ -348,7 +348,6 @@ public MRESReturn Discard_ExplodePre(int skull, int owner, int teamNum)
 			
 		dmg -= TotalDecay;
 	}
-	
 	float pos[3];
 	GetEntPropVector(skull, Prop_Send, "m_vecOrigin", pos);
 	
