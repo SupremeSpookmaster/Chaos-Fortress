@@ -1505,6 +1505,8 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 	{
 		EmitSoundToAll(SOUND_SUPPORT_BOX_BREAK, toolbox, _, _, _, _, GetRandomInt(90, 110));
 
+		//We can't use this because it fucks up the Drone's spawn and puts it in the map void.
+		/*
 		for (int i = 0; i < sizeof(Model_BoxGibs); i++)
 		{
 			float randAng[3], randVel[3];
@@ -1518,8 +1520,7 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 					randVel[vec] = GetRandomFloat(200.0, 800.0);
 			}
 				
-			//We can't use this because it fucks up the Drone's spawn and puts it in the map void.
-			/*int gib = SpawnPhysicsProp(Model_BoxGibs[i], 0, "0", 99999.0, true, 1.0, pos, randAng, randVel, 5.0);
+			int gib = SpawnPhysicsProp(Model_BoxGibs[i], 0, "0", 99999.0, true, 1.0, pos, randAng, randVel, 5.0);
 			
 			if (IsValidEntity(gib))
 			{
@@ -1528,8 +1529,9 @@ public void Toss_SpawnSentry(int toolbox, bool supercharged, int superchargeType
 				RequestFrame(Toss_FadeOutGib, EntIndexToEntRef(gib));
 				SetEntityCollisionGroup(gib, 1);
 				SetEntProp(gib, Prop_Send, "m_iTeamNum", 0);
-			}*/
+			}
 		}
+		*/
 
 		Toss_SpawnSupportDrone(toolbox, supercharged, superchargeType);
 
@@ -2012,6 +2014,8 @@ public int MakeToolbox(int owner, char abilityName[255], bool support)
 	return -1;
 }
 
+SupportDroneStats stats;
+
 public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchargeType)
 {
 	int owner = GetClientOfUserId(Toss_ToolboxOwner[toolbox]);
@@ -2032,7 +2036,6 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 	SpawnParticle(pos, PARTICLE_TOSS_BUILD_1, 2.0);
 	SpawnParticle(pos, PARTICLE_TOSS_BUILD_2, 2.0);
 	
-	SupportDroneStats stats;
 	stats.Copy(Toss_SupportStats[toolbox]);
 	//Toss_SupportStats[toolbox].Copy(stats);
 	float facingAng[3];
@@ -2041,7 +2044,30 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 	//I have no fucking idea why, but deleting the toolbox BEFORE spawning the support drone instantly crashes the server.
 	//Having the toolbox in the same position as the Drone messes up spawn logic, though, so we need to get rid of it.
 	//Therefore: teleport off the map.
-	TeleportEntity(toolbox, OFF_THE_MAP);
+	RemoveEntity(toolbox);
+	//TeleportEntity(toolbox, OFF_THE_MAP);
+	DataPack pack = new DataPack();
+	RequestFrame(Toss_SpawnSupportOnDelay, pack);
+	WritePackCell(pack, GetClientUserId(owner));
+	WritePackFloatArray(pack, pos, sizeof(pos));
+	WritePackFloatArray(pack, facingAng, sizeof(facingAng));
+	WritePackCell(pack, team);
+	WritePackCell(pack, superchargeType);
+}
+
+public void Toss_SpawnSupportOnDelay(DataPack pack)
+{
+	ResetPack(pack);
+	int owner = GetClientOfUserId(ReadPackCell(pack));
+	float pos[3], facingAng[3];
+	ReadPackFloatArray(pack, pos, sizeof(pos));
+	ReadPackFloatArray(pack, facingAng, sizeof(facingAng));
+	int team = ReadPackCell(pack);
+	int superchargeType = ReadPackCell(pack);
+	delete pack;
+
+	if (!IsValidClient(owner))
+		return;
 
 	if (!TF2Util_IsPointInRespawnRoom(pos))
 	{
@@ -2094,8 +2120,6 @@ public void Toss_SpawnSupportDrone(int toolbox, bool supercharged, int superchar
 		//ALSO: Fix allied collisions
 		//ALSO ALSO: Allow Support Drones to be healed by friendly Rescue Ranger bolts, but NOTHING ELSE.
 	}
-
-	RemoveEntity(toolbox);
 }
 
 public void Support_Logic(int drone)
