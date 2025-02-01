@@ -267,7 +267,7 @@ public void CFC_MakeNatives()
 	CreateNative("CF_AttachWearable", Native_CF_AttachWearable);
 	
 	CreateNative("CF_GetCharacterArms", Native_CF_GetCharacterArms);
-	CreateNative("CF_SetCharacterArms", Native_CF_SetCharacterArms);
+	//CreateNative("CF_SetCharacterArms", Native_CF_SetCharacterArms);	//Crashes on Linux due to empty string (TODO)
 	
 	CreateNative("CF_GetCharacterBaseSpeed", Native_CF_GetCharacterBaseSpeed);
 	
@@ -1162,14 +1162,14 @@ void CFC_WeaponEquipped(int client, int weapon)
 	if (!CF_IsPlayerCharacter(client))
 		return;
 		
-	if (!g_Characters[client].HasCustomArms)
+	/*if (!g_Characters[client].HasCustomArms)
 		return;
 		
 	int model = PrecacheModel(g_Characters[client].Arms);
 
 	SetEntityModel(weapon, g_Characters[client].Arms);
 	SetEntProp(weapon, Prop_Send, "m_nCustomViewmodelModelIndex", model);
-	SetEntProp(weapon, Prop_Send, "m_iViewModelIndex", model);
+	SetEntProp(weapon, Prop_Send, "m_iViewModelIndex", model);*/
 }
 
 /**
@@ -1365,7 +1365,7 @@ void CFC_WeaponEquipped(int client, int weapon)
  	
  	CFA_UpdateMadeCharacter(client);
  	
- 	CF_SetCharacterArms(client, g_Characters[client].Arms);
+ 	//CF_SetCharacterArms(client, g_Characters[client].Arms); //Crashes on Linux due to empty string (TODO)
  	
  	b_FirstSpawn[client] = false;
  	
@@ -2152,7 +2152,7 @@ public Native_CF_GetCharacterArms(Handle plugin, int numParams)
 	}
 }
 
-public Native_CF_SetCharacterArms(Handle plugin, int numParams)
+/*public Native_CF_SetCharacterArms(Handle plugin, int numParams) //Crashes on Linux due to empty string (TODO)
 {
 	int client = GetNativeCell(1);
 	char arms[255];
@@ -2178,7 +2178,7 @@ public Native_CF_SetCharacterArms(Handle plugin, int numParams)
 			SetEntProp(weapon, Prop_Send, "m_iViewModelIndex", model);
 		}
 	}
-}
+}*/
 
 public any Native_CF_MakeClientCharacter(Handle plugin, int numParams)
 {

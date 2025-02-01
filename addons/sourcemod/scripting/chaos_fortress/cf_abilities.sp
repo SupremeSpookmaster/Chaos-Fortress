@@ -312,6 +312,8 @@ public Action GetOwner(int ent)
 
 Handle HudSync;
 
+bool b_HUDTimerActive = false;
+
 #define NOPE				"replay/record_fail.wav"
 #define HEAL_DEFAULT		"items/smallmedkit1.wav"
 #define HEAL_DEFAULT_MODEL	"models/items/medkit_medium.mdl"
@@ -322,8 +324,8 @@ Handle HudSync;
 public void CFA_MapStart()
 {
 	HudSync = CreateHudSynchronizer();
-	
-	CreateTimer(0.1, CFA_HUDTimer, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+
+	b_HUDTimerActive = false;
 	
 	PrecacheSound(NOPE);
 	PrecacheSound(HEAL_DEFAULT);
@@ -339,6 +341,10 @@ public void CFA_MapStart()
 	//MODEL_NONE = PrecacheModel("models/empty.mdl");
 }
 
+public void CFA_SetHUDTimerStatus(bool status) { b_HUDTimerActive = status; }
+
+public bool CFA_GetHUDTimerStatus() { return b_HUDTimerActive; }
+
 public void ScoreThink(int entity)
 {
 	for(int client = 1; client <= MaxClients; client++)
@@ -352,6 +358,9 @@ public void ScoreThink(int entity)
 
 public Action CFA_HUDTimer(Handle timer)
 {
+	if (!CFA_GetHUDTimerStatus())
+		return Plugin_Stop;
+
 	int rState = CF_GetRoundState();
 	bool wouldBeStuck;
 	bool tooPoor;
@@ -4001,7 +4010,8 @@ char VMAnim_ForcedSequence[MAXPLAYERS + 1][255];
 //TODO: Make this work with custom weapon models.
 public Native_CF_ForceViewmodelAnimation(Handle plugin, int numParams)
 {
-	int client = GetNativeCell(1);
+	return 0;
+	/*int client = GetNativeCell(1);
 	char activity[255];
 	GetNativeString(2, activity, sizeof(activity));
 	bool hideWeapon = GetNativeCell(3);
@@ -4060,7 +4070,7 @@ public Native_CF_ForceViewmodelAnimation(Handle plugin, int numParams)
 		}
 	}
 	
-	RequestFrame(VMAnim_Check, GetClientUserId(client));
+	RequestFrame(VMAnim_Check, GetClientUserId(client));*/
 }
 
 public void VMAnim_BlockAttacks(int client)
@@ -4083,7 +4093,7 @@ public void VMAnim_BlockAttacks(int client)
 	}
 }
 
-public void VMAnim_Check(int id)
+/*public void VMAnim_Check(int id)
 {
 	int client = GetClientOfUserId(id);
 	if (!IsValidMulti(client))
@@ -4127,7 +4137,7 @@ public void VMAnim_Check(int id)
 	}
 	
 	RequestFrame(VMAnim_Check, id);
-}
+}*/
 
 public Action CFA_WeaponCanSwitch(int client, int weapon)
 {

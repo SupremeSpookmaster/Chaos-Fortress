@@ -135,7 +135,11 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 	if (!CheckFile(checkFile))
 		return false;
 		
+	if (!snd[0])
+		return false;
+
 	PrecacheSound(snd);
+
 	int playMode = 0;
 	
 	int ultType = 0;

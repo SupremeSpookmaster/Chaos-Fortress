@@ -107,8 +107,20 @@ public Action Timer_ChatMessages(Handle messages)
 
 public void OnClientPutInServer(int client)
 {
-	SDKHook(client, SDKHook_WeaponSwitch, CFC_WeaponEquipped);
-	SDKHook(client, SDKHook_WeaponCanSwitchTo, CFA_WeaponCanSwitch);
+	//SDKHook(client, SDKHook_WeaponSwitch, CFC_WeaponEquipped);
+	//SDKHook(client, SDKHook_WeaponCanSwitchTo, CFA_WeaponCanSwitch);
+
+	if (!CFA_GetHUDTimerStatus())
+	{
+		CreateTimer(1.0, StartHUDTimerOnDelay, _, TIMER_FLAG_NO_MAPCHANGE);
+		CFA_SetHUDTimerStatus(true);
+	}
+}
+
+public Action StartHUDTimerOnDelay(Handle timer)
+{
+	CreateTimer(0.1, CFA_HUDTimer, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+	return Plugin_Continue;
 }
 
 #define SOUND_PHYSTOUCH_HIT		"@weapons/fx/rics/arrow_impact_metal2.wav"
@@ -390,6 +402,9 @@ void CF_SetRoundState(int state)
 
 public Native_CF_GetRoundState(Handle plugin, int numParams)
 {
+	if (FindEntityByClassname(-1, "tf_gamerules") == -1)
+		return 0;
+
 	RoundState state = GameRules_GetRoundState();
 	if (state == RoundState_RoundRunning || state == RoundState_Bonus)
 		return 1;

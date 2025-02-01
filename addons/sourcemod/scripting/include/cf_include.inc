@@ -3,7 +3,7 @@
 #endif
 #define _cfinc_included_
 
-#include <cbasenpc>
+//#include <cbasenpc>	//TODO UNERASE
 #include <cfgmap>
 
 enum CF_ResourceType
@@ -840,13 +840,14 @@ native CF_SetCharacterName(int client, char NewName[255]);
  */
 native CF_GetCharacterArms(int client, char output[255]);
 
+//Crashes on Linux due to empty string (TODO)
 /**
- * Changes the model path of the given client's current character's viewmodel arms.
+ * Changes the model path of the given client's current character's viewmodel arms. 
  *
  * @param client				The client whose arms to set.
  * @param NewArms				The new model to be used for arms.
  */
-native CF_SetCharacterArms(int client, char NewArms[255]);
+//native CF_SetCharacterArms(int client, char NewArms[255]);
 
 /**
  * Retrieves the model path of the given client's current character.
