@@ -1109,7 +1109,7 @@ native float CF_GetAbilityCooldown(int client, CF_AbilityType type);
  * Activates a given ability, if it exists on the character.
  *
  * @param client		The client whose ability to activate.
- * @param pluginName			The plugin name of the ability, as specified in the config as "plugin_name".
+ * @param pluginName	The plugin name of the ability, as specified in the config as "plugin_name".
  * @param abilityName	The ability name of the ability, as specified in the config as "ability_name".
  *
  */
