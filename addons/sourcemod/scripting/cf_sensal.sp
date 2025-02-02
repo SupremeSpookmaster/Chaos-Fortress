@@ -132,11 +132,11 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	{
 		ScytheThrow(client, abilityName);
 	}
-	else if(StrContains(abilityName, ABILITY_BARRIER) != -1)
+	else if(StrContains(abilityName, ABILITY_BARRIER_PORTAL) != -1)
 	{
 		ApplyBarrier(client, abilityName);
 	}
-	else if(StrContains(abilityName, ABILITY_BARRIER_PORTAL) != -1)
+	else if(StrContains(abilityName, ABILITY_BARRIER) != -1)
 	{
 		ApplyBarrier(client, abilityName);
 	}
