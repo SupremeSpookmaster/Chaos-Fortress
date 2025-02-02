@@ -170,22 +170,22 @@ public void Generic_DeleteTimers(int client)
 		}
 	}
 	
-	if (g_ModelTimer[client] != null)
+	if (g_ModelTimer[client] != null && g_ModelTimer[client] != INVALID_HANDLE)
 	{
 		delete g_ModelTimer[client];
 		g_ModelTimer[client] = null;
 	}
-	if (g_SpeedTimer[client] != null)
+	if (g_SpeedTimer[client] != null && g_SpeedTimer[client] != INVALID_HANDLE)
 	{
 		delete g_SpeedTimer[client];
 		g_SpeedTimer[client] = null;
 	}
-	if (g_HealthTimer[client] != null)
+	if (g_HealthTimer[client] != null && g_HealthTimer[client] != INVALID_HANDLE)
 	{
 		delete g_HealthTimer[client];
 		g_HealthTimer[client] = null;
 	}
-	if (g_ScaleTimer[client] != null)
+	if (g_ScaleTimer[client] != null && g_ScaleTimer[client] != INVALID_HANDLE)
 	{
 		delete g_ScaleTimer[client];
 		g_ScaleTimer[client] = null;
