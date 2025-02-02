@@ -127,6 +127,7 @@ Function g_ProjectileLogic[2049] = { INVALID_FUNCTION, ... };
 //int MODEL_NONE = -1;
 
 bool b_ProjectileCanCollideWithAllies[2049] = { false, ... };
+bool b_IsProjectile[2049] = { false, ... };
 
 CF_AbilityType i_HeldBlocked[MAXPLAYERS + 1] = { CF_AbilityType_None, ... };
 
@@ -286,6 +287,7 @@ public void CFA_OnEntityDestroyed(int entity)
 	i_GenericProjectileOwner[entity] = -1;
 	b_IsFakeHealthKit[entity] = false;
 	b_IsMedigunShield[entity] = false;
+	b_IsProjectile[entity] = false;
 	f_FakeMediShieldHP[entity] = 0.0;
 	f_FakeMediShieldMaxHP[entity] = 0.0;
 	b_ProjectileCanCollideWithAllies[entity] = false;
@@ -1068,6 +1070,7 @@ public void CFC_MapEnd()
 		b_IsMedigunShield[i] = false;
 		b_ProjectileCanCollideWithAllies[i] = false;
 		i_GenericProjectileOwner[i] = -1;
+		b_IsProjectile[i] = false;
 	}
 }
 
@@ -3188,8 +3191,14 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 	Action ReturnVal = Plugin_Continue;
 	bool CallForward = true;
 	
+	if (b_IsProjectile[ent1] && b_IsProjectile[ent2])
+	{
+		result = false;
+		ReturnVal = Plugin_Changed;
+		CallForward = false;
+	}
 	//First test: don't allow TF2 projectiles to collide with their owners or players who are on their owner's team:
-	if (IsValidClient(GetClientOfUserId(i_GenericProjectileOwner[ent1])))
+	else if (IsValidClient(GetClientOfUserId(i_GenericProjectileOwner[ent1])))
 	{
 		TFTeam team = view_as<TFTeam>(GetEntProp(ent1, Prop_Send, "m_iTeamNum"));
 		int owner = GetEntPropEnt(ent1, Prop_Send, "m_hOwnerEntity");
@@ -4066,6 +4075,7 @@ public void CFA_OnEntityCreated(int entity, const char[] classname)
 	if (StrContains(classname, "tf_projectile") != -1)
 	{
 		SDKHook(entity, SDKHook_SpawnPost, GetOwner);
+		b_IsProjectile[entity] = true;
 		b_ProjectileCanCollideWithAllies[entity] = StrEqual(classname, "tf_projectile_healing_bolt");
 	}
 	
