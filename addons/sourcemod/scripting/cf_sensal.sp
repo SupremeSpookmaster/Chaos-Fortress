@@ -891,8 +891,10 @@ Action PortalGateStartTimer(Handle timer, DataPack pack)
 			float pos[3];
 			GetEntPropVector(client, Prop_Data, "m_vecAbsOrigin", pos);
 			float pos2[3];
+			pos[2] += 5.0;
 			pos = pos2;
-			Handle hTrace = TR_TraceHullFilterEx(pos, pos2, hullcheckmins, hullcheckmaxs, MASK_SOLID, TraceRayHitWorldOnly, entity);
+			pos2[2] += 400.0;
+			Handle hTrace = TR_TraceHullFilterEx(pos, pos2, hullcheckmins, hullcheckmaxs, ( MASK_SOLID ), TraceRayHitWorldOnly, entity);
 			if(TR_DidHit(hTrace))
 			{
 				//Because its a hull, when it hits itll get the middle of said hull
