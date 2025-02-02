@@ -156,6 +156,11 @@ char s_OnResizeSuccess[MAXPLAYERS + 1][255];
 
 public void CF_OnCharacterCreated(int client)
 {
+	Generic_DeleteTimers(client);
+}
+
+public void Generic_DeleteTimers(int client)
+{
 	for (int i = 0; i < 4; i++)
 	{
 		if (g_BlockTimers[client][i] != null && g_BlockTimers[client][i] != INVALID_HANDLE)	//I know SM already checks if the handle isn't null, but if I don't put this check here I get error spam.
@@ -165,10 +170,26 @@ public void CF_OnCharacterCreated(int client)
 		}
 	}
 	
-	delete g_ModelTimer[client];
-	delete g_SpeedTimer[client];
-	delete g_HealthTimer[client];
-	delete g_ScaleTimer[client];
+	if (g_ModelTimer[client] != null)
+	{
+		delete g_ModelTimer[client];
+		g_ModelTimer[client] = null;
+	}
+	if (g_SpeedTimer[client] != null)
+	{
+		delete g_SpeedTimer[client];
+		g_SpeedTimer[client] = null;
+	}
+	if (g_HealthTimer[client] != null)
+	{
+		delete g_HealthTimer[client];
+		g_HealthTimer[client] = null;
+	}
+	if (g_ScaleTimer[client] != null)
+	{
+		delete g_ScaleTimer[client];
+		g_ScaleTimer[client] = null;
+	}
 }
 
 public void Weapon_ClearAllOldWeapons(int client)
@@ -318,7 +339,7 @@ public void Scale_Activate(int client, char abilityName[255])
 	if (duration > 0.0)
 	{
 		f_ScaleEndTime[client] = GetGameTime() + duration - 0.1;
-		g_ScaleTimer[client] = CreateTimer(duration, Scale_Revert, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+		g_ScaleTimer[client] = CreateTimer(duration, Scale_Revert, GetClientUserId(client));
 	}
 }
 
@@ -357,7 +378,7 @@ public void Health_Activate(int client, char abilityName[255])
 	if (duration > 0.0)
 	{
 		f_HealthEndTime[client] = GetGameTime() + duration - 0.1;
-		g_HealthTimer[client] = CreateTimer(duration, Health_Revert, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+		g_HealthTimer[client] = CreateTimer(duration, Health_Revert, GetClientUserId(client));
 	}
 }
 
@@ -393,7 +414,7 @@ public void Speed_Activate(int client, char abilityName[255])
 	if (duration > 0.0)
 	{
 		f_SpeedEndTime[client] = GetGameTime() + duration - 0.1;
-		g_SpeedTimer[client] = CreateTimer(duration, Speed_Revert, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+		g_SpeedTimer[client] = CreateTimer(duration, Speed_Revert, GetClientUserId(client));
 	}
 }
 
@@ -430,7 +451,7 @@ public void Model_Activate(int client, char abilityName[255])
 	if (duration > 0.0)
 	{
 		f_ModelEndTime[client] = GetGameTime() + duration - 0.1;
-		g_ModelTimer[client] = CreateTimer(duration, Model_Revert, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+		g_ModelTimer[client] = CreateTimer(duration, Model_Revert, GetClientUserId(client));
 	}
 	
 	if (!b_WearablesHidden[client])
@@ -859,19 +880,10 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 	for (int i = 0; i < 4; i++)
 	{
 		Limit_NumUses[client][i] = 0;
-		if (g_BlockTimers[client][i] != null && g_BlockTimers[client][i] != INVALID_HANDLE)	//I know SM already checks if the handle isn't null, but if I don't put this check here I get error spam.
-		{
-			delete g_BlockTimers[client][i];
-			g_BlockTimers[client][i] = null;
-		}
 	}
+	Generic_DeleteTimers(client);
 	
 	b_WearablesHidden[client] = false;
-	
-	delete g_ModelTimer[client];
-	delete g_SpeedTimer[client];
-	delete g_HealthTimer[client];
-	delete g_ScaleTimer[client];
 	
 	i_NumConds[client] = 0;
 	
