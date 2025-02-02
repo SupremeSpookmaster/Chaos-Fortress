@@ -342,7 +342,13 @@ bool IsValidTarget(int attacker, int victim)
 	{
 		if(GetEntProp(victim, Prop_Data, "m_takedamage") == 0)
 			return false;
+		
+		char classname[255];
+		GetEntityClassname(victim, classname, sizeof(classname));
 
+		if ((StrContains(classname, "obj_") != -1) && (StrContains(classname, "npc") != -1))
+			return false;
+		
 		int team2 = GetEntProp(victim, Prop_Send, "m_iTeamNum");
 		if(team2 == 0)
 			return false;
@@ -592,8 +598,7 @@ void ApplyBarrier(int client, char abilityName[255])
 
 bool UpdateBarrier(int client, char abilityName[255] = "")
 {
-//	int maxHealth = RoundFloat(CF_GetCharacterMaxHealth(client));
-	int maxHealth = RoundFloat(200.0);
+	int maxHealth = RoundFloat(CF_GetCharacterMaxHealth(client));
 	//Hardcode at 200 for now.
 	
 	// 255 alpha at x5 max health
@@ -641,8 +646,8 @@ bool UpdateBarrier(int client, char abilityName[255] = "")
 			SetEntityRenderMode(entity, RENDER_TRANSCOLOR);
 			ShieldEntRef[client] = EntIndexToEntRef(entity);
 
-			SDKUnhook(client, SDKHook_OnTakeDamagePost, BarrierTakeDamagePost);
-			SDKHook(client, SDKHook_OnTakeDamagePost, BarrierTakeDamagePost);
+			SDKUnhook(client, SDKHook_OnTakeDamageAlivePost, BarrierTakeDamagePost);
+			SDKHook(client, SDKHook_OnTakeDamageAlivePost, BarrierTakeDamagePost);
 
 			// Don't show barrier to ourself
 			SDKHook(entity, SDKHook_SetTransmit, ShieldSetTransmit);
