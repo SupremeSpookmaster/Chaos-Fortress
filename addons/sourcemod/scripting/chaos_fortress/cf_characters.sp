@@ -424,6 +424,9 @@ public void CFC_OnEntityDestroyed(int entity)
  
  public void CF_LoadSpecificCharacter(char path[255], bool JustDownload)
  {
+	if (!path[0])
+		return;
+		
  	ConfigMap Character = new ConfigMap(path);
  	
  	if (Character == null)
