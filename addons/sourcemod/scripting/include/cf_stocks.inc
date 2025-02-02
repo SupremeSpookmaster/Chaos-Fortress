@@ -1016,7 +1016,7 @@ stock int AttachParticleToEntity(int entity, char type[255], char point[255], fl
 			DispatchKeyValue(part1, "effect_name", type);
 			
 			float pos[3];
-			CF_WorldSpaceCenter(entity, pos);
+			GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", pos);
 			pos[0] += xOff;
 			pos[1] += yOff;
 			pos[2] += zOff;
