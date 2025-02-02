@@ -592,8 +592,7 @@ void ApplyBarrier(int client, char abilityName[255])
 
 bool UpdateBarrier(int client, char abilityName[255] = "")
 {
-//	int maxHealth = RoundFloat(CF_GetCharacterMaxHealth(client));
-	int maxHealth = RoundFloat(200.0);
+	int maxHealth = RoundFloat(CF_GetCharacterMaxHealth(client));
 	//Hardcode at 200 for now.
 	
 	// 255 alpha at x5 max health
@@ -641,8 +640,8 @@ bool UpdateBarrier(int client, char abilityName[255] = "")
 			SetEntityRenderMode(entity, RENDER_TRANSCOLOR);
 			ShieldEntRef[client] = EntIndexToEntRef(entity);
 
-			SDKUnhook(client, SDKHook_OnTakeDamagePost, BarrierTakeDamagePost);
-			SDKHook(client, SDKHook_OnTakeDamagePost, BarrierTakeDamagePost);
+			SDKUnhook(client, SDKHook_OnTakeDamageAlivePost, BarrierTakeDamagePost);
+			SDKHook(client, SDKHook_OnTakeDamageAlivePost, BarrierTakeDamagePost);
 
 			// Don't show barrier to ourself
 			SDKHook(entity, SDKHook_SetTransmit, ShieldSetTransmit);
