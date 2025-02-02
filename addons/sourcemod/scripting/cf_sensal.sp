@@ -895,7 +895,7 @@ Action PortalGateStartTimer(Handle timer, DataPack pack)
 			float pos2[3];
 
 			pos[2] += 5.0;
-			pos = pos2;
+			pos2 = pos;
 			pos2[2] += 400.0;
 
 			Handle hTrace = TR_TraceHullFilterEx(pos, pos2, hullcheckmins, hullcheckmaxs, ( MASK_SOLID ), TraceRayHitWorldOnly, client);
