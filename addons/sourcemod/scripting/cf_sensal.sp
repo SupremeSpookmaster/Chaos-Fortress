@@ -885,8 +885,8 @@ Action PortalGateStartTimer(Handle timer, DataPack pack)
 			SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", GetPlayerWeaponSlot(client, TFWeaponSlot_Melee));
 
 			//Trace upwards for 400 units
-			float hullcheckmaxs = view_as<float>( { 20.0, 20.0, 24.0 } );
-			float hullcheckmins = view_as<float>( { -20.0, -20.0, 0.0 } );	
+			float hullcheckmaxs[3] = view_as<float>( { 20.0, 20.0, 24.0 } );
+			float hullcheckmins[3] = view_as<float>( { -20.0, -20.0, 0.0 } );	
 
 			float pos[3];
 			GetEntPropVector(client, Prop_Data, "m_vecAbsOrigin", pos);
