@@ -342,7 +342,13 @@ bool IsValidTarget(int attacker, int victim)
 	{
 		if(GetEntProp(victim, Prop_Data, "m_takedamage") == 0)
 			return false;
+		
+		char classname[255];
+		GetEntityClassname(victim, classname, sizeof(classname));
 
+		if ((StrContains(classname, "obj_") != -1) && (StrContains(classname, "npc") != -1))
+			return false;
+		
 		int team2 = GetEntProp(victim, Prop_Send, "m_iTeamNum");
 		if(team2 == 0)
 			return false;
