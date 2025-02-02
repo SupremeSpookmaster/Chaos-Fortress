@@ -31,7 +31,7 @@ Handle g_ChatMessages;
 Handle g_ChatIntervals;
 Handle g_ChatTimes;
 
-#define GAME_DESCRIPTION	"Chaos Fortress: Closed Alpha"
+#define GAME_DESCRIPTION	"Chaos Fortress: Open Beta"
 
 /**
  * Creates all of Chaos Fortress' natives.
@@ -105,7 +105,7 @@ public Action Timer_ChatMessages(Handle messages)
 	return Plugin_Continue;
 }
 
-public void OnClientPutInServer(int client)
+/*public void OnClientPutInServer(int client)
 {
 	//SDKHook(client, SDKHook_WeaponSwitch, CFC_WeaponEquipped);
 	//SDKHook(client, SDKHook_WeaponCanSwitchTo, CFA_WeaponCanSwitch);
@@ -121,7 +121,7 @@ public Action StartHUDTimerOnDelay(Handle timer)
 {
 	CreateTimer(0.1, CFA_HUDTimer, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 	return Plugin_Continue;
-}
+}*/
 
 #define SOUND_PHYSTOUCH_HIT		"@weapons/fx/rics/arrow_impact_metal2.wav"
 #define SOUND_PHYSTOUCH_BLAST	"@weapons/explode1.wav"
@@ -143,6 +143,8 @@ public void CF_MapStart()
 	
 	PrecacheSound(SOUND_PHYSTOUCH_HIT);
 	PrecacheSound(SOUND_PHYSTOUCH_BLAST);
+
+	CreateTimer(0.1, CFA_HUDTimer, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 }
 
 /**

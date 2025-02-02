@@ -212,6 +212,11 @@ public OnMapStart()
 	PrecacheSound(SND_ADMINCOMMAND);
 }
 
+public OnMapEnd()
+{
+	CFC_MapEnd();
+}
+
 public Action PlayerKilled(Event hEvent, const char[] sEvName, bool bDontBroadcast)
 {
 	int victim = GetClientOfUserId(hEvent.GetInt("userid"));

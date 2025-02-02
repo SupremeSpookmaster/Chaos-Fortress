@@ -456,8 +456,11 @@ public void Calcium_ShockPlayer(int attacker, int victim, float radius, int prev
 	for (int i = 0; i < GetArraySize(victims); i++)
 	{
 		int vic = GetArrayCell(victims, i);
-		if (!Calcium_HitByPlayer[attacker][vic])
-			Calcium_ShockPlayer(attacker, vic, Calcium_ChainRadius[attacker], victim);
+		if (IsValidClient(vic))
+		{
+			if (!Calcium_HitByPlayer[attacker][vic])
+				Calcium_ShockPlayer(attacker, vic, Calcium_ChainRadius[attacker], victim);
+		}
 	}
 	
 	delete victims;

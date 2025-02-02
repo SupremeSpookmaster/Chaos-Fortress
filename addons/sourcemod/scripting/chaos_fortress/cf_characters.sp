@@ -313,7 +313,8 @@ public void CFC_OnEntityDestroyed(int entity)
  */
  public void CF_LoadCharacters(int admin)
  {
- 	DeleteCfg(Characters);
+	//if (Characters != null)
+ 	//	DeleteCfg(Characters);
  		
  	Characters = new ConfigMap("data/chaos_fortress/characters.cfg");
  	

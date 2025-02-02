@@ -341,10 +341,6 @@ public void CFA_MapStart()
 	//MODEL_NONE = PrecacheModel("models/empty.mdl");
 }
 
-public void CFA_SetHUDTimerStatus(bool status) { b_HUDTimerActive = status; }
-
-public bool CFA_GetHUDTimerStatus() { return b_HUDTimerActive; }
-
 public void ScoreThink(int entity)
 {
 	for(int client = 1; client <= MaxClients; client++)
@@ -358,9 +354,6 @@ public void ScoreThink(int entity)
 
 public Action CFA_HUDTimer(Handle timer)
 {
-	if (!CFA_GetHUDTimerStatus())
-		return Plugin_Stop;
-
 	int rState = CF_GetRoundState();
 	bool wouldBeStuck;
 	bool tooPoor;
@@ -953,6 +946,129 @@ public void CFA_ReduceUltCharge_CharacterSwitch(int client)
 		newCharge = f_UltCharge[client];
 		
 	CF_SetUltCharge(client, newCharge, true);
+}
+
+public void CFC_MapEnd()
+{
+	for (int i = 0; i <= MaxClients; i++)
+	{
+		f_UltChargeRequired[i] = 0.0;
+		f_UltCharge[i] = 0.0;
+		f_UltChargeOnRegen[i] = 0.0;
+		f_UltChargeOnDamage[i] = 0.0;
+		f_UltChargeOnHurt[i] = 0.0;
+		f_UltChargeOnHeal[i] = 0.0;
+		f_ResourceRegenInterval[i] = 0.0;
+		f_UltChargeOnKill[i] = 0.0;
+		f_ResourceRegenNext[i] = 0.0;
+		f_UltCD[i] = 0.0;
+		f_UltCDEndTime[i] = 0.0;
+		f_M2CD[i] = 0.0;
+		f_M2CDEndTime[i] = 0.0;
+		f_M3CD[i] = 0.0;
+		f_M3CDEndTime[i] = 0.0;
+		f_ReloadCD[i] = 0.0;
+		f_ReloadCDEndTime[i] = 0.0;
+		f_M2Cost[i] = 0.0;
+		f_M3Cost[i] = 0.0;
+		f_ReloadCost[i] = 0.0;
+		f_ResourceMax[i] = 0.0;
+		f_Resources[i] = 0.0;
+		f_ResourcesOnRegen[i] = 0.0;
+		f_ResourcesOnDamage[i] = 0.0;
+		f_ResourcesOnHurt[i] = 0.0;
+		f_ResourcesOnHeal[i] = 0.0;
+		f_ResourcesOnKill[i] = 0.0;
+		f_NextResourceRegen[i] = 0.0;
+		f_ResourcesSinceLastGain[i] = 0.0;
+		f_ResourcesToTriggerSound[i] = 0.0;
+		f_UltScale[i] = 0.0;
+		f_M2Scale[i] = 0.0;
+		f_RScale[i] = 0.0;
+		f_CancelTemporarySpeedMod[i] = 0.0;
+		f_M3Scale[i] = 0.0;
+		f_M3Scale[i] = 0.0;
+		f_M3Scale[i] = 0.0;
+		f_M3Scale[i] = 0.0;
+		f_M3Scale[i] = 0.0;
+		f_M3Scale[i] = 0.0;
+		f_M3Scale[i] = 0.0;
+		f_M3Scale[i] = 0.0;
+		f_M3Scale[i] = 0.0;
+
+		strcopy(s_UltName[i], 255, "");
+		strcopy(s_M2Name[i], 255, "");
+		strcopy(s_M3Name[i], 255, "");
+		strcopy(s_ResourceName[i], 255, "");
+		strcopy(s_ReloadName[i], 255, "");
+		strcopy(s_ResourceName_Plural[i], 255, "");
+		strcopy(s_ReloadName[i], 255, "");
+		strcopy(s_ReloadName[i], 255, "");
+
+		b_CharacterHasUlt[i] = false;
+		b_UsingResources[i] = false;
+		b_M2IsHeld[i] = false;
+		b_M3IsHeld[i] = false;
+		b_ReloadIsHeld[i] = false;
+		b_ResourceIsUlt[i] = false;
+		b_ResourceIsPercentage[i] = false;
+		b_UseHUD[i] = false;
+		b_HasM2[i] = false;
+		b_HasM3[i] = false;
+		b_HasReload[i] = false;
+		b_HoldingReload[i] = false;
+		b_HoldingM2[i] = false;
+		b_HoldingM3[i] = false;
+		b_ForceEndHeldM2[i] = false;
+		b_ForceEndHeldM3[i] = false;
+		b_ForceEndHeldReload[i] = false;
+		b_UltBlocked[i] = false;
+		b_M2Blocked[i] = false;
+		b_M3Blocked[i] = false;
+		b_ReloadBlocked[i] = false;
+		b_UltIsGrounded[i] = false;
+		b_M2IsGrounded[i] = false;
+		b_M3IsGrounded[i] = false;
+		b_ReloadIsGrounded[i] = false;
+		b_HeldM2BlocksOthers[i] = false;
+		b_HeldM3BlocksOthers[i] = false;
+		b_HeldReloadBlocksOthers[i] = false;
+
+		i_HealingDone[i] = 0;
+		i_UltWeaponSlot[i] = -1;
+		i_M2WeaponSlot[i] = -1;
+		i_M3WeaponSlot[i] = -1;
+		i_ReloadWeaponSlot[i] = -1;
+		i_UltAmmo[i] = -1;
+		i_M2Ammo[i] = -1;
+		i_M3Ammo[i] = -1;
+		i_ReloadAmmo[i] = -1;
+		i_HUDR[i] = 0;
+		i_HUDG[i] = 0;
+		i_HUDB[i] = 0;
+		i_HUDA[i] = 0;
+		i_M2Stocks[i] = 0;
+		i_M2MaxStocks[i] = 0;
+		i_M3Stocks[i] = 0;
+		i_M3MaxStocks[i] = 0;
+		i_ReloadStocks[i] = 0;
+		i_ReloadMaxStocks[i] = 0;
+		i_HUDB[i] = 0;
+		i_HUDA[i] = 0;
+	}
+
+	for (int i = 0; i < 2049; i++)
+	{
+		for (int j = 0; j < 2049; j++)
+			f_NextShieldCollisionForward[i][j] = 0.0;
+
+		f_FakeMediShieldHP[i] = 0.0;
+		f_FakeMediShieldMaxHP[i] = 0.0;
+		b_IsFakeHealthKit[i] = false;
+		b_IsMedigunShield[i] = false;
+		b_ProjectileCanCollideWithAllies[i] = false;
+		i_GenericProjectileOwner[i] = -1;
+	}
 }
 
 public void CFA_ToggleHUD(int client, bool toggle)
