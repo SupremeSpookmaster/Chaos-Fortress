@@ -339,13 +339,20 @@ public void Scale_Activate(int client, char abilityName[255])
 	if (duration > 0.0)
 	{
 		f_ScaleEndTime[client] = GetGameTime() + duration - 0.1;
-		g_ScaleTimer[client] = CreateTimer(duration, Scale_Revert, GetClientUserId(client));
+		DataPack pack = new DataPack();
+		g_ScaleTimer[client] = CreateDataTimer(duration, Scale_Revert, pack);
+		WritePackCell(pack, GetClientUserId(client));
+		WritePackCell(pack, client);
 	}
 }
 
-public Action Scale_Revert(Handle revert, int id)
+public Action Scale_Revert(Handle revert, DataPack pack)
 {
-	int client = GetClientOfUserId(id);
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	int idx = ReadPackCell(pack);
+	g_ScaleTimer[idx] = null;
+
 	if (!IsValidMulti(client))
 		return Plugin_Continue;
 		
@@ -378,13 +385,20 @@ public void Health_Activate(int client, char abilityName[255])
 	if (duration > 0.0)
 	{
 		f_HealthEndTime[client] = GetGameTime() + duration - 0.1;
-		g_HealthTimer[client] = CreateTimer(duration, Health_Revert, GetClientUserId(client));
+		DataPack pack = new DataPack();
+		g_HealthTimer[client] = CreateDataTimer(duration, Health_Revert, pack);
+		WritePackCell(pack, GetClientUserId(client));
+		WritePackCell(pack, client);
 	}
 }
 
-public Action Health_Revert(Handle revert, int id)
+public Action Health_Revert(Handle revert, DataPack pack)
 {
-	int client = GetClientOfUserId(id);
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	int idx = ReadPackCell(pack);
+	g_HealthTimer[idx] = null;
+
 	if (!IsValidMulti(client))
 		return Plugin_Continue;
 		
@@ -414,13 +428,20 @@ public void Speed_Activate(int client, char abilityName[255])
 	if (duration > 0.0)
 	{
 		f_SpeedEndTime[client] = GetGameTime() + duration - 0.1;
-		g_SpeedTimer[client] = CreateTimer(duration, Speed_Revert, GetClientUserId(client));
+		DataPack pack = new DataPack();
+		g_SpeedTimer[client] = CreateDataTimer(duration, Speed_Revert, pack);
+		WritePackCell(pack, GetClientUserId(client));
+		WritePackCell(pack, client);
 	}
 }
 
-public Action Speed_Revert(Handle revert, int id)
+public Action Speed_Revert(Handle revert, DataPack pack)
 {
-	int client = GetClientOfUserId(id);
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	int idx = ReadPackCell(pack);
+	g_SpeedTimer[idx] = null;
+
 	if (!IsValidMulti(client))
 		return Plugin_Continue;
 		
@@ -451,7 +472,10 @@ public void Model_Activate(int client, char abilityName[255])
 	if (duration > 0.0)
 	{
 		f_ModelEndTime[client] = GetGameTime() + duration - 0.1;
-		g_ModelTimer[client] = CreateTimer(duration, Model_Revert, GetClientUserId(client));
+		DataPack pack = new DataPack();
+		g_ModelTimer[client] = CreateDataTimer(duration, Model_Revert, pack);
+		WritePackCell(pack, GetClientUserId(client));
+		WritePackCell(pack, client);
 	}
 	
 	if (!b_WearablesHidden[client])
@@ -462,9 +486,14 @@ public void Model_Activate(int client, char abilityName[255])
 	}
 }
 
-public Action Model_Revert(Handle revert, int id)
+public Action Model_Revert(Handle revert, DataPack pack)
 {
-	int client = GetClientOfUserId(id);
+	ResetPack(pack);
+
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	int idx = ReadPackCell(pack);
+	g_ModelTimer[idx] = null;
+
 	if (!IsValidMulti(client))
 		return Plugin_Continue;
 		
@@ -544,6 +573,7 @@ public void Block_Activate(int client, char abilityName[255])
 		g_BlockTimers[client][slot] = CreateDataTimer(duration, Block_Unblock, pack/*, TIMER_FLAG_NO_MAPCHANGE*/);
 		WritePackCell(pack, GetClientUserId(client));
 		WritePackCell(pack, type);
+		WritePackCell(pack, client);
 	}
 }
 
@@ -552,6 +582,10 @@ public Action Block_Unblock(Handle unblock, DataPack pack)
 	ResetPack(pack);
 	int client = GetClientOfUserId(ReadPackCell(pack));
 	CF_AbilityType type = ReadPackCell(pack);
+	int idx = ReadPackCell(pack);
+
+	int slot = view_as<int>(type);
+	g_BlockTimers[idx][slot] = null;
 	
 	if (IsValidMulti(client))
 		CF_UnblockAbilitySlot(client, type);
