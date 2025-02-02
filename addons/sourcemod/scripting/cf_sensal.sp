@@ -18,7 +18,7 @@
 
 #define ABILITY_WEAPON			"sensal_special_weapon"
 #define ABILITY_THROW			"sensal_ability_throw"
-#define ABILITY_BARRIER			"sensal_ability_barrier"
+#define ABILITY_BARRIER_NORM			"sensal_ability_barrier"
 #define ABILITY_BARRIER_SPAWN	"sensal_special_barrier"
 #define ABILITY_BARRIER_PORTAL	"sensal_ability_barrier_portal"
 #define ABILITY_MASSLASER		"sensal_ability_masslaser"
@@ -132,11 +132,11 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	{
 		ScytheThrow(client, abilityName);
 	}
-	else if(StrContains(abilityName, ABILITY_BARRIER) != -1)
+	else if(StrContains(abilityName, ABILITY_BARRIER_PORTAL) != -1)
 	{
 		ApplyBarrier(client, abilityName);
 	}
-	else if(StrContains(abilityName, ABILITY_BARRIER_PORTAL) != -1)
+	else if(StrContains(abilityName, ABILITY_BARRIER_NORM) != -1)
 	{
 		ApplyBarrier(client, abilityName);
 	}
