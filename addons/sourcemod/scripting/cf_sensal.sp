@@ -592,7 +592,9 @@ void ApplyBarrier(int client, char abilityName[255])
 
 bool UpdateBarrier(int client, char abilityName[255] = "")
 {
-	int maxHealth = RoundFloat(CF_GetCharacterMaxHealth(client));
+//	int maxHealth = RoundFloat(CF_GetCharacterMaxHealth(client));
+	int maxHealth = RoundFloat(200.0);
+	//Hardcode at 200 for now.
 	
 	// 255 alpha at x5 max health
 	int alpha = (GetClientHealth(client) - maxHealth) * 255 / (maxHealth * 4);
@@ -1613,7 +1615,7 @@ public bool Can_I_See_Enemy_Only(int attacker, int enemy)
 	Handle trace;
 	float pos_npc[3];
 	float pos_enemy[3];
-	CF_WorldSpaceCenter(attacker, pos_npc);
+	GetEntPropVector(attacker, Prop_Data, "m_vecAbsOrigin", pos_npc);
 	CF_WorldSpaceCenter(enemy, pos_enemy);
 
 	trace = TR_TraceRayFilterEx(pos_npc, pos_enemy, ( MASK_SOLID | CONTENTS_SOLID ), RayType_EndPoint, TraceRayCanSeeAllySpecific, enemy);
