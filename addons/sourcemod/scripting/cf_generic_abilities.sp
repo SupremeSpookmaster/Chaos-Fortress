@@ -160,7 +160,8 @@ public void CF_OnCharacterCreated(int client)
 	{
 		if (g_BlockTimers[client][i] != null && g_BlockTimers[client][i] != INVALID_HANDLE)	//I know SM already checks if the handle isn't null, but if I don't put this check here I get error spam.
 		{
-			KillTimer(g_BlockTimers[client][i]);
+			delete g_BlockTimers[client][i];
+			g_BlockTimers[client][i] = null;
 		}
 	}
 	
@@ -519,7 +520,7 @@ public void Block_Activate(int client, char abilityName[255])
 		int slot = view_as<int>(type);
 		
 		DataPack pack = new DataPack();
-		g_BlockTimers[client][slot] = CreateDataTimer(duration, Block_Unblock, pack, TIMER_FLAG_NO_MAPCHANGE);
+		g_BlockTimers[client][slot] = CreateDataTimer(duration, Block_Unblock, pack/*, TIMER_FLAG_NO_MAPCHANGE*/);
 		WritePackCell(pack, GetClientUserId(client));
 		WritePackCell(pack, type);
 	}
@@ -860,7 +861,8 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 		Limit_NumUses[client][i] = 0;
 		if (g_BlockTimers[client][i] != null && g_BlockTimers[client][i] != INVALID_HANDLE)	//I know SM already checks if the handle isn't null, but if I don't put this check here I get error spam.
 		{
-			KillTimer(g_BlockTimers[client][i]);
+			delete g_BlockTimers[client][i];
+			g_BlockTimers[client][i] = null;
 		}
 	}
 	
