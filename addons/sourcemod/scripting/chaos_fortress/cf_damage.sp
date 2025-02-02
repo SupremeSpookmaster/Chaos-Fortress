@@ -56,6 +56,9 @@ public Action CFDMG_OnTakeDamageAlive(victim, &attacker, &inflictor, &Float:dama
 	
 	if (CF_GetRoundState() == 1 && attacker != victim)
 	{
+		if (damage > float(GetClientHealth(victim)))
+			damage = float(GetClientHealth(victim));
+			
 		CF_GiveSpecialResource(attacker, damage, CF_ResourceType_DamageDealt);
 		CF_GiveUltCharge(attacker, damage, CF_ResourceType_DamageDealt);
 		CF_GiveSpecialResource(victim, damage, CF_ResourceType_DamageTaken);

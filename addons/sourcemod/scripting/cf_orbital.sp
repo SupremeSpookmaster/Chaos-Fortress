@@ -180,6 +180,12 @@ public Action Tracer_PreThink(int client)
 		Tracer_Disable(client);
 		return Plugin_Stop;
 	}
+
+	if (!IsValidMulti(client) || !CF_HasAbility(client, ORBITAL, TRACER))
+	{
+		Tracer_Disable(client);
+		return Plugin_Stop;
+	}
 		
 	float charge = GetChargePercent(weapon);
 	bool FullCharge = HasFullCharge(client);

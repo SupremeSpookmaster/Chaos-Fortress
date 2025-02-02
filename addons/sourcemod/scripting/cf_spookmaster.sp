@@ -232,20 +232,6 @@ public void Absorb_HealOnDelay(DataPack pack)
 
 bool Discard_VMAnim[MAXPLAYERS + 1] = { false, ... };
 
-public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
-{
-	Discard_Bonus[client] = 0.0;
-	Absorb_Uses[client] = 0;
-	Absorb_DestroyEyeParticles(client);
-	Discard_VMAnim[client] = false;
-}
-
-public void CF_OnCharacterCreated(int client)
-{
-	if (CF_HasAbility(client, SPOOKMASTER, ABSORB) && Absorb_Uses[client] > 0)
-		Absorb_SetStats(client, float(Absorb_Uses[client]));
-}
-
 int Discard_Particle[2049] = { -1, ... };
 
 float Discard_BaseDMG[2049] = { 0.0, ... };
@@ -382,6 +368,7 @@ float Calcium_SkeleDamage[MAXPLAYERS + 1] = { 0.0, ... };
 int Calcium_SkeleHealth[MAXPLAYERS + 1] = { 0, ... };
 
 bool Calcium_HitByPlayer[MAXPLAYERS + 1][MAXPLAYERS + 1];
+bool Calcium_SpawnMinions[MAXPLAYERS + 1] = { false, ... };
 
 public void Calcium_Activate(int client, char abilityName[255])
 {
@@ -392,6 +379,7 @@ public void Calcium_Activate(int client, char abilityName[255])
 	Calcium_Ignite[client] = CF_GetArgF(client, SPOOKMASTER, abilityName, "ignite");
 	Calcium_SkeleHealth[client] = CF_GetArgI(client, SPOOKMASTER, abilityName, "skele_health");
 	Calcium_SkeleDamage[client] = CF_GetArgF(client, SPOOKMASTER, abilityName, "skele_damage");
+	Calcium_SpawnMinions[client] = CF_GetArgI(client, SPOOKMASTER, abilityName, "skele_spawn") > 0;
 	
 	Calcium_ClearHitStatus(client);
 }
@@ -476,7 +464,7 @@ public void Calcium_ClearHitStatus(int client)
 
 public void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int deadRinger)
 {
-	if (GetGameTime() <= Calcium_EndTime[attacker])
+	if (GetGameTime() <= Calcium_EndTime[attacker] && Calcium_SpawnMinions[attacker])
 	{
 		float pos[3];
 		GetClientAbsOrigin(victim, pos);
@@ -503,4 +491,25 @@ public void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int deadR
 			TeleportEntity(skeleton, pos);
 		}
 	}
+}
+
+public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
+{
+	Discard_Bonus[client] = 0.0;
+	Absorb_Uses[client] = 0;
+	Calcium_EndTime[client] = 0.0;
+	Absorb_DestroyEyeParticles(client);
+	Discard_VMAnim[client] = false;
+}
+
+public void CF_OnCharacterCreated(int client)
+{
+	if (CF_HasAbility(client, SPOOKMASTER, ABSORB) && Absorb_Uses[client] > 0)
+		Absorb_SetStats(client, float(Absorb_Uses[client]));
+}
+
+public void OnMapEnd()
+{
+	for (int i = 0; i <= MaxClients; i++)
+		Calcium_EndTime[i] = 0.0;
 }
