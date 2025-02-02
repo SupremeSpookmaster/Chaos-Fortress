@@ -1284,6 +1284,7 @@ void CFC_WeaponEquipped(int client, int weapon)
 	{
 		CFC_GiveWearables(client, wearables);
 	}
+	SDKCall_RecalculatePlayerBodygroups(client);
 	
 	ConfigMap weapons = map.GetSection("character.weapons");
 	if (weapons == null)

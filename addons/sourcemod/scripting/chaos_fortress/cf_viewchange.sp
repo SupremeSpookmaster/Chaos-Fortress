@@ -1,5 +1,5 @@
 static Handle SDKEquipWearable;
-
+Handle g_hRecalculatePlayerBodygroups;
 void ViewChange_PluginStart()
 {
 	GameData gamedata = LoadGameConfigFile("sm-tf2.games");
@@ -10,6 +10,21 @@ void ViewChange_PluginStart()
 	if(!SDKEquipWearable)
 		LogError("[Gamedata] Could not find RemoveWearable");
 	delete gamedata;
+
+	GameData gd = LoadGameConfigFile("chaos_fortress");
+	StartPrepSDKCall(SDKCall_Raw);
+	PrepSDKCall_SetFromConf(gd, SDKConf_Signature, "CTFPlayerShared::RecalculatePlayerBodygroups");
+	if((g_hRecalculatePlayerBodygroups = EndPrepSDKCall()) == INVALID_HANDLE) SetFailState("Failed to create Call for CTFPlayerShared::RecalculatePlayerBodygroups");
+
+	delete gd;
+}
+
+stock void SDKCall_RecalculatePlayerBodygroups(int index)
+{
+	if(g_hRecalculatePlayerBodygroups)
+	{
+		SDKCall(g_hRecalculatePlayerBodygroups, GetPlayerSharedAddress(index));
+	}
 }
 
 stock TFClassType TF2_GetWeaponClass(int index, TFClassType defaul=TFClass_Unknown, int checkSlot=-1)
