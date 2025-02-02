@@ -18,7 +18,7 @@
 
 #define ABILITY_WEAPON			"sensal_special_weapon"
 #define ABILITY_THROW			"sensal_ability_throw"
-#define ABILITY_BARRIER			"sensal_ability_barrier"
+#define ABILITY_BARRIER_NORM			"sensal_ability_barrier"
 #define ABILITY_BARRIER_SPAWN	"sensal_special_barrier"
 #define ABILITY_BARRIER_PORTAL	"sensal_ability_barrier_portal"
 #define ABILITY_MASSLASER		"sensal_ability_masslaser"
@@ -136,7 +136,7 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	{
 		ApplyBarrier(client, abilityName);
 	}
-	else if(StrContains(abilityName, ABILITY_BARRIER) != -1)
+	else if(StrContains(abilityName, ABILITY_BARRIER_NORM) != -1)
 	{
 		ApplyBarrier(client, abilityName);
 	}
@@ -885,16 +885,20 @@ Action PortalGateStartTimer(Handle timer, DataPack pack)
 			SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", GetPlayerWeaponSlot(client, TFWeaponSlot_Melee));
 
 			//Trace upwards for 400 units
-			static const float hullcheckmaxs[] = { 20.0, 20.0, 24.0 };
-			static const float hullcheckmins[] = { -20.0, -20.0, 0.0 };   
+			static float hullcheckmaxs[3];
+			static float hullcheckmins[3];
+			hullcheckmaxs = view_as<float>( { 20.0, 20.0, 24.0 } );
+			hullcheckmins = view_as<float>( { -20.0, -20.0, 0.0 } );	
 
 			float pos[3];
 			GetEntPropVector(client, Prop_Data, "m_vecAbsOrigin", pos);
 			float pos2[3];
+
 			pos[2] += 5.0;
 			pos = pos2;
 			pos2[2] += 400.0;
-			Handle hTrace = TR_TraceHullFilterEx(pos, pos2, hullcheckmins, hullcheckmaxs, ( MASK_SOLID ), TraceRayHitWorldOnly, entity);
+
+			Handle hTrace = TR_TraceHullFilterEx(pos, pos2, hullcheckmins, hullcheckmaxs, ( MASK_SOLID ), TraceRayHitWorldOnly, client);
 			if(TR_DidHit(hTrace))
 			{
 				//Because its a hull, when it hits itll get the middle of said hull
@@ -907,7 +911,7 @@ Action PortalGateStartTimer(Handle timer, DataPack pack)
 			if(GetClientTeam(client) == 2)
 				entity = ParticleEffectAt(pos2, "eyeboss_death_vortex", 0.0);
 			else
-				entity = ParticleEffectAt(pos2, "eyeboss_death_vortex", 0.0);
+				entity = ParticleEffectAt(pos2, "eyeboss_tp_vortex", 0.0);
 
 			if(entity != -1)
 			{
