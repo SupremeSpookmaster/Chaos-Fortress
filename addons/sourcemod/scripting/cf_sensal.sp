@@ -993,40 +993,39 @@ Action PortalGateLoopTimer(Handle timer, DataPack pack)
 								found = true;
 								FireScythe(client, abilityName, victim, pos);
 							}
-							else if(victim == client)
-							{
-								int red = 50;
-								int green = 50;
-								int blue = 200;
-								if(GetClientTeam(client) == 2)
-								{
-									red = 200;
-									green = 50;
-									blue = 50;
-								}
-								int colorLayer4[4];
-								float diameter = float(10 * 4);
-								SetColorRGBA(colorLayer4, red, green, blue, 200);
-								float PosUser[3];
-								CF_WorldSpaceCenter(client, PosUser);
-								//we set colours of the differnet laser effects to give it more of an effect
-								int colorLayer1[4];
-								SetColorRGBA(colorLayer1, colorLayer4[0] * 5 + 765 / 8, colorLayer4[1] * 5 + 765 / 8, colorLayer4[2] * 5 + 765 / 8, 100);
-								TE_SetupBeamPoints(pos, PosUser, g_Ruina_BEAM_Combine_Black, 0, 0, 0, 0.6, ClampBeamWidth(diameter * 0.5), ClampBeamWidth(diameter * 0.8), 0, 5.0, colorLayer1, 3);
-								TE_SendToAll(0.0);
-								TE_SetupBeamPoints(pos, PosUser, g_Ruina_BEAM_Combine_Black, 0, 0, 0, 0.4, ClampBeamWidth(diameter * 0.4), ClampBeamWidth(diameter * 0.5), 0, 5.0, colorLayer1, 3);
-								TE_SendToAll(0.0);
-								TE_SetupBeamPoints(pos, PosUser, g_Ruina_BEAM_Combine_Black, 0, 0, 0, 0.2, ClampBeamWidth(diameter * 0.3), ClampBeamWidth(diameter * 0.3), 0, 5.0, colorLayer1, 3);
-								TE_SendToAll(0.0);
-								int glowColor[4];
-								SetColorRGBA(glowColor, red, green, blue, 200);
-								TE_SetupBeamPoints(pos, PosUser, g_Ruina_BEAM_Combine_Blue, 0, 0, 0, 0.7, ClampBeamWidth(diameter * 0.2), ClampBeamWidth(diameter * 0.2), 0, 0.5, glowColor, 0);
-								TE_SendToAll(0.0);
-								
-								CF_DoAbility(client, "cf_sensal", "sensal_ability_barrier_portal");
-							}
 						}
-
+						if(Can_I_See_Enemy_Only(entity, client))
+						{
+							int red = 50;
+							int green = 50;
+							int blue = 200;
+							if(GetClientTeam(client) == 2)
+							{
+								red = 200;
+								green = 50;
+								blue = 50;
+							}
+							int colorLayer4[4];
+							float diameter = float(10 * 4);
+							SetColorRGBA(colorLayer4, red, green, blue, 200);
+							float PosUser[3];
+							CF_WorldSpaceCenter(client, PosUser);
+							//we set colours of the differnet laser effects to give it more of an effect
+							int colorLayer1[4];
+							SetColorRGBA(colorLayer1, colorLayer4[0] * 5 + 765 / 8, colorLayer4[1] * 5 + 765 / 8, colorLayer4[2] * 5 + 765 / 8, 100);
+							TE_SetupBeamPoints(pos, PosUser, g_Ruina_BEAM_Combine_Black, 0, 0, 0, 0.6, ClampBeamWidth(diameter * 0.5), ClampBeamWidth(diameter * 0.8), 0, 5.0, colorLayer1, 3);
+							TE_SendToAll(0.0);
+							TE_SetupBeamPoints(pos, PosUser, g_Ruina_BEAM_Combine_Black, 0, 0, 0, 0.4, ClampBeamWidth(diameter * 0.4), ClampBeamWidth(diameter * 0.5), 0, 5.0, colorLayer1, 3);
+							TE_SendToAll(0.0);
+							TE_SetupBeamPoints(pos, PosUser, g_Ruina_BEAM_Combine_Black, 0, 0, 0, 0.2, ClampBeamWidth(diameter * 0.3), ClampBeamWidth(diameter * 0.3), 0, 5.0, colorLayer1, 3);
+							TE_SendToAll(0.0);
+							int glowColor[4];
+							SetColorRGBA(glowColor, red, green, blue, 200);
+							TE_SetupBeamPoints(pos, PosUser, g_Ruina_BEAM_Combine_Blue, 0, 0, 0, 0.7, ClampBeamWidth(diameter * 0.2), ClampBeamWidth(diameter * 0.2), 0, 0.5, glowColor, 0);
+							TE_SendToAll(0.0);
+							
+							CF_DoAbility(client, "cf_sensal", "sensal_ability_barrier_portal");
+						}
 						if(found)
 							EmitSoundToAll("misc/halloween/spell_teleport.wav", entity, SNDCHAN_STATIC, 90, _, 0.8);
 					}
@@ -1608,7 +1607,7 @@ public bool TraceRayHitWorldOnly(int entity,int mask,any data)
 	return false;
 }
 
-/*
+
 public bool Can_I_See_Enemy_Only(int attacker, int enemy)
 {
 	Handle trace;
@@ -1643,4 +1642,3 @@ public bool TraceRayCanSeeAllySpecific(int entity,int mask,any data)
 	
 	return false;
 }
-*/
