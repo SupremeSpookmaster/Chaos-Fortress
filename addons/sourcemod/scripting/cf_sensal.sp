@@ -854,7 +854,23 @@ void DoPortalGate(int client, char abilityName[255])
 	pack.WriteString(abilityName);
 
 	// Partial refund if you somehow died during the startup delay
-	CF_SetUltCharge(client, CF_GetArgF(client, PluginName, abilityName, "refund"), true);
+	pack = new DataPack();
+	RequestFrame(PortalGateSetRefund, pack);
+	pack.WriteCell(GetClientUserId(client));
+	pack.WriteFloat(CF_GetArgF(client, PluginName, abilityName, "refund"));
+}
+
+void PortalGateSetRefund(DataPack pack)
+{
+	pack.Reset();
+
+	int client = GetClientOfUserId(pack.ReadCell());
+	if(client)
+	{
+		CF_SetUltCharge(client, pack.ReadFloat(), true);
+	}
+
+	delete pack;
 }
 
 Action PortalGateStartTimer(Handle timer, DataPack pack)
