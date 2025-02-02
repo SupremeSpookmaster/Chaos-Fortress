@@ -3190,6 +3190,9 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 {
 	Action ReturnVal = Plugin_Continue;
 	bool CallForward = true;
+
+	if (ent1 < 0 || ent1 > 2048 || ent2 < 0 || ent2 > 2048)
+		return Plugin_Continue;
 	
 	if (b_IsProjectile[ent1] && b_IsProjectile[ent2])
 	{
