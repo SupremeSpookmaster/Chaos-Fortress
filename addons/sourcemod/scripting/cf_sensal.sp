@@ -20,6 +20,7 @@
 #define ABILITY_THROW			"sensal_ability_throw"
 #define ABILITY_BARRIER			"sensal_ability_barrier"
 #define ABILITY_BARRIER_SPAWN	"sensal_special_barrier"
+#define ABILITY_BARRIER_PORTAL	"sensal_ability_barrier_portal"
 #define ABILITY_MASSLASER		"sensal_ability_masslaser"
 #define ABILITY_PORTALGATE		"sensal_ability_portalgate"
 #define ABILITY_BLOCKRESOURCE	"sensal_ability_noresource"
@@ -52,6 +53,8 @@ int Shared_BEAM_Laser;
 int Shared_BEAM_Glow;
 int Shared_ROCKET;
 int KillFeedType = -1;
+int g_Ruina_BEAM_Combine_Black;
+int g_Ruina_BEAM_Combine_Blue;
 
 int VulnStacks[MAXPLAYERS+1];
 float VulnStackMulti[MAXPLAYERS+1];
@@ -106,6 +109,8 @@ public void OnMapStart()
 	Shared_ROCKET = PrecacheModel(PARTICLE_ROCKET_MODEL);
 
 	PrecacheSound("misc/halloween/spell_teleport.wav");
+	g_Ruina_BEAM_Combine_Black 	= PrecacheModel("materials/sprites/combineball_trail_black_1.vmt", true);
+	g_Ruina_BEAM_Combine_Blue 	= PrecacheModel("materials/sprites/combineball_trail_blue_1.vmt", true);
 
 	for(int i; i < sizeof(SyctheHitSound); i++)
 	{
@@ -128,6 +133,10 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 		ScytheThrow(client, abilityName);
 	}
 	else if(StrContains(abilityName, ABILITY_BARRIER) != -1)
+	{
+		ApplyBarrier(client, abilityName);
+	}
+	else if(StrContains(abilityName, ABILITY_BARRIER_PORTAL) != -1)
 	{
 		ApplyBarrier(client, abilityName);
 	}
@@ -331,15 +340,8 @@ bool IsValidTarget(int attacker, int victim)
 	}
 	else
 	{
-		if(!GetEntProp(victim, Prop_Data, "m_takedamage"))
+		if(GetEntProp(victim, Prop_Data, "m_takedamage") == 0)
 			return false;
-		
-		//static char classname[64];
-		//if(!GetEntityClassname(victim, classname, sizeof(classname)))
-		//	return false;
-		
-		//if(StrContains(classname, "base_boss") == -1)
-		//	return false;
 
 		int team2 = GetEntProp(victim, Prop_Send, "m_iTeamNum");
 		if(team2 == 0)
@@ -882,11 +884,29 @@ Action PortalGateStartTimer(Handle timer, DataPack pack)
 
 			SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", GetPlayerWeaponSlot(client, TFWeaponSlot_Melee));
 
+			//Trace upwards for 400 units
+			float hullcheckmaxs = view_as<float>( { 20.0, 20.0, 24.0 } );
+			float hullcheckmins = view_as<float>( { -20.0, -20.0, 0.0 } );	
+
 			float pos[3];
 			GetEntPropVector(client, Prop_Data, "m_vecAbsOrigin", pos);
-			pos[2] += 400.0;
+			float pos2[3];
+			pos = pos2;
+			Handle hTrace = TR_TraceHullFilterEx(pos, pos2, hullcheckmins, hullcheckmaxs, MASK_SOLID, TraceRayHitWorldOnly, entity);
+			if(TR_DidHit(hTrace))
+			{
+				//Because its a hull, when it hits itll get the middle of said hull
+				TR_GetEndPosition(vecEnd, pos2);
+				pos2[2] -= 15.0;
+			}
+			delete hTrace;
+			
 
-			entity = ParticleEffectAt(pos, "eyeboss_tp_vortex", 0.0);
+			if(GetClientTeam(client) == 2)
+				entity = ParticleEffectAt(pos2, "eyeboss_death_vortex", 0.0);
+			else
+				entity = ParticleEffectAt(pos2, "eyeboss_death_vortex", 0.0);
+
 			if(entity != -1)
 			{
 				char abilityName[255];
@@ -902,7 +922,7 @@ Action PortalGateStartTimer(Handle timer, DataPack pack)
 				pack.WriteFloat(GetGameTime() + duration);
 				pack.WriteString(abilityName);
 
-				ParticleEffectAt(pos, "hammer_bell_ring_shockwave", 1.0);
+				ParticleEffectAt(pos2, "hammer_bell_ring_shockwave", 1.0);
 			}
 
 			CF_PlayRandomSound(client, "", "sound_portalgate_1");
@@ -950,6 +970,38 @@ Action PortalGateLoopTimer(Handle timer, DataPack pack)
 							{
 								found = true;
 								FireScythe(client, abilityName, victim, pos);
+							}
+							else if(victim == client)
+							{
+								int red = 50;
+								int green = 50;
+								int blue = 200;
+								if(GetClientTeam(client) == 2)
+								{
+									red = 200;
+									green = 50;
+									blue = 50;
+								}
+								int colorLayer4[4];
+								float diameter = float(10 * 4);
+								SetColorRGBA(colorLayer4, red, green, blue, 200);
+								float PosUser[3];
+								CF_WorldSpaceCenter(client, PosUser);
+								//we set colours of the differnet laser effects to give it more of an effect
+								int colorLayer1[4];
+								SetColorRGBA(colorLayer1, colorLayer4[0] * 5 + 765 / 8, colorLayer4[1] * 5 + 765 / 8, colorLayer4[2] * 5 + 765 / 8, 100);
+								TE_SetupBeamPoints(pos, PosUser, g_Ruina_BEAM_Combine_Black, 0, 0, 0, 0.6, ClampBeamWidth(diameter * 0.5), ClampBeamWidth(diameter * 0.8), 0, 5.0, colorLayer1, 3);
+								TE_SendToAll(0.0);
+								TE_SetupBeamPoints(pos, PosUser, g_Ruina_BEAM_Combine_Black, 0, 0, 0, 0.4, ClampBeamWidth(diameter * 0.4), ClampBeamWidth(diameter * 0.5), 0, 5.0, colorLayer1, 3);
+								TE_SendToAll(0.0);
+								TE_SetupBeamPoints(pos, PosUser, g_Ruina_BEAM_Combine_Black, 0, 0, 0, 0.2, ClampBeamWidth(diameter * 0.3), ClampBeamWidth(diameter * 0.3), 0, 5.0, colorLayer1, 3);
+								TE_SendToAll(0.0);
+								int glowColor[4];
+								SetColorRGBA(glowColor, red, green, blue, 200);
+								TE_SetupBeamPoints(pos, PosUser, g_Ruina_BEAM_Combine_Blue, 0, 0, 0, 0.7, ClampBeamWidth(diameter * 0.2), ClampBeamWidth(diameter * 0.2), 0, 0.5, glowColor, 0);
+								TE_SendToAll(0.0);
+								
+								CF_DoAbility(client, "cf_sensal", "sensal_ability_barrier_portal");
 							}
 						}
 
@@ -1524,3 +1576,49 @@ stock float fmodf(float num, float denom)
 {
 	return num - denom * RoundToFloor(num / denom);
 }
+
+public bool TraceRayHitWorldOnly(int entity,int mask,any data)
+{
+	if(entity == 0)
+	{
+		return true;
+	}
+	return false;
+}
+
+/*
+public bool Can_I_See_Enemy_Only(int attacker, int enemy)
+{
+	Handle trace;
+	float pos_npc[3];
+	float pos_enemy[3];
+	CF_WorldSpaceCenter(attacker, pos_npc);
+	CF_WorldSpaceCenter(enemy, pos_enemy);
+
+	trace = TR_TraceRayFilterEx(pos_npc, pos_enemy, ( MASK_SOLID | CONTENTS_SOLID ), RayType_EndPoint, TraceRayCanSeeAllySpecific, enemy);
+	
+	int Traced_Target = TR_GetEntityIndex(trace);
+	delete trace;
+	if(Traced_Target == enemy)
+	{
+		return true;
+	}
+	return false;
+}
+
+
+public bool TraceRayCanSeeAllySpecific(int entity,int mask,any data)
+{
+	if(entity == 0)
+	{
+		return true;
+	}
+
+	if(entity == data)
+	{
+		return true;
+	}
+	
+	return false;
+}
+*/
