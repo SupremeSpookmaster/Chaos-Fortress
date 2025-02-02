@@ -286,6 +286,10 @@ public void CFC_MakeForwards()
 	RegConsoleCmd("character", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
 	RegConsoleCmd("setcharacter", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
 	RegConsoleCmd("changecharacter", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
+	RegConsoleCmd("ch", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
+	RegConsoleCmd("cha", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
+	RegConsoleCmd("char", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
+	RegConsoleCmd("c", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
 	
 	c_DesiredCharacter = RegClientCookie("DesiredCharacter", "The character this player has chosen to spawn as. If blank: reverts to the default character.", CookieAccess_Private);
 	
