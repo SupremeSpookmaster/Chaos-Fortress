@@ -896,7 +896,7 @@ Action PortalGateStartTimer(Handle timer, DataPack pack)
 			if(TR_DidHit(hTrace))
 			{
 				//Because its a hull, when it hits itll get the middle of said hull
-				TR_GetEndPosition(vecEnd, pos2);
+				TR_GetEndPosition(pos2, hTrace);
 				pos2[2] -= 15.0;
 			}
 			delete hTrace;
