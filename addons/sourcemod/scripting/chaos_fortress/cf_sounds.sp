@@ -16,6 +16,15 @@ GlobalForward g_SoundHook;
 float f_LastSoundHook[MAXPLAYERS + 1] = { 0.0, ... };
 float f_Silenced[MAXPLAYERS + 1] = { 0.0, ... };
 
+public void CFS_MapEnd()
+{
+	for (int i = 0; i <= MaxClients; i++)
+	{
+		f_LastSoundHook[i] = 0.0;
+		f_Silenced[i] = 0.0;
+	}
+}
+
 public void CFS_OnPluginStart()
 {
 	g_SoundHook = new GlobalForward("CF_SoundHook", ET_Event, Param_String, Param_CellByRef, Param_CellByRef, Param_FloatByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);

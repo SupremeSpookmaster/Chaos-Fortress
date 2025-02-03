@@ -364,6 +364,9 @@ stock bool CheckFile(char path[255])
 
 stock void CopyMenu(Menu &dest, Menu source)
 {
+	if (source == null || source == INVALID_HANDLE || dest == null || dest == INVALID_HANDLE)
+		return;
+		
 	char title[255];
 	source.GetTitle(title, 255);
 	dest.SetTitle(title);

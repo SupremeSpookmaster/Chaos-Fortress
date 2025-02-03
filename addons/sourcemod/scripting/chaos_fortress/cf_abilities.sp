@@ -1379,7 +1379,7 @@ void EndHeldM3(int client, bool TriggerCallback, bool resupply = false)
 		if (!resupply)
 		{
 			CF_PlayRandomSound(client, "", "sound_heldend_m3");
-			SubtractStock(client, CF_AbilityType_M2);
+			SubtractStock(client, CF_AbilityType_M3);
 		}
 
 		b_ForceEndHeldM3[client] = false;
@@ -1535,6 +1535,7 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 		
 		if (type == CF_AbilityType_Ult)
 		{
+			f_UltCharge[client] = 0.0;
 			bool played = CF_PlayRandomSound(client, "", "sound_ultimate_activation");
 			
 			if (!played)
@@ -1555,7 +1556,7 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 			ConfigMap map = new ConfigMap(g_Characters[client].MapPath);
 			if (map != null)
 			{
-				float distance = GetFloatFromConfigMap(map, "character.ultimate_stats.radius", 800.0);
+				float distance = GetFloatFromConfigMap(map, "character.ultimate_stats.radius", 999999.0);
 				float pos[3];
 				GetClientAbsOrigin(client, pos);
 				
@@ -3040,7 +3041,14 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 				continue;
 			
 			float vicLoc[3];
-			CF_WorldSpaceCenter(victim, vicLoc);
+			GetEntPropVector(victim, Prop_Data, "m_vecAbsOrigin", vicLoc);
+			if (CF_IsPlayerCharacter(victim))
+				vicLoc[2] += 40.0 * CF_GetCharacterScale(victim);
+
+			float dist = GetVectorDistance(groundZero, vicLoc);
+
+			if (dist > radius)
+				continue;
 			
 			bool passed = true;
 					
@@ -3061,8 +3069,6 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 					
 			if (passed)
 			{
-				float dist = GetVectorDistance(groundZero, vicLoc);
-
 				float realDMG = dmg;
 				if (dist > falloffStart)
 				{
@@ -3190,6 +3196,9 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 {
 	Action ReturnVal = Plugin_Continue;
 	bool CallForward = true;
+
+	if (ent1 < 0 || ent1 > 2048 || ent2 < 0 || ent2 > 2048)
+		return Plugin_Continue;
 	
 	if (b_IsProjectile[ent1] && b_IsProjectile[ent2])
 	{

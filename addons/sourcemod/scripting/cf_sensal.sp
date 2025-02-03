@@ -727,7 +727,7 @@ void DoMassLaser(int client, char abilityName[255])
 			TF2Items_SetAttribute(item, 0, 2048, 0.0);
 		}
 
-		TF2Items_SetItemIndex(item, 31162);
+		TF2Items_SetItemIndex(item, 31467);	//Fist bump is 31162, I have replaced it with Commending Clap because partner taunts can get cancelled
 		int entity = TF2Items_GiveNamedItem(client, item);
 		if(entity != -1)
 		{

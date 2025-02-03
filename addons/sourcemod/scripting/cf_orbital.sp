@@ -142,6 +142,7 @@ public Action CF_OnFakeMediShieldDamaged(int shield, int attacker, int inflictor
 }
 
 bool Tracer_FullyCharged[MAXPLAYERS + 1] = { false, ... };
+float Tracer_NextBeam[MAXPLAYERS + 1] = { 0.0, ... };
 
 public void TF2_OnConditionAdded(int client, TFCond condition)
 {
@@ -159,6 +160,7 @@ public void Tracer_Activate(int client)
 {
 	Tracer_FullyCharged[client] = false;
 	SDKHook(client, SDKHook_PreThink, Tracer_PreThink);
+	Tracer_NextBeam[client] = 0.0;
 
 	CF_PlayRandomSound(client, "", "sound_tracer_scope");
 }
@@ -169,8 +171,6 @@ public void Tracer_Disable(int client)
 	
 	CF_PlayRandomSound(client, "", "sound_tracer_unscope");
 }
-
-float Tracer_NextBeam[MAXPLAYERS + 1] = { 0.0, ... };
 
 public Action Tracer_PreThink(int client)
 {

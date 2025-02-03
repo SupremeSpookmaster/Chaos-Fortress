@@ -548,7 +548,6 @@ public Action Delay_ActivateAbility(Handle delayed, DataPack pack)
 	ReadPackString(pack, ab, sizeof(ab));
 	ReadPackString(pack, pl, sizeof(pl));
 	ReadPackString(pack, snd, sizeof(snd));
-	delete pack;
 	
 	if (!IsValidMulti(client))
 		return Plugin_Continue;
