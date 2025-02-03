@@ -1535,6 +1535,7 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 		
 		if (type == CF_AbilityType_Ult)
 		{
+			f_UltCharge[client] = 0.0;
 			bool played = CF_PlayRandomSound(client, "", "sound_ultimate_activation");
 			
 			if (!played)
@@ -1555,7 +1556,7 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 			ConfigMap map = new ConfigMap(g_Characters[client].MapPath);
 			if (map != null)
 			{
-				float distance = GetFloatFromConfigMap(map, "character.ultimate_stats.radius", 800.0);
+				float distance = GetFloatFromConfigMap(map, "character.ultimate_stats.radius", 999999.0);
 				float pos[3];
 				GetClientAbsOrigin(client, pos);
 				
