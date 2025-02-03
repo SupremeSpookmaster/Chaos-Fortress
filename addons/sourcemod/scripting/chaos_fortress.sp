@@ -215,6 +215,7 @@ public OnMapStart()
 public OnMapEnd()
 {
 	CFC_MapEnd();
+	CFS_MapEnd();
 }
 
 public Action PlayerKilled(Event hEvent, const char[] sEvName, bool bDontBroadcast)
