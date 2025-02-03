@@ -599,10 +599,13 @@ void ApplyBarrier(int client, char abilityName[255])
 bool UpdateBarrier(int client, char abilityName[255] = "")
 {
 	int maxHealth = RoundFloat(CF_GetCharacterMaxHealth(client));
+	int health = GetClientHealth(client);
+	if (health == 0 || maxHealth == 0 || (health - maxHealth) == 0)
+		return false;
 	//Hardcode at 200 for now.
 	
 	// 255 alpha at x5 max health
-	int alpha = (GetClientHealth(client) - maxHealth) * 255 / (maxHealth * 4);
+	int alpha = (health - maxHealth) * 255 / (maxHealth * 4);
 	
 	if(alpha < 1)
 	{
@@ -670,11 +673,16 @@ void BarrierTakeDamagePost(int victim, int attacker, int inflictor, float damage
 		SDKUnhook(victim, SDKHook_OnTakeDamagePost, BarrierTakeDamagePost);
 }
 
+float MassLaser_CloseDamage[MAXPLAYERS + 1] = { 0.0, ... };
+float MassLaser_FarDamage[MAXPLAYERS + 1] = { 0.0, ... };
+
 void DoMassLaser(int client, char abilityName[255])
 {
 	float range = CF_GetArgF(client, PluginName, abilityName, "radius");
 	int targets = CF_GetArgI(client, PluginName, abilityName, "targets");
 	float delay = CF_GetArgF(client, PluginName, abilityName, "delay");
+	MassLaser_CloseDamage[client] = CF_GetArgF(client, PluginName, abilityName, "damage_close");
+	MassLaser_FarDamage[client] = CF_GetArgF(client, PluginName, abilityName, "damage_far");
 
 	float pos[3];
 	GetClientEyePosition(client, pos);
@@ -1161,8 +1169,8 @@ Action SensalInitiateLaserAttack_DamagePart(Handle timer, DataPack pack)
 	trace = TR_TraceHullFilterEx(VectorStart, VectorTarget, hullMin, hullMax, 1073741824, Sensal_BEAM_TraceUsers, entity);	// 1073741824 is CONTENTS_LADDER?
 	delete trace;
 			
-	float CloseDamage = 350.0;
-	float FarDamage = 60.0;
+	float CloseDamage = MassLaser_CloseDamage[entity];	//350
+	float FarDamage = MassLaser_FarDamage[entity];	//60
 	float MaxDistance = 1000.0;
 	float playerPos[3];
 	
