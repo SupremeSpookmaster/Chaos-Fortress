@@ -640,6 +640,7 @@ bool UpdateBarrier(int client, char abilityName[255] = "")
 		char model[255];
 		CF_GetArgS(client, PluginName, abilityName, "model", model, sizeof(model));
 		
+		//CF issue, model doesnt hav ea model name somehow.
 		if(model[0])
 		{
 			SetEntProp(entity, Prop_Send, "m_nModelIndex", PrecacheModel(model));
