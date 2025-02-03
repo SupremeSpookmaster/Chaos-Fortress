@@ -178,6 +178,9 @@ public Action Draw_RevertAtts(Handle revert, int id)
 
 public bool Draw_IsHoldingHuntsman(int client)
 {
+	if (!IsValidMulti(client) || !CF_IsPlayerCharacter(client))
+		return false;
+
 	int acWep = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
 	if (!IsValidEntity(acWep))
 		return false;
@@ -323,6 +326,7 @@ public void Explosive_DeleteParticle(int client)
 		
 	i_ExplosiveParticle[client] = -1;
 	StopSound(client, SNDCHAN_AUTO, SOUND_EXPLOSIVE_LOOP);
+	SDKUnhook(client, SDKHook_PreThink, Explosive_CheckHuntsman);
 }
 
 public void Explosive_OnArrowFired(int entity)
