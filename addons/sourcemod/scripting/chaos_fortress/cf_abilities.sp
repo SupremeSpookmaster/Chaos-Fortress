@@ -1379,7 +1379,7 @@ void EndHeldM3(int client, bool TriggerCallback, bool resupply = false)
 		if (!resupply)
 		{
 			CF_PlayRandomSound(client, "", "sound_heldend_m3");
-			SubtractStock(client, CF_AbilityType_M2);
+			SubtractStock(client, CF_AbilityType_M3);
 		}
 
 		b_ForceEndHeldM3[client] = false;

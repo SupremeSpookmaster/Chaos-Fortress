@@ -381,6 +381,7 @@ public Action Explosive_OnTouch(int entity, int other)
 }
 
 bool b_VolleyActive[MAXPLAYERS + 1] = { false, ... };
+bool b_VolleyTargeting[MAXPLAYERS + 1] = { false, ... };
 bool b_ArrowWillTriggerVolley[2049] = { false, ... };
 
 float f_VolleyDelay[MAXPLAYERS + 1] = { 0.0, ... };
@@ -407,6 +408,7 @@ public void Volley_Activate(int client, char abilityName[255])
 	f_VolleySpread[client] = CF_GetArgF(client, CBS, abilityName, "spread");
 	f_VolleyVelocity[client] = CF_GetArgF(client, CBS, abilityName, "velocity");
 	f_VolleyDamage[client] = CF_GetArgF(client, CBS, abilityName, "damage");
+	b_VolleyTargeting[client] = CF_GetArgF(client, CBS, abilityName, "target") > 0;
 	
 	b_VolleyActive[client] = true;
 	TF2_AddCondition(client, TFCond_CritHype);
@@ -525,7 +527,7 @@ public void Volley_ShootArrows(DataPack pack)
 		baseAng[0] = 90.0;
 		baseAng[1] = 0.0;
 		baseAng[2] = 0.0;
-		
+		//TODO: Sort all enemies by distance, targets must have line-of-sight, have each arrow target the next closest player if targeting is enabled
 		for (int i = 0; i < i_VolleyCount[client]; i++)
 		{
 			for (int vec = 0; vec < 3; vec++)
