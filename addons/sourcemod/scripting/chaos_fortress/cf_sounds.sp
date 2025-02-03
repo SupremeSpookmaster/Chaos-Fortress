@@ -373,6 +373,9 @@ public bool PlaySpecificReplacement(int client, char sound[PLATFORM_MAX_PATH])
 	StringToLower(Sound);
 	CF_GetPlayerConfig(client, conf, sizeof(conf));
 	
+	if (!conf[0])
+		return false;
+		
 	ConfigMap map = new ConfigMap(conf);
 	if (map == null)
 		return false;
