@@ -3040,7 +3040,14 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 				continue;
 			
 			float vicLoc[3];
-			CF_WorldSpaceCenter(victim, vicLoc);
+			GetEntPropVector(victim, Prop_Data, "m_vecAbsOrigin", vicLoc);
+			if (CF_IsPlayerCharacter(victim))
+				vicLoc[2] += 40.0 * CF_GetCharacterScale(victim);
+
+			float dist = GetVectorDistance(groundZero, vicLoc);
+
+			if (dist > radius)
+				continue;
 			
 			bool passed = true;
 					
@@ -3061,8 +3068,6 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 					
 			if (passed)
 			{
-				float dist = GetVectorDistance(groundZero, vicLoc);
-
 				float realDMG = dmg;
 				if (dist > falloffStart)
 				{
