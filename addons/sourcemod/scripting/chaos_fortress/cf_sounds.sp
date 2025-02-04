@@ -376,12 +376,16 @@ public bool PlaySpecificReplacement(int client, char sound[PLATFORM_MAX_PATH])
 	
 	if (!conf[0])
 		return false;
-		
+
 	ConfigMap map = new ConfigMap(conf);
 	if (map == null)
 		return false;
 		
-	StringMapSnapshot snap = map.GetSection("character.sounds").Snapshot();
+	ConfigMap map2 = map.GetSection("character.sounds");
+	if (map2 == null)
+		return false;
+
+	StringMapSnapshot snap = map2.Snapshot();
 	
 	bool played = false;
 	

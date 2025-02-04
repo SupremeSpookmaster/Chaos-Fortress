@@ -208,12 +208,14 @@ public void OnPluginStart()
 
 public OnMapStart()
 {
+	//GameRules_SetProp("m_iRoundState", RoundState_BetweenRounds);
 	CF_MapStart();
 	PrecacheSound(SND_ADMINCOMMAND);
 }
 
 public OnMapEnd()
 {
+	CFA_MapEnd();
 	CFC_MapEnd();
 	CFS_MapEnd();
 }

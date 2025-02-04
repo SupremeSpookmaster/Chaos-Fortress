@@ -950,7 +950,7 @@ public void CFA_ReduceUltCharge_CharacterSwitch(int client)
 	CF_SetUltCharge(client, newCharge, true);
 }
 
-public void CFC_MapEnd()
+public void CFA_MapEnd()
 {
 	for (int i = 0; i <= MaxClients; i++)
 	{

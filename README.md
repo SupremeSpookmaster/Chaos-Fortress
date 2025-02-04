@@ -22,13 +22,14 @@ This game mode is currently incompatible with 64-bit servers. I am in the proces
 ## *Prerequisites:*
 - **[SourceMod 1.12+](https://www.sourcemod.net/downloads.php)**
 - **[TF2Attributes 1.7.0+](https://github.com/FlaminSarge/tf2attributes)**
-- **[TF2Items](https://github.com/asherkin/TF2Items)**
+- **[TF2Items](https://builds.limetech.io/?project=tf2items)**
 - **[TF2 Econ Data](https://github.com/nosoop/SM-TFEconData)**
 - **[TF2 Econ Dynamic](https://github.com/nosoop/SMExt-TFEconDynamic)**
 - **[TF2 Utils](https://github.com/nosoop/SM-TFUtils)**
-- **[CollisionHook](https://forums.alliedmods.net/showthread.php?t=197815)**
+- **[CollisionHook](https://github.com/voided/CollisionHook)**
 - **[SteamWorks](https://users.alliedmods.net/~kyles/builds/SteamWorks/)**
 - **[TF2 Custom Attributes](https://forums.alliedmods.net/showthread.php?p=2703773)**
+- **[Taunt Gamedata For Sensal](https://raw.githubusercontent.com/FlaminSarge/tf_tauntem/master/tf2.tauntem.txt)**
 - **[Fake Particle System](https://github.com/SupremeSpookmaster/Fake-Particle-System)** - Note that you will need to use the version of `data/fake_particle_system/fakeparticles.cfg` which comes packaged with ***Chaos Fortress***, and not the version included in the release build of the Fake Particle System.
 - **[Portable NPC System](https://github.com/SupremeSpookmaster/TF2-Portable-NPC-System)** - Again, note that you will need to use the version of `data/pnpc/npcs.cfg` which comes packaged with ***Chaos Fortress***, and not the version included in the release build of the Portable NPC System.
 - **[TF2 World Text Helper](https://github.com/SupremeSpookmaster/TF2-World-Text-Helper)**
