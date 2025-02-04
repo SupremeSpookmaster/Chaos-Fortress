@@ -1180,6 +1180,25 @@ void CFC_WeaponEquipped(int client, int weapon)
 	SetEntProp(weapon, Prop_Send, "m_iViewModelIndex", model);*/
 }
 
+public void CFC_MapEnd()
+{
+	delete CF_Characters_Configs;
+	delete CF_Characters_Names;
+	delete CF_CharactersMenu;
+
+	for (int i = 0; i <= MaxClients; i++)
+	{
+		delete CF_CharacterParticles[i];
+		delete CF_ClientMenu[i];
+	}
+
+	if (Characters != null)
+	{
+		delete Characters;
+		Characters = null;
+	}
+}
+
 /**
  * Turns a player into their selected Chaos Fortress character, or the default specified in game_rules if they haven't chosen.
  *
