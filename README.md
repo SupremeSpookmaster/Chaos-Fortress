@@ -22,7 +22,7 @@ This game mode is currently incompatible with 64-bit servers. I am in the proces
 ## *Prerequisites:*
 - **[SourceMod 1.12+](https://www.sourcemod.net/downloads.php)**
 - **[TF2Attributes 1.7.0+](https://github.com/FlaminSarge/tf2attributes)**
-- **[TF2Items](https://github.com/asherkin/TF2Items)**
+- **[TF2Items](https://builds.limetech.io/?project=tf2items)**
 - **[TF2 Econ Data](https://github.com/nosoop/SM-TFEconData)**
 - **[TF2 Econ Dynamic](https://github.com/nosoop/SMExt-TFEconDynamic)**
 - **[TF2 Utils](https://github.com/nosoop/SM-TFUtils)**
