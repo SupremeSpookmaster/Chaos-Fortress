@@ -2,7 +2,7 @@
 	Sensal based on the Zombie Riot version
 	Code and it's porting by Batfoxkid and Artvin
 */
-
+#define EF_BONEMERGE			(1 << 0)
 #include <sourcemod>
 #include <tf2_stocks>
 #include <sdkhooks>
@@ -283,6 +283,10 @@ void WeaponSwitchPost(int userid)
 						&& GetEntProp(entity, Prop_Send, "m_nModelIndex") == model)
 						{
 							SetAlphaBodyGroup(client, entity, ABILITY_WEAPON);
+							char classname[36];
+							GetEntityClassname(entity, classname, sizeof(classname));
+							if(StrEqual(classname, "tf_wearable_vm", false))
+								SetSizeWeaponViewmodel(client, entity, ABILITY_WEAPON);
 						}
 					}
 				}
@@ -475,6 +479,16 @@ int FireScythe(int client, char abilityName[255], int target, const float overri
 	return rocket;
 }
 
+
+void SetSizeWeaponViewmodel(int client, int entity, char abilityName[255])
+{
+	char arg[255];
+
+	FormatEx(arg, sizeof(arg), "viewmodel_size");
+	float ViewmodelSize = CF_GetArgF(client, PluginName, abilityName, arg);
+	if(ViewmodelSize > 0.0)
+		SetEntPropFloat(entity, Prop_Send, "m_flModelScale", ViewmodelSize);
+}
 void SetAlphaBodyGroup(int client, int entity, char abilityName[255])
 {
 	TFTeam num = TF2_GetClientTeam(client);
@@ -602,7 +616,6 @@ bool UpdateBarrier(int client, char abilityName[255] = "")
 	int health = GetClientHealth(client);
 	if (health == 0 || maxHealth == 0 || (health - maxHealth) == 0)
 		return false;
-	//Hardcode at 200 for now.
 	
 	// 255 alpha at x5 max health
 	int alpha = (health - maxHealth) * 255 / (maxHealth * 4);
@@ -642,20 +655,23 @@ bool UpdateBarrier(int client, char abilityName[255] = "")
 		
 		char model[255];
 		CF_GetArgS(client, PluginName, abilityName, "model", model, sizeof(model));
+
+		//Do not bonemerge, makes it fly.
+		SetEntProp(entity, Prop_Send, "m_fEffects", GetEntProp(entity, Prop_Send, "m_fEffects") &~ EF_BONEMERGE);
 		
 		//CF issue, model doesnt hav ea model name somehow.
 		if(model[0])
 		{
 			SetEntProp(entity, Prop_Send, "m_nModelIndex", PrecacheModel(model));
-			SetEntityRenderMode(entity, RENDER_TRANSCOLOR);
-			ShieldEntRef[client] = EntIndexToEntRef(entity);
-
-			SDKUnhook(client, SDKHook_OnTakeDamageAlivePost, BarrierTakeDamagePost);
-			SDKHook(client, SDKHook_OnTakeDamageAlivePost, BarrierTakeDamagePost);
-
-			// Don't show barrier to ourself
-			SDKHook(entity, SDKHook_SetTransmit, ShieldSetTransmit);
 		}
+		SetEntityRenderMode(entity, RENDER_TRANSCOLOR);
+		ShieldEntRef[client] = EntIndexToEntRef(entity);
+
+		SDKUnhook(client, SDKHook_OnTakeDamageAlivePost, BarrierTakeDamagePost);
+		SDKHook(client, SDKHook_OnTakeDamageAlivePost, BarrierTakeDamagePost);
+
+		// Don't show barrier to ourself
+		SDKHook(entity, SDKHook_SetTransmit, ShieldSetTransmit);
 	}
 
 	SetEntityRenderColor(entity, 255, 255, 255, alpha);
