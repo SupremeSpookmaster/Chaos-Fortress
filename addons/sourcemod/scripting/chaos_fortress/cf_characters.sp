@@ -520,6 +520,12 @@ public Action CFC_OpenMenu(int client, int args)
 	if (!IsValidClient(client))
 		return Plugin_Continue;
 		
+	if (GameRules_GetRoundState() == RoundState_GameOver)
+	{
+		ReplyToCommand(client, "Cannot be used in the post-game, please wait.");
+		return Plugin_Continue;
+	}
+
 	delete CF_ClientMenu[client];
 		
 	CF_ClientMenu[client] = new Menu(CFC_Menu);
@@ -1148,12 +1154,12 @@ public Action CFC_OpenMenu(int client, int args)
 
 public void CF_OnRoundStateChanged(int state)
 {
-	if (state == 0)
+	for (int i = 1; i <= MaxClients; i++)
 	{
-		for (int i = 1; i <= MaxClients; i++)
-		{
-			b_CharacterApplied[i] = false;
-		}
+		if (state == 0)
+				b_CharacterApplied[i] = false;
+		if (state == 2)
+			delete CF_ClientMenu[i];
 	}
 }
 

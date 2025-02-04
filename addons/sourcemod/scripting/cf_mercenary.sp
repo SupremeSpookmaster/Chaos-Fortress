@@ -179,9 +179,19 @@ public void Frag_Throw(int client, char abilityName[255])
 		
 	Frag_DMG[client] = CF_GetArgF(client, MERC, abilityName, "damage");
 	Frag_Velocity[client] = CF_GetArgF(client, MERC, abilityName, "velocity");
-	CreateTimer(0.18, Frag_ThrowOnDelay, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
-	CF_ForceViewmodelAnimation(client, "pj_fire");
-	Frag_VMAnim[client] = true;
+	Frag_HasJarate[client] = CF_GetArgI(client, MERC, abilityName, "is_jarate") != 0;
+	
+	if (!Frag_HasJarate[client])
+	{
+		CreateTimer(0.18, Frag_ThrowOnDelay, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+		CF_ForceViewmodelAnimation(client, "pj_fire");
+		Frag_VMAnim[client] = true;
+	}
+	else
+	{
+		CF_DoAbility(client, "cf_generic_abilities", "generic_weapon_frag");
+		SDKHook(client, SDKHook_WeaponCanSwitchTo, Frag_BlockWeaponSwitch);
+	}
 }
 
 public Action Frag_BlockWeaponSwitch(int client, int weapon)
