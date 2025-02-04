@@ -1656,3 +1656,17 @@ native int CF_GetAbilityMaxStocks(int client, CF_AbilityType type);
  * @param origin	The origin to set.
  */
 native void CF_SetLocalOrigin(int entity, float origin[3]);
+
+/**
+ * Begins lag compensation for this client. Call CF_EndLagCompensation when you are done.
+ * 
+ * @param client	The client to lag-compensate.
+ */
+native void CF_StartLagCompensation(int client);
+
+/**
+ * Ends lag compensation for this client. Will not work unless you have called CF_StartLagCompensation first.
+ * 
+ * @param client	The client whose lag compensation to end.
+ */
+native void CF_EndLagCompensation(int client);

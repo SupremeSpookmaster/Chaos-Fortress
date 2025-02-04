@@ -220,6 +220,12 @@ public Action CFB_OnCallForMedic(int client, const char[] command, int args)
 	num1 = StringToInt(arg1);
 	num2 = StringToInt(arg2);
 	
+	if (num1 == 1 && num2 == 6)
+	{
+		CFA_UltMessage(client);
+		return Plugin_Continue;
+	}
+
 	if (num1 != 0 || num2 != 0) // voicemenu 0 0 only, thank you CookieCat!
 		return Plugin_Continue;
 	

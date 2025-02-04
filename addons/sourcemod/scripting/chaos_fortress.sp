@@ -185,6 +185,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 public void OnPluginStart()
 {
 	HookEvent("post_inventory_application", PlayerReset);
+	HookEvent("player_spawn", PlayerSpawn);
 	//HookEvent("player_spawn", PlayerReset);
 	HookEvent("player_death", PlayerKilled);
 	HookEvent("player_death", PlayerKilled_Pre, EventHookMode_Pre);
@@ -205,12 +206,14 @@ public void OnPluginStart()
 }
 
 #define SND_ADMINCOMMAND		"ui/cyoa_ping_in_progress.wav"
+#define SND_RESPAWN				"mvm/mvm_revive.wav"
 
 public OnMapStart()
 {
 	//GameRules_SetProp("m_iRoundState", RoundState_BetweenRounds);
 	CF_MapStart();
 	PrecacheSound(SND_ADMINCOMMAND);
+	PrecacheSound(SND_RESPAWN);
 }
 
 public OnMapEnd()
@@ -330,6 +333,18 @@ public void RoundStart(Event hEvent, const char[] sEvName, bool bDontBroadcast)
 public void RoundEnd(Event hEvent, const char[] sEvName, bool bDontBroadcast)
 {
 	CF_RoundEnd();
+}
+
+public void PlayerSpawn(Event gEvent, const char[] sEvName, bool bDontBroadcast)
+{
+	int client = GetClientOfUserId(gEvent.GetInt("userid"));
+	
+	if (IsValidClient(client))
+	{
+		TF2_AddCondition(client, TFCond_Buffed, 3.0);
+		TF2_AddCondition(client, TFCond_UberchargedCanteen, 3.0);
+		EmitSoundToClient(client, SND_RESPAWN);
+	}
 }
 
 public void PlayerReset(Event gEvent, const char[] sEvName, bool bDontBroadcast)
