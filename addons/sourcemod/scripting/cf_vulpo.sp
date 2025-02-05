@@ -235,6 +235,14 @@ public Action CF_SoundHook(char sample[PLATFORM_MAX_PATH], int &entity, int &cha
 	return Plugin_Continue;
 }
 
+public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
+{
+	if(reason == CF_CRR_SWITCHED_CHARACTER)
+	{
+		FakeClientCommand(client, "destory 0; destory 1; destory 2; destory 3");
+	}
+}
+
 public void OnEntityCreated(int entity, const char[] classname)
 {
 	if(!StrContains(classname, "tf_projectile_mechanicalarmorb"))
