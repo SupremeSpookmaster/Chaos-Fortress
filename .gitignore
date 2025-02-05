@@ -49,3 +49,5 @@
 !cf_include.inc
 !cf_stocks.inc
 !tf_player_collisions.inc
+addons/sourcemod/scripting/compile.sh
+addons/sourcemod/scripting/spcomp64
