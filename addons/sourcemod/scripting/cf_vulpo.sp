@@ -288,7 +288,7 @@ Action OnShortCircuit(int entity)
 	int team = GetEntProp(owner, Prop_Send, "m_iTeamNum");
 	for(int client = 1; client <= MaxClients; client++)
 	{
-		if(IsClientInGame(client))
+		if(IsClientInGame(client) && IsPlayerAlive(client))
 		{
 			if(team != GetClientTeam(client))
 			{
@@ -482,7 +482,7 @@ Action Timer_AmpThink(Handle timer, int ref)
 		int team = GetEntProp(entity, Prop_Send, "m_iTeamNum");
 		for(int client = 1; client <= MaxClients; client++)
 		{
-			if(IsClientInGame(client))
+			if(IsClientInGame(client) && IsPlayerAlive(client))
 			{
 				if(team != GetClientTeam(client))
 				{
