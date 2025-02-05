@@ -18,6 +18,12 @@
 
 bool b_InSpawn[2049][4];
 
+float f_SpawnGrace = 3.0;
+bool b_PreserveUlt = false;
+
+public float GetSpawnGrace() { return f_SpawnGrace; }
+public bool GetPreserveUlt() { return b_PreserveUlt; }
+
 GlobalForward g_OnPlayerKilled;
 GlobalForward g_OnRoundStateChanged;
 GlobalForward g_OnPlayerKilled_Pre;
@@ -173,6 +179,8 @@ public void CF_SetGameRules(int admin)
 		Format(s_DefaultCharacter, sizeof(s_DefaultCharacter), "configs/chaos_fortress/%s.cfg", s_DefaultCharacter);
 		CFA_SetChargeRetain(GetFloatFromConfigMap(subsection, "charge_retain", 0.0));
 		b_DisplayRole = GetBoolFromConfigMap(subsection, "display_role", false);
+		b_PreserveUlt = GetBoolFromConfigMap(subsection, "preserve_ult", false);
+		f_SpawnGrace = GetFloatFromConfigMap(subsection, "spawn_grace", 3.0);
 		
 		float KillValue = GetFloatFromConfigMap(subsection, "value_kills", 1.0);
 		float DeathValue = GetFloatFromConfigMap(subsection, "value_deaths", 1.0);

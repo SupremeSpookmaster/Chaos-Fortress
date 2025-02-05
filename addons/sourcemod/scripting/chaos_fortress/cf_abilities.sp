@@ -190,6 +190,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_SetLocalOrigin", Native_CF_SetLocalOrigin);
 	CreateNative("CF_StartLagCompensation", Native_CF_StartLagCompensation);
 	CreateNative("CF_EndLagCompensation", Native_CF_EndLagCompensation);
+	CreateNative("CF_DoAbilitySlot", Native_CF_DoAbilitySlot);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -585,6 +586,18 @@ public Action CFA_HUDTimer(Handle timer)
 					int g = i_HUDG[client];
 					int b = i_HUDB[client];
 					int a = i_HUDA[client];
+
+					if (r == 255 && g == 255 && b == 255)
+					{
+						r = 255;
+						g = 160;
+						b = 160;
+						if (TF2_GetClientTeam(client) == TFTeam_Blue)
+						{
+							b = 255;
+							r = 160;
+						}
+					}
 
 					Call_StartForward(g_OnHUDDisplayed);
 
@@ -1073,10 +1086,10 @@ public void CFA_MapEnd()
 		i_M2Ammo[i] = -1;
 		i_M3Ammo[i] = -1;
 		i_ReloadAmmo[i] = -1;
-		i_HUDR[i] = 0;
-		i_HUDG[i] = 0;
-		i_HUDB[i] = 0;
-		i_HUDA[i] = 0;
+		i_HUDR[i] = 255;
+		i_HUDG[i] = 255;
+		i_HUDB[i] = 255;
+		i_HUDA[i] = 255;
 		i_M2Stocks[i] = 0;
 		i_M2MaxStocks[i] = 0;
 		i_M3Stocks[i] = 0;
@@ -2246,6 +2259,48 @@ public Native_CF_DoAbility(Handle plugin, int numParams)
 	Call_PushString(abName);
 	
 	Call_Finish();
+}
+
+public Native_CF_DoAbilitySlot(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+
+	int slot = GetNativeCell(2);
+		
+	char pluginName[255], abName[255];
+	
+	ConfigMap map = new ConfigMap(g_Characters[client].MapPath);
+	if (map == null)
+		return;
+		
+	ConfigMap abilities = map.GetSection("character.abilities");
+	if (abilities == null)
+	{
+		DeleteCfg(map);
+		return;
+	}
+		
+	int i = 1;
+	char secName[255];
+	Format(secName, sizeof(secName), "ability_%i", i);
+		
+	ConfigMap subsection = abilities.GetSection(secName);
+	while (subsection != null)
+	{
+		if (GetIntFromConfigMap(subsection, "slot", -1) == slot)
+		{
+			subsection.Get("ability_name", abName, sizeof(abName));
+			subsection.Get("plugin_name", pluginName, sizeof(pluginName));
+			CF_DoAbility(client, pluginName, abName);
+		}
+		
+		i++;
+		Format(secName, sizeof(secName), "ability_%i", i);
+		subsection = abilities.GetSection(secName);
+	}
 }
 
 public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)

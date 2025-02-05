@@ -1157,9 +1157,13 @@ public void CF_OnRoundStateChanged(int state)
 	for (int i = 1; i <= MaxClients; i++)
 	{
 		if (state == 0)
-				b_CharacterApplied[i] = false;
+			b_CharacterApplied[i] = false;
 		if (state == 2)
+		{
+			if (!GetPreserveUlt())
+				CF_SetUltCharge(i, 0.0, true);
 			delete CF_ClientMenu[i];
+		}
 	}
 }
 
@@ -1216,7 +1220,7 @@ public void CFC_MapEnd()
  */
  void CF_MakeCharacter(int client, bool callForward = true, bool ForceNewCharStatus = false, char ForcedCharacter[255] = "", char message[255] = "")
  {
- 	if (!IsValidClient(client))
+ 	if (!IsValidClient(client) || !IsPlayerAlive(client))
  		return;
 
 	EndHeldM2(client, true, true);

@@ -84,13 +84,11 @@
 //				- Turns at a rate of 2 degrees per frame (126 per second).
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
-//	- TODO: Make Demopan's fancy ult delay an officially supported feature that you can enable or disable by setting "warning_delay" in the ultimate stats section.
-//	- TODO: Disable random crits on the beta test server (melee characters like Spookmaster and Demopan are utterly busted with random crits).
 //	- TODO: Test all game modes (except for CTF which won't be officially supported):
 //		- [X] Payload
 //		- [ ] Payload Race
 //		- [ ] Control Points
-//		- [ ] King of the Hill
+//		- [X] King of the Hill
 //	- TODO: Rewrite the wiki.
 //		- May end up just scrapping the wiki. It adds way too much upkeep for next to no benefit.
 //	- TODO: Make sure plugin variables automatically get reset on map change. I imagine this will not be a problem, but if it's like ZR and variables don't get reset automatically, it's going to be a nightmare to deal with.
@@ -337,13 +335,18 @@ public void RoundEnd(Event hEvent, const char[] sEvName, bool bDontBroadcast)
 
 public void PlayerSpawn(Event gEvent, const char[] sEvName, bool bDontBroadcast)
 {
-	int client = GetClientOfUserId(gEvent.GetInt("userid"));
-	
-	if (IsValidClient(client))
+	float duration = GetSpawnGrace();
+
+	if (duration > 0.0)
 	{
-		TF2_AddCondition(client, TFCond_Buffed, 3.0);
-		TF2_AddCondition(client, TFCond_UberchargedCanteen, 3.0);
-		EmitSoundToClient(client, SND_RESPAWN);
+		int client = GetClientOfUserId(gEvent.GetInt("userid"));
+		
+		if (IsValidClient(client))
+		{
+			TF2_AddCondition(client, TFCond_Buffed, duration);
+			TF2_AddCondition(client, TFCond_UberchargedCanteen, duration);
+			EmitSoundToClient(client, SND_RESPAWN);
+		}
 	}
 }
 

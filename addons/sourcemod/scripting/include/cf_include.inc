@@ -1670,3 +1670,11 @@ native void CF_StartLagCompensation(int client);
  * @param client	The client whose lag compensation to end.
  */
 native void CF_EndLagCompensation(int client);
+
+/**
+ * Activates all abilities which use the given slot.
+ * 
+ * @param client	The client whose ability slot to activate.
+ * @param slot		The ability slot to activate.
+ */
+native void CF_DoAbilitySlot(int client, int slot);
