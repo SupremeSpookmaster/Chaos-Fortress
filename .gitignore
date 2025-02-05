@@ -28,3 +28,4 @@
 !tf_player_collisions.inc
 addons/sourcemod/scripting/compile.sh
 addons/sourcemod/scripting/spcomp64
+addons/sourcemod/scripting/cf_npc_tester.sp
