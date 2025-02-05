@@ -1262,7 +1262,8 @@ bool ZeinaWingsActivate(int client, char abilityName[255])
 	if(IsValidEntity(ShieldEntRef[client]))
 	{
 		TF2_RemoveWearable(client, ShieldEntRef[client]);
-		RemoveEntity(ShieldEntRef[client]);
+		if(IsValidEntity(ShieldEntRef[client]))
+			RemoveEntity(ShieldEntRef[client]);
 	}
 
 	// Remove overheal decay along with our shield
@@ -1360,7 +1361,8 @@ public Action ZeinaFlightThink(int client)
 		if(IsValidEntity(ShieldEntRef[client]))
 		{
 			TF2_RemoveWearable(client, ShieldEntRef[client]);
-			RemoveEntity(ShieldEntRef[client]);
+			if(IsValidEntity(ShieldEntRef[client]))
+				RemoveEntity(ShieldEntRef[client]);
 		}
 
 		ShieldEntRef[client] = -1;
@@ -1378,7 +1380,8 @@ public Action ZeinaFlightThink(int client)
 		if(IsValidEntity(ShieldEntRef[client]))
 		{
 			TF2_RemoveWearable(client, ShieldEntRef[client]);
-			RemoveEntity(ShieldEntRef[client]);
+			if(IsValidEntity(ShieldEntRef[client]))
+				RemoveEntity(ShieldEntRef[client]);
 		}
 
 		SetEntityMoveType(client, MOVETYPE_WALK);
