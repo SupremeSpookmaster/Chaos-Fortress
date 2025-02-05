@@ -1357,6 +1357,8 @@ public Action ZeinaFlightThink(int client)
 		if(IsValidEntity(ShieldEntRef[client]))
 			TF2_RemoveWearable(client, EntRefToEntIndex(ShieldEntRef[client]));
 
+		ShieldEntRef[client] = -1;
+
 		SvAirAccelerate_Client[client] = SvAirAccelerate_Client[0];
 		SvAccelerate_Client[client] = SvAccelerate_Client[0];
 		SDKUnhook(client, SDKHook_PreThink, ZeinaFlightThink);
@@ -1453,16 +1455,23 @@ void ZeinaPickupAlly(int client)
 		return;
 	}
 
-	CurrentlyPickingUpAlly[client] = -1;
 	if(!AllyOnlyPickUpOne[client])
 	{
 		if(IsValidEntity(LaserToConnectPickup[client]))
 			RemoveEntity(LaserToConnectPickup[client]);
 
 		SDKUnhook(client, SDKHook_PreThink, ZeinalMoveAllyToMe);
+		int CarryThis = EntRefToEntIndex(CurrentlyPickingUpAlly[client]);
+		if(IsValidClient(CarryThis))
+		{
+			PrintCenterText(CarryThis, "");
+		}
+		PrintCenterText(client, "");
+		CurrentlyPickingUpAlly[client] = -1;
 		return;
 	}
 
+	CurrentlyPickingUpAlly[client] = -1;
 	int SaveTeam = GetEntProp(client, Prop_Send, "m_iTeamNum");
 	SetEntProp(client, Prop_Send, "m_iTeamNum", 0);
 	//So it lag comps allies.
@@ -1564,6 +1573,7 @@ void ZeinalMoveAllyToMe(int client)
 {
 	if(!IsValidEntity(ShieldEntRef[client]))
 	{
+		PrintCenterText(client, "");
 		//nope, only while flying.
 		SDKUnhook(client, SDKHook_PreThink, ZeinalMoveAllyToMe);
 		if(IsValidEntity(LaserToConnectPickup[client]))
@@ -1574,7 +1584,7 @@ void ZeinalMoveAllyToMe(int client)
 	int CarryThis = EntRefToEntIndex(CurrentlyPickingUpAlly[client]);
 	if(!IsValidClient(CarryThis))
 	{
-		PrintCenterText(CarryThis, "");
+		PrintCenterText(client, "");
 		//nope, only while flying.
 		SDKUnhook(client, SDKHook_PreThink, ZeinalMoveAllyToMe);
 		if(IsValidEntity(LaserToConnectPickup[client]))
@@ -1583,6 +1593,8 @@ void ZeinalMoveAllyToMe(int client)
 	}
 	if(!IsPlayerAlive(CarryThis))
 	{
+		PrintCenterText(client, "");
+		PrintCenterText(CarryThis, "");
 		//nope, only while flying.
 		SDKUnhook(client, SDKHook_PreThink, ZeinalMoveAllyToMe);
 		if(IsValidEntity(LaserToConnectPickup[client]))
