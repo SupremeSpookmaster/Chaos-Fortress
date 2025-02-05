@@ -742,8 +742,22 @@ bool UpdateBarrier(int client, char abilityName[255] = "", int AllyGive = -1)
 
 	int maxHealth = RoundFloat(CF_GetCharacterMaxHealth(AllyGive));
 	int health = GetClientHealth(AllyGive);
+
 	if (health == 0 || maxHealth == 0 || (health - maxHealth) == 0)
+	{
+		// No more barrier
+		if(ShieldEntRef[AllyGive] != -1)
+		{
+			int entity = EntRefToEntIndex(ShieldEntRef[AllyGive]);
+			if(entity != -1)
+			{
+				TF2_RemoveWearable(AllyGive, entity);
+			}
+
+			ShieldEntRef[AllyGive] = -1;
+		}
 		return false;
+	}
 	
 	// 255 alpha at x5 max health
 	int alpha = (health - maxHealth) * 255 / (maxHealth * 4);
