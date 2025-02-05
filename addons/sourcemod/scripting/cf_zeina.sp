@@ -1005,10 +1005,10 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 	switch(GetRandomInt(1,2))
 	{
 		case 1:
-			EmitSoundToAll("weapons/rescue_ranger_charge_01.wav", victim, SNDCHAN_STATIC, 60, _, 0.15, GetRandomInt(95,105));
+			EmitSoundToAll("weapons/rescue_ranger_charge_01.wav", victim, SNDCHAN_AUTO, 60, _, 0.15, GetRandomInt(95,105));
 		
 		case 2:
-			EmitSoundToAll("weapons/rescue_ranger_charge_02.wav", victim, SNDCHAN_STATIC, 60, _, 0.15, GetRandomInt(95,105));
+			EmitSoundToAll("weapons/rescue_ranger_charge_02.wav", victim, SNDCHAN_AUTO, 60, _, 0.15, GetRandomInt(95,105));
 	}						
 	int BeaconHealth = GetEntProp(BeaconProtect, Prop_Data, "m_iHealth");
 	int BeaconMaxHealth = GetEntProp(BeaconProtect, Prop_Data, "m_iMaxHealth");
