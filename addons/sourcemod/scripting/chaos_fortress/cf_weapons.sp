@@ -195,7 +195,7 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 	if(count % 2)
 		--count;
 		
-	TF2Items_SetNumAttributes(hWeapon, count);
+	TF2Items_SetNumAttributes(hWeapon, count / 2);
 	
 	for(int i; i < count; i += 2)
 	{
