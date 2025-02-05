@@ -209,7 +209,6 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 			TF2_RemoveWearable(client, entity);
 
 		ShieldEntRef[client] = -1;
-		SDKUnhook(client, SDKHook_OnTakeDamagePost, BarrierTakeDamagePost);
 	}
 
 	SDKUnhook(client, SDKHook_WeaponSwitchPost, WeaponSwitch);
@@ -816,7 +815,9 @@ Action ShieldSetTransmit(int entity, int client)
 {
 	return GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity") == client ? Plugin_Stop : Plugin_Continue;
 }
-void CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, const float damageForce[3], const float damagePosition[3], int damagecustom)
+
+public Action CF_OnTakeDamageAlive_Post(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+	float damageForce[3], float damagePosition[3], int &damagecustom)
 {
 	if(ShieldEntRef[victim] != -1)
 	{
@@ -825,6 +826,7 @@ void CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float da
 			TempomaryShield[victim] = 0;
 		UpdateBarrier(victim);
 	}
+	return Plugin_Continue;
 }
 
 float MassLaser_CloseDamage[MAXPLAYERS + 1] = { 0.0, ... };
