@@ -345,6 +345,8 @@ Action OnShortCircuit(int entity)
 		}
 	}
 
+	CF_GiveUltCharge(owner, 65.0, CF_ResourceType_Generic);
+
 	RemoveEntity(entity);
 	return Plugin_Stop;
 }
@@ -470,6 +472,7 @@ Action Timer_AmpThink(Handle timer, int ref)
 		int level = GetEntProp(entity, Prop_Send, "m_iUpgradeLevel");
 		bool boosted = (owner != -1 && TF2_IsPlayerInCondition(owner, TFCond_CritCanteen));
 		int metal = GetEntProp(entity, Prop_Send, "m_iAmmoMetal") + (level > 1 ? 10 : 5);
+		float ultCharge;
 
 		if(boosted)
 			metal = 10000;
@@ -503,10 +506,14 @@ Action Timer_AmpThink(Handle timer, int ref)
 						AmpBuffTimer[client] = CreateTimer(2.5, Timer_AmpBuff, client);
 
 						metal -= cost;
+						ultCharge += float(cost);
 					}
 				}
 			}
 		}
+
+		if(owner != -1)
+			CF_GiveUltCharge(owner, ultCharge, CF_ResourceType_Generic);
 
 		if(metal > 400)
 			metal = 400;
