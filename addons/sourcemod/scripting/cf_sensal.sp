@@ -209,7 +209,6 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 			TF2_RemoveWearable(client, entity);
 
 		ShieldEntRef[client] = -1;
-		SDKUnhook(client, SDKHook_OnTakeDamagePost, BarrierTakeDamagePost);
 	}
 
 	SDKUnhook(client, SDKHook_WeaponSwitchPost, WeaponSwitch);
@@ -217,12 +216,6 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 
 public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
-	if(ShieldEntRef[victim] != -1)
-	{
-		TempomaryShield[victim] -= RoundToNearest(damage);
-		if(TempomaryShield[victim] <= 0)
-			TempomaryShield[victim] = 0;
-	}
 
 	if(VulnStacks[victim] > 0 && !(damagetype & DMG_CRIT))
 	{
@@ -809,9 +802,6 @@ bool UpdateBarrier(int client, char abilityName[255] = "", int AllyGive = -1)
 		SetEntityRenderMode(entity, RENDER_TRANSCOLOR);
 		ShieldEntRef[AllyGive] = EntIndexToEntRef(entity);
 
-		SDKUnhook(AllyGive, SDKHook_OnTakeDamageAlivePost, BarrierTakeDamagePost);
-		SDKHook(AllyGive, SDKHook_OnTakeDamageAlivePost, BarrierTakeDamagePost);
-
 		// Don't show barrier to ourself
 		SDKHook(entity, SDKHook_SetTransmit, ShieldSetTransmit);
 	}
@@ -826,10 +816,17 @@ Action ShieldSetTransmit(int entity, int client)
 	return GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity") == client ? Plugin_Stop : Plugin_Continue;
 }
 
-void BarrierTakeDamagePost(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, const float damageForce[3], const float damagePosition[3], int damagecustom)
+public Action CF_OnTakeDamageAlive_Post(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+	float damageForce[3], float damagePosition[3], int &damagecustom)
 {
-	if(!UpdateBarrier(victim))
-		SDKUnhook(victim, SDKHook_OnTakeDamagePost, BarrierTakeDamagePost);
+	if(ShieldEntRef[victim] != -1)
+	{
+		TempomaryShield[victim] -= RoundToNearest(damage);
+		if(TempomaryShield[victim] <= 0)
+			TempomaryShield[victim] = 0;
+		UpdateBarrier(victim);
+	}
+	return Plugin_Continue;
 }
 
 float MassLaser_CloseDamage[MAXPLAYERS + 1] = { 0.0, ... };

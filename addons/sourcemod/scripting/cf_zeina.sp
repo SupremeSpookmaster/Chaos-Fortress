@@ -1540,7 +1540,7 @@ bool Zeina_HitWorldOnly(int entity, int contentsMask, int client)
 {
 	if(entity == 0)
 		return true;
-
+	
 	return false;
 }
 
