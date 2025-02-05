@@ -587,6 +587,18 @@ public Action CFA_HUDTimer(Handle timer)
 					int b = i_HUDB[client];
 					int a = i_HUDA[client];
 
+					if (r == 255 && g == 255 && b == 255)
+					{
+						r = 255;
+						g = 160;
+						b = 160;
+						if (TF2_GetClientTeam(client) == TFTeam_Blue)
+						{
+							b = 255;
+							r = 160;
+						}
+					}
+
 					Call_StartForward(g_OnHUDDisplayed);
 
 					Call_PushCell(client);
@@ -1074,10 +1086,10 @@ public void CFA_MapEnd()
 		i_M2Ammo[i] = -1;
 		i_M3Ammo[i] = -1;
 		i_ReloadAmmo[i] = -1;
-		i_HUDR[i] = 0;
-		i_HUDG[i] = 0;
-		i_HUDB[i] = 0;
-		i_HUDA[i] = 0;
+		i_HUDR[i] = 255;
+		i_HUDG[i] = 255;
+		i_HUDB[i] = 255;
+		i_HUDA[i] = 255;
 		i_M2Stocks[i] = 0;
 		i_M2MaxStocks[i] = 0;
 		i_M3Stocks[i] = 0;
