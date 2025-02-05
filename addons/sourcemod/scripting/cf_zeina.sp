@@ -413,6 +413,14 @@ void ZeinaInitiateSlash(int client, char abilityName[255])
 	pos2[2] = belowBossEyes[2] + vecForward[2] * VectorForward;
 
 	
+	//Makes sure that it hits anything where you can see
+	Handle trace;
+	trace = TR_TraceRayFilterEx(belowBossEyes, pos2, MASK_ALL, RayType_EndPoint, Zeina_HitWorldOnly, client);	// 1073741824 is CONTENTS_LADDER?
+	if (TR_DidHit(trace))
+	{
+		TR_GetEndPosition(pos2, trace);
+	}
+	delete trace;
 	float hullMin[3];
 	float hullMax[3];
 	hullMin[0] = -float(SENSAL_LASER_THICKNESS);
@@ -425,12 +433,8 @@ void ZeinaInitiateSlash(int client, char abilityName[255])
 	SensalHitList = new ArrayList();
 
 	CF_StartLagCompensation(client);
-	Handle trace;
 	trace = TR_TraceHullFilterEx(belowBossEyes, pos2, hullMin, hullMax, MASK_ALL, Zeina_BEAM_TraceUsers, client);	// 1073741824 is CONTENTS_LADDER?
-	if (TR_DidHit(trace))
-	{
-		TR_GetEndPosition(pos2, trace);
-	}
+	
 	CF_EndLagCompensation(client);
 	delete trace;
 	int colorLayer4[4];
@@ -1540,6 +1544,13 @@ bool Zeina_FindTraceAlly(int entity, int contentsMask, int client)
 	int targTeam = GetEntProp(entity, Prop_Send, "m_iTeamNum");
 	int MyTeam = TempSaveTeam;
 	if(targTeam == MyTeam)
+		return true;
+
+	return false;
+}
+bool Zeina_HitWorldOnly(int entity, int contentsMask, int client)
+{
+	if(entity == 0)
 		return true;
 
 	return false;
