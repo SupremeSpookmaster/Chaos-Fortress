@@ -25,6 +25,7 @@
 #define ABILITY_PORTALGATE		"sensal_ability_portalgate"
 #define ABILITY_BLOCKRESOURCE	"sensal_ability_noresource"
 #define ABILITY_RAGDOLL			"sensal_special_ragdoll"
+#define ABILITY_BARRIER_TEMP	"sensal_shield_temp"
 
 static const char SyctheHitSound[][] =
 {
@@ -137,6 +138,10 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 		ApplyBarrier(client, abilityName);
 	}
 	else if(StrContains(abilityName, ABILITY_BARRIER_NORM) != -1)
+	{
+		ApplyBarrier(client, abilityName);
+	}
+	else if(StrContains(abilityName, ABILITY_BARRIER_TEMP) != -1)
 	{
 		ApplyBarrier(client, abilityName);
 	}
@@ -588,7 +593,16 @@ void ApplyBarrier(int client, char abilityName[255])
 {
 	int amount = CF_GetArgI(client, PluginName, abilityName, "amount");
 	int cap = RoundFloat(CF_GetCharacterMaxHealth(client) * CF_GetArgF(client, PluginName, abilityName, "cap"));
-	
+	int drainshieldto = CF_GetArgI(client, PluginName, abilityName, "drainshieldto");
+	if(drainshieldto > 0)
+	{
+		int drainshieldper = CF_GetArgI(client, PluginName, abilityName, "shieldrain");
+		DataPack pack2 = new DataPack();
+		CreateDataTimer(0.5, ZeinaShieldDrain, pack2, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
+		WritePackCell(pack2, EntIndexToEntRef(client));
+		WritePackCell(pack2, drainshieldto);
+		WritePackCell(pack2, drainshieldper);
+	}
 	int health = GetClientHealth(client);
 	if(health < cap)
 	{
@@ -608,6 +622,48 @@ void ApplyBarrier(int client, char abilityName[255])
 	}
 
 	UpdateBarrier(client, abilityName);
+}
+
+public Action ZeinaShieldDrain(Handle timer, DataPack pack)
+{
+	ResetPack(pack);
+	int client = EntRefToEntIndex(ReadPackCell(pack));
+	if (!IsValidEntity(client))
+		return Plugin_Stop;
+
+	if (!IsPlayerAlive(client))
+		return Plugin_Stop;
+		
+	//no shield, bye.
+	if(ShieldEntRef[client] == -1)
+		return Plugin_Stop;
+
+	int drainshieldto = ReadPackCell(pack);
+	int drainshieldper = ReadPackCell(pack);
+
+	int health = GetClientHealth(client);
+	int amountChange = drainshieldper;
+	if(drainshieldto >= health)
+	{
+		return Plugin_Stop;
+	}
+	
+	if (drainshieldto > (health - amountChange))
+	{
+		//it drains too much, reduce.
+		amountChange = health - (drainshieldto);
+	}
+	health -= amountChange;
+	SetEntityHealth(client, health);
+	Event event = CreateEvent("player_healonhit", true);
+	event.SetInt("entindex", client);
+	event.SetInt("amount", -amountChange);
+	event.Fire();
+
+	if(health <= drainshieldto)
+		return Plugin_Stop;
+
+	return Plugin_Continue;
 }
 
 bool UpdateBarrier(int client, char abilityName[255] = "")
@@ -677,6 +733,7 @@ bool UpdateBarrier(int client, char abilityName[255] = "")
 	SetEntityRenderColor(entity, 255, 255, 255, alpha);
 	return true;
 }
+
 
 Action ShieldSetTransmit(int entity, int client)
 {

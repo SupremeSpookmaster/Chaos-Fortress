@@ -721,7 +721,7 @@ public int Shield_CreateProp(int shield)
 		SetEntPropEnt(prop, Prop_Send, "m_hOwnerEntity", owner);
 		SetEntProp(prop, Prop_Send, "m_iTeamNum", team);
 		
-		SetEntityModel(prop, MODEL_SHIELD_DAMAGED);
+		SetEntityModel(prop, "MODEL_SHIELD_DAMAGED");
 		DispatchKeyValue(prop, "skin", team == view_as<int>(TFTeam_Red) ? "0" : "1");
 		
 		DispatchSpawn(prop);

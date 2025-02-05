@@ -3002,7 +3002,7 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 	
 	int attacker = GetNativeCell(1);
 	
-	if (!IsValidClient(attacker))
+	if (!IsValidEntity(attacker))
 		return ReturnValue;
 		
 	int inflictor = GetNativeCell(2);
@@ -3104,7 +3104,7 @@ public bool GenericAOE_Trace(int entity, int attacker)
 	if (!HasEntProp(entity, Prop_Send, "m_iTeamNum"))
 		return true;
 		
-	int targTeam = GetClientTeam(attacker);
+	int targTeam = GetEntProp(attacker, Prop_Send, "m_iTeamNum");
 	
 	if (GetEntProp(entity, Prop_Send, "m_iTeamNum") != targTeam || (entity == attacker))
 	{
