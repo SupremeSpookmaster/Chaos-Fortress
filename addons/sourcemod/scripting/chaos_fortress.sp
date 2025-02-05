@@ -335,13 +335,18 @@ public void RoundEnd(Event hEvent, const char[] sEvName, bool bDontBroadcast)
 
 public void PlayerSpawn(Event gEvent, const char[] sEvName, bool bDontBroadcast)
 {
-	int client = GetClientOfUserId(gEvent.GetInt("userid"));
-	
-	if (IsValidClient(client))
+	float duration = GetSpawnGrace();
+
+	if (duration > 0.0)
 	{
-		TF2_AddCondition(client, TFCond_Buffed, 3.0);
-		TF2_AddCondition(client, TFCond_UberchargedCanteen, 3.0);
-		EmitSoundToClient(client, SND_RESPAWN);
+		int client = GetClientOfUserId(gEvent.GetInt("userid"));
+		
+		if (IsValidClient(client))
+		{
+			TF2_AddCondition(client, TFCond_Buffed, duration);
+			TF2_AddCondition(client, TFCond_UberchargedCanteen, duration);
+			EmitSoundToClient(client, SND_RESPAWN);
+		}
 	}
 }
 
