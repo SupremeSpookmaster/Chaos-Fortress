@@ -44,6 +44,7 @@
 !cf_gadgeteer.sp
 !cf_npcs.sp
 !cf_sensal.sp
+!cf_vulpo.sp
 
 #Include Files
 !cf_include.inc
