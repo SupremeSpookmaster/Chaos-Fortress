@@ -99,6 +99,11 @@ GlobalForward g_SimulatedSpellCast;
 GlobalForward g_ForcedVMAnimEnd;
 GlobalForward g_OnHUDDisplayed;
 
+Handle SDKStartLagCompensation;
+Handle SDKFinishLagCompensation;
+Address CLagCompensationManager;
+Address SDKGetCurrentCommand;
+
 int i_GenericProjectileOwner[2049] = { -1, ... };
 int i_HealingDone[MAXPLAYERS + 1] = { 0, ... };
 int i_UltWeaponSlot[MAXPLAYERS + 1] = { -1, ... };
@@ -183,6 +188,8 @@ public void CFA_MakeNatives()
 	CreateNative("CF_GetAbilityStocks", Native_CF_GetAbilityStocks);
 	CreateNative("CF_GetAbilityMaxStocks", Native_CF_GetAbilityMaxStocks);
 	CreateNative("CF_SetLocalOrigin", Native_CF_SetLocalOrigin);
+	CreateNative("CF_StartLagCompensation", Native_CF_StartLagCompensation);
+	CreateNative("CF_EndLagCompensation", Native_CF_EndLagCompensation);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -235,6 +242,27 @@ public void CFA_MakeForwards()
 	g_hSetLocalOrigin = EndPrepSDKCall();
 	if(!g_hSetLocalOrigin)
 		LogError("[Gamedata] Could not find CBaseEntity::SetLocalOrigin");
+
+	StartPrepSDKCall(SDKCall_Raw);
+	PrepSDKCall_SetFromConf(gd, SDKConf_Signature, "CLagCompensationManager::StartLagCompensation");
+	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Pointer);
+	SDKStartLagCompensation = EndPrepSDKCall();
+	if(!SDKStartLagCompensation)
+		LogError("[Gamedata] Could not find CLagCompensationManager::StartLagCompensation");
+	
+	StartPrepSDKCall(SDKCall_Raw);
+	PrepSDKCall_SetFromConf(gd, SDKConf_Signature, "CLagCompensationManager::FinishLagCompensation");
+	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
+	SDKFinishLagCompensation = EndPrepSDKCall();
+	if(!SDKFinishLagCompensation)
+		LogError("[Gamedata] Could not find CLagCompensationManager::FinishLagCompensation");
+
+	DHook_CreateDetour(gd, "CLagCompensationManager::StartLagCompensation", _, DHook_StartLagCompensation);
+
+	SDKGetCurrentCommand = view_as<Address>(gd.GetOffset("GetCurrentCommand"));
+	if(SDKGetCurrentCommand == view_as<Address>(-1))
+		LogError("[Gamedata] Could not find GetCurrentCommand");
 	
 	delete gd;
 }
@@ -1882,6 +1910,29 @@ public Native_CF_SetUltCharge(Handle plugin, int numParams)
 			else
 				CF_ActivateAbilitySlot(client, 9);
 		}*/
+	}
+}
+
+//TODO: Sound cues!
+public void CFA_UltMessage(int client)
+{
+	float charge = f_UltCharge[client] / f_UltChargeRequired[client];
+	char message[255];
+	TFTeam team = TF2_GetClientTeam(client);
+	Format(message, sizeof(message), "%s%N{default}: My {olive}%s{default} is ", (team == TFTeam_Red ? "{red}" : "{blue}"), client, s_UltName[client]);
+
+	if (charge >= 1.0)
+		Format(message, sizeof(message), "%s{green}FULLY CHARGED{default}!", message);
+	else
+	{
+		Format(message, sizeof(message), "%s{yellow}%iPCNTG{default} charged!", message, RoundToFloor(100.0 * charge));
+		ReplaceString(message, sizeof(message), "PCNTG", "%%");
+	}
+
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (IsValidMulti(i, false, _, true, team))
+			CPrintToChat(i, message);
 	}
 }
 
@@ -4403,6 +4454,18 @@ public Native_CF_GetAbilityMaxStocks(Handle plugin, int numParams)
 	}
 }
 
+public Native_CF_StartLagCompensation(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	SDKCall_StartLagCompensation(client);
+}
+
+public Native_CF_EndLagCompensation(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	SDKCall_FinishLagCompensation(client);
+}
+
 public Native_CF_SetLocalOrigin(Handle plugin, int numParams)
 {
 	int index = GetNativeCell(1);
@@ -4411,10 +4474,41 @@ public Native_CF_SetLocalOrigin(Handle plugin, int numParams)
 	SDKCall_SetLocalOrigin(index, localOrigin);
 }
 
-stock void SDKCall_SetLocalOrigin(int index, float localOrigin[3])
+void SDKCall_SetLocalOrigin(int index, float localOrigin[3])
 {
 	if(g_hSetLocalOrigin)
 	{
 		SDKCall(g_hSetLocalOrigin, index, localOrigin);
 	}
+}
+
+void SDKCall_FinishLagCompensation(int client)
+{
+	if(SDKStartLagCompensation && SDKFinishLagCompensation && SDKGetCurrentCommand != view_as<Address>(-1))
+	{
+		Address value = DHook_GetLagCompensationManager();
+		if(value)
+			SDKCall(SDKFinishLagCompensation, value, client);
+	}
+}
+
+void SDKCall_StartLagCompensation(int client)
+{
+	if(SDKStartLagCompensation && SDKFinishLagCompensation && SDKGetCurrentCommand != view_as<Address>(-1))
+	{
+		Address value = DHook_GetLagCompensationManager();
+		if(value)
+			SDKCall(SDKStartLagCompensation, value, client, GetEntityAddress(client) + SDKGetCurrentCommand);
+	}
+}
+
+Address DHook_GetLagCompensationManager()
+{
+	return CLagCompensationManager;
+}
+
+static MRESReturn DHook_StartLagCompensation(Address address)
+{
+	CLagCompensationManager = address;
+	return MRES_Ignored;
 }
