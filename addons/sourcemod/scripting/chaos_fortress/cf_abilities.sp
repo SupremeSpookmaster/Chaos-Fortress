@@ -1877,7 +1877,7 @@ public Native_CF_SetUltCharge(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
 	
-	if (!CF_IsPlayerCharacter(client))
+	if (!IsValidClient(client))
 		return;
 		
 	float amt = GetNativeCell(2);
