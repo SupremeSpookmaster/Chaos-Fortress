@@ -489,8 +489,8 @@ public CFC_Menu(Menu CFC_Menu, MenuAction action, int client, int param)
 		GetArrayString(CF_Characters_Configs, param, conf, 255);
 
 		CFC_BuildInfoMenu(client, conf, false, false);		
-	}
-	else if (action == MenuAction_End || action == MenuAction_Cancel)
+	} 
+	else if (action == MenuAction_End)
 	{
 		delete CF_ClientMenu[client];
 			
