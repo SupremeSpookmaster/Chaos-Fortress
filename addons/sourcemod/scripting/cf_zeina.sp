@@ -1259,6 +1259,9 @@ bool ZeinaWingsActivate(int client, char abilityName[255])
 	if(!abilityName[0])
 		return false;	// Update model, no new one
 	
+	if(IsValidEntity(ShieldEntRef[client]))
+		TF2_RemoveWearable(client, EntRefToEntIndex(ShieldEntRef[client]));
+
 	// Remove overheal decay along with our shield
 	entity = CF_AttachWearable(client, 57, "tf_wearable", true, 0, 0, _, "107 ; 1.5 ; 610 ; -15.0");
 	if(entity == -1)
@@ -1439,6 +1442,7 @@ bool Zeina_TouchGround(int entity, int contentsMask, int client)
 }
 
 
+float TextTrottle[MAXPLAYERS +1];
 int CurrentlyPickingUpAlly[MAXPLAYERS +1];
 int TempSaveTeam;
 void ZeinaPickupAlly(int client)
@@ -1482,6 +1486,7 @@ void ZeinaPickupAlly(int client)
 	CF_EndLagCompensation(client);
 	SetEntProp(client, Prop_Send, "m_iTeamNum", SaveTeam);
 	
+	TextTrottle[client] = GetGameTime();
 	if (TR_DidHit(trace))
 	{
 		int target = TR_GetEntityIndex(trace);	
@@ -1506,10 +1511,21 @@ void ZeinaPickupAlly(int client)
 			CF_DoAbility(client, "cf_sensal", "sensal_ability_ally");
 			AllyOnlyPickUpOne[client] = false;
 			//We found our target to fly with!
+			RequestFrame(SetCDBackReload, EntIndexToEntRef(client));
+			TextTrottle[target] = GetGameTime();
+			delete trace;
+			return;
 		}
 	}
-	RequestFrame(SetCDBackReload, EntIndexToEntRef(client));
+	RequestFrame(SetCDBackReloadfast, EntIndexToEntRef(client));
 	delete trace;
+}
+void SetCDBackReloadfast(int ref)
+{
+	int client = EntRefToEntIndex(ref);
+	if(!IsValidClient(client))
+		return;
+	CF_ApplyAbilityCooldown(client, 0.2, CF_AbilityType_Reload, true, false);
 }
 void SetCDBackReload(int ref)
 {
@@ -1558,6 +1574,7 @@ void ZeinalMoveAllyToMe(int client)
 	int CarryThis = EntRefToEntIndex(CurrentlyPickingUpAlly[client]);
 	if(!IsValidClient(CarryThis))
 	{
+		PrintCenterText(CarryThis, "");
 		//nope, only while flying.
 		SDKUnhook(client, SDKHook_PreThink, ZeinalMoveAllyToMe);
 		if(IsValidEntity(LaserToConnectPickup[client]))
@@ -1576,10 +1593,21 @@ void ZeinalMoveAllyToMe(int client)
 	int buttons = GetClientButtons(CarryThis);
 	if (buttons & IN_JUMP != 0)
 	{
+		PrintCenterText(CarryThis, "");
 		//nope, only while flying.
 		SDKUnhook(client, SDKHook_PreThink, ZeinalMoveAllyToMe);
 		if(IsValidEntity(LaserToConnectPickup[client]))
 			RemoveEntity(LaserToConnectPickup[client]);
+	}
+	if(TextTrottle[CarryThis] < GetGameTime())
+	{
+		TextTrottle[CarryThis] = GetGameTime() + 0.5;
+		PrintCenterText(CarryThis, "Press [JUMP] to release yourself Manually!");
+	}
+	if(TextTrottle[client] < GetGameTime())
+	{
+		TextTrottle[client] = GetGameTime() + 0.5;
+		PrintCenterText(client, "Press [R] To release your target early!");
 	}
 	float vecView[3];
 	float vecFwd[3];
