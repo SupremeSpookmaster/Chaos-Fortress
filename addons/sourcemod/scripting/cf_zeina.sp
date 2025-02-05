@@ -1260,7 +1260,10 @@ bool ZeinaWingsActivate(int client, char abilityName[255])
 		return false;	// Update model, no new one
 	
 	if(IsValidEntity(ShieldEntRef[client]))
-		TF2_RemoveWearable(client, EntRefToEntIndex(ShieldEntRef[client]));
+	{
+		TF2_RemoveWearable(client, ShieldEntRef[client]);
+		RemoveEntity(ShieldEntRef[client]);
+	}
 
 	// Remove overheal decay along with our shield
 	entity = CF_AttachWearable(client, 57, "tf_wearable", true, 0, 0, _, "107 ; 1.5 ; 610 ; -15.0");
@@ -1355,7 +1358,10 @@ public Action ZeinaFlightThink(int client)
 	if (!IsPlayerAlive(client))
 	{
 		if(IsValidEntity(ShieldEntRef[client]))
-			TF2_RemoveWearable(client, EntRefToEntIndex(ShieldEntRef[client]));
+		{
+			TF2_RemoveWearable(client, ShieldEntRef[client]);
+			RemoveEntity(ShieldEntRef[client]);
+		}
 
 		ShieldEntRef[client] = -1;
 
@@ -1370,7 +1376,10 @@ public Action ZeinaFlightThink(int client)
 	if(ZeinaFlightDuration[client] < GetGameTime())
 	{
 		if(IsValidEntity(ShieldEntRef[client]))
-			TF2_RemoveWearable(client, EntRefToEntIndex(ShieldEntRef[client]));
+		{
+			TF2_RemoveWearable(client, ShieldEntRef[client]);
+			RemoveEntity(ShieldEntRef[client]);
+		}
 
 		SetEntityMoveType(client, MOVETYPE_WALK);
 		SDKUnhook(client, SDKHook_PreThink, ZeinaFlightThink);
