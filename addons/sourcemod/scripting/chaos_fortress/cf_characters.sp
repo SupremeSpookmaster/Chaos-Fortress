@@ -1220,7 +1220,7 @@ public void CFC_MapEnd()
  */
  void CF_MakeCharacter(int client, bool callForward = true, bool ForceNewCharStatus = false, char ForcedCharacter[255] = "", char message[255] = "")
  {
- 	if (!IsValidClient(client))
+ 	if (!IsValidClient(client) || !IsPlayerAlive(client))
  		return;
 
 	EndHeldM2(client, true, true);
