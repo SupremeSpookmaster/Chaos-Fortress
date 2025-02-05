@@ -26,6 +26,7 @@
 #define ABILITY_BLOCKRESOURCE	"sensal_ability_noresource"
 #define ABILITY_RAGDOLL			"sensal_special_ragdoll"
 #define ABILITY_BARRIER_TEMP	"sensal_shield_temp"
+#define ABILITY_BARRIER_ALLY	"sensal_ability_ally"
 
 static const char SyctheHitSound[][] =
 {
@@ -59,6 +60,7 @@ int g_Ruina_BEAM_Combine_Blue;
 
 int VulnStacks[MAXPLAYERS+1];
 float VulnStackMulti[MAXPLAYERS+1];
+int TempomaryShield[MAXPLAYERS+1];
 
 int ShieldEntRef[MAXPLAYERS+1] = {-1, ...};
 
@@ -157,10 +159,15 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	{
 		DoPortalGate(client, abilityName);
 	}
+	else if(StrContains(abilityName, ABILITY_BARRIER_ALLY) != -1)
+	{
+		GiveAllyShield(client, abilityName);
+	}
 }
 
 public void CF_OnCharacterCreated(int client)
 {
+	TempomaryShield[client] = 0;
 	if(CF_HasAbility(client, PluginName, ABILITY_WEAPON))
 	{
 		SDKUnhook(client, SDKHook_WeaponSwitchPost, WeaponSwitch);
@@ -194,6 +201,7 @@ Action UpdateHealthTimer(Handle timer, int userid)
 
 public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
+	TempomaryShield[client] = 0;
 	if(ShieldEntRef[client] != -1)
 	{
 		int entity = EntRefToEntIndex(ShieldEntRef[client]);
@@ -209,6 +217,13 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 
 public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
+	if(ShieldEntRef[victim] != -1)
+	{
+		TempomaryShield[victim] -= RoundToNearest(damage);
+		if(TempomaryShield[victim] <= 0)
+			TempomaryShield[victim] = 0;
+	}
+
 	if(VulnStacks[victim] > 0 && !(damagetype & DMG_CRIT))
 	{
 		float total = Pow(VulnStackMulti[victim], float(VulnStacks[victim]));
@@ -589,19 +604,71 @@ Action RemoveVulnStackTimer(Handle timer, int victim)
 	return Plugin_Continue;
 }
 
+void GiveAllyShield(int client, char abilityName[255])
+{
+	//i hate doing native,s doing it the lazy way.			
+	int AllyFound = GetEntProp(client, Prop_Data, "m_iHammerID");
+	AllyFound -= 1000;
+	if(!IsValidEntity(AllyFound))
+	{
+		return;
+	}
+	AllyFound = EntRefToEntIndex(AllyFound);
+	int amount = CF_GetArgI(client, PluginName, abilityName, "amount");
+	int cap = RoundFloat(CF_GetCharacterMaxHealth(AllyFound) * CF_GetArgF(client, PluginName, abilityName, "cap"));
+	int drainshieldper = CF_GetArgI(client, PluginName, abilityName, "shieldrain"); //The shield that was given is only tempomary.
+	if(drainshieldper > 0)
+	{
+		//Theres some type of temp shield, dont do another drain.
+		if(TempomaryShield[AllyFound] <= 0)
+		{
+			DataPack pack2 = new DataPack();
+			CreateDataTimer(0.5, ZeinaShieldDrain, pack2, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
+			WritePackCell(pack2, EntIndexToEntRef(AllyFound));
+			WritePackCell(pack2, drainshieldper);
+		}
+	}
+	int health = GetClientHealth(AllyFound);
+	if(health < cap)
+	{
+		health += amount;
+		if(health > cap)
+		{
+			amount -= health - cap;
+			health = cap;
+		}
+		
+		SetEntityHealth(AllyFound, health);
+
+		Event event = CreateEvent("player_healonhit", true);
+		event.SetInt("entindex", AllyFound);
+		event.SetInt("amount", amount);
+		event.Fire();
+	}
+	else
+	{
+		amount = 0;
+	}
+	if(drainshieldper > 0)
+	{
+		TempomaryShield[AllyFound] += amount;
+	}
+	UpdateBarrier(client, abilityName, AllyFound);
+}
 void ApplyBarrier(int client, char abilityName[255])
 {
 	int amount = CF_GetArgI(client, PluginName, abilityName, "amount");
 	int cap = RoundFloat(CF_GetCharacterMaxHealth(client) * CF_GetArgF(client, PluginName, abilityName, "cap"));
-	int drainshieldto = CF_GetArgI(client, PluginName, abilityName, "drainshieldto");
-	if(drainshieldto > 0)
+	int drainshieldper = CF_GetArgI(client, PluginName, abilityName, "shieldrain"); //The shield that was given is only tempomary.
+	if(drainshieldper > 0)
 	{
-		int drainshieldper = CF_GetArgI(client, PluginName, abilityName, "shieldrain");
-		DataPack pack2 = new DataPack();
-		CreateDataTimer(0.5, ZeinaShieldDrain, pack2, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
-		WritePackCell(pack2, EntIndexToEntRef(client));
-		WritePackCell(pack2, drainshieldto);
-		WritePackCell(pack2, drainshieldper);
+		if(TempomaryShield[client] <= 0)
+		{
+			DataPack pack2 = new DataPack();
+			CreateDataTimer(0.5, ZeinaShieldDrain, pack2, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
+			WritePackCell(pack2, EntIndexToEntRef(client));
+			WritePackCell(pack2, drainshieldper);
+		}
 	}
 	int health = GetClientHealth(client);
 	if(health < cap)
@@ -620,7 +687,14 @@ void ApplyBarrier(int client, char abilityName[255])
 		event.SetInt("amount", amount);
 		event.Fire();
 	}
-
+	else
+	{
+		amount = 0;
+	}
+	if(drainshieldper > 0)
+	{
+		TempomaryShield[client] += amount;
+	}
 	UpdateBarrier(client, abilityName);
 }
 
@@ -638,56 +712,54 @@ public Action ZeinaShieldDrain(Handle timer, DataPack pack)
 	if(ShieldEntRef[client] == -1)
 		return Plugin_Stop;
 
-	int drainshieldto = ReadPackCell(pack);
 	int drainshieldper = ReadPackCell(pack);
 
 	int health = GetClientHealth(client);
 	int amountChange = drainshieldper;
-	if(drainshieldto >= health)
+
+	if(amountChange > TempomaryShield[client])
 	{
-		return Plugin_Stop;
-	}
-	
-	if (drainshieldto > (health - amountChange))
-	{
-		//it drains too much, reduce.
-		amountChange = health - (drainshieldto);
+		amountChange = TempomaryShield[client];
 	}
 	health -= amountChange;
+	TempomaryShield[client] -= amountChange;
 	SetEntityHealth(client, health);
 	Event event = CreateEvent("player_healonhit", true);
 	event.SetInt("entindex", client);
 	event.SetInt("amount", -amountChange);
 	event.Fire();
-
-	if(health <= drainshieldto)
+	UpdateBarrier(client);
+	if(amountChange <= 0)
 		return Plugin_Stop;
 
 	return Plugin_Continue;
 }
 
-bool UpdateBarrier(int client, char abilityName[255] = "")
+bool UpdateBarrier(int client, char abilityName[255] = "", int AllyGive = -1)
 {
-	int maxHealth = RoundFloat(CF_GetCharacterMaxHealth(client));
-	int health = GetClientHealth(client);
+	if(AllyGive == -1)
+		AllyGive = client;
+
+	int maxHealth = RoundFloat(CF_GetCharacterMaxHealth(AllyGive));
+	int health = GetClientHealth(AllyGive);
 	if (health == 0 || maxHealth == 0 || (health - maxHealth) == 0)
 		return false;
 	
 	// 255 alpha at x5 max health
 	int alpha = (health - maxHealth) * 255 / (maxHealth * 4);
 	
-	if(alpha < 1)
+	if(TempomaryShield[AllyGive] <= 0 && alpha < 1)
 	{
 		// No more barrier
-		if(ShieldEntRef[client] != -1)
+		if(ShieldEntRef[AllyGive] != -1)
 		{
-			int entity = EntRefToEntIndex(ShieldEntRef[client]);
+			int entity = EntRefToEntIndex(ShieldEntRef[AllyGive]);
 			if(entity != -1)
 			{
-				TF2_RemoveWearable(client, entity);
+				TF2_RemoveWearable(AllyGive, entity);
 			}
 
-			ShieldEntRef[client] = -1;
+			ShieldEntRef[AllyGive] = -1;
 		}
 
 		return false;
@@ -697,7 +769,7 @@ bool UpdateBarrier(int client, char abilityName[255] = "")
 		alpha = 255;
 	
 	// Update barrier model
-	int entity = EntRefToEntIndex(ShieldEntRef[client]);
+	int entity = EntRefToEntIndex(ShieldEntRef[AllyGive]);
 	
 	if(entity == -1)
 	{
@@ -705,7 +777,7 @@ bool UpdateBarrier(int client, char abilityName[255] = "")
 			return false;	// Update model, no new one
 		
 		// Remove overheal decay along with our shield
-		entity = CF_AttachWearable(client, 57, "tf_wearable", true, 0, 0, _, "125 ; -9999");
+		entity = CF_AttachWearable(AllyGive, 57, "tf_wearable", true, 0, 0, _, "125 ; -9999");
 		if(entity == -1)
 			return false;
 		
@@ -721,10 +793,10 @@ bool UpdateBarrier(int client, char abilityName[255] = "")
 			SetEntProp(entity, Prop_Send, "m_nModelIndex", PrecacheModel(model));
 		}
 		SetEntityRenderMode(entity, RENDER_TRANSCOLOR);
-		ShieldEntRef[client] = EntIndexToEntRef(entity);
+		ShieldEntRef[AllyGive] = EntIndexToEntRef(entity);
 
-		SDKUnhook(client, SDKHook_OnTakeDamageAlivePost, BarrierTakeDamagePost);
-		SDKHook(client, SDKHook_OnTakeDamageAlivePost, BarrierTakeDamagePost);
+		SDKUnhook(AllyGive, SDKHook_OnTakeDamageAlivePost, BarrierTakeDamagePost);
+		SDKHook(AllyGive, SDKHook_OnTakeDamageAlivePost, BarrierTakeDamagePost);
 
 		// Don't show barrier to ourself
 		SDKHook(entity, SDKHook_SetTransmit, ShieldSetTransmit);
