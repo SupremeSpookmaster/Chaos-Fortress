@@ -1157,9 +1157,13 @@ public void CF_OnRoundStateChanged(int state)
 	for (int i = 1; i <= MaxClients; i++)
 	{
 		if (state == 0)
-				b_CharacterApplied[i] = false;
+			b_CharacterApplied[i] = false;
 		if (state == 2)
+		{
+			if (!GetPreserveUlt())
+				CF_SetUltCharge(i, 0.0, true);
 			delete CF_ClientMenu[i];
+		}
 	}
 }
 
