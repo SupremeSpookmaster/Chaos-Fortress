@@ -1261,7 +1261,7 @@ bool ZeinaWingsActivate(int client, char abilityName[255])
 	
 	if(IsValidEntity(ShieldEntRef[client]))
 	{
-		TF2_RemoveWearable(client, ShieldEntRef[client]);
+		TF2_RemoveWearable(client, EntRefToEntIndex(ShieldEntRef[client]));
 		if(IsValidEntity(ShieldEntRef[client]))
 			RemoveEntity(ShieldEntRef[client]);
 	}
@@ -1360,7 +1360,7 @@ public Action ZeinaFlightThink(int client)
 	{
 		if(IsValidEntity(ShieldEntRef[client]))
 		{
-			TF2_RemoveWearable(client, ShieldEntRef[client]);
+			TF2_RemoveWearable(client, EntRefToEntIndex(ShieldEntRef[client]));
 			if(IsValidEntity(ShieldEntRef[client]))
 				RemoveEntity(ShieldEntRef[client]);
 		}
@@ -1379,7 +1379,7 @@ public Action ZeinaFlightThink(int client)
 	{
 		if(IsValidEntity(ShieldEntRef[client]))
 		{
-			TF2_RemoveWearable(client, ShieldEntRef[client]);
+			TF2_RemoveWearable(client, EntRefToEntIndex(ShieldEntRef[client]));
 			if(IsValidEntity(ShieldEntRef[client]))
 				RemoveEntity(ShieldEntRef[client]);
 		}
