@@ -57,7 +57,6 @@ int i_ExpidonsaEnergyEffect[MAXENTITIES][MAX_EXPI_ENERGY_EFFECTS];
 float ZeinaMaxDurationSlash[MAXPLAYERS+1] = {-1.0, ...};
 float ZeinaMaxDurationSlash_Warmup[MAXPLAYERS+1] = {-1.0, ...};
 int i_OwnerEntityEnvLaser[MAXENTITIES];
-Handle g_hSetLocalOrigin;
 int ShieldAttachedToBeacon[MAXENTITIES] = {0, ...};
 int ShieldEntRef[MAXPLAYERS+1] = {-1, ...};
 float SvAirAccelerate_Replicate[MAXPLAYERS+1] = {-1.0, ...};
@@ -91,14 +90,6 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 
 public void OnPluginStart()
 {
-	GameData  gamedata = LoadGameConfigFile("zombie_riot");
-	
-	StartPrepSDKCall(SDKCall_Entity);
-	PrepSDKCall_SetFromConf(gamedata, SDKConf_Signature, "CBaseEntity::SetLocalOrigin");
-	PrepSDKCall_AddParameter(SDKType_Vector, SDKPass_ByRef);
-	g_hSetLocalOrigin = EndPrepSDKCall();
-	if(!g_hSetLocalOrigin)
-		LogError("[Gamedata] Could not find CBaseEntity::SetLocalOrigin");
 
 	CvarAirAcclerate = FindConVar("sv_airaccelerate");
 	if(CvarAirAcclerate)
@@ -107,9 +98,6 @@ public void OnPluginStart()
 	CvarAcclerate = FindConVar("sv_accelerate");
 	if(CvarAcclerate)
 		CvarAcclerate.Flags &= ~(FCVAR_NOTIFY | FCVAR_REPLICATED);
-	
-	//defaults.
-	delete gamedata;
 }
 
 public void OnMapStart()
