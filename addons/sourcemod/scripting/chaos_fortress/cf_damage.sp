@@ -15,6 +15,25 @@ public void CFDMG_MakeForwards()
 											Param_CellByRef, Param_CellByRef, Param_Array, Param_Array, Param_CellByRef);
 }
 
+public Action CFDMG_OnTakeDamageAlive_Post(victim, &attacker, &inflictor, &Float:damage, &damagetype, &weapon,
+	Float:damageForce[3], Float:damagePosition[3], damagecustom)
+{
+	CFDMG_CallDamageForward(g_PostDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
+	
+	if (CF_GetRoundState() == 1 && attacker != victim)
+	{
+		if (damage > float(GetClientHealth(victim)))
+			damage = float(GetClientHealth(victim));
+			
+		CF_GiveSpecialResource(attacker, damage, CF_ResourceType_DamageDealt);
+		CF_GiveUltCharge(attacker, damage, CF_ResourceType_DamageDealt);
+		CF_GiveSpecialResource(victim, damage, CF_ResourceType_DamageTaken);
+		CF_GiveUltCharge(victim, damage, CF_ResourceType_DamageTaken);
+	}
+
+	return Plugin_Continue;
+}
+
 public Action CFDMG_OnTakeDamageAlive(victim, &attacker, &inflictor, &Float:damage, &damagetype, &weapon,
 	Float:damageForce[3], Float:damagePosition[3], damagecustom)
 {	
@@ -42,27 +61,6 @@ public Action CFDMG_OnTakeDamageAlive(victim, &attacker, &inflictor, &Float:dama
 		{
 			ReturnValue = newValue;
 		}
-	}
-	
-	//Finally, we call PostDamage:
-	if (ReturnValue != Plugin_Handled && ReturnValue != Plugin_Stop)
-	{
-		newValue = CFDMG_CallDamageForward(g_PostDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
-		if (newValue > ReturnValue)
-		{
-			ReturnValue = newValue;
-		}
-	}
-	
-	if (CF_GetRoundState() == 1 && attacker != victim)
-	{
-		if (damage > float(GetClientHealth(victim)))
-			damage = float(GetClientHealth(victim));
-			
-		CF_GiveSpecialResource(attacker, damage, CF_ResourceType_DamageDealt);
-		CF_GiveUltCharge(attacker, damage, CF_ResourceType_DamageDealt);
-		CF_GiveSpecialResource(victim, damage, CF_ResourceType_DamageTaken);
-		CF_GiveUltCharge(victim, damage, CF_ResourceType_DamageTaken);
 	}
 
 	return ReturnValue;

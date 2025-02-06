@@ -1404,6 +1404,8 @@ public void CF_DestroyAllBuildings(int client)
  	
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
  	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
+	SDKUnhook(client, SDKHook_OnTakeDamageAlivePost, CFDMG_OnTakeDamageAlive_Post);
+ 	SDKHook(client, SDKHook_OnTakeDamageAlivePost, CFDMG_OnTakeDamageAlive_Post);
  	
  	CFA_UpdateMadeCharacter(client);
  	
@@ -1912,6 +1914,7 @@ public void CF_DestroyAllBuildings(int client)
  	//CF_GetPlayerConfig(client, s_PreviousCharacter[client], 255);
  	CF_SetPlayerConfig(client, "");
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
+	SDKUnhook(client, SDKHook_OnTakeDamageAlivePost, CFDMG_OnTakeDamageAlive_Post);
  	b_CharacterApplied[client] = false;
  	g_Characters[client].Destroy();
 	
