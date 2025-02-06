@@ -7,12 +7,12 @@
 #include <cfgmap>
 #include <sdkhooks>
 
-#define SDKHooks_TakeDamage CF_TakeDamage
-
 void CF_TakeDamage(int entity = 0, int inflictor = 0, int attacker = 0, float damage = 0.0, int damageType=DMG_GENERIC, int weapon=-1,const float damageForce[3]=NULL_VECTOR, const float damagePosition[3]=NULL_VECTOR, bool bypassHooks = false)
 {
 	SDKHooks_TakeDamage(entity, inflictor, attacker, damage, damageType, IsValidEntity(weapon) ? weapon : -1, damageForce, damagePosition, bypassHooks);
 }
+
+#define SDKHooks_TakeDamage CF_TakeDamage
 
 enum CF_ResourceType
 {
