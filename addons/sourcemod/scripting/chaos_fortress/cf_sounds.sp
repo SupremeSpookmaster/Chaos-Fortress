@@ -152,17 +152,10 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 
 	int playMode = 0;
 	
-	int ultType = 0;
-	if (StrEqual(Sound, "sound_ultimate_activation"))
-		ultType = 1;
-	if (StrEqual(Sound, "sound_ultimate_activation_friendly")) { ultType = 2; playMode = 2; }
-	if (StrEqual(Sound, "sound_ultimate_activation_hostile")) { ultType = 3; playMode = 3; }
-	if (StrEqual(Sound, "sound_ultimate_activation_self")) { ultType = 4; playMode = 1; }
-	
 	int level = 100;
 	float volume = 1.0;
-	int channel = ultType != 0 ? 4 : 7;
-	bool global = ultType != 0;
+	int channel = 7;
+	bool global = false;
 	int maxPitch = 100;
 	int minPitch = 100;
 	
@@ -184,17 +177,11 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 		if (section != null)
 		{			
 			level = GetIntFromConfigMap(section, "level", 100);
-			
-			if (ultType == 0)
-				playMode = GetIntFromConfigMap(section, "source", 0);
+			playMode = GetIntFromConfigMap(section, "source", 0);
 				
 			volume = GetFloatFromConfigMap(section, "volume", 1.0);
-			
-			if (ultType == 0)
-				channel = GetIntFromConfigMap(section, "channel", 7);
-				
-			if (ultType == 0)
-				global = GetBoolFromConfigMap(section, "global", false);
+			channel = GetIntFromConfigMap(section, "channel", 7);
+			global = GetBoolFromConfigMap(section, "global", false);
 				
 			float chance = GetFloatFromConfigMap(section, "chance", 1.0);
 			
@@ -232,7 +219,7 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 			CanPlay = false;
 		}
 		
-		if (CanPlay && ultType == 0)
+		if (CanPlay)
 			level -= CF_GetDialogueReduction(source);
 		
 		DeleteCfg(cfgMap);
