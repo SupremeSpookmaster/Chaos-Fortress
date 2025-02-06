@@ -243,7 +243,7 @@ public Action CFB_OnCallForMedic(int client, const char[] command, int args)
 
 	if ((num1 != 0 || num2 != 0) && gt < f_NextMedicCall[client])
 		return Plugin_Handled;
-	else
+	else if (num1 != 0 || num2 != 0)
 	{
 		Call_StartForward(g_OnCallForMedic);
 		Call_PushCell(client);

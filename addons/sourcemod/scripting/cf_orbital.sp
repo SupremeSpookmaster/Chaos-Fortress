@@ -38,11 +38,11 @@ int laserModel;
 #define PARTICLE_STRIKE_WARNING_AURA_BLUE		"utaunt_tarotcard_blue_vortex"
 #define PARTICLE_STRIKE_WARNING_BLUE			"sparks_powerline_blue"
 
-#define SOUND_TASER_BLAST				"misc/halloween/spell_lightning_ball_impact.wav"
-#define SOUND_GRAVITY_LOOP				"player/taunt_bumper_car_go_loop.wav"
-#define SOUND_STRIKE_BLAST				"weapons/cow_mangler_explode.wav"
-#define SOUND_STRIKE_BLAST_2			"weapons/cow_mangler_explosion_charge_01.wav"
-#define SOUND_STRIKE_WARNING			"ambient_mp3/alarms/doomsday_lift_alarm.mp3"
+#define SOUND_TASER_BLAST				")misc/halloween/spell_lightning_ball_impact.wav"
+#define SOUND_GRAVITY_LOOP				")player/taunt_bumper_car_go_loop.wav"
+#define SOUND_STRIKE_BLAST				")weapons/cow_mangler_explode.wav"
+#define SOUND_STRIKE_BLAST_2			")weapons/cow_mangler_explosion_charge_01.wav"
+#define SOUND_STRIKE_WARNING			")ambient_mp3/alarms/doomsday_lift_alarm.mp3"
 
 #define MODEL_TASER						"models/weapons/w_models/w_drg_ball.mdl"
 

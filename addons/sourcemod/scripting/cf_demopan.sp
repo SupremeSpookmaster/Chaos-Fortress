@@ -33,14 +33,14 @@ int glowModel;
 #define MODEL_REFINED					"models/player/items/taunts/cash_wad.mdl"
 #define MODEL_SHIELD_DAMAGED			"models/chaos_fortress/demopan/refined_shield.mdl"
 
-#define SOUND_BOMB_EXPLODE				"weapons/explode1.wav"
-#define SOUND_BOMB_LOOP					"weapons/cow_mangler_idle.wav"
-#define SOUND_SHIELD_HIT				"misc/halloween/spell_lightning_ball_impact.wav"
-#define SOUND_SHIELD_TAKEDAMAGE			"weapons/fx/rics/ric1.wav"
-#define SOUND_SHIELD_STAGEBREAK			"chaos_fortress/demopan/demopan_shield_break_minor.mp3"
-#define SOUND_SHIELD_FULLBREAK			"chaos_fortress/demopan/demopan_shield_break_final.mp3"
-#define SOUND_TRADE_EXPLOSION_1			"weapons/explode1.wav"
-#define SOUND_TRADE_EXPLOSION_2			"ui/notification_alert.wav"
+#define SOUND_BOMB_EXPLODE				")weapons/explode1.wav"
+#define SOUND_BOMB_LOOP					")weapons/cow_mangler_idle.wav"
+#define SOUND_SHIELD_HIT				")misc/halloween/spell_lightning_ball_impact.wav"
+#define SOUND_SHIELD_TAKEDAMAGE			")weapons/fx/rics/ric1.wav"
+#define SOUND_SHIELD_STAGEBREAK			")chaos_fortress/demopan/demopan_shield_break_minor.mp3"
+#define SOUND_SHIELD_FULLBREAK			")chaos_fortress/demopan/demopan_shield_break_final.mp3"
+#define SOUND_TRADE_EXPLOSION_1			")weapons/explode1.wav"
+#define SOUND_TRADE_EXPLOSION_2			")ui/notification_alert.wav"
 
 public void OnMapStart()
 {

@@ -24,7 +24,7 @@
 #define PARTICLE_ABSORB_3				"eye_powerup_green_lvl_3"
 #define PARTICLE_ABSORB_4				"eye_powerup_green_lvl_4"
 
-#define SOUND_DISCARD_EXPLODE		"misc/halloween/spell_fireball_impact.wav"
+#define SOUND_DISCARD_EXPLODE		")misc/halloween/spell_fireball_impact.wav"
 
 #define MODEL_DISCARD				"models/props_mvm/mvm_human_skull_collide.mdl"
 
