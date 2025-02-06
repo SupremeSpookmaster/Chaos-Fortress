@@ -1117,6 +1117,14 @@ public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
 	SetEntityRenderColor(entity, newTeam == TFTeam_Red ? 255 : 120, 120, newTeam == TFTeam_Blue ? 255 : 120, 255);
 }
 
+public void OnMapEnd()
+{
+	for (int i = 0; i < 2049; i++)
+	{
+		b_IsResourceProp[i] = false;
+	}
+}
+
 public void OnEntityDestroyed(int entity)
 {
 	if (entity > 0 && entity < 2049)
