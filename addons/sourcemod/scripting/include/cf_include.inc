@@ -3,7 +3,7 @@
 #endif
 #define _cfinc_included_
 
-//#include <cbasenpc>	//TODO UNERASE
+#include <cbasenpc>
 #include <cfgmap>
 
 enum CF_ResourceType
