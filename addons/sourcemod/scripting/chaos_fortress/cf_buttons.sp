@@ -249,7 +249,6 @@ public Action CFB_OnCallForMedic(int client, const char[] command, int args)
 		Call_StartForward(g_OnCallForMedic);
 		Call_PushCell(client);
 		Call_Finish();
-		return Plugin_Handled;
 	}
 	
 	return Plugin_Continue;

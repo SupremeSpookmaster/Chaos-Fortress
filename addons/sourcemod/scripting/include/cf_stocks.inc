@@ -3030,7 +3030,7 @@ stock bool Entity_Can_Be_Shot(int entity)
 //Returns true by default for entities that are not brushes.
 stock bool Brush_Is_Solid(int entity)
 {
-	char entname[255];
+	/*char entname[255];
 	GetEntityClassname(entity, entname, sizeof(entname));
 	
 	if (StrContains(entname, "info_") != -1 || StrContains(entname, "trigger_") != -1)
@@ -3047,9 +3047,9 @@ stock bool Brush_Is_Solid(int entity)
 		{
 			return false;
 		}
-	}
-	
-	return true;
+	}*/
+
+	return ((GetEntProp(entity, Prop_Send, "m_nSolidType") != 0) && ((GetEntProp(entity, Prop_Send, "m_usSolidFlags") & 4) == 0));
 }
 
 stock bool IsAlly(int me, int them)
