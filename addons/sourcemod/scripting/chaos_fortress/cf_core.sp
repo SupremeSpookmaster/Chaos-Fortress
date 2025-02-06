@@ -613,7 +613,7 @@ public float GetProjectileDamage(int entity, float defaultVal)
 //this DOES NOT handle all collisions, only for buildings, arrow can do its other things itself.
 public void ArrowTouchNonCombatEntity(int entity, int other)
 {
-	if (other > 0 && entity < 2048)
+	if (other <= 0 || entity > 2048)
 		return;
 
 	char classname[255];
@@ -626,15 +626,10 @@ public void ArrowTouchNonCombatEntity(int entity, int other)
 		int attacker = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
 		float chargerPos[3];
 		GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", chargerPos);
+		EmitSoundToAll(g_ArrowImpactSounds_Player[GetRandomInt(0, sizeof(g_ArrowImpactSounds_Player) - 1)], entity);
 		if (IsValidClient(attacker))
 		{
-			EmitSoundToAll(g_ArrowImpactSounds_Player[GetRandomInt(0, sizeof(g_ArrowImpactSounds_Player) - 1)], entity);
 			EmitSoundToClient(attacker, g_ArrowImpactSounds_Player[GetRandomInt(0, sizeof(g_ArrowImpactSounds_Player) - 1)]);
-		}
-		else
-		{
-			EmitSoundToAll(g_ArrowImpactSounds_World[GetRandomInt(0, sizeof(g_ArrowImpactSounds_World) - 1)], entity);
-			EmitSoundToClient(attacker, g_ArrowImpactSounds_World[GetRandomInt(0, sizeof(g_ArrowImpactSounds_World) - 1)]);
 		}
 
 		SDKHooks_TakeDamage(other, attacker, attacker, original_damage , DMG_BULLET, Weapon, NULL_VECTOR, chargerPos);
