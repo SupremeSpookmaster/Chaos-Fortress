@@ -195,7 +195,6 @@ Handle CF_CharacterParticles[MAXPLAYERS + 1] = { null, ... };
 ConfigMap Characters;
 
 Menu CF_CharactersMenu;
-Menu CF_ClientMenu[MAXPLAYERS + 1] = { null, ... };
 
 #if defined USE_PREVIEWS
 int i_CFPreviewModel[MAXPLAYERS + 1] = { -1, ... };
@@ -492,8 +491,6 @@ public CFC_Menu(Menu CFC_Menu, MenuAction action, int client, int param)
 	} 
 	else if (action == MenuAction_End)
 	{
-		delete CF_ClientMenu[client];
-			
 		#if defined USE_PREVIEWS
 		CF_DeletePreviewModel(client);
 		#endif
@@ -525,12 +522,10 @@ public Action CFC_OpenMenu(int client, int args)
 		ReplyToCommand(client, "Cannot be used in the post-game, please wait.");
 		return Plugin_Continue;
 	}
-
-	delete CF_ClientMenu[client];
 		
-	CF_ClientMenu[client] = new Menu(CFC_Menu);
-	CopyMenu(CF_ClientMenu[client], CF_CharactersMenu);
-	CF_ClientMenu[client].Display(client, MENU_TIME_FOREVER);
+	Menu menu = new Menu(CFC_Menu);
+	CopyMenu(menu, CF_CharactersMenu);
+	menu.Display(client, MENU_TIME_FOREVER);
 	b_ReadingLore[client] = false;
 	
 	#if defined USE_PREVIEWS
@@ -770,8 +765,6 @@ public Action CFC_OpenMenu(int client, int args)
  	if (!IsValidClient(client))
 		return;
 		
-	delete CF_ClientMenu[client];
-	
 	ConfigMap Character = new ConfigMap(config);
 	
  	if (Character == null)
@@ -874,32 +867,32 @@ public Action CFC_OpenMenu(int client, int args)
  	
  	s_CharacterConfigInMenu[client] = config;
  	
- 	CF_ClientMenu[client] = new Menu(CFC_InfoMenu);
- 	CF_ClientMenu[client].SetTitle(title);
+ 	Menu menu = new Menu(CFC_InfoMenu);
+ 	menu.SetTitle(title);
  	
  	Format(name, sizeof(name), "Spawn As %s", name);
- 	CF_ClientMenu[client].AddItem("Select", name);
+ 	menu.AddItem("Select", name);
  	
  	if (!isLore)
  	{
 	 	if (StrEqual(lore, ""))
 	 	{
-	 		CF_ClientMenu[client].AddItem("Lore", "(No Lore)", ITEMDRAW_DISABLED);
+	 		menu.AddItem("Lore", "(No Lore)", ITEMDRAW_DISABLED);
 	 	}
 	 	else
 	 	{
-	 		CF_ClientMenu[client].AddItem("Lore", "View Lore");
+	 		menu.AddItem("Lore", "View Lore");
 	 	}
 	 }
 	 else
 	 {
-	 	CF_ClientMenu[client].AddItem("Lore", "View Gameplay Description");
+	 	menu.AddItem("Lore", "View Gameplay Description");
 	 }
  	
- 	CF_ClientMenu[client].AddItem("Back", "Go Back");
+ 	menu.AddItem("Back", "Go Back");
  	
- 	CF_ClientMenu[client].ExitButton = false;
- 	CF_ClientMenu[client].Display(client, MENU_TIME_FOREVER);
+ 	menu.ExitButton = false;
+ 	menu.Display(client, MENU_TIME_FOREVER);
  	b_ReadingLore[client] = isLore;
  	
  	DeleteCfg(Character);
@@ -932,8 +925,6 @@ public Action CFC_OpenMenu(int client, int args)
 				
 				SetClientCookie(client, c_DesiredCharacter, s_CharacterConfigInMenu[client]);
 				b_CharacterApplied[client] = false;
-				
-				delete CF_ClientMenu[client];
 					
 				#if defined USE_PREVIEWS
 				CF_DeletePreviewModel(client);
@@ -953,8 +944,6 @@ public Action CFC_OpenMenu(int client, int args)
 	}
 	else if (action == MenuAction_End || action == MenuAction_Cancel)
 	{
-		delete CF_ClientMenu[client];
-				
 		#if defined USE_PREVIEWS
 		CF_DeletePreviewModel(client);
 		#endif
@@ -1162,7 +1151,6 @@ public void CF_OnRoundStateChanged(int state)
 		{
 			if (!GetPreserveUlt())
 				CF_SetUltCharge(i, 0.0, true);
-			delete CF_ClientMenu[i];
 		}
 	}
 }
@@ -1199,7 +1187,6 @@ public void CFC_MapEnd()
 	for (int i = 0; i <= MaxClients; i++)
 	{
 		delete CF_CharacterParticles[i];
-		delete CF_ClientMenu[i];
 	}
 
 	if (Characters != null)
