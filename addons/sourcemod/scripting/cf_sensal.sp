@@ -824,8 +824,7 @@ Action ShieldSetTransmit(int entity, int client)
 	return GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity") == client ? Plugin_Stop : Plugin_Continue;
 }
 
-public Action CF_OnTakeDamageAlive_Post(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
-	float damageForce[3], float damagePosition[3], int &damagecustom)
+public Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int weapon)
 {
 	if(ShieldEntRef[victim] != -1)
 	{

@@ -288,16 +288,11 @@ forward Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &i
  * @param attacker					The player who dealt the damage.
  * @param inflictor					The entity which inflicted the damage (EX: Engineer's sentry gun in vanilla TF2)
  * @param damage					The damage dealt.
- * @param damagetype				The type of damage dealt.
- * @param weapon					The weapon which dealt the damage.
- * @param damageForce				The force of the damage, used for ragdolls.
- * @param damagePosition			The position from which damageForce is applied to ragdolls.
- * @param damagecustom				Custom damage flags such as backstabs.
+ * @param weapon					The weapon used.
  *
  * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */
-forward Action CF_OnTakeDamageAlive_Post(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
-	float damageForce[3], float damagePosition[3], int &damagecustom);
+forward Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int weapon);
 	
 /**
  * Called when a simulated medigun shield created by CF_CreateShieldWall is damaged.
