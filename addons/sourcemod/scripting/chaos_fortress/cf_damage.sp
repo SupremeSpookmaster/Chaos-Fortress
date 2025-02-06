@@ -21,7 +21,7 @@ public void CFDMG_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor
 	Call_PushCell(victim);
 	Call_PushCell(attacker);
 	Call_PushCell(inflictor);
-	Call_PushCell(damage);
+	Call_PushFloat(damage);
 	Call_PushCell(weapon);
 
 	Call_Finish();
