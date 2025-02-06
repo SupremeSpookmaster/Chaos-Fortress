@@ -5,6 +5,18 @@ bool b_TabDown[MAXPLAYERS + 1] = { false, ... };
 bool b_JumpDown[MAXPLAYERS + 1] = { false, ... };
 bool b_CrouchDown[MAXPLAYERS + 1] = { false, ... };
 
+float f_NextMedicCall[MAXPLAYERS + 1] = { 0.0, ... };
+float f_NextUltMessage[MAXPLAYERS + 1] = { 0.0, ... };
+
+public void CFB_MapEnd()
+{
+	for (int i = 0; i <= MaxClients; i++)
+	{
+		f_NextMedicCall[i] = 0.0;
+		f_NextUltMessage[i] = 0.0;
+	}
+}
+
 GlobalForward g_OnRunCmd;
 GlobalForward g_OnM2;
 GlobalForward g_OnM3;
@@ -220,18 +232,34 @@ public Action CFB_OnCallForMedic(int client, const char[] command, int args)
 	num1 = StringToInt(arg1);
 	num2 = StringToInt(arg2);
 	
-	if (num1 == 1 && num2 == 6)
+	float gt = GetGameTime();
+
+	if (num1 == 1 && num2 == 6 && gt > f_NextUltMessage[client])
 	{
 		CFA_UltMessage(client);
-		return Plugin_Continue;
+		f_NextUltMessage[client] = gt + 2.0;	//TODO: Make this customizable in game_rules.cfg
+		return Plugin_Handled;
 	}
 
-	if (num1 != 0 || num2 != 0) // voicemenu 0 0 only, thank you CookieCat!
-		return Plugin_Continue;
+	if ((num1 != 0 || num2 != 0) && gt < f_NextMedicCall[client])
+		return Plugin_Handled;
 	
-	Call_StartForward(g_OnCallForMedic);
-	Call_PushCell(client);
-	Call_Finish();
-	
+	return Plugin_Continue;
+}
+
+public Action OnClientCommandKeyValues(int client, KeyValues kv)
+{
+	char buffer[64];
+	KvGetSectionName(kv, buffer, sizeof(buffer));
+
+	if(StrEqual(buffer, "+helpme_server", false))
+	{
+		Call_StartForward(g_OnCallForMedic);
+		Call_PushCell(client);
+		Call_Finish();
+
+		f_NextMedicCall[client] = GetGameTime() + 0.5;
+	}
+
 	return Plugin_Continue;
 }
