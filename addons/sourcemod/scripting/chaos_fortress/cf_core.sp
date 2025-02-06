@@ -149,6 +149,9 @@ public void CF_MapStart()
 	
 	PrecacheSound(SOUND_PHYSTOUCH_HIT);
 	PrecacheSound(SOUND_PHYSTOUCH_BLAST);
+	PrecacheSound("weapons/fx/rics/arrow_impact_metal.wav");
+	PrecacheSound("weapons/fx/rics/arrow_impact_metal2.wav");
+	PrecacheSound("weapons/fx/rics/arrow_impact_metal4.wav");
 
 	CreateTimer(0.1, CFA_HUDTimer, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 }
@@ -442,7 +445,10 @@ public void OnEntityCreated(int entity, const char[] classname)
 	{
 		RemoveEntity(entity);
 	}
-	
+	if (StrContains(classname, "tf_projectile_arrow") != -1)
+	{
+		SDKHook(entity, SDKHook_Touch, ArrowTouchNonCombatEntity);
+	}
 	if (StrContains(classname, "func_respawnroom") != -1)
 	{
 		SDKHook(entity, SDKHook_StartTouch, EnterSpawn);
@@ -574,4 +580,55 @@ public float GetProjectileDamage(int entity, float defaultVal)
 		return GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_Syringe", "m_iDeflected") + 4);
 	
 	return defaultVal;
+}
+
+
+public void ArrowTouchNonCombatEntity(int entity, int other)
+{
+	//This fixes arrows not detecting/intereacting with some entities, in this case its our custom buildings.
+
+	//DO YOUR FILTERS HERE THANKS111
+		
+	float original_damage = GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_Rocket", "m_iDeflected")+4);
+	int Weapon = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
+	int attacker = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
+	float chargerPos[3];
+	GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", chargerPos);
+	for(int client=1; client<=MaxClients; client++)
+	{
+		if(IsClientInGame(client))
+		{
+			if(attacker == client)
+			{
+				switch(GetRandomInt(1,3))
+				{
+					case 1:
+						EmitSoundToClient(client, "weapons/fx/rics/arrow_impact_metal.wav", attacker, SNDCHAN_STATIC, 70, _, 1.0);
+					
+					case 2:
+						EmitSoundToClient(client, "weapons/fx/rics/arrow_impact_metal2.wav", attacker, SNDCHAN_STATIC, 70, _, 1.0);
+					
+					case 3:
+						EmitSoundToClient(client, "weapons/fx/rics/arrow_impact_metal4.wav", attacker, SNDCHAN_STATIC, 70, _, 1.0);
+				}	
+			}
+			else
+			{
+
+				switch(GetRandomInt(1,3))
+				{
+					case 1:
+						EmitSoundToClient(client, "weapons/fx/rics/arrow_impact_metal.wav", other, SNDCHAN_STATIC, 70, _, 1.0);
+					
+					case 2:
+						EmitSoundToClient(client, "weapons/fx/rics/arrow_impact_metal2.wav", other, SNDCHAN_STATIC, 70, _, 1.0);
+					
+					case 3:
+						EmitSoundToClient(client, "weapons/fx/rics/arrow_impact_metal4.wav", other, SNDCHAN_STATIC, 70, _, 1.0);
+				}	
+			}
+		}
+	}
+	SDKHooks_TakeDamage(other, attacker, attacker, original_damage , DMG_BULLET, Weapon, NULL_VECTOR, chargerPos);
+	RemoveEntity(entity);
 }
