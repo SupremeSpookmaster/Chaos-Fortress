@@ -1732,29 +1732,6 @@ stock float fixAngle(float angle)
 	return angle;
 }
 
-stock float ApproachAngle( float target, float value, float speed )
-{
-	float delta = AngleDiff_Change(target, value);
-	
-	// Speed is assumed to be positive
-	if ( speed < 0 )
-		speed = -speed;
-	
-	if ( delta < -180 )
-		delta += 360;
-	else if ( delta > 180 )
-		delta -= 360;
-	
-	if ( delta > speed )
-		value += speed;
-	else if ( delta < -speed )
-		value -= speed;
-	else 
-		value = target;
-	
-	return value;
-}
-
 stock float AngleDiff_Change( float destAngle, float srcAngle )
 {
 	float delta = fmodf(destAngle - srcAngle, 360.0);
@@ -1770,11 +1747,6 @@ stock float AngleDiff_Change( float destAngle, float srcAngle )
 	}
 	
 	return delta;
-}
-
-stock float fmodf(float num, float denom)
-{
-	return num - denom * RoundToFloor(num / denom);
 }
 
 public bool TraceRayHitWorldOnly(int entity,int mask,any data)

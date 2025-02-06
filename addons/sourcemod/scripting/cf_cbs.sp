@@ -523,23 +523,73 @@ public void Volley_ShootArrows(DataPack pack)
 		
 	if (gt >= nextVolley)
 	{
-		float baseAng[3], offsetAng[3];
-		baseAng[0] = 90.0;
-		baseAng[1] = 0.0;
-		baseAng[2] = 0.0;
-		//TODO: Sort all enemies by distance, targets must have line-of-sight, have each arrow target the next closest player if targeting is enabled
-		for (int i = 0; i < i_VolleyCount[client]; i++)
+		if (b_VolleyTargeting[client])
 		{
-			for (int vec = 0; vec < 3; vec++)
+			//TODO: Turn this into a CF native, should be able to target allies or enemies, should have a radius parameter, should have filter parameters
+			ArrayList enemies = new ArrayList(255);
+
+			for (int i = 1; i < 2049 && GetArraySize(enemies) < i_VolleyCount[client]; i++)
 			{
-				offsetAng[vec] = baseAng[vec] + GetRandomFloat(-f_VolleySpread[client], f_VolleySpread[client]);
+				if (!CF_IsValidTarget(i, grabEnemyTeam(client)) || (IsValidClient(i) && !IsPlayerAlive(i)))
+					continue;
+
+				float vicPos[3];
+				CF_WorldSpaceCenter(i, vicPos);
+
+				TR_TraceRayFilter(pos, vicPos, MASK_SHOT, RayType_EndPoint, CF_LOSTrace, i);
+				if (!TR_DidHit())
+					PushArrayCell(enemies, i);
 			}
-				
-			int arrow = Volley_MakeArrow(client, pos, offsetAng, f_VolleyVelocity[client], 0.1, 8, client, client);
-			if (IsValidEntity(arrow))
+
+			if (GetArraySize(enemies) < 1)
 			{
-				EmitSoundToAll(SOUND_ARROW_WHOOSH, arrow, _, 80, _, _, GetRandomInt(80, 120));
-				b_IsVolleyArrow[arrow] = true;
+				delete enemies;
+			}
+			else
+			{
+				ArrayList victims = SortListByDistance(pos, enemies);
+				delete enemies;
+
+				for (int i = 0; i < GetArraySize(victims); i++)
+				{
+					int vic = GetArrayCell(victims, i);
+					float vicPos[3], ang[3];
+					CF_WorldSpaceCenter(vic, vicPos);
+
+					MakeVectorFromPoints(pos, vicPos, ang);
+					GetVectorAngles(ang, ang);
+
+					int arrow = Volley_MakeArrow(client, pos, ang, f_VolleyVelocity[client], 0.1, 8, client, client);
+					if (IsValidEntity(arrow))
+					{
+						EmitSoundToAll(SOUND_ARROW_WHOOSH, arrow, _, 80, _, _, GetRandomInt(80, 120));
+						b_IsVolleyArrow[arrow] = true;
+					}
+				}
+
+				delete victims;
+			}
+		}
+		else
+		{
+			float baseAng[3], offsetAng[3];
+			baseAng[0] = 90.0;
+			baseAng[1] = 0.0;
+			baseAng[2] = 0.0;
+
+			for (int i = 0; i < i_VolleyCount[client]; i++)
+			{
+				for (int vec = 0; vec < 3; vec++)
+				{
+					offsetAng[vec] = baseAng[vec] + GetRandomFloat(-f_VolleySpread[client], f_VolleySpread[client]);
+				}
+					
+				int arrow = Volley_MakeArrow(client, pos, offsetAng, f_VolleyVelocity[client], 0.1, 8, client, client);
+				if (IsValidEntity(arrow))
+				{
+					EmitSoundToAll(SOUND_ARROW_WHOOSH, arrow, _, 80, _, _, GetRandomInt(80, 120));
+					b_IsVolleyArrow[arrow] = true;
+				}
 			}
 		}
 		

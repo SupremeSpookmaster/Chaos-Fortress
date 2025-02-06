@@ -6,6 +6,7 @@
 #include <cbasenpc>
 #include <cfgmap>
 #include <sdkhooks>
+#include <cf_stocks>
 
 void CF_TakeDamage(int entity = 0, int inflictor = 0, int attacker = 0, float damage = 0.0, int damageType=DMG_GENERIC, int weapon=-1,const float damageForce[3]=NULL_VECTOR, const float damagePosition[3]=NULL_VECTOR, bool bypassHooks = false)
 {
@@ -97,7 +98,7 @@ enum CF_SpellIndex
 };
 
 //TODO: This will need to be expanded upon to include things like medigun shields
-public bool CF_DefaultTrace(entity, contentsMask)
+stock bool CF_DefaultTrace(entity, contentsMask)
 {
 	if (entity <= MaxClients)
 		return false;
@@ -120,6 +121,15 @@ public bool CF_DefaultTrace(entity, contentsMask)
 	}
 		
 	return true;
+}
+
+//Generic line-of-sight trace.
+stock bool CF_LOSTrace(int entity, int contentsmask, int target)
+{
+	if (IsValidClient(entity) || entity == target || IsABuilding(entity))
+		return false;
+
+	return Brush_Is_Solid(entity);
 }
 
   ////////////////////////////////////////

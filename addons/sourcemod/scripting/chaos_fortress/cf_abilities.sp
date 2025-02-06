@@ -4057,6 +4057,9 @@ public Native_CF_IsValidTarget(Handle plugin, int numParams)
 		if (team != entTeam)
 			return false;
 	}
+
+	if (!Entity_Can_Be_Shot(entity))
+		return false;
 	
 	if (!StrEqual(pluginName, "") && filter != INVALID_FUNCTION)
 	{

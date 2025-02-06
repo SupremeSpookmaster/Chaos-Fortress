@@ -3052,6 +3052,49 @@ stock bool Brush_Is_Solid(int entity)
 	return ((GetEntProp(entity, Prop_Send, "m_nSolidType") != 0) && ((GetEntProp(entity, Prop_Send, "m_usSolidFlags") & 4) == 0));
 }
 
+stock ArrayList SortListByDistance(float pos[3], ArrayList list)
+{
+	if (GetArraySize(list) > 0)
+	{
+		ArrayList ordered = new ArrayList(255);
+
+		while (GetArraySize(list) > 0)
+		{
+			PushArrayCell(ordered, Sort_GetClosestInList(pos, list));
+		}
+
+		return ordered;
+	}
+
+	return list;
+}
+
+stock int Sort_GetClosestInList(float pos[3], ArrayList &list)
+{
+	int closestSlot = 0;
+	int closestEntity = 0;
+	float closestDist = 99999999.0;
+
+	for (int i = 0; i < GetArraySize(list); i++)
+	{
+		int ent = GetArrayCell(list, i);
+		float entPos[3];
+		CF_WorldSpaceCenter(i, entPos);
+
+		float dist = GetVectorDistance(pos, entPos);
+		if (dist < closestDist)
+		{
+			closestEntity = ent;
+			closestDist = dist;
+			closestSlot = i;
+		}
+	}
+
+	RemoveFromArray(list, closestSlot);
+
+	return closestEntity;
+}
+
 stock bool IsAlly(int me, int them)
 {
 	if (!HasEntProp(them, Prop_Send, "m_iTeamNum"))
