@@ -585,26 +585,9 @@ public float GetProjectileDamage(int entity, float defaultVal)
 
 public void ArrowTouchNonCombatEntity(int entity, int other)
 {
-	return;
-	//DO YOUR FILTERS HERE THANKS111
-	//DO YOUR FILTERS HERE THANKS111
-	//DO YOUR FILTERS HERE THANKS111
-	//DO YOUR FILTERS HERE THANKS111
-	//DO YOUR FILTERS HERE THANKS111
-	//DO YOUR FILTERS HERE THANKS111
-	//DO YOUR FILTERS HERE THANKS111
-	//DO YOUR FILTERS HERE THANKS111
-	//DO YOUR FILTERS HERE THANKS111
-	//DO YOUR FILTERS HERE THANKS111
-	//DO YOUR FILTERS HERE THANKS111
-	//DO YOUR FILTERS HERE THANKS111
-	//DO YOUR FILTERS HERE THANKS111
-	//DO YOUR FILTERS HERE THANKS111
-	//DO YOUR FILTERS HERE THANKS111
-	//DO YOUR FILTERS HERE THANKS111
+	if (other == 0 || !Brush_Is_Solid(other))
+		return;
 
-	//This fixes arrows not detecting/intereacting with some entities, in this case its our custom buildings.
-	
 	float original_damage = GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_Rocket", "m_iDeflected")+4);
 	int Weapon = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
 	int attacker = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
