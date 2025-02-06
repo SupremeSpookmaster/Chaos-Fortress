@@ -53,8 +53,8 @@ public void OnMapStart()
 	PrecacheSound(SOUND_TRADE_EXPLOSION_1);
 	PrecacheSound(SOUND_TRADE_EXPLOSION_2);
 	
-	PrecacheModel(MODEL_REFINED);
-	PrecacheModel(MODEL_SHIELD_DAMAGED);
+	PrecacheModel(MODEL_REFINED, true);
+	PrecacheModel(MODEL_SHIELD_DAMAGED, true);
 	
 	lgtModel = PrecacheModel("materials/sprites/lgtning.vmt");
 	glowModel = PrecacheModel("materials/sprites/glow02.vmt");
@@ -513,7 +513,7 @@ float f_OldPercentage[2049] = { 1.0, ... };
 
 int Flash_BaseMainColor = 160;
 int Flash_BaseSecondaryColor = 60;
-int Flash_BaseAlpha = 120;
+int Flash_BaseAlpha = 180;
 int Flash_MaxMainColor = 255;
 int Flash_MaxSecondaryColor = 200;
 int Flash_MaxAlpha = 255;
@@ -720,8 +720,8 @@ public int Shield_CreateProp(int shield)
 		
 		SetEntPropEnt(prop, Prop_Send, "m_hOwnerEntity", owner);
 		SetEntProp(prop, Prop_Send, "m_iTeamNum", team);
-		
-		SetEntityModel(prop, "MODEL_SHIELD_DAMAGED");
+
+		SetEntityModel(prop, MODEL_SHIELD_DAMAGED);
 		DispatchKeyValue(prop, "skin", team == view_as<int>(TFTeam_Red) ? "0" : "1");
 		
 		DispatchSpawn(prop);
