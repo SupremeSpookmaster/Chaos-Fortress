@@ -191,6 +191,8 @@ public void CFA_MakeNatives()
 	CreateNative("CF_StartLagCompensation", Native_CF_StartLagCompensation);
 	CreateNative("CF_EndLagCompensation", Native_CF_EndLagCompensation);
 	CreateNative("CF_DoAbilitySlot", Native_CF_DoAbilitySlot);
+	CreateNative("CF_DoBulletTrace", Native_CF_DoBulletTrace);
+	CreateNative("CF_TraceHeadshot", Native_CF_TraceHeadshot);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -4532,6 +4534,52 @@ public Native_CF_SetLocalOrigin(Handle plugin, int numParams)
 	float localOrigin[3];
 	GetNativeArray(2, localOrigin, 3);
 	SDKCall_SetLocalOrigin(index, localOrigin);
+}
+
+public any Native_CF_DoBulletTrace(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	float startPos[3], endPos[3];
+	GetNativeArray(2, startPos, sizeof(startPos));
+	GetNativeArray(3, endPos, sizeof(endPos));
+	int maxPen = GetNativeCell(4);
+	TFTeam team = GetNativeCell(5);
+	char pluginName[255];
+	GetNativeString(6, pluginName, sizeof(pluginName));
+	Function filter = GetNativeFunction(7);
+
+	if (!IsValidClient(client))
+		return null;
+
+	ArrayList enemies = CreateArray(255);
+
+	CF_StartLagCompensation(client);
+
+	//TODO: Trace
+
+	CF_EndLagCompensation(client);
+
+	return sorted;
+}
+
+public any Native_CF_TraceHeadshot(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	int target = GetNativeCell(2);
+	float startPos[3], endPos[3];
+	GetNativeArray(3, startPos, sizeof(startPos));
+	GetNativeArray(4, endPos, sizeof(endPos));
+
+	if (!IsValidClient(target))
+		return false;
+
+	if (IsValidClient(client))
+		CF_StartLagCompensation(client);
+
+	//TODO: Trace
+	
+	if (IsValidClient(client))
+		CF_EndLagCompensation(client);
 }
 
 void SDKCall_SetLocalOrigin(int index, float localOrigin[3])
