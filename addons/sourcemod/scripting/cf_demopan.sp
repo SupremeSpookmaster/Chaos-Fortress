@@ -524,6 +524,7 @@ int Flash_AlphaDecay = 4;
 public void Shield_Activate(int client, char abilityName[255])
 {
 	float hp = CF_GetArgF(client, DEMOPAN, abilityName, "health");
+	float scaling = CF_GetArgF(client, DEMOPAN, abilityName, "health_scaling");
 	float lifespan = CF_GetArgF(client, DEMOPAN, abilityName, "lifespan");
 	float scale = CF_GetArgF(client, DEMOPAN, abilityName, "scale");
 	f_ShieldDistance[client] = CF_GetArgF(client, DEMOPAN, abilityName, "distance");
@@ -546,6 +547,18 @@ public void Shield_Activate(int client, char abilityName[255])
 	pos[2] -= f_ShieldHeight[client] * buffer[2];
 	
 	TFTeam team = TF2_GetClientTeam(client);
+
+	float numFoes = 0.0;
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (CF_IsValidTarget(i, grabEnemyTeam(client)))
+		{
+			numFoes += 1.0;
+		}
+	}
+
+	if (numFoes > 1.0)
+		hp += scaling * numFoes;
 	
 	int shield = CF_CreateShieldWall(client, model, team == TFTeam_Red ? "0" : "1", scale, hp, pos, ang, lifespan);
 	
