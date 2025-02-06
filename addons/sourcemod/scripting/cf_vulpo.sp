@@ -116,6 +116,9 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 
 public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
+	if (!IsValidClient(attacker))
+		return Plugin_Continue;
+		
 	if(AmpBuffTimer[attacker])
 	{
 		damage *= 1.15;
