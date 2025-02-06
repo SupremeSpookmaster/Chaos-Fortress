@@ -605,3 +605,4 @@ public void OnEntityDestroyed(int entity)
 	CFA_OnEntityDestroyed(entity);
 	Core_OnEntityDestroyed(entity);
 }
+

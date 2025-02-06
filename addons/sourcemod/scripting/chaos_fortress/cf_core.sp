@@ -141,7 +141,7 @@ public Action StartHUDTimerOnDelay(Handle timer)
 #define SOUND_PHYSTOUCH_HIT		"@weapons/fx/rics/arrow_impact_metal2.wav"
 #define SOUND_PHYSTOUCH_BLAST	"@weapons/explode1.wav"
 
-/*static char g_ArrowImpactSounds_World[][] = {
+static char g_ArrowImpactSounds_World[][] = {
 	")weapons/fx/arrow_impact_concrete.wav",
 	")weapons/fx/arrow_impact_concrete2.wav",
 	")weapons/fx/arrow_impact_concrete4.wav"
@@ -152,7 +152,7 @@ static char g_ArrowImpactSounds_Player[][] = {
 	")weapons/fx/arrow_impact_flesh2.wav",
 	")weapons/fx/arrow_impact_flesh3.wav",
 	")weapons/fx/arrow_impact_flesh4.wav"
-};*/
+};
 
 /**
  * Called when the map starts.
@@ -175,8 +175,8 @@ public void CF_MapStart()
 	PrecacheSound("weapons/fx/rics/arrow_impact_metal2.wav");
 	PrecacheSound("weapons/fx/rics/arrow_impact_metal4.wav");
 
-	//for (int i = 0; i < (sizeof(g_ArrowImpactSounds_World));   i++) { PrecacheSound(g_ArrowImpactSounds_World[i]);   }
-	//for (int i = 0; i < (sizeof(g_ArrowImpactSounds_Player));   i++) { PrecacheSound(g_ArrowImpactSounds_Player[i]);   }
+	for (int i = 0; i < (sizeof(g_ArrowImpactSounds_World));   i++) { PrecacheSound(g_ArrowImpactSounds_World[i]);   }
+	for (int i = 0; i < (sizeof(g_ArrowImpactSounds_Player));   i++) { PrecacheSound(g_ArrowImpactSounds_Player[i]);   }
 
 	CreateTimer(0.1, CFA_HUDTimer, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 }
@@ -472,10 +472,10 @@ public void OnEntityCreated(int entity, const char[] classname)
 	{
 		RemoveEntity(entity);
 	}
-	/*if (StrContains(classname, "tf_projectile_arrow") != -1)
+	if (StrContains(classname, "tf_projectile_arrow") != -1)
 	{
 		SDKHook(entity, SDKHook_Touch, ArrowTouchNonCombatEntity);
-	}*/
+	}
 	if (StrContains(classname, "func_respawnroom") != -1)
 	{
 		SDKHook(entity, SDKHook_StartTouch, EnterSpawn);
@@ -610,19 +610,23 @@ public float GetProjectileDamage(int entity, float defaultVal)
 }
 
 
-/*public void ArrowTouchNonCombatEntity(int entity, int other)
+//this DOES NOT handle all collisions, only for buildings, arrow can do its other things itself.
+public void ArrowTouchNonCombatEntity(int entity, int other)
 {
-	if (other == 0 || !Brush_Is_Solid(other))
+	if (other > 0 && entity < 2048)
 		return;
 
-	float original_damage = GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_Rocket", "m_iDeflected")+4);
-	int Weapon = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
-	int attacker = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
-	float chargerPos[3];
-	GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", chargerPos);
-	if (CF_IsValidTarget(other, grabEnemyTeam(attacker)))
+	char classname[255];
+	GetEntityClassname(other, classname, sizeof(classname));
+	if (StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_teleporter") || StrEqual(classname, "obj_dispenser"))
 	{
-		if (IsValidClient(other))
+
+		float original_damage = GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_Rocket", "m_iDeflected")+4);
+		int Weapon = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
+		int attacker = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
+		float chargerPos[3];
+		GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", chargerPos);
+		if (IsValidClient(attacker))
 		{
 			EmitSoundToAll(g_ArrowImpactSounds_Player[GetRandomInt(0, sizeof(g_ArrowImpactSounds_Player) - 1)], entity);
 			EmitSoundToClient(attacker, g_ArrowImpactSounds_Player[GetRandomInt(0, sizeof(g_ArrowImpactSounds_Player) - 1)]);
@@ -632,11 +636,9 @@ public float GetProjectileDamage(int entity, float defaultVal)
 			EmitSoundToAll(g_ArrowImpactSounds_World[GetRandomInt(0, sizeof(g_ArrowImpactSounds_World) - 1)], entity);
 			EmitSoundToClient(attacker, g_ArrowImpactSounds_World[GetRandomInt(0, sizeof(g_ArrowImpactSounds_World) - 1)]);
 		}
+
+		SDKHooks_TakeDamage(other, attacker, attacker, original_damage , DMG_BULLET, Weapon, NULL_VECTOR, chargerPos);
+
+		RemoveEntity(entity);
 	}
-	else
-		EmitSoundToAll(g_ArrowImpactSounds_World[GetRandomInt(0, sizeof(g_ArrowImpactSounds_World) - 1)], entity);
-
-	SDKHooks_TakeDamage(other, attacker, attacker, original_damage , DMG_BULLET, Weapon, NULL_VECTOR, chargerPos);
-
-	RemoveEntity(entity);
-}*/
+}
