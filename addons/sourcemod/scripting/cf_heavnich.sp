@@ -90,6 +90,15 @@ public void TF2_OnConditionRemoved(int client, TFCond condition)
 
 public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result)
 {
+	if (!StrEqual(plugin, HEAVNICH))
+		return Plugin_Continue;
+
+	if (StrContains(ability, CHOW) != -1 && GetClientButtons(client) & IN_ATTACK2 != 0)
+	{
+		result = false;
+		return Plugin_Changed;
+	}
+
 	if (!Rev_Active[client] || (Rev_EndTime[client] < GetGameTime() && !TF2_IsPlayerInCondition(client, TFCond_Slowed)))
 		return Plugin_Continue;
 		
@@ -398,5 +407,15 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 	}
 	
 	f_MegaEndTime[client] = 0.0;
+	Rev_EndTime[client] = 0.0;
 	Rev_Active[client] = false;
+}
+
+public void OnMapEnd()
+{
+	for (int i = 0; i <= MaxClients; i++)
+	{
+		Rev_EndTime[i] = 0.0;
+		f_MegaEndTime[i] = 0.0;
+	}
 }
