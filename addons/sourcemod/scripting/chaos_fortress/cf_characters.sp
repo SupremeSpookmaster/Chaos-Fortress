@@ -1408,6 +1408,7 @@ public void CF_DestroyAllBuildings(int client)
  	SDKHook(client, SDKHook_OnTakeDamageAlivePost, CFDMG_OnTakeDamageAlive_Post);
  	
  	CFA_UpdateMadeCharacter(client);
+	CF_SetRespawnTime(client);
  	
  	//CF_SetCharacterArms(client, g_Characters[client].Arms); //Crashes on Linux due to empty string (TODO)
  	

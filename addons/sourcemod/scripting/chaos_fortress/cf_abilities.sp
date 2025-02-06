@@ -309,6 +309,7 @@ public void CFA_AddHealingPoints(int client, int amt)
 public void CFA_Disconnect(int client)
 {
 	i_HealingDone[client] = 0;
+	f_UltCharge[client] = 0.0;
 }
 
 public void CFA_OnEntityDestroyed(int entity)

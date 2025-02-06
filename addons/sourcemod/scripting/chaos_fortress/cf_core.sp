@@ -19,6 +19,8 @@
 bool b_InSpawn[2049][4];
 
 float f_SpawnGrace = 3.0;
+float f_RespawnTimeRed = 9.0;
+float f_RespawnTimeBlue = 9.0;
 bool b_PreserveUlt = false;
 
 public float GetSpawnGrace() { return f_SpawnGrace; }
@@ -38,6 +40,13 @@ Handle g_ChatIntervals;
 Handle g_ChatTimes;
 
 #define GAME_DESCRIPTION	"Chaos Fortress: Open Beta"
+
+public void CF_SetRespawnTime(int client)
+{
+	float time = (TF2_GetClientTeam(client) == TFTeam_Red ? f_RespawnTimeRed : f_RespawnTimeBlue);
+	if (time >= 0.0)
+		TF2Util_SetPlayerRespawnTimeOverride(client, time);
+}
 
 /**
  * Creates all of Chaos Fortress' natives.
@@ -165,7 +174,7 @@ public void CF_MapStart()
 	PrecacheSound("weapons/fx/rics/arrow_impact_metal.wav");
 	PrecacheSound("weapons/fx/rics/arrow_impact_metal2.wav");
 	PrecacheSound("weapons/fx/rics/arrow_impact_metal4.wav");
-	
+
 	//for (int i = 0; i < (sizeof(g_ArrowImpactSounds_World));   i++) { PrecacheSound(g_ArrowImpactSounds_World[i]);   }
 	//for (int i = 0; i < (sizeof(g_ArrowImpactSounds_Player));   i++) { PrecacheSound(g_ArrowImpactSounds_Player[i]);   }
 
@@ -200,6 +209,8 @@ public void CF_SetGameRules(int admin)
 		b_DisplayRole = GetBoolFromConfigMap(subsection, "display_role", false);
 		b_PreserveUlt = GetBoolFromConfigMap(subsection, "preserve_ult", false);
 		f_SpawnGrace = GetFloatFromConfigMap(subsection, "spawn_grace", 3.0);
+		f_RespawnTimeRed = GetFloatFromConfigMap(subsection, "respawn_red", 9.0);
+		f_RespawnTimeBlue = GetFloatFromConfigMap(subsection, "respawn_blue", 9.0);
 		
 		float KillValue = GetFloatFromConfigMap(subsection, "value_kills", 1.0);
 		float DeathValue = GetFloatFromConfigMap(subsection, "value_deaths", 1.0);
