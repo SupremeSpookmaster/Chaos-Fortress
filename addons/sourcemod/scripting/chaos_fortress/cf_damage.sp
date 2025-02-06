@@ -11,14 +11,20 @@ public void CFDMG_MakeForwards()
 											Param_CellByRef, Param_CellByRef, Param_Array, Param_Array, Param_CellByRef);
 	g_ResistanceDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Resistance", ET_Event, Param_Cell, Param_CellByRef, Param_CellByRef, Param_FloatByRef,
 											Param_CellByRef, Param_CellByRef, Param_Array, Param_Array, Param_CellByRef);
-	g_PostDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Post", ET_Event, Param_Cell, Param_CellByRef, Param_CellByRef, Param_FloatByRef,
-											Param_CellByRef, Param_CellByRef, Param_Array, Param_Array, Param_CellByRef);
+	g_PostDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Post", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Float, Param_Cell);
 }
 
-public Action CFDMG_OnTakeDamageAlive_Post(victim, &attacker, &inflictor, &Float:damage, &damagetype, &weapon,
-	Float:damageForce[3], Float:damagePosition[3], damagecustom)
+public void CFDMG_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, const float damageForce[3], const float damagePosition[3], int damagecustom)
 {
-	CFDMG_CallDamageForward(g_PostDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
+	Call_StartForward(g_PostDamageForward);
+
+	Call_PushCell(victim);
+	Call_PushCell(attacker);
+	Call_PushCell(inflictor);
+	Call_PushCell(damage);
+	Call_PushCell(weapon);
+
+	Call_Finish();
 	
 	if (CF_GetRoundState() == 1 && attacker != victim)
 	{
@@ -30,8 +36,6 @@ public Action CFDMG_OnTakeDamageAlive_Post(victim, &attacker, &inflictor, &Float
 		CF_GiveSpecialResource(victim, damage, CF_ResourceType_DamageTaken);
 		CF_GiveUltCharge(victim, damage, CF_ResourceType_DamageTaken);
 	}
-
-	return Plugin_Continue;
 }
 
 public Action CFDMG_OnTakeDamageAlive(victim, &attacker, &inflictor, &Float:damage, &damagetype, &weapon,

@@ -625,7 +625,7 @@ public void OnEntityCreated(int entity, const char[] classname)
 	}
 }
 
-public Action CF_OnTakeDamageAlive_Post(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
+public Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int weapon)
 {
 	if (!IsValidMulti(attacker))
 		return Plugin_Continue;
