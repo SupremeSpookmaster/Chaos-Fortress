@@ -1209,6 +1209,20 @@ public void CFC_MapEnd()
 	}
 }
 
+public void CF_DestroyAllBuildings(int client)
+{
+	for (int i = MaxClients + 1; i < 2049; i++)
+	{
+		if (!IsValidEntity(i))
+			continue;
+
+		if (IsABuilding(i) && (GetEntPropEnt(i, Prop_Send, "m_hBuilder") == client || GetEntPropEnt(i, Prop_Send, "m_hOwnerEntity") == client))
+		{
+			SDKHooks_TakeDamage(i, 0, 0, 999999999.0);
+		}
+	}
+}
+
 /**
  * Turns a player into their selected Chaos Fortress character, or the default specified in game_rules if they haven't chosen.
  *
@@ -1250,6 +1264,9 @@ public void CFC_MapEnd()
 		return;
 		
 	bool ConfigsAreDifferent = !StrEqual(conf, s_PreviousCharacter[client]);
+	if (ConfigsAreDifferent)
+		CF_DestroyAllBuildings(client);
+
 	bool IsNewCharacter = ConfigsAreDifferent || b_IsDead[client] || b_FirstSpawn[client] || ForceNewCharStatus;
 	if (IsNewCharacter)
 		CF_UnmakeCharacter(client, true, ConfigsAreDifferent ? CF_CRR_SWITCHED_CHARACTER : CF_CRR_RESPAWNED);
