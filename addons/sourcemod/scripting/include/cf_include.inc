@@ -755,6 +755,25 @@ native CF_SetPlayerConfig(int client, char[] confName);
 native float CF_GetCharacterMaxHealth(int client);
 
 /**
+ * Retrieves the character's archetype, stored in the output buffer.
+ * 
+ * @param client	Client whose archetype to get.
+ * @param output	Output buffer.
+ * @param size		Output buffer length.
+ * 
+ * @return	The character's archetype, stored in the output buffer.
+ */
+native CF_GetCharacterArchetype(int client, char[] output, int size);
+
+/**
+ * Sets the character's archetype.
+ * 
+ * @param client	Client whose archetype to set.
+ * @param archetype	New archetype.
+ */
+native CF_SetCharacterArchetype(int client, char[] archetype);
+
+/**
  * Sets the max HP of the given client's character.
  *
  * @param client		The client whose max HP to set.
