@@ -4536,7 +4536,7 @@ public Native_CF_SetLocalOrigin(Handle plugin, int numParams)
 	SDKCall_SetLocalOrigin(index, localOrigin);
 }
 
-ArrayList BulletTrace_Hits;
+ArrayList BulletTrace_Hits = null;
 TFTeam BulletTrace_Team;
 char BulletTrace_Plugin[255];
 Function BulletTrace_Filter;
@@ -4553,30 +4553,46 @@ public any Native_CF_DoBulletTrace(Handle plugin, int numParams)
 	BulletTrace_Filter = GetNativeFunction(7);
 
 	delete BulletTrace_Hits;
-	BulletTrace_Hits = CreateArray(255);
+	BulletTrace_Hits = new ArrayList();
+	ArrayList returnVal = new ArrayList();
 
 	if (IsValidClient(client))
 		CF_StartLagCompensation(client);
 
 	TR_TraceRayFilter(startPos, endPos, MASK_SHOT, RayType_EndPoint, CF_BulletFilter);
 
-	ArrayList sorted = SortListByDistance(startPos, BulletTrace_Hits);
-	delete BulletTrace_Hits;
-
-	if (GetArraySize(sorted) > maxPen + 1)
+	if (GetArraySize(BulletTrace_Hits) < 1)
 	{
-		while (GetArraySize(sorted) > maxPen + 1)
-			RemoveFromArray(sorted, GetArraySize(sorted) - 1);
+		delete BulletTrace_Hits;
+	}
+	else
+	{
+		delete returnVal;
+		returnVal = SortListByDistance(startPos, BulletTrace_Hits);
+		delete BulletTrace_Hits;
 
-		int vic = GetArrayCell(sorted, GetArraySize(sorted) - 1);
-		CF_TraceShot(client, vic, startPos, endPos, _, false);
-		SetNativeArray(3, endPos, sizeof(endPos));
+		if (GetArraySize(returnVal) >= maxPen + 1)
+		{
+			while (GetArraySize(returnVal) > maxPen + 1)
+				RemoveFromArray(returnVal, GetArraySize(returnVal) - 1);
+
+			int vic = GetArrayCell(returnVal, GetArraySize(returnVal) - 1);
+			CF_TraceShot(client, vic, startPos, endPos, _, false);
+			SetNativeArray(8, endPos, sizeof(endPos));
+		}
+
+		for (int i = 0; i < GetArraySize(returnVal); i++)
+		{
+			char classname[255];
+			GetEntityClassname(GetArrayCell(returnVal, i), classname, sizeof(classname));
+			CPrintToChatAll(classname);
+		}
 	}
 
 	if (IsValidClient(client))
 		CF_EndLagCompensation(client);
 
-	return sorted;
+	return returnVal;
 }
 
 public bool CF_BulletFilter(int entity, int contentsmask)
@@ -4618,7 +4634,7 @@ public any Native_CF_TraceShot(Handle plugin, int numParams)
 	}
 
 	TR_GetEndPosition(endPos, trace);
-	SetNativeArray(4, endPos, sizeof(endPos));
+	SetNativeArray(7, endPos, sizeof(endPos));
 	SetNativeCellRef(5, hs);
 
 	delete trace;

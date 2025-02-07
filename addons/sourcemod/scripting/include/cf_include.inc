@@ -1713,15 +1713,16 @@ native void CF_DoAbilitySlot(int client, int slot);
  * 
  * @param client			The client to trace for.
  * @param startPos			The starting position of the trace.
- * @param endPos			The ending position of the trace. This is overridden to the final hit position of the trace if it reaches the maximum number of penetrations.
+ * @param endPos			The ending position of the trace.
  * @param numPenetrations	Optional max number of targets the ray can penetrate.
  * @param team				Optional team to check for, using CF_IsValidTarget.
  * @param plugin			Plugin name of the optional filter function, using CF_IsValidTarget. Only necessary if "filter" is used.
  * @param filter			Function name of the optional filter function, using CF_IsValidTarget. This function must take one int as a parameter, that being the entity's index, and must return a bool (true to count as valid, false otherwise).
+ * @param hitPos			Optional output vector to store the end position of the trace, if it reaches the maximum number of penetrations and hits another target.
  * 
  * @return	An ArrayList of all of the entities who were hit by this trace, sorted by distance from the starting position.
  */
-native ArrayList CF_DoBulletTrace(int client, float startPos[3], float endPos[3], int numPenetrations = 0, TFTeam team, char[] plugin = "", Function filter = INVALID_FUNCTION);
+native ArrayList CF_DoBulletTrace(int client, float startPos[3], float endPos[3], int numPenetrations = 0, TFTeam team, char[] plugin = "", Function filter = INVALID_FUNCTION, float hitPos[3] = NULL_VECTOR);
 
 /**
  * Performs a trace ray from startPos to endPos, and checks to see if the trace goes through the target.
@@ -1730,10 +1731,11 @@ native ArrayList CF_DoBulletTrace(int client, float startPos[3], float endPos[3]
  * @param user		The client who is running the trace.
  * @param target	The target to check for headshots.
  * @param startPos	The starting position of the trace.
- * @param endPos	The ending position of the trace. This is overridden by the hit point of the trace, if it goes through the target.
+ * @param endPos	The ending position of the trace.
  * @param headshot	This gets set to true if this trace goes through the target's head.
  * @param doLagComp	If set to false: lag compensation is skipped.
+ * @param hitPos	Optional output vector to store the position at which the trace and the target intersect, if they hit.
  * 
  * @return	True if the trace headshots the target, false otherwise.
  */
-native void CF_TraceShot(int user, int target, float startPos[3], float endPos[3], bool &headshot = false, bool doLagComp = true);
+native void CF_TraceShot(int user, int target, float startPos[3], float endPos[3], bool &headshot = false, bool doLagComp = true, float hitPos[3] = NULL_VECTOR);

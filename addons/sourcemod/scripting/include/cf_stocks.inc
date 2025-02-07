@@ -462,7 +462,7 @@ public Action Timer_RemoveEntity(Handle removeEnt, int entityId)
 }
 
 //int GAT_User = -1;
-stock Handle getAimTrace(int client, TraceEntityFilter customTrace)
+stock Handle getAimTrace(int client, TraceEntityFilter customTrace, int data = -1)
 {
 	if (!IsValidClient(client))
 	{
@@ -478,7 +478,7 @@ stock Handle getAimTrace(int client, TraceEntityFilter customTrace)
 	
 	//GAT_User = client;
 	
-	trace = TR_TraceRayFilterEx(eyePos, eyeAng, MASK_SHOT, RayType_Infinite, customTrace);
+	trace = TR_TraceRayFilterEx(eyePos, eyeAng, MASK_SHOT, RayType_Infinite, customTrace, data);
 	
 	return trace;
 }
@@ -486,6 +486,16 @@ stock Handle getAimTrace(int client, TraceEntityFilter customTrace)
 public bool Trace_OnlyHitWorld(entity, contentsMask)
 {
 	return entity == 0;
+}
+
+public bool CFTrace_OnlyHitEnemies(int entity, int contentsMask, int user)
+{
+	return CF_IsValidTarget(entity, grabEnemyTeam(user));
+}
+
+public bool Trace_HitSolids(entity, contentsMask, user)
+{
+	return Brush_Is_Solid(entity);
 }
 
 public bool TraceEntityFilterPlayer_GAT(entity, contentsMask)
@@ -2054,6 +2064,14 @@ stock Handle GetPluginHandle(char plugin[255])
 	return INVALID_HANDLE;
 }
 
+stock void GetPointInDirection(float startPos[3], float ang[3], float distance, float endPos[3])
+{
+	float buffer[3];
+	GetAngleVectors(ang, buffer, NULL_VECTOR, NULL_VECTOR);
+	ScaleVector(buffer, distance);
+	AddVectors(startPos, buffer, endPos);
+}
+
 stock void GetPointFromAngles(float startLoc[3], float angles[3], float distance, float output[3], TraceEntityFilter filter, int traceFlags)
 {
 	float endLoc[3];
@@ -3030,7 +3048,7 @@ stock bool Entity_Can_Be_Shot(int entity)
 //Returns true by default for entities that are not brushes.
 stock bool Brush_Is_Solid(int entity)
 {
-	/*char entname[255];
+	char entname[255];
 	GetEntityClassname(entity, entname, sizeof(entname));
 	
 	if (StrContains(entname, "info_") != -1 || StrContains(entname, "trigger_") != -1)
@@ -3047,7 +3065,7 @@ stock bool Brush_Is_Solid(int entity)
 		{
 			return false;
 		}
-	}*/
+	}
 
 	return ((GetEntProp(entity, Prop_Send, "m_nSolidType") != 0) && ((GetEntProp(entity, Prop_Send, "m_usSolidFlags") & 4) == 0));
 }

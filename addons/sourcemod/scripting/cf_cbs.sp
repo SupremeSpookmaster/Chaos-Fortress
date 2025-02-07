@@ -530,7 +530,7 @@ public void Volley_ShootArrows(DataPack pack)
 
 			for (int i = 1; i < 2049 && GetArraySize(enemies) < i_VolleyCount[client]; i++)
 			{
-				if (!CF_IsValidTarget(i, grabEnemyTeam(client)) || (IsValidClient(i) && !IsPlayerAlive(i)))
+				if (!CF_IsValidTarget(i, grabEnemyTeam(client))/* || (IsValidClient(i) && !IsPlayerAlive(i))*/)
 					continue;
 
 				float vicPos[3];
