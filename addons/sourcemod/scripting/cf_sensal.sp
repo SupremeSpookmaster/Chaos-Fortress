@@ -208,8 +208,6 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 		if(entity != -1)
 		{
 			TF2_RemoveWearable(client, entity);
-			if(IsValidEntity(ShieldEntRef[client]))
-				RemoveEntity(ShieldEntRef[client]);
 		}
 
 		ShieldEntRef[client] = -1;
@@ -749,8 +747,6 @@ bool UpdateBarrier(int client, char abilityName[255] = "", int AllyGive = -1)
 			if(entity != -1)
 			{
 				TF2_RemoveWearable(AllyGive, entity);
-				if(IsValidEntity(ShieldEntRef[AllyGive]))
-					RemoveEntity(ShieldEntRef[AllyGive]);
 			}
 
 			ShieldEntRef[AllyGive] = -1;
@@ -770,8 +766,6 @@ bool UpdateBarrier(int client, char abilityName[255] = "", int AllyGive = -1)
 			if(entity != -1)
 			{
 				TF2_RemoveWearable(AllyGive, entity);
-				if(IsValidEntity(ShieldEntRef[AllyGive]))
-					RemoveEntity(ShieldEntRef[AllyGive]);
 			}
 
 			ShieldEntRef[AllyGive] = -1;

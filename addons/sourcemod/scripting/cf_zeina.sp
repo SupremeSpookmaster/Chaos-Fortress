@@ -665,6 +665,7 @@ void ZeinaDashActivate(int client, char abilityName[255])
 		return;
 	//No dash during fly.
 
+	CF_PlayRandomSound(client, "", "sound_zeina_dash");
 	float Dur_charge = CF_GetArgF(client, PluginName, abilityName, "duration_charge");
 	float Dur_Stop = CF_GetArgF(client, PluginName, abilityName, "duration_stop");
 
@@ -1262,8 +1263,6 @@ bool ZeinaWingsActivate(int client, char abilityName[255])
 	if(IsValidEntity(ShieldEntRef[client]))
 	{
 		TF2_RemoveWearable(client, EntRefToEntIndex(ShieldEntRef[client]));
-		if(IsValidEntity(ShieldEntRef[client]))
-			RemoveEntity(ShieldEntRef[client]);
 	}
 
 	// Remove overheal decay along with our shield
@@ -1361,8 +1360,6 @@ public Action ZeinaFlightThink(int client)
 		if(IsValidEntity(ShieldEntRef[client]))
 		{
 			TF2_RemoveWearable(client, EntRefToEntIndex(ShieldEntRef[client]));
-			if(IsValidEntity(ShieldEntRef[client]))
-				RemoveEntity(ShieldEntRef[client]);
 		}
 
 		ShieldEntRef[client] = -1;
@@ -1380,8 +1377,6 @@ public Action ZeinaFlightThink(int client)
 		if(IsValidEntity(ShieldEntRef[client]))
 		{
 			TF2_RemoveWearable(client, EntRefToEntIndex(ShieldEntRef[client]));
-			if(IsValidEntity(ShieldEntRef[client]))
-				RemoveEntity(ShieldEntRef[client]);
 		}
 
 		SetEntityMoveType(client, MOVETYPE_WALK);
@@ -1482,6 +1477,27 @@ void ZeinaPickupAlly(int client)
 		CurrentlyPickingUpAlly[client] = -1;
 		return;
 	}
+	SDKUnhook(client, SDKHook_PreThink, ZeinaTryPickupAlly);
+	SDKHook(client, SDKHook_PreThink, ZeinaTryPickupAlly);
+}
+
+void ZeinaTryPickupAlly(int client)
+{
+	if(!IsValidEntity(ShieldEntRef[client]))
+	{
+		//nope, only while flying.
+		SDKUnhook(client, SDKHook_PreThink, ZeinaTryPickupAlly);
+		return;
+	}
+	if(!AllyOnlyPickUpOne[client])
+		SDKUnhook(client, SDKHook_PreThink, ZeinaTryPickupAlly);
+
+	if(!IsPlayerAlive(client))
+		SDKUnhook(client, SDKHook_PreThink, ZeinaTryPickupAlly);
+
+	int buttons = GetClientButtons(client);
+	if (!(buttons & IN_RELOAD != 0))
+		SDKUnhook(client, SDKHook_PreThink, ZeinaTryPickupAlly);
 
 	CurrentlyPickingUpAlly[client] = -1;
 	int SaveTeam = GetEntProp(client, Prop_Send, "m_iTeamNum");
@@ -1495,8 +1511,10 @@ void ZeinaPickupAlly(int client)
 	float Angles[3];
 	GetClientEyeAngles(client, Angles);
 	GetAngleVectors(Angles, vecForward, NULL_VECTOR, NULL_VECTOR);
-
-	float VectorForward = 400.0; //a really high number.
+	CF_PlayRandomSound(client, "", "sound_zeina_pickup_ally");
+	//Try pickupAlly
+	
+	float VectorForward = 500.0; //a really high number.
 	pos2[0] = belowBossEyes[0] + vecForward[0] * VectorForward;
 	pos2[1] = belowBossEyes[1] + vecForward[1] * VectorForward;
 	pos2[2] = belowBossEyes[2] + vecForward[2] * VectorForward;
@@ -1525,8 +1543,10 @@ void ZeinaPickupAlly(int client)
 				g = 200;
 				b = 15;
 			}
+			SDKUnhook(client, SDKHook_PreThink, ZeinaTryPickupAlly);
 			int Laser_4_i = ConnectWithBeamClient(client, target, r, g, b, 2.25, 2.25, 5.0, LASERBEAM);
 
+			CF_DoAbility(client, "cf_sensal", "sensal_ability_barrier_portal");
 			LaserToConnectPickup[client] = EntIndexToEntRef(Laser_4_i);
 			SetEntProp(client, Prop_Data, "m_iHammerID", CurrentlyPickingUpAlly[client] + 1000);
 			CF_DoAbility(client, "cf_sensal", "sensal_ability_ally");
@@ -1541,6 +1561,7 @@ void ZeinaPickupAlly(int client)
 	RequestFrame(SetCDBackReloadfast, EntIndexToEntRef(client));
 	delete trace;
 }
+
 void SetCDBackReloadfast(int ref)
 {
 	int client = EntRefToEntIndex(ref);
