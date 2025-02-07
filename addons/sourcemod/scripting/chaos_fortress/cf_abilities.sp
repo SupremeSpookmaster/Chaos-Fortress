@@ -192,7 +192,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_EndLagCompensation", Native_CF_EndLagCompensation);
 	CreateNative("CF_DoAbilitySlot", Native_CF_DoAbilitySlot);
 	CreateNative("CF_DoBulletTrace", Native_CF_DoBulletTrace);
-	CreateNative("CF_TraceHeadshot", Native_CF_TraceHeadshot);
+	CreateNative("CF_TraceShot", Native_CF_TraceShot);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -4536,6 +4536,11 @@ public Native_CF_SetLocalOrigin(Handle plugin, int numParams)
 	SDKCall_SetLocalOrigin(index, localOrigin);
 }
 
+ArrayList BulletTrace_Hits;
+TFTeam BulletTrace_Team;
+char BulletTrace_Plugin[255];
+Function BulletTrace_Filter;
+
 public any Native_CF_DoBulletTrace(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
@@ -4543,43 +4548,87 @@ public any Native_CF_DoBulletTrace(Handle plugin, int numParams)
 	GetNativeArray(2, startPos, sizeof(startPos));
 	GetNativeArray(3, endPos, sizeof(endPos));
 	int maxPen = GetNativeCell(4);
-	TFTeam team = GetNativeCell(5);
-	char pluginName[255];
-	GetNativeString(6, pluginName, sizeof(pluginName));
-	Function filter = GetNativeFunction(7);
+	BulletTrace_Team = GetNativeCell(5);
+	GetNativeString(6, BulletTrace_Plugin, sizeof(BulletTrace_Plugin));
+	BulletTrace_Filter = GetNativeFunction(7);
 
-	if (!IsValidClient(client))
-		return null;
+	delete BulletTrace_Hits;
+	BulletTrace_Hits = CreateArray(255);
 
-	ArrayList enemies = CreateArray(255);
+	if (IsValidClient(client))
+		CF_StartLagCompensation(client);
 
-	CF_StartLagCompensation(client);
+	TR_TraceRayFilter(startPos, endPos, MASK_SHOT, RayType_EndPoint, CF_BulletFilter);
 
-	//TODO: Trace
+	ArrayList sorted = SortListByDistance(startPos, BulletTrace_Hits);
+	delete BulletTrace_Hits;
 
-	CF_EndLagCompensation(client);
+	if (GetArraySize(sorted) > maxPen + 1)
+	{
+		while (GetArraySize(sorted) > maxPen + 1)
+			RemoveFromArray(sorted, GetArraySize(sorted) - 1);
+
+		int vic = GetArrayCell(sorted, GetArraySize(sorted) - 1);
+		CF_TraceShot(client, vic, startPos, endPos, _, false);
+		SetNativeArray(3, endPos, sizeof(endPos));
+	}
+
+	if (IsValidClient(client))
+		CF_EndLagCompensation(client);
 
 	return sorted;
 }
 
-public any Native_CF_TraceHeadshot(Handle plugin, int numParams)
+public bool CF_BulletFilter(int entity, int contentsmask)
+{
+	if (CF_IsValidTarget(entity, BulletTrace_Team, BulletTrace_Plugin, BulletTrace_Filter))
+		PushArrayCell(BulletTrace_Hits, entity);
+
+	return false;
+}
+
+public any Native_CF_TraceShot(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
 	int target = GetNativeCell(2);
 	float startPos[3], endPos[3];
 	GetNativeArray(3, startPos, sizeof(startPos));
 	GetNativeArray(4, endPos, sizeof(endPos));
+	bool doLagComp = GetNativeCell(6);
 
 	if (!IsValidClient(target))
-		return false;
+		return 0;
 
-	if (IsValidClient(client))
+	if (IsValidClient(client) && doLagComp)
 		CF_StartLagCompensation(client);
 
-	//TODO: Trace
-	
-	if (IsValidClient(client))
+	Handle trace = TR_TraceRayFilterEx(startPos, endPos, MASK_SHOT, RayType_EndPoint, CF_OnlyHitTarget, target);
+
+	if (IsValidClient(client) && doLagComp)
 		CF_EndLagCompensation(client);
+
+	bool hs = false;
+	if (TR_GetFraction(trace) < 1.0)
+	{
+		target = TR_GetEntityIndex(trace);
+		if (target > 0)
+		{
+			hs = (TR_GetHitGroup(trace) == HITGROUP_HEAD);
+		}
+	}
+
+	TR_GetEndPosition(endPos, trace);
+	SetNativeArray(4, endPos, sizeof(endPos));
+	SetNativeCellRef(5, hs);
+
+	delete trace;
+
+	return 0;
+}
+
+public bool CF_OnlyHitTarget(int entity, int contentsMask, int target)
+{
+	return target == entity;
 }
 
 void SDKCall_SetLocalOrigin(int index, float localOrigin[3])

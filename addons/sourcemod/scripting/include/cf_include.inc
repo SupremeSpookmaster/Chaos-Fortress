@@ -15,6 +15,20 @@ void CF_TakeDamage(int entity = 0, int inflictor = 0, int attacker = 0, float da
 
 #define SDKHooks_TakeDamage CF_TakeDamage
 
+enum //hitgroup_t
+{
+	HITGROUP_GENERIC,
+	HITGROUP_HEAD,
+	HITGROUP_CHEST,
+	HITGROUP_STOMACH,
+	HITGROUP_LEFTARM,
+	HITGROUP_RIGHTARM,
+	HITGROUP_LEFTLEG,
+	HITGROUP_RIGHTLEG,
+	
+	NUM_HITGROUPS
+};
+
 enum CF_ResourceType
 {
     CF_ResourceType_Generic = 0,
@@ -1699,7 +1713,7 @@ native void CF_DoAbilitySlot(int client, int slot);
  * 
  * @param client			The client to trace for.
  * @param startPos			The starting position of the trace.
- * @param endPos			The ending position of the trace.
+ * @param endPos			The ending position of the trace. This is overridden to the final hit position of the trace if it reaches the maximum number of penetrations.
  * @param numPenetrations	Optional max number of targets the ray can penetrate.
  * @param team				Optional team to check for, using CF_IsValidTarget.
  * @param plugin			Plugin name of the optional filter function, using CF_IsValidTarget. Only necessary if "filter" is used.
@@ -1710,14 +1724,16 @@ native void CF_DoAbilitySlot(int client, int slot);
 native ArrayList CF_DoBulletTrace(int client, float startPos[3], float endPos[3], int numPenetrations = 0, TFTeam team, char[] plugin = "", Function filter = INVALID_FUNCTION);
 
 /**
- * Performs a trace ray from startPos to endPos, and checks to see if the trace goes through the target's head.
+ * Performs a trace ray from startPos to endPos, and checks to see if the trace goes through the target.
  * This is automatically lag-compensated.
  * 
  * @param user		The client who is running the trace.
  * @param target	The target to check for headshots.
  * @param startPos	The starting position of the trace.
- * @param endPos	The ending position of the trace.
+ * @param endPos	The ending position of the trace. This is overridden by the hit point of the trace, if it goes through the target.
+ * @param headshot	This gets set to true if this trace goes through the target's head.
+ * @param doLagComp	If set to false: lag compensation is skipped.
  * 
  * @return	True if the trace headshots the target, false otherwise.
  */
-native bool CF_TraceHeadshot(int user, int target, float startPos[3], float endPos[3]);
+native void CF_TraceShot(int user, int target, float startPos[3], float endPos[3], bool &headshot = false, bool doLagComp = true);
