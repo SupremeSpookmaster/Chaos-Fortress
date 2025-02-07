@@ -193,6 +193,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_DoAbilitySlot", Native_CF_DoAbilitySlot);
 	CreateNative("CF_DoBulletTrace", Native_CF_DoBulletTrace);
 	CreateNative("CF_TraceShot", Native_CF_TraceShot);
+	CreateNative("CF_FireGenericBullet", Native_CF_FireGenericBullet);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -355,6 +356,31 @@ bool b_HUDTimerActive = false;
 #define SOUND_SPEED_APPLY		"weapons/discipline_device_power_up.wav"
 #define SOUND_SPEED_REMOVE		"weapons/discipline_device_power_down.wav"
 
+#define PARTICLE_CRIT		"crit_text"
+#define PARTICLE_MINICRIT	"minicrit_text"
+
+static char g_CritHits[][] = {
+	")player/crit_hit.wav",
+	")player/crit_hit2.wav",
+	")player/crit_hit3.wav",
+	")player/crit_hit4.wav",
+	")player/crit_hit5.wav"
+};
+
+static char g_MiniCritHits[][] = {
+	")player/crit_hit_mini.wav",
+	")player/crit_hit_mini2.wav",
+	")player/crit_hit_mini3.wav",
+	")player/crit_hit_mini4.wav",
+	")player/crit_hit_mini5.wav"
+};
+
+static char g_CritHits_Victim[][] = {
+	")player/crit_received1.wav",
+	")player/crit_received2.wav",
+	")player/crit_received3.wav"
+};
+
 public void CFA_MapStart()
 {
 	HudSync = CreateHudSynchronizer();
@@ -371,6 +397,10 @@ public void CFA_MapStart()
 	int entity = FindEntityByClassname(MaxClients + 1, "tf_player_manager");
 	if(IsValidEntity(entity))
 		SDKHook(entity, SDKHook_ThinkPost, ScoreThink);
+
+	for (int i = 0; i < (sizeof(g_CritHits));   i++) { PrecacheSound(g_CritHits[i]);   }
+	for (int i = 0; i < (sizeof(g_MiniCritHits));   i++) { PrecacheSound(g_MiniCritHits[i]);   }
+	for (int i = 0; i < (sizeof(g_CritHits_Victim));   i++) { PrecacheSound(g_CritHits_Victim[i]);   }
 		
 	//MODEL_NONE = PrecacheModel("models/empty.mdl");
 }
@@ -4648,6 +4678,125 @@ public any Native_CF_TraceShot(Handle plugin, int numParams)
 	delete trace;
 
 	return 0;
+}
+
+public Native_CF_FireGenericBullet(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	if (!IsValidClient(client))
+		return;
+		
+	float ang[3];
+	GetNativeArray(2, ang, sizeof(ang));
+	float damage = GetNativeCell(3);
+	float hsMult = GetNativeCell(4);
+	float spread = GetNativeCell(5);
+	char hitPlugin[255], checkPlugin[255], particle[255];
+	GetNativeString(6, hitPlugin, sizeof(hitPlugin));
+	Function hitFunction = GetNativeFunction(7);
+	float falloffStart = GetNativeCell(8);
+	float falloffEnd = GetNativeCell(9);
+	float falloffMax = GetNativeCell(10);
+	int pierce = GetNativeCell(11);
+	TFTeam checkTeam = GetNativeCell(12);
+	GetNativeString(13, checkPlugin, sizeof(checkPlugin));
+	Function checkFunction = GetNativeFunction(14);
+	GetNativeString(15, particle, sizeof(particle));
+
+	float startPos[3], endPos[3], shootPos[3], hitPos[3];
+	GetClientAbsOrigin(client, startPos);
+	startPos[2] += 60.0 * CF_GetCharacterScale(client);
+
+	for (int i = 0; i < 3; i++)
+		ang[i] += GetRandomFloat(-spread, spread);
+
+	GetPointInDirection(startPos, ang, 20.0, shootPos);
+	shootPos[2] -= 20.0;
+	GetPointInDirection(startPos, ang, 9999.0, endPos);
+
+	//TODO: Get impact effect/sound of hitPos, like what PNPCS does for its melee trace
+	ArrayList victims = CF_DoBulletTrace(client, startPos, endPos, pierce, checkTeam, checkPlugin, checkFunction, hitPos);
+	SpawnParticle_ControlPoints(shootPos, hitPos, particle, 2.0);
+
+	for (int i = 0; i < GetArraySize(victims); i++)
+	{
+		int vic = GetArrayCell(victims, i);
+
+		bool hs, allowFalloff = true;
+		bool crit = (TF2_IsPlayerInCondition(client, TFCond_CritCanteen) || TF2_IsPlayerInCondition(client, TFCond_CritMmmph) || TF2_IsPlayerInCondition(client, TFCond_CritOnDamage) || TF2_IsPlayerInCondition(client, TFCond_CritOnFirstBlood) || 
+		TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture) || TF2_IsPlayerInCondition(client, TFCond_CritOnKill) || TF2_IsPlayerInCondition(client, TFCond_CritOnWin) || TF2_IsPlayerInCondition(client, TFCond_CritRuneTemp) ||
+		TF2_IsPlayerInCondition(client, TFCond_Kritzkrieged));
+		
+		int hsEffect = 2;
+		CF_TraceShot(client, vic, startPos, endPos, hs, _, hitPos);
+		float damageToDeal = damage * (hs ? hsMult : 1.0);
+
+		if (!StrEqual(hitPlugin, "") && hitFunction != INVALID_FUNCTION)
+		{
+			Handle FunctionPlugin = GetPluginHandle(hitPlugin);
+
+			if (FunctionPlugin != INVALID_HANDLE)
+			{
+				Call_StartFunction(FunctionPlugin, hitFunction);
+
+				Call_PushCell(client);
+				Call_PushCell(vic);
+				Call_PushFloatRef(damageToDeal);
+				Call_PushCellRef(allowFalloff);
+				Call_PushCellRef(hs);
+				Call_PushCellRef(hsEffect);
+				Call_PushCellRef(crit);
+
+				Call_Finish();
+			}
+		}
+
+		int weapon = TF2_GetActiveWeapon(client);
+
+		if (allowFalloff && falloffMax != 0.0)
+		{
+			if (IsValidEntity(weapon) && crit)
+			{
+				allowFalloff = GetAttributeValue(weapon, 868, 0.0) > 0.0;
+			}
+
+			if (allowFalloff)
+			{
+				float dist = GetVectorDistance(startPos, hitPos);
+				if (dist > falloffStart)
+				{
+					damageToDeal *= 1.0 - (((falloffStart - dist) / (falloffEnd - dist)) * falloffMax);
+				}
+			}
+		}
+
+		if ((hs && hsEffect > 0) || crit)
+		{
+			if (hsEffect == 1 && !crit)
+			{
+				EmitSoundToAll(g_MiniCritHits[GetRandomInt(0, sizeof(g_MiniCritHits) - 1)], vic);
+				EmitSoundToClient(client, g_MiniCritHits[GetRandomInt(0, sizeof(g_MiniCritHits) - 1)]);
+				SpawnParticle(hitPos, PARTICLE_MINICRIT, 2.0);
+			}
+			else if (crit || hsEffect >= 2)
+			{
+				EmitSoundToAll(g_CritHits_Victim[GetRandomInt(0, sizeof(g_CritHits_Victim) - 1)], vic);
+				EmitSoundToClient(client, g_CritHits[GetRandomInt(0, sizeof(g_CritHits) - 1)]);
+				SpawnParticle(hitPos, PARTICLE_CRIT, 2.0);
+			}
+		}
+
+		if (crit)
+		{
+			damageToDeal *= 3.0;
+			//if (IsValidEntity(weapon))	//TODO
+			//	damageToDeal *= GetAttributeValue(weapon, )
+		}
+
+		SDKHooks_TakeDamage(vic, client, client, damageToDeal, DMG_BULLET, (IsValidEntity(weapon) ? weapon : -1), _, hitPos);
+	}
+
+	delete victims;
 }
 
 public bool CF_OnlyHitTarget(int entity, int contentsMask, int target)

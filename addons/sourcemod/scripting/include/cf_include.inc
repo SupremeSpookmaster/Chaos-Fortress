@@ -1715,7 +1715,7 @@ native void CF_DoAbilitySlot(int client, int slot);
  * @param startPos			The starting position of the trace.
  * @param endPos			The ending position of the trace.
  * @param numPenetrations	Optional max number of targets the ray can penetrate.
- * @param team				Optional team to check for, using CF_IsValidTarget.
+ * @param team				Optional team to check for, using CF_IsValidTarget. Targets who are considered invalid by CF_IsValidTarget are ignored by this native.
  * @param plugin			Plugin name of the optional filter function, using CF_IsValidTarget. Only necessary if "filter" is used.
  * @param filter			Function name of the optional filter function, using CF_IsValidTarget. This function must take one int as a parameter, that being the entity's index, and must return a bool (true to count as valid, false otherwise).
  * @param hitPos			Optional output vector to store the end position of the trace, if it reaches the maximum number of penetrations and hits another target.
@@ -1739,3 +1739,31 @@ native ArrayList CF_DoBulletTrace(int client, float startPos[3], float endPos[3]
  * @return	True if the trace headshots the target, false otherwise.
  */
 native void CF_TraceShot(int user, int target, float startPos[3], float endPos[3], bool &headshot = false, bool doLagComp = true, float hitPos[3] = NULL_VECTOR);
+
+/**
+ * Automatically sets up and calls CF_DoBulletTrace and CF_TraceShot, then deals damage to every enemy it hits.
+ * This is automatically lag-compensated.
+ * 
+ * @param client		The client to fire the bullet.
+ * @param ang			The angle of the shot.
+ * @param damage		Base damage.
+ * @param hsMult		Headshot damage multiplier.
+ * @param spread		Random spread.
+ * @param hitPlugin		Name of the plugin containing the optional function to call on a hit.
+ * @param hitFunction	Optional function to call on a hit. Must take an int for the attacker, an int for the victim, a float by reference for damage, a bool by reference for falloff, a bool by reference for headshot, an int by reference for headshot effects, and a bool by reference for crits.
+ * 						Example: void MyHeadshotCallback(int attacker, int victim, &float baseDamage, &bool allowFalloff, &bool isHeadshot, &int hsEffect, bool &crit)
+ * 						baseDamage can be changed to modify the damage dealt before falloff is calculated.
+ * 						Setting allowFalloff to false will block damage falloff from being calculated.
+ * 						isHeadshot can be modified to force or prevent a headshot.
+ * 						hsEffect is used for particle/sound effects on headshots. If <= 0, no effects are displayed. If set to 1, mini-crit effects are used. If >= 2, full crit effects are used.
+ * 						crit can be set to true to force the attack to crit, or to prevent a crit. Forcing a crit will force hsEffect to 2.
+ * @param falloffStart	Range at which damage falloff begins.
+ * @param falloffEnd	Range at which damage falloff becomes its strongest.
+ * @param falloffMax	Maximum percentage of damage to subtract based on falloff, IE 0.3 = 30% reduced damage.
+ * @param pierce		The maximum number of enemies pierced by this attack.
+ * @param team			Optional team to check for, using CF_IsValidTarget. Targets who are considered invalid by CF_IsValidTarget are ignored by this native.
+ * @param plugin		Plugin name of the optional filter function, using CF_IsValidTarget. Only necessary if "filter" is used.
+ * @param filter		Function name of the optional filter function, using CF_IsValidTarget. This function must take one int as a parameter, that being the entity's index, and must return a bool (true to count as valid, false otherwise).
+ * @param particle		Bullet tracer particle to use. Must be a multi-point particle.
+ */
+native void CF_FireGenericBullet(int client, float ang[3], float damage, float hsMult = 1.0, float spread = 0.0, char[] hitPlugin = "", Function hitFunction = INVALID_FUNCTION, float falloffStart = 0.0, float falloffEnd = 0.0, float falloffMax = 0.0, int pierce = 0, TFTeam team, char[] plugin = "", Function filter = INVALID_FUNCTION, char[] particle = "bullet_shotgun_tracer01_red");
