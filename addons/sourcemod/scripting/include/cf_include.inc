@@ -1709,7 +1709,7 @@ native void CF_DoAbilitySlot(int client, int slot);
 /**
  * Performs a trace ray from startPos to endPos, and returns an ArrayList of players who were caught.
  * This is automatically lag-compensated.
- * Can be paired with CF_TraceHeadshot to determine if a given victim was headshot.
+ * Can be paired with CF_TraceShot to determine if a given victim was headshot, as well as to get the individual hit positions of every victim hit by this trace.
  * 
  * @param client			The client to trace for.
  * @param startPos			The starting position of the trace.
