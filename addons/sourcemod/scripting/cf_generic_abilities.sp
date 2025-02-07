@@ -929,16 +929,84 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 
 public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
-	if (CF_HasAbility(attacker, GENERIC, ARCHETYPE))
+	if (CF_HasAbility(attacker, GENERIC, ARCHETYPE) && !IsInvuln(victim))
 	{
-		
+		char archetype[255];
+		CF_GetCharacterArchetype(victim, archetype, sizeof(archetype));
+
+		char conf[255], path[255];
+		CF_GetPlayerConfig(attacker, conf, sizeof(conf));
+		ConfigMap map = new ConfigMap(conf);
+		if (map == null)
+		{
+			return Plugin_Continue;
+		}
+			
+		CF_GetAbilityConfigMapPath(attacker, GENERIC, ARCHETYPE, archetype, path, sizeof(path));
+		CPrintToChatAll("Path should be %s", path);
+		ConfigMap interactions = map.GetSection(path);
+		if (interactions != null)
+		{
+			char sound[255];
+			interactions.Get("dealt_sound", sound, sizeof(sound));
+			if (sound[0])
+			{
+				PrecacheSound(sound);
+				EmitSoundToClient(attacker, sound, _, _, _, _, _, GetRandomInt(80, 110));
+				EmitSoundToClient(victim, sound, _, _, _, _, _, GetRandomInt(80, 110));
+			}
+
+			damage *= GetFloatFromConfigMap(interactions, "damage_dealt", 1.0);
+
+			DeleteCfg(map);
+
+			return Plugin_Changed;
+		}
+
+		DeleteCfg(map);
 	}
+
+	return Plugin_Continue;
 }
 
 public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
-	if (CF_HasAbility(victim, GENERIC, ARCHETYPE))
+	if (CF_HasAbility(victim, GENERIC, ARCHETYPE) && !IsInvuln(victim))
 	{
+		char archetype[255];
+		CF_GetCharacterArchetype(attacker, archetype, sizeof(archetype));
 
+		char conf[255], path[255];
+		CF_GetPlayerConfig(victim, conf, sizeof(conf));
+		ConfigMap map = new ConfigMap(conf);
+		if (map == null)
+		{
+			return Plugin_Continue;
+		}
+			
+		CF_GetAbilityConfigMapPath(victim, GENERIC, ARCHETYPE, archetype, path, sizeof(path));
+		CPrintToChatAll("Path should be %s", path);
+		ConfigMap interactions = map.GetSection(path);
+		if (interactions != null)
+		{
+			char sound[255];
+			interactions.Get("taken_sound", sound, sizeof(sound));
+			if (sound[0])
+			{
+				PrecacheSound(sound);
+				EmitSoundToClient(attacker, sound, _, _, _, _, _, GetRandomInt(80, 110));
+				EmitSoundToClient(victim, sound, _, _, _, _, _, GetRandomInt(80, 110));
+			}
+
+			damage *= GetFloatFromConfigMap(interactions, "damage_taken", 1.0);
+
+			DeleteCfg(map);
+
+			return Plugin_Changed;
+		}
+
+		DeleteCfg(map);
 	}
+
+	return Plugin_Continue;
 }
