@@ -20,6 +20,7 @@
 #define HEALTH				"generic_health"
 #define SCALE				"generic_scale_ability"
 #define SHAKE				"generic_shake"
+#define ARCHETYPE			"generic_archetype_modifiers"
 
 float Weapon_EndTime[2049] = { 0.0, ... };
 
@@ -923,5 +924,21 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 	for (int j = 0; j < 131; j++)
 	{
 		f_CondEndTime[client][j] = 0.0;
+	}
+}
+
+public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
+{
+	if (CF_HasAbility(attacker, GENERIC, ARCHETYPE))
+	{
+		
+	}
+}
+
+public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
+{
+	if (CF_HasAbility(victim, GENERIC, ARCHETYPE))
+	{
+
 	}
 }

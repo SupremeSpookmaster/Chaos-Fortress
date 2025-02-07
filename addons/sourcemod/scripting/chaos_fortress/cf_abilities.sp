@@ -4711,21 +4711,23 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 		ang[i] += GetRandomFloat(-spread, spread);
 
 	GetPointInDirection(startPos, ang, 20.0, shootPos);
-	shootPos[2] -= 20.0;
+
+	GetClientEyePosition(client, startPos);
 	GetPointInDirection(startPos, ang, 9999.0, endPos);
 
 	//TODO: Get impact effect/sound of hitPos, like what PNPCS does for its melee trace
 	ArrayList victims = CF_DoBulletTrace(client, startPos, endPos, pierce, checkTeam, checkPlugin, checkFunction, hitPos);
 	SpawnParticle_ControlPoints(shootPos, hitPos, particle, 2.0);
 
+	bool crit = (TF2_IsPlayerInCondition(client, TFCond_CritCanteen) || TF2_IsPlayerInCondition(client, TFCond_CritMmmph) || TF2_IsPlayerInCondition(client, TFCond_CritOnDamage) || TF2_IsPlayerInCondition(client, TFCond_CritOnFirstBlood) || 
+	TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture) || TF2_IsPlayerInCondition(client, TFCond_CritOnKill) || TF2_IsPlayerInCondition(client, TFCond_CritOnWin) || TF2_IsPlayerInCondition(client, TFCond_CritRuneTemp) ||
+	TF2_IsPlayerInCondition(client, TFCond_Kritzkrieged));
+
 	for (int i = 0; i < GetArraySize(victims); i++)
 	{
 		int vic = GetArrayCell(victims, i);
 
 		bool hs, allowFalloff = true;
-		bool crit = (TF2_IsPlayerInCondition(client, TFCond_CritCanteen) || TF2_IsPlayerInCondition(client, TFCond_CritMmmph) || TF2_IsPlayerInCondition(client, TFCond_CritOnDamage) || TF2_IsPlayerInCondition(client, TFCond_CritOnFirstBlood) || 
-		TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture) || TF2_IsPlayerInCondition(client, TFCond_CritOnKill) || TF2_IsPlayerInCondition(client, TFCond_CritOnWin) || TF2_IsPlayerInCondition(client, TFCond_CritRuneTemp) ||
-		TF2_IsPlayerInCondition(client, TFCond_Kritzkrieged));
 		
 		int hsEffect = 2;
 		CF_TraceShot(client, vic, startPos, endPos, hs, _, hitPos);
@@ -4763,10 +4765,20 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 			if (allowFalloff)
 			{
 				float dist = GetVectorDistance(startPos, hitPos);
-				if (dist > falloffStart)
+
+				float mult = 1.0;
+
+				if (dist >= falloffEnd)
+					mult = 1.0 - falloffMax;
+				else if (dist > falloffStart)
 				{
-					damageToDeal *= 1.0 - (((falloffStart - dist) / (falloffEnd - dist)) * falloffMax);
+					dist -= falloffStart;
+					float maxDist = falloffEnd - falloffStart;
+					mult = 1.0 - ((dist / maxDist) * falloffMax);
 				}
+
+				damageToDeal *= mult;
+				CPrintToChatAll("Falloff mult: %f", mult);
 			}
 		}
 
@@ -4793,6 +4805,7 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 			//	damageToDeal *= GetAttributeValue(weapon, )
 		}
 
+		CPrintToChatAll("Headshot: %i, damage: %.2f", hs, damageToDeal);
 		SDKHooks_TakeDamage(vic, client, client, damageToDeal, DMG_BULLET, (IsValidEntity(weapon) ? weapon : -1), _, hitPos);
 	}
 

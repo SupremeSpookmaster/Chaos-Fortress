@@ -78,6 +78,7 @@ enum struct CFCharacter
 	char Name[255];
 	char MapPath[255];
 	char Arms[255];
+	char Archetype[255];
 	
 	TFClassType Class;
 	
@@ -89,7 +90,7 @@ enum struct CFCharacter
 	Handle Abilities_M3;
 	Handle Abilities_Reload;
 	
-	void Create(float newSpeed, float newMaxHP, TFClassType newClass, char newModel[255], char newName[255], float newScale, float newWeight, char newMapPath[255], char newArms[255])
+	void Create(float newSpeed, float newMaxHP, TFClassType newClass, char newModel[255], char newName[255], float newScale, float newWeight, char newMapPath[255], char newArms[255], char newArchetype[255])
 	{
 		this.Speed = newSpeed;
 		this.MaxHP = newMaxHP;
@@ -99,6 +100,7 @@ enum struct CFCharacter
 		this.Scale = newScale;
 		this.BaseSpeed = newSpeed;
 		this.Weight = newWeight;
+		this.Archetype = newArchetype;
 		
 		this.MapPath = newMapPath;
 		this.Arms = newArms;
@@ -251,6 +253,9 @@ public void CFC_MakeNatives()
 	
 	CreateNative("CF_GetCharacterModel", Native_CF_GetCharacterModel);
 	CreateNative("CF_SetCharacterModel", Native_CF_SetCharacterModel);
+
+	CreateNative("CF_GetCharacterArchetype", Native_CF_GetCharacterArchetype);
+	CreateNative("CF_SetCharacterArchetype", Native_CF_SetCharacterArchetype);
 	
 	CreateNative("CF_GetCharacterSpeed", Native_CF_GetCharacterSpeed);
 	CreateNative("CF_SetCharacterSpeed", Native_CF_SetCharacterSpeed);
@@ -1261,10 +1266,11 @@ public void CF_DestroyAllBuildings(int client)
 	CF_SetPlayerConfig(client, conf);
 	SetClientCookie(client, c_DesiredCharacter, conf);
 		
-	char model[255], name[255], arms[255]/*, animator[255]*/;
+	char model[255], name[255], arms[255], archetype[255]/*, animator[255]*/;
 	map.Get("character.model", model, sizeof(model));
 	map.Get("character.name", name, sizeof(name));
 	map.Get("character.arms", arms, sizeof(arms));
+	map.Get("character.menu_display.role", archetype, sizeof(archetype));
 	//map.Get("character.animator_model", animator, sizeof(animator));
 	float speed = GetFloatFromConfigMap(map, "character.speed", 300.0);
 	float health = GetFloatFromConfigMap(map, "character.health", 250.0);
@@ -1273,7 +1279,7 @@ public void CF_DestroyAllBuildings(int client)
 	i_DialogueReduction[client] = GetIntFromConfigMap(map, "character.be_quiet", 1);
 	float scale = GetFloatFromConfigMap(map, "character.scale", 1.0);
 	
-	g_Characters[client].Create(speed, health, Classes[class], model, name, scale, weight, conf, arms);
+	g_Characters[client].Create(speed, health, Classes[class], model, name, scale, weight, conf, arms, archetype);
 		
 	ConfigMap GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 	
@@ -2133,6 +2139,23 @@ public Native_CF_GetCharacterModel(Handle plugin, int numParams)
 	return;
 }
 
+public Native_CF_GetCharacterArchetype(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	int size = GetNativeCell(3);
+	
+	if (CF_IsPlayerCharacter(client))
+	{
+		SetNativeString(2, g_Characters[client].Archetype, size, false);
+	}
+	else
+	{
+		SetNativeString(2, "", size + 1, false);
+	}
+	
+	return;
+}
+
 public Native_CF_SetCharacterModel(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
@@ -2146,6 +2169,18 @@ public Native_CF_SetCharacterModel(Handle plugin, int numParams)
 		
 		SetVariantString(NewModel);
 		AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
+	}
+}
+
+public Native_CF_SetCharacterArchetype(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	char NewArchetype[255];
+	GetNativeString(2, NewArchetype, sizeof(NewArchetype));
+	
+	if (CF_IsPlayerCharacter(client) && CheckFile(NewArchetype))
+	{
+		g_Characters[client].Archetype = NewArchetype;
 	}
 }
 
