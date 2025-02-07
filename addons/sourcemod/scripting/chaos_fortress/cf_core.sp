@@ -620,20 +620,24 @@ public void ArrowTouchNonCombatEntity(int entity, int other)
 	GetEntityClassname(other, classname, sizeof(classname));
 	if (StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_teleporter") || StrEqual(classname, "obj_dispenser"))
 	{
-
-		float original_damage = GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_Rocket", "m_iDeflected")+4);
-		int Weapon = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
 		int attacker = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
-		float chargerPos[3];
-		GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", chargerPos);
-		EmitSoundToAll(g_ArrowImpactSounds_Player[GetRandomInt(0, sizeof(g_ArrowImpactSounds_Player) - 1)], entity);
-		if (IsValidClient(attacker))
+
+		if (CF_IsValidTarget(other, grabEnemyTeam(attacker)))
 		{
-			EmitSoundToClient(attacker, g_ArrowImpactSounds_Player[GetRandomInt(0, sizeof(g_ArrowImpactSounds_Player) - 1)]);
+			float original_damage = GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_Rocket", "m_iDeflected")+4);
+			int Weapon = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
+
+			float chargerPos[3];
+			GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", chargerPos);
+			EmitSoundToAll(g_ArrowImpactSounds_Player[GetRandomInt(0, sizeof(g_ArrowImpactSounds_Player) - 1)], entity);
+			if (IsValidClient(attacker))
+			{
+				EmitSoundToClient(attacker, g_ArrowImpactSounds_Player[GetRandomInt(0, sizeof(g_ArrowImpactSounds_Player) - 1)]);
+			}
+
+			SDKHooks_TakeDamage(other, attacker, attacker, original_damage , DMG_BULLET, Weapon, NULL_VECTOR, chargerPos);
+
+			RemoveEntity(entity);
 		}
-
-		SDKHooks_TakeDamage(other, attacker, attacker, original_damage , DMG_BULLET, Weapon, NULL_VECTOR, chargerPos);
-
-		RemoveEntity(entity);
 	}
 }
