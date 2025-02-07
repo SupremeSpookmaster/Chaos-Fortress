@@ -916,15 +916,15 @@ native bool CF_IsPlayerCharacter(int client);
  * @param reserve		The weapon's reserve ammo.
  * @param clip			The ammo held in the weapon's clip/magazine/whatever.
  * @param att			The weapon's attributes.
- * @param override		Optional weapon model override.
+ * @param override		Optional weapon model override (THIS IS UNIMPLEMENTED, USE A CUSTOM ATTRIBUTE INSTEAD)
  * @param visible		Should the weapon be visible?
  * @param unequip		Should whichever weapon(s) currently in this weapon's slot be removed before equipping this weapon?
- * @param ForceClass	Class to force this weapon to use the animations of, if using ViewChange. 1-9 for the mercs, anything above 9 is considered all-class.
+ * @param ForceClass	Class to force this weapon to use the animations of, if using ViewChange. 1-9 for the mercs, anything above 9 is considered all-class. (UNIMPLEMENTED)
  * @param spawn			If true, ammo is applied one frame later instead of instantly so it doesn't interfere with the resupply event.
  * @param fireAbility	The ability to activate when this weapon fires, optional.
  * @param firePlugin	The plugin of the ability to activate when this weapon fires, optional.
  * @param fireSound		The sound slot to use when this weapon fires, optional.
- * @param autoEquip		If set to false, the weapon is only *created*, not equipped. Useful if you need to run your own logic before equipping the weapon yourself.
+ * @param autoEquip		If set to false, the weapon is only *created*, not equipped. Useful if you need to run your own logic before equipping the weapon yourself. NOTE: If spawning a PDA, sapper, or disguise kit with this set to false, you must equip it on the same frame you call this on, otherwise it will not equip.
  *
  * @return The entity index of the spawned weapon, -1 if not valid.
  */

@@ -5,6 +5,7 @@ char s_WeaponFirePlugin[2049][255];
 char s_WeaponFireSound[2049][255];
 
 bool b_WeaponIsVisible[2049] = { false, ... };
+bool b_EquippingWeapon[MAXPLAYERS + 1] = { false, ... };
 
 GlobalForward g_CalcAttackRate;
 
@@ -15,6 +16,14 @@ public void CFW_OnEntityDestroyed(int entity)
 	s_WeaponFirePlugin[entity] = "";
 	s_WeaponFireSound[entity] = "";
 	b_WeaponIsVisible[entity] = false;
+}
+
+public void CFW_MapEnd()
+{
+	for (int i = 0; i <= MaxClients; i++)
+	{
+		b_EquippingWeapon[i] = false;
+	}
 }
 
 public void CFW_MakeForwards()
@@ -143,7 +152,11 @@ public Native_CF_SpawnWeapon(Handle plugin, int numParams)
  	GetNativeString(17, fireSound, sizeof(fireSound));
  	bool autoEquip = GetNativeCell(18);
  	
- 	return SpawnWeapon_Special(client, name, index, level, qual, slot, reserve, clip, att, override, visible, unequip, ForceClass, spawn, fireAbility, firePlugin, fireSound, autoEquip);
+	b_EquippingWeapon[client] = true;
+ 	int weapon = SpawnWeapon_Special(client, name, index, level, qual, slot, reserve, clip, att, override, visible, unequip, ForceClass, spawn, fireAbility, firePlugin, fireSound, autoEquip);
+	b_EquippingWeapon[client] = false;
+
+	return weapon;
  }
 
 //Credit to Artvin and Batfoxkid for this, I just took it from Zombie Riot and modified some things.
@@ -300,8 +313,12 @@ public void CFW_GiveAmmoOnDelay(DataPack pack)
 //Don't let characters who just happen to be spies or engineers have sappers or PDAs.
 public Action TF2Items_OnGiveNamedItem(client, String:classname[], iItemDefinitionIndex, &Handle:hItem)
 {
+	if (b_EquippingWeapon[client])
+		return Plugin_Continue;
+
     switch (iItemDefinitionIndex)
     {    case 735, 736, 810, 831, 933, 1080, 1102, 25, 26, 28, 737: return Plugin_Handled;    }
+
     return Plugin_Continue;
 }
 
