@@ -39,50 +39,6 @@
 //		- The Gambler:
 //			- Begin work.
 //
-//	- BALANCE CHANGES (things to keep in mind for balancing)
-//		////////////////////////////////////////////
-//		-ALL:
-//			- Ult charge rate may be way too slow across the board. We will find out during the public beta test.
-//		////////////////////////////////////////////
-//		- Mercenary:
-//			- None! (Pending public opinion during beta)
-//		////////////////////////////////////////////
-//		- Spookmaster Bones:
-//			- The red cape is an iconic part of his design, but it is bound to cause team recognition problems for players who are unfamiliar with the character.
-//				- Fix the model to use proper team colors if people complain about it a lot.
-//			- Turns into an unstoppable monster at max souls. This might just be because of random crits giving him triple damage 60% of the time. Test further after removing random crits.
-//			- Any kill will grant a soul, not just melee. This encourages sitting at a distance and fishing for souls risk-free with Skull Servants instead of getting in and fighting.
-//				- Make players drop timed soul pickups that the SB player needs to manually pick up to gain the soul. Upon being picked up, these souls immediately heal the user for 75 HP and the player gains 1 Soul to do whatever they want with.
-//					- This is a fairly drastic change. Only do this if people think SB is overpowered or boring to play.
-//					- Thanks to all of the work we just put into fake health kits, this should be super easy to implement!
-//		////////////////////////////////////////////
-//		- Orbital Sniper:
-//			- Assuming full charge, the rifle's lower and upper damage bounds without external modifiers should be:
-//				- LOWEST: 149 (bodyshot, no height advantage bonus)
-//				- HIGHEST: 740 (headshot, max height advantage bonus)
-//				- This is not a balance issue, just a general note for future reference.
-//		////////////////////////////////////////////
-//		- Count Heavnich:
-//			- "Chow Down" might be too strong compared to "Share Sandvich", resulting in players never using Share.
-//				- Maybe make Chow cost two Sandviches, then increase Sandvich base regen rate?
-//		////////////////////////////////////////////
-//		- Demopan:
-//			- Refined Protection, as incredibly cool as it is, REALLY doesn't fit with his playstyle. Like, at all. Would probably be best to put it on a different character and replace Demopan's R ability with something else.
-//		////////////////////////////////////////////
-//		- Christian Brutal Sniper:
-//			- None! (Pending public reception during open beta).
-//		////////////////////////////////////////////
-//		- Doktor Medick:
-//			- He is definitely WAY too tanky for a healer. He regens while healing, can give himself res while healing, and can toss a healing splash that heals an entire crowd PLUS himself for 80 HP, and even if you DO put him in a dire situation, he can try to teleport away. I wager he will be a bit problematic on launch.
-//		////////////////////////////////////////////
-//		- Gadgeteer:
-//			- Notes regarding Drone stats:
-//				- Can fire twice per second.
-//				- Deals 20 damage per shot, for a total DPS of 40 per Drone, not counting Supercharge.
-//				- 100 HP per Drone.
-//				- Can detect targets within 800 HU, and will not stop firing as long as that target is within 1100 HU and maintains line-of-sight.
-//				- Turns at a rate of 2 degrees per frame (126 per second).
-//
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Test all game modes (except for CTF which won't be officially supported):
 //		- [X] Payload
@@ -105,7 +61,6 @@
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
 //	- Certain hats, when equipped via the wearable system, do not visually appear on bots (but they do work *sometimes*). Count Heavnich's "Noble Amassment of Hats" is an example of such a hat. 
-//	- COUNT HEAVNICH: I don't know how, but "Chow Down" *sometimes* still causes you to T-pose when it ends. This is fixed immediately by switching weapons, and has no permanent side effects. It does look very unprofessional, though, so I am inclined to find a fix if possible.
 //	- CF_Teleport can get you stuck in enemy spawn doors. I'm not going to bother fixing this, if you're enough of a scumbag to try to teleport into the enemy's spawn you deserve to get stuck and die.
 //	- CF_ForceViewmodelAnimation causes the user to T-Pose if they go through the resupply event mid-sequence. This does not actually do anything, as switching their weapon immediately fixes it. Still looks pretty bad.
 //
@@ -113,45 +68,9 @@
 //	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This feature may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //			- Scrap this feature entirely and remove all mentions of it from the code. This will be a giant pain in the ass but does not need to be done until public release.
 //	- ALL: All projectiles are affected by every instance of CF_OnGenericProjectileTeamChanged (excluding Gadgeteer) because I forgot to add a filter. Oops.
-//	- ALL: Characters get stuck in each other if either of them has a different model scale than 1.0. Ask Artvin, he probably knows what to do.
 //
 //	- PRESUMED UNFIXABLE (major bugs which I don't believe can be fixed with my current SourceMod expertise. The best thing you can do is classify these as exploits and punish them as such):
-//	- DEMOPAN: Enemies can get stuck in his shield if they walk into it while it is held. Demopans can abuse this to intentionally get enemies stuck for free kills. Sadly, the only known way to fix this results in the shield becoming completely useless while held, and doesn't even solve the problem because you can still get players stuck by releasing the shield at just the right moment.
-//	- ALL: Resized characters do not have accurate hitboxes, IE trying to snipe Heavnich in the head does not register as a hit.
-//
-//	- THINGS TO KEEP IN MIND FOR FUTURE REFERENCE:
-//		- Cool and/or Frequently-Used Particle Effects:
-//			- doomsday_tentpole_vanish01 (big, green, pole-shaped flash, could be used for a reskin of SSB's Necrotic Blast)
-//			- raygun_projectile_blue, raygun_projectile_red, raygun_projectile_blue_crit, raygun_projectile_red_crit
-//			- rd_robot_explosion
-//			- eyeboss_tp_vortex, eyeboss_death_vortex
-//			- spell_fireball_small_blue, spell_fireball_small_red
-//			- merasmus_tp_flash02, merasmus_spawn_flash, merasmus_spawn_flash2
-//			- merasmus_dazed_explosion
-//			- merasmus_zap
-//			- spell_lightningball_hit_red, spell_lightningball_hit_blue
-//			- drg_cow_explosioncore_charged, drg_cow_explosioncore_charged_blue
-//			- flaregun_trail_red, flaregun_trail_blue
-//			- charge_up
-//			- crit_text, heal_text, hit_text, minicrit_text, miss_text, mvm_pow_bam, mvm_pow_crack, mvm_pow_crash, mvm_pow_crit, mvm_pow_punch, mvm_pow_smash
-//			- duck_collect_green
-//			- dxhr_lightningball_parent_red, dxhr_lightningball_parent_blue
-//			- eyeboss_team_blue, eyeboss_team_red
-//			- green_vortex_rain, green_vortex_rain_3
-//			- halloween_pickup_active_green_2, halloween_pickup_active_red_2
-//			- hammer_bones_kickup, hammer_dust_kickup
-//			- hammer_lock_vanish01, hammer_souls_rising
-//			- healthgained_blu, healthgained_blu_2, healthgained_blu_giant, healthgained_blu_giant_2, healthgained_blu_large, healthgained_blu_large_2
-//			- healthgained_red, healthgained_red_2, healthgained_red_giant, healthgained_red_giant_2, healthgained_red_large, healthgained_red_large_2
-//			- heavy_ring_of_fire
-//			- hwn_skeleton_glow_blue, hwn_skeleton_glow_red
-//			- scorchshot_trail_red, scorchshot_trail_blue
-//			- smoke_marker (blue beacon effect)
-//			- spell_lightningball_parent_blue, spell_lightningball_parent_red
-//		- Cool and/or Frequently-Used Netprops:
-//			- m_flNextPrimaryAttack
-//			- m_hOwnerEntity, m_iTeamNum
-//			- m_vecOrigin, m_angRotation, m_vecVelocity
+//	- None! (Currently)
 
 #define PLUGIN_NAME           		  "Chaos Fortress"
 
