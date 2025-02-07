@@ -30,7 +30,6 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 
 public void PrimaryFire_Activate(int client, char abilityName[255])
 {
-	CPrintToChatAll("Primary fire");
 	float startPos[3], endPos[3], shootPos[3], hitPos[3], ang[3];
 	GetClientEyePosition(client, startPos);
 	GetClientEyeAngles(client, ang);
@@ -54,7 +53,7 @@ public void PrimaryFire_Activate(int client, char abilityName[255])
 		else
 			SDKHooks_TakeDamage(vic, client, client, 20.0, DMG_BULLET, _, _, hitPos);
 
-		SpawnParticle_ControlPoints(shootPos, hitPos, PARTICLE_RAILGUN_RED, 2.0);
+		//SpawnParticle_ControlPoints(shootPos, hitPos, PARTICLE_RAILGUN_RED, 2.0);
 	}
 
 	delete victims;
