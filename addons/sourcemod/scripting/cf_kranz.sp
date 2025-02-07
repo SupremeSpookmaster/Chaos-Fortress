@@ -41,6 +41,8 @@ public void PrimaryFire_Activate(int client, char abilityName[255])
 	ArrayList victims = CF_DoBulletTrace(client, startPos, endPos, 1, grabEnemyTeam(client), _, _, hitPos);
 	SpawnParticle_ControlPoints(shootPos, hitPos, PARTICLE_RAILGUN_BLUE, 2.0);
 
+	float dmg = 20.0;
+
 	for (int i = 0; i < GetArraySize(victims); i++)
 	{
 		int vic = GetArrayCell(victims, i);
@@ -49,9 +51,11 @@ public void PrimaryFire_Activate(int client, char abilityName[255])
 		CF_TraceShot(client, vic, startPos, endPos, hs, _, hitPos);
 
 		if (hs)
-			SDKHooks_TakeDamage(vic, client, client, 100.0, DMG_BULLET, _, _, hitPos);
+			SDKHooks_TakeDamage(vic, client, client, dmg * 5.0, DMG_BULLET, _, _, hitPos);
 		else
-			SDKHooks_TakeDamage(vic, client, client, 20.0, DMG_BULLET, _, _, hitPos);
+			SDKHooks_TakeDamage(vic, client, client, dmg, DMG_BULLET, _, _, hitPos);
+
+		dmg *= 0.5;
 
 		//SpawnParticle_ControlPoints(shootPos, hitPos, PARTICLE_RAILGUN_RED, 2.0);
 	}

@@ -3097,7 +3097,7 @@ stock int Sort_GetClosestInList(float pos[3], ArrayList &list)
 	{
 		int ent = GetArrayCell(list, i);
 		float entPos[3];
-		CF_WorldSpaceCenter(i, entPos);
+		CF_WorldSpaceCenter(ent, entPos);
 
 		float dist = GetVectorDistance(pos, entPos);
 		if (dist < closestDist)
