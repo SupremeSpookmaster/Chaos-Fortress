@@ -28,39 +28,35 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	}
 }
 
+bool PrimaryFire_HSFalloff = false;
+int PrimaryFire_HSEffect = 1;
+
 public void PrimaryFire_Activate(int client, char abilityName[255])
 {
-	float startPos[3], endPos[3], shootPos[3], hitPos[3], ang[3];
-	GetClientEyePosition(client, startPos);
+	float damage = CF_GetArgF(client, KRANZ, abilityName, "damage");
+	float hsMult = CF_GetArgF(client, KRANZ, abilityName, "hs_mult");
+	PrimaryFire_HSEffect = CF_GetArgI(client, KRANZ, abilityName, "hs_fx");
+	PrimaryFire_HSFalloff = CF_GetArgI(client, KRANZ, abilityName, "hs_falloff") > 0;
+	float falloffStart = CF_GetArgF(client, KRANZ, abilityName, "falloff_start");
+	float falloffEnd = CF_GetArgF(client, KRANZ, abilityName, "falloff_end");
+	float falloffMax = CF_GetArgF(client, KRANZ, abilityName, "falloff_max");
+	int pierce = CF_GetArgI(client, KRANZ, abilityName, "pierce");
+	float spread = CF_GetArgF(client, KRANZ, abilityName, "spread");
+
+	float ang[3];
 	GetClientEyeAngles(client, ang);
+	CF_FireGenericBullet(client, ang, damage, hsMult, spread, KRANZ, PrimaryFire_Hit, falloffStart, falloffEnd, falloffMax, pierce, grabEnemyTeam(client));
+}
 
-	GetPointInDirection(startPos, ang, 20.0, shootPos);
-	shootPos[2] -= 20.0;
-	GetPointInDirection(startPos, ang, 9999.0, endPos);
-
-	ArrayList victims = CF_DoBulletTrace(client, startPos, endPos, 1, grabEnemyTeam(client), _, _, hitPos);
-	SpawnParticle_ControlPoints(shootPos, hitPos, PARTICLE_RAILGUN_BLUE, 2.0);
-
-	float dmg = 20.0;
-
-	for (int i = 0; i < GetArraySize(victims); i++)
+public void PrimaryFire_Hit(int attacker, int victim, float &baseDamage, bool &allowFalloff, bool &isHeadshot, int &hsEffect, bool &crit)
+{
+	CPrintToChatAll("Kranz hit");
+	if (isHeadshot)
 	{
-		int vic = GetArrayCell(victims, i);
-
-		bool hs;
-		CF_TraceShot(client, vic, startPos, endPos, hs, _, hitPos);
-
-		if (hs)
-			SDKHooks_TakeDamage(vic, client, client, dmg * 5.0, DMG_BULLET, _, _, hitPos);
-		else
-			SDKHooks_TakeDamage(vic, client, client, dmg, DMG_BULLET, _, _, hitPos);
-
-		dmg *= 0.5;
-
-		//SpawnParticle_ControlPoints(shootPos, hitPos, PARTICLE_RAILGUN_RED, 2.0);
+		allowFalloff = PrimaryFire_HSFalloff;
 	}
 
-	delete victims;
+	hsEffect = PrimaryFire_HSEffect;
 }
 
 public bool PrimaryFire_Trace(entity, contentsMask, user)

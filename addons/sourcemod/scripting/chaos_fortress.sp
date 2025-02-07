@@ -40,14 +40,8 @@
 //			- Begin work.
 //
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
-//	- TODO: Test all game modes (except for CTF which won't be officially supported):
-//		- [X] Payload
-//		- [ ] Payload Race
-//		- [ ] Control Points
-//		- [X] King of the Hill
 //	- TODO: Rewrite the wiki.
 //		- May end up just scrapping the wiki. It adds way too much upkeep for next to no benefit.
-//	- TODO: Make sure plugin variables automatically get reset on map change. I imagine this will not be a problem, but if it's like ZR and variables don't get reset automatically, it's going to be a nightmare to deal with.
 //	- TODO: The following plugins are mandatory for CF to run, and need to be added to the GitHub's prerequisites:
 //		- None, currently.
 //	- TODO: The current development branch has the following fatal issues which break the plugin, and will need to be fixed in the release branch:

@@ -8,7 +8,7 @@
 #include <sdkhooks>
 #include <cf_stocks>
 
-void CF_TakeDamage(int entity = 0, int inflictor = 0, int attacker = 0, float damage = 0.0, int damageType=DMG_GENERIC, int weapon=-1,const float damageForce[3]=NULL_VECTOR, const float damagePosition[3]=NULL_VECTOR, bool bypassHooks = false)
+stock void CF_TakeDamage(int entity = 0, int inflictor = 0, int attacker = 0, float damage = 0.0, int damageType=DMG_GENERIC, int weapon=-1,const float damageForce[3]=NULL_VECTOR, const float damagePosition[3]=NULL_VECTOR, bool bypassHooks = false)
 {
 	SDKHooks_TakeDamage(entity, inflictor, attacker, damage, damageType, IsValidEntity(weapon) ? weapon : -1, damageForce, damagePosition, bypassHooks);
 }
@@ -1751,7 +1751,7 @@ native void CF_TraceShot(int user, int target, float startPos[3], float endPos[3
  * @param spread		Random spread.
  * @param hitPlugin		Name of the plugin containing the optional function to call on a hit.
  * @param hitFunction	Optional function to call on a hit. Must take an int for the attacker, an int for the victim, a float by reference for damage, a bool by reference for falloff, a bool by reference for headshot, an int by reference for headshot effects, and a bool by reference for crits.
- * 						Example: void MyHeadshotCallback(int attacker, int victim, &float baseDamage, &bool allowFalloff, &bool isHeadshot, &int hsEffect, bool &crit)
+ * 						Example: void MyHeadshotCallback(int attacker, int victim, float &baseDamage, bool &allowFalloff, bool &isHeadshot, int &hsEffect, bool &crit)
  * 						baseDamage can be changed to modify the damage dealt before falloff is calculated.
  * 						Setting allowFalloff to false will block damage falloff from being calculated.
  * 						isHeadshot can be modified to force or prevent a headshot.
