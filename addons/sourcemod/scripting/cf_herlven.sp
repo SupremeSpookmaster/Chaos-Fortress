@@ -8,6 +8,9 @@ int BEAM_Combine_Black;
 int BEAM_Combine_Blue;
 int BEAM_Combine_Red;
 
+int Glow_Sprite_Red;
+int Glow_Sprite_Blue;
+
 /*
 	Laser .vmt's that work (but mainly look good):
 
@@ -165,6 +168,9 @@ public void OnMapStart()
 
 	BEAM_Glow 			= PrecacheModel("sprites/glow02.vmt", true);
 
+	Glow_Sprite_Blue = PrecacheModel("sprites/blueglow2.vmt", true);
+	Glow_Sprite_Red = PrecacheModel("sprites/redglow2.vmt", true);
+
 	PrecacheScriptSound(JUMPPAD_IMPACT1);
 	PrecacheScriptSound(JUMPPAD_IMPACT2);
 	Zero(Generic_Laser_BEAM_HitDetected);
@@ -263,7 +269,8 @@ static Action BeaconFailSafe(Handle timer, int ref)
 	float Initiate_In = CF_GetArgF(client, THIS_PLUGIN_NAME, ORBITAL_DEATH_RAY, "WindUp"); //3.0;
 
 	float pos[3]; GetAbsOrigin_main(beacon, pos);
-	float Sky_Loc[3]; Sky_Loc = pos; Sky_Loc[2]+=500.0;
+	float Sky_Loc[3];
+	Sky_Loc = GetDeathRayAnchorLocation(client, pos);
 	TE_SetupBeamPoints(pos, Sky_Loc, BEAM_Laser, BEAM_Glow, 0, 0, Initiate_In, 15.0, 15.0, 0, 1.0, GetColor(client), 3);				
 	TE_SendToAll();
 
@@ -278,8 +285,9 @@ static Action BeaconFailSafe(Handle timer, int ref)
 	return Plugin_Handled;
 }
 //get a sky location depending on players.
-static float[] GetDeathRayAnchorLocation(int client)
+static float[] GetDeathRayAnchorLocation(int client, float Origin[3])
 {
+	/*
 	int OnMyTeam = 0;
 	TFTeam team = TF2_GetClientTeam(client);
 	int[] MyTeamArray = new int[MaxClients];
@@ -339,9 +347,17 @@ static float[] GetDeathRayAnchorLocation(int client)
 	Anchor_Loc[1] /=OnMyTeam;
 	Anchor_Loc[2] /=OnMyTeam;
 
-	Anchor_Loc[2]+=GetRandomFloat(3000.0, 3500.0);
+	Anchor_Loc[2]+=GetRandomFloat(3000.0, 3500.0);*/
 
-	return Anchor_Loc;
+	Generic_Laser_Trace Laser;
+	Laser.client = client;
+	float Angles[3];
+	Angles = {-90.0, 0.0, 0.0};
+	Laser.DoForwardTrace_Custom(Angles, Origin);
+
+	Laser.End_Point[2]-=25.0;
+
+	return Laser.End_Point;
 }
 static Action OffSetDeathRay_Spawn(Handle Timer, DataPack pack)
 {
@@ -365,7 +381,6 @@ static Action OffSetDeathRay_Spawn(Handle Timer, DataPack pack)
 	{
 		GetClientEyePosition(client, Spawn_Loc);
 	}
-	ParticleEffectAt(Spawn_Loc, GetClientTeam(client) == 2 ? "powerup_supernova_explode_red" : "powerup_supernova_explode_blue", 1.0);
 	Invoke_DeathRay(client, Spawn_Loc);
 	if(IsValidEntity(Ball))
 		RemoveEntity(Ball);
@@ -379,9 +394,44 @@ static void Invoke_DeathRay(int client, float Loc[3])
 	struct_DeathRayData[client].Timer = GetGameTime() + struct_DeathRayData[client].Duration;
 	struct_DeathRayData[client].Location = Loc;
 
-	struct_DeathRayData[client].Anchor_Loc = GetDeathRayAnchorLocation(client);
+	struct_DeathRayData[client].Anchor_Loc = GetDeathRayAnchorLocation(client, Loc);
 	
 	EmitSoundToAll(DEATHRAY_TOUCHDOWN_SOUND, 0, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, 1.0, SNDPITCH_NORMAL, -1, Loc);
+
+	int color[4]; color = GetColor(client);
+	float TE_Duration = struct_DeathRayData[client].Duration;
+	float diameter = ClampBeamWidth(struct_DeathRayData[client].Radius*2.0);
+
+	float True_Sky[3]; True_Sky = struct_DeathRayData[client].Anchor_Loc; True_Sky[2]+=2500.0;
+									
+	TE_SetupBeamPoints(struct_DeathRayData[client].Anchor_Loc, True_Sky, BEAM_Laser, BEAM_Glow, 0, 0, TE_Duration, diameter, diameter, 0, 1.0, color, 3);				
+	TE_SendToAll();
+
+	TE_SetupBeamPoints(struct_DeathRayData[client].Anchor_Loc, True_Sky, BEAM_Combine_Black, 0, 0, 0, TE_Duration, 0.7*diameter, 0.7*diameter, 0, 2.5, color, 3);				
+	TE_SendToAll();
+
+	int Laser_Core = (TF2_GetClientTeam(client) == TFTeam_Blue ? BEAM_Combine_Blue : BEAM_Combine_Red);
+	TE_SetupBeamPoints(struct_DeathRayData[client].Anchor_Loc, True_Sky, Laser_Core, Laser_Core, 0, 0, TE_Duration, diameter, diameter, 0, 1.5, color, 3);				
+	TE_SendToAll();
+	
+	TE_SetupBeamRingPoint(struct_DeathRayData[client].Anchor_Loc, 300.0, 300.1, Laser_Core, BEAM_Glow, 0, 1, TE_Duration, 20.0, 0.1, color, 1, 0);
+	TE_SendToAll();
+	TE_SetupBeamRingPoint(struct_DeathRayData[client].Anchor_Loc, 300.0, 0.0, Laser_Core, BEAM_Glow, 0, 1, TE_Duration, 15.0, 0.1, color, 1, 0);
+	TE_SendToAll();
+
+	ParticleEffectAt(Loc, GetClientTeam(client) == 2 ? "powerup_supernova_explode_red" : "powerup_supernova_explode_blue", 1.0);
+	ParticleEffectAt(struct_DeathRayData[client].Anchor_Loc, GetClientTeam(client) == 2 ? "powerup_supernova_explode_red" : "powerup_supernova_explode_blue", 1.0);
+
+	if (TF2_GetClientTeam(client) == TFTeam_Blue)
+	{
+		TE_SetupGlowSprite(struct_DeathRayData[client].Anchor_Loc, Glow_Sprite_Blue, TE_Duration, 2.0, 255);
+		TE_SendToAll();
+	}
+	else
+	{
+		TE_SetupGlowSprite(struct_DeathRayData[client].Anchor_Loc, Glow_Sprite_Red, TE_Duration, 2.0, 255);
+		TE_SendToAll();
+	}
 
 	//super earth's finest, in action!
 	SDKUnhook(client, SDKHook_PreThink, OribtalDeathRay_Tick);
@@ -423,8 +473,8 @@ static void OribtalDeathRay_Tick(int client)
 		float Travel_Dist = 0.0;
 		Location[2]+=25.0;
 		i_DeathRayUser = client;
-		fl_DeathRayStart = Location;
-		int Target = CF_GetClosestTarget(Location, false, Travel_Dist, 0.0, grabEnemyTeam(client), THIS_PLUGIN_NAME, Can_I_SeeTarget_Deathray);
+		fl_DeathRayStart = Effect_Anchor_Loc;
+		int Target = CF_GetClosestTarget(Effect_Anchor_Loc, false, Travel_Dist, 0.0, grabEnemyTeam(client), THIS_PLUGIN_NAME, Can_I_SeeTarget_Deathray);
 		Location[2]-=25.0;
 
 		if(CF_IsValidTarget(Target, grabEnemyTeam(client)))
@@ -1052,7 +1102,8 @@ static void Beacon_CheckForCollision(int ref)
 	{
 		float Initiate_In = CF_GetArgF(client, THIS_PLUGIN_NAME, ORBITAL_DEATH_RAY, "WindUp"); //3.0;
 
-		float Sky_Loc[3]; Sky_Loc = pos; Sky_Loc[2]+=500.0;
+		float Sky_Loc[3];
+		Sky_Loc = GetDeathRayAnchorLocation(client, pos);
 		TE_SetupBeamPoints(pos, Sky_Loc, BEAM_Laser, BEAM_Glow, 0, 0, Initiate_In, 15.0, 15.0, 0, 1.0, GetColor(client), 3);				
 		TE_SendToAll();
 
