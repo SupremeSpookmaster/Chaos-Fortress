@@ -1,8 +1,93 @@
+#pragma semicolon 1
+#pragma newdecls required
+
+int BEAM_Laser;
+int BEAM_Glow;
+
+int BEAM_Combine_Black;
+int BEAM_Combine_Blue;
+int BEAM_Combine_Red;
+
 /*
-This basic plugin template exists to provide devs with an easy starting point for their character plugins, to get all of the annoying tedious work out of the way.
-To use this template, just replace the placeholder text (THIS_PLUGIN_NAME, ORBITAL_DEATH_RAY, cf_plugin_template, etc) with whatever you need. Then, you can add any missing
-forwards your plugin needs as you work.
+	Laser .vmt's that work (but mainly look good):
+
+	"materials/sprites/laser.vmt"
+	"materials/sprites/physbeam.vmt"
+	"materials/sprites/plasma.vmt"
+	"materials/sprites/plasma1.vmt"		//weird one.
+	"materials/sprites/fireburst.vmt"	//aacts like the one above in its weirdness
+	"materials/sprites/plasmabeam.vmt"	//A PURE BEAM OF SOLID PLAZMA!
+	"materials/sprites/purplelaser1.vmt"	//a laser that has a base colour of purple. seems to work best with low width
+	"materials/sprites/spotlight.vmt"		//A REALLY FAT BEAM OF LIGHT.
+	"materials/sprites/white.vmt"			//a really fat beam of light, like the one above
+
+	"materials/sprites/combineball_trail_black_1.vmt"	//This one has potential for a pure black laser!
+
+	"materials/sprites/lgtning.vmt"
+	"materials/sprites/lgtning_noz.vmt"
+
+	//the most unique ones so far
+	"materials/sprites/hydragutbeam.vmt"
+	"materials/sprites/hydragutbeamcap.vmt"
+	"materials/sprites/hydraspinalcord.vmt"
+
+	
+
+	//Beams that are like balls, not a constant beam. basically like balls.
+	"sprites/glow02.vmt"
+	"materials/sprites/combineball_glow_black_1.vmt"
+	"materials/sprites/wxplo1.vmt"
+	"materials/sprites/bubble.vmt"
+	
+	"materials/sprites/laserdot.vmt"
+	"materials/sprites/light_glow01.vmt"
+	"materials/sprites/light_glow02.vmt"	//seems to have bigger gaps then the 01 version.
+	"materials/sprites/light_glow02_noz.vmt"
+	"materials/sprites/light_glow03.vmt"	//Even larger gaps.
+	
+	"materials/sprites/orangecore1.vmt"
+	"materials/sprites/orangecore2.vmt"	//smaller then 1
+	"materials/sprites/orangeflare1.vmt"
+
+	"materials/sprites/physcannon_bluecore1.vmt"
+	"materials/sprites/physcannon_bluecore1b.vmt"
+	"materials/sprites/physcannon_bluecore2.vmt"
+	"materials/sprites/physcannon_bluecore2b.vmt"
+
+	"materials/sprites/physring1.vmt"	//kinda looks like a diamond.
+
+	"materials/sprites/plasmaember.vmt"
+
+	
+	//Halo's
+	"materials/sprites/halo01.vmt"	
+	"materials/sprites/plasmahalo.vmt"	//note: this works well with just a normal laser, not just as a halo!
+
+
+
+	"materials/sprites/obsolete.vmt"	//this one is just fucking funny.
 */
+#define Zero(%1)		ResetToZero(%1, sizeof(%1))
+#define Zero2(%1)	ResetToZero2(%1, sizeof(%1), sizeof(%1[]))
+
+stock void ResetToZero(any[] array, int length)
+{
+	for(int i; i<length; i++)
+	{
+		array[i] = 0;
+	}
+}
+stock void ResetToZero2(any[][] array, int length1, int length2)
+{
+	for(int a; a<length1; a++)
+	{
+		for(int b; b<length2; b++)
+		{
+			array[a][b] = 0;
+		}
+	}
+}
+
 
 #include <cf_include>
 #include <sdkhooks>
@@ -13,24 +98,91 @@ forwards your plugin needs as you work.
 #define MAXENTITIES				2048
 
 //replace with actual grenade models. the iron bomber ones
-#define BEACON_MODEL_RED	"models/props_moonbase/moon_gravel_crystal_red.mdl"
-#define BEACON_MODEL_BLUE	"models/props_moonbase/moon_gravel_crystal_blue.mdl"
+#define BEACON_BASE_MODEL	"models/workshop/weapons/c_models/c_quadball/w_quadball_grenade.mdl"
+
+#define JUMPPAD_IMPACT1					"Passtime.BallSmack"
+#define JUMPPAD_IMPACT2					"TFPlayer.AirBlastImpact"
 
 #define THIS_PLUGIN_NAME		"cf_herlven"
 
 #define ORBITAL_DEATH_RAY		"herlven_orbital_deathray"
 #define SUPER_SHOTGUN			"herlven_super_shotgun"
+#define CUSTOM_TELEPORTERS		"herlven_teleporters"
+#define METAL_PISTOL			"herlven_metal_pistol"
+
+#define DEATHRAY_TOUCHDOWN_SOUND	"weapons/physcannon/energy_sing_explosion2.wav"
+#define DEATHRAY_THROW_SOUND		"misc/hologram_start.wav"
+#define DEATHRAY_PASSIVE_SOUND		"ambient/energy/weld1.wav"
+#define DEATHRAY_END_SOUND			"misc/hologram_stop.wav"
+
+//EmitSoundToAll(KENSHOSI_GRAVITY_DRIVE_LOOP_SOUND, client, SNDCHAN_STATIC, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL);
+//EmitSoundToAll(KENSHOSI_SWORD_DISSAPEAR_SOUND, 0, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, 0.25, SNDPITCH_NORMAL, -1, loc);
+
+
+//
+
+//
+
+
+static float fl_JumpPadRecharge[MAXENTITIES];
+static int Generic_Laser_BEAM_HitDetected[MAXENTITIES];
+static int i_beacon_owner[MAXENTITIES];
+static bool b_has_pistol[MAXTF2PLAYERS];
+
+static const char DeathRayPassiveSounds[][] =
+{
+	"weapons/physcannon/superphys_small_zap1.wav",
+	"weapons/physcannon/superphys_small_zap2.wav",
+	"weapons/physcannon/superphys_small_zap3.wav",
+	"weapons/physcannon/superphys_small_zap4.wav"
+};
+static const char WidowCritSound[][] =
+{
+	"weapons/widow_maker_shot_crit_01.wav",
+	"weapons/widow_maker_shot_crit_02.wav",
+	"weapons/widow_maker_shot_crit_03.wav"
+};
 
 //Precache all of your plugin-specific sounds and models here.
 public void OnMapStart()
 {
-	PrecacheModel(BEACON_MODEL_RED, true);
-	PrecacheModel(BEACON_MODEL_BLUE, true);
+	PrecacheModel(BEACON_BASE_MODEL, true);
+
+	for(int i; i < sizeof(DeathRayPassiveSounds); i++)
+	{
+		PrecacheSound(DeathRayPassiveSounds[i]);
+	}
+	for(int i; i < sizeof(WidowCritSound); i++)
+	{
+		PrecacheSound(WidowCritSound[i]);
+	}
+
+	BEAM_Laser 			= PrecacheModel("materials/sprites/laser.vmt", true);
+
+	BEAM_Combine_Black 	= PrecacheModel("materials/sprites/combineball_trail_black_1.vmt", true);
+	BEAM_Combine_Blue	= PrecacheModel("materials/sprites/combineball_trail_blue_1.vmt", true);
+	BEAM_Combine_Red	= PrecacheModel("materials/sprites/combineball_trail_red_1.vmt", true);
+
+	BEAM_Glow 			= PrecacheModel("sprites/glow02.vmt", true);
+
+	PrecacheScriptSound(JUMPPAD_IMPACT1);
+	PrecacheScriptSound(JUMPPAD_IMPACT2);
+	Zero(Generic_Laser_BEAM_HitDetected);
+	Zero(fl_JumpPadRecharge);
+	Zero(b_has_pistol);
+
+	PrecacheSound(DEATHRAY_TOUCHDOWN_SOUND, true);
+	PrecacheSound(DEATHRAY_THROW_SOUND, true);
+	PrecacheSound(DEATHRAY_PASSIVE_SOUND, true);
+	PrecacheSound(DEATHRAY_END_SOUND, true);
+
+	PrecacheSound("beams/beamstart5.wav", true);
 }
 
 //Hook your events in here.
 public void OnPluginStart()
 {
+	HookEvent("player_builtobject", OnBuildObject);
 }
 
 //This forward is called when an ability is activated. It is best used to check if the ability being activated is
@@ -44,12 +196,12 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	//The activated ability belongs to our plugin, check to see which ability it is.	
 	if (StrContains(abilityName, ORBITAL_DEATH_RAY) != -1)
 	{
-		Orbital_Death_Ray_Activate(client, abilityName);
+		Orbital_Death_Ray_Activate(client);
 	}
 	//The activated ability belongs to our plugin, check to see which ability it is.	
 	if (StrContains(abilityName, SUPER_SHOTGUN) != -1)
 	{
-		SuperShotgunFire_Activate(client, abilityName);
+		SuperShotgun_Activate(client, abilityName);
 	}
 }
 
@@ -57,6 +209,7 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 //read the ability's variables via the "CF_GetArg" natives and apply its special effects. For example, if our ability
 //shoots a rocket with customizable damage, this is where we would read the ability's args from the config to get the
 //rocket's damage and then shoot it.
+static bool b_DeathRay_Active[MAXTF2PLAYERS];
 enum struct DeathRay_Data
 {
 	float Duration;
@@ -73,35 +226,122 @@ enum struct DeathRay_Data
 	float Anchor_Loc[3];	//the sky location its anchored to.
 }
 static DeathRay_Data struct_DeathRayData[MAXTF2PLAYERS];
-void Orbital_Death_Ray_Activate(int client, char abilityName[255])
+void Orbital_Death_Ray_Activate(int client)
 {
-	struct_DeathRayData[client].Damage = 10.0;
-	struct_DeathRayData[client].Radius = 25.0;
-	struct_DeathRayData[client].Speed = 10.0;
-	struct_DeathRayData[client].Duration = 10.0;
+	b_DeathRay_Active[client] = true;
+	struct_DeathRayData[client].Damage = CF_GetArgF(client, THIS_PLUGIN_NAME, ORBITAL_DEATH_RAY, "Damage");	// 10.0;
+	struct_DeathRayData[client].Radius = CF_GetArgF(client, THIS_PLUGIN_NAME, ORBITAL_DEATH_RAY, "Radius");// 25.0;
+	struct_DeathRayData[client].Speed =  CF_GetArgF(client, THIS_PLUGIN_NAME, ORBITAL_DEATH_RAY, "Speed");//10.0;
+	struct_DeathRayData[client].Duration =CF_GetArgF(client, THIS_PLUGIN_NAME, ORBITAL_DEATH_RAY, "Duration");//10.0;
 
-	float Initiate_In = 3.0;
+	float Throw_Velocity = CF_GetArgF(client, THIS_PLUGIN_NAME, ORBITAL_DEATH_RAY, "Throw Velocity");// 1000.0;
+	int Ball = Beacon_CreateProp(client, Throw_Velocity);
 
-	int Ball = Beacon_CreateProp(client);
+	i_beacon_owner[Ball] = EntIndexToEntRef(client);
+	RequestFrame(Beacon_CheckForCollision, EntIndexToEntRef(Ball));
+	//this breaks PDA. me sad :(
+	//CF_SimulateSpellbookCast(client, _, CF_Spell_Fireball);
 
-	float Throw_Velocity = 1000.0;
+	EmitSoundToAll(DEATHRAY_THROW_SOUND, client, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, 1.0, SNDPITCH_NORMAL);
 
-	float pos[3], vecAngles[3], vecVelocity[3];
-	GetClientEyeAngles(client, vecAngles);
-	GetClientEyePosition(client, pos);
-	vecAngles[0] -= 8.0;
+	CreateTimer(10.0, BeaconFailSafe, EntIndexToEntRef(Ball), TIMER_FLAG_NO_MAPCHANGE);
+
+}
+static Action BeaconFailSafe(Handle timer, int ref)
+{
+	int beacon = EntRefToEntIndex(ref);
+	if(!IsValidEntity(beacon))
+		return Plugin_Stop;
+
+	int client = EntRefToEntIndex(i_beacon_owner[beacon]);
 	
-	vecVelocity[0] = Cosine(DegToRad(vecAngles[0]))*Cosine(DegToRad(vecAngles[1]))*Throw_Velocity;
-	vecVelocity[1] = Cosine(DegToRad(vecAngles[0]))*Sine(DegToRad(vecAngles[1]))*Throw_Velocity;
-	vecVelocity[2] = Sine(DegToRad(vecAngles[0])) * Throw_Velocity;
-	vecVelocity[2] *= -1;
-	
-	TeleportEntity(Ball, pos, vecAngles, vecVelocity);
+	if(!IsValidClient(client))
+		return Plugin_Stop;
+
+	i_beacon_owner[beacon] = INVALID_ENT_REFERENCE;
+
+	float Initiate_In = CF_GetArgF(client, THIS_PLUGIN_NAME, ORBITAL_DEATH_RAY, "WindUp"); //3.0;
+
+	float pos[3]; GetAbsOrigin_main(beacon, pos);
+	float Sky_Loc[3]; Sky_Loc = pos; Sky_Loc[2]+=500.0;
+	TE_SetupBeamPoints(pos, Sky_Loc, BEAM_Laser, BEAM_Glow, 0, 0, Initiate_In, 15.0, 15.0, 0, 1.0, GetColor(client), 3);				
+	TE_SendToAll();
 
 	DataPack pack2 = new DataPack();
 	CreateDataTimer(Initiate_In, OffSetDeathRay_Spawn, pack2, TIMER_FLAG_NO_MAPCHANGE);
 	WritePackCell(pack2, EntIndexToEntRef(client));
-	WritePackCell(pack2, EntIndexToEntRef(Ball));
+	WritePackCell(pack2, EntIndexToEntRef(beacon));
+
+	TeleportEntity(beacon, NULL_VECTOR, NULL_VECTOR, {0.0, 0.0,0.0});
+	SetEntityMoveType(beacon, MOVETYPE_NONE);
+
+	return Plugin_Handled;
+}
+//get a sky location depending on players.
+static float[] GetDeathRayAnchorLocation(int client)
+{
+	int OnMyTeam = 0;
+	TFTeam team = TF2_GetClientTeam(client);
+	int[] MyTeamArray = new int[MaxClients];
+
+	//get the anchor location of clients on our team.
+	for(int i=1 ; i <= MaxClients ; i++)
+	{
+		
+		if(!IsValidClient(i))
+			continue;
+
+		if(!IsPlayerAlive(i))
+			continue;
+
+		if(team != TF2_GetClientTeam(i))
+			continue;
+
+		MyTeamArray[OnMyTeam] = i;
+		OnMyTeam++;
+	}
+
+	//if we don't have a lot of  teammates, also include enemy location.
+	if(OnMyTeam < 2)
+	{
+
+		for(int i=1 ; i <= MaxClients ; i++)
+		{
+			if(!IsValidClient(i))
+				continue;
+
+			if(!IsPlayerAlive(i))
+				continue;
+
+			MyTeamArray[OnMyTeam] = i;
+			OnMyTeam++;
+		}
+	}
+
+	float Anchor_Loc[3];
+	for(int i=0 ; i < OnMyTeam ; i++)
+	{
+		float Loc[3];
+		GetClientAbsOrigin(MyTeamArray[i], Loc);
+		AddVectors(Anchor_Loc, Loc, Anchor_Loc);
+	}
+	if(OnMyTeam <= 0)
+	{
+		//what
+		GetClientAbsOrigin(client, Anchor_Loc);
+
+		Anchor_Loc[0]+=GetRandomFloat(-250.0, 250.0);
+		Anchor_Loc[1]+=GetRandomFloat(-250.0, 250.0);
+		Anchor_Loc[2]+=GetRandomFloat(3000.0, 3500.0);
+		return Anchor_Loc;
+	}
+	Anchor_Loc[0] /=OnMyTeam;
+	Anchor_Loc[1] /=OnMyTeam;
+	Anchor_Loc[2] /=OnMyTeam;
+
+	Anchor_Loc[2]+=GetRandomFloat(3000.0, 3500.0);
+
+	return Anchor_Loc;
 }
 static Action OffSetDeathRay_Spawn(Handle Timer, DataPack pack)
 {
@@ -125,6 +365,7 @@ static Action OffSetDeathRay_Spawn(Handle Timer, DataPack pack)
 	{
 		GetClientEyePosition(client, Spawn_Loc);
 	}
+	ParticleEffectAt(Spawn_Loc, GetClientTeam(client) == 2 ? "powerup_supernova_explode_red" : "powerup_supernova_explode_blue", 1.0);
 	Invoke_DeathRay(client, Spawn_Loc);
 	if(IsValidEntity(Ball))
 		RemoveEntity(Ball);
@@ -138,16 +379,24 @@ static void Invoke_DeathRay(int client, float Loc[3])
 	struct_DeathRayData[client].Timer = GetGameTime() + struct_DeathRayData[client].Duration;
 	struct_DeathRayData[client].Location = Loc;
 
+	struct_DeathRayData[client].Anchor_Loc = GetDeathRayAnchorLocation(client);
+	
+	EmitSoundToAll(DEATHRAY_TOUCHDOWN_SOUND, 0, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, 1.0, SNDPITCH_NORMAL, -1, Loc);
+
 	//super earth's finest, in action!
 	SDKUnhook(client, SDKHook_PreThink, OribtalDeathRay_Tick);
 	SDKHook(client, SDKHook_PreThink, OribtalDeathRay_Tick);
 }
+static int i_DeathRayUser;
+static float fl_DeathRayStart[3];
 static void OribtalDeathRay_Tick(int client)
 {
 	float GameTime = GetGameTime();
 
 	if(struct_DeathRayData[client].Timer < GameTime || CF_GetRoundState() != 1)
 	{
+		b_DeathRay_Active[client] = false;
+		EmitSoundToAll(DEATHRAY_END_SOUND, 0, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, 1.0, SNDPITCH_NORMAL, -1, struct_DeathRayData[client].Location);
 		SDKUnhook(client, SDKHook_PreThink, OribtalDeathRay_Tick);
 		return;
 	}
@@ -157,35 +406,335 @@ static void OribtalDeathRay_Tick(int client)
 
 	float Location[3]; Location = struct_DeathRayData[client].Location;
 
+	float Effect_EndLoc[3], Effect_Anchor_Loc[3];
+	Effect_Anchor_Loc = struct_DeathRayData[client].Anchor_Loc;
+	float Dist = GetVectorDistance(Location, Effect_Anchor_Loc)*1.1;
+
+	Move_Vector_Towards_Target(Effect_Anchor_Loc, Location, Effect_EndLoc, Dist);
+
+	float Radius = struct_DeathRayData[client].Radius;
 	if(update)
 	{
+		EmitSoundToAll(DEATHRAY_PASSIVE_SOUND, 0, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, GetRandomFloat(0.75, 1.0), GetRandomInt(60, 180), -1, Location);
+
+		EmitSoundToAll(DeathRayPassiveSounds[GetURandomInt() % sizeof(DeathRayPassiveSounds)], 0, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, GetRandomFloat(0.25, 0.5), GetRandomInt(75, 125), -1, Location);
+
 		struct_DeathRayData[client].Throttle = GameTime + 0.1;
 		float Travel_Dist = 0.0;
 		Location[2]+=25.0;
-		int Target = CF_GetClosestTarget(Location, false, Travel_Dist, 0.0, TF2_GetClientTeam(client));
+		i_DeathRayUser = client;
+		fl_DeathRayStart = Location;
+		int Target = CF_GetClosestTarget(Location, false, Travel_Dist, 0.0, grabEnemyTeam(client), THIS_PLUGIN_NAME, Can_I_SeeTarget_Deathray);
 		Location[2]-=25.0;
 
-		if(CF_IsValidTarget(Target, TF2_GetClientTeam(client)))
+		if(CF_IsValidTarget(Target, grabEnemyTeam(client)))
 		{
 			float Enemy_Loc[3];
-			GetEntPropVector(Target, Prop_Data, "m_vecAbsOrigin", Enemy_Loc);
+			GetAbsOrigin_main(Target, Enemy_Loc);
+			Travel_Dist = GetVectorDistance(Enemy_Loc, Location);
 			float Speed = struct_DeathRayData[client].Speed;
 			if(Travel_Dist < Speed)
 			{
-				Speed*= Travel_Dist/Speed;
+				Speed*= (Travel_Dist/Speed);
 			}
 
 			Move_Vector_Towards_Target(Location, Enemy_Loc, struct_DeathRayData[client].Location, Speed);
 		}
-		
+
+		Generic_Laser_Trace Laser;
+		Laser.client = client;
+		Laser.Damage = struct_DeathRayData[client].Damage;
+		Laser.damagetype = DMG_PLASMA|DMG_PREVENT_PHYSICS_FORCE;
+		Laser.Radius =  Radius;
+		Laser.Start_Point = Effect_Anchor_Loc;
+		Laser.End_Point = Effect_EndLoc;
+		Laser.Deal_Damage();
+
+		/*float Land_Pos[3]; Land_Pos = Effect_EndLoc;
+		Land_Pos[0]+=GetRandomFloat(-150.0, 150.0);
+		Land_Pos[1]+=GetRandomFloat(-150.0, 150.0);
+		EmitFancyIonEffect(Effect_EndLoc, Effect_Anchor_Loc);
+		*/
 	}
-		
 
+	int color[4]; color = GetColor(client);
+	float TE_Duration = 0.1;
+	float diameter = ClampBeamWidth(Radius*2.0);
+									
+	TE_SetupBeamPoints(Effect_Anchor_Loc, Effect_EndLoc, BEAM_Laser, BEAM_Glow, 0, 0, TE_Duration, diameter, diameter, 0, 1.0, color, 3);				
+	TE_SendToAll();
 
+	TE_SetupBeamPoints(Effect_Anchor_Loc, Effect_EndLoc, BEAM_Combine_Black, 0, 0, 0, TE_Duration, 0.7*diameter, 0.7*diameter, 0, 2.5, color, 3);				
+	TE_SendToAll();
+
+	int Laser_Core = (TF2_GetClientTeam(client) == TFTeam_Blue ? BEAM_Combine_Blue : BEAM_Combine_Red);
+	TE_SetupBeamPoints(Effect_Anchor_Loc, Effect_EndLoc, Laser_Core, Laser_Core, 0, 0, TE_Duration, diameter, diameter, 0, 1.5, color, 3);				
+	TE_SendToAll();
 }
-void SuperShotgunFire_Activate(int client, char abilityName[255])
+public bool Can_I_SeeTarget_Deathray(int enemy)
 {
+	return (enemy == Check_Line_Of_Sight(i_DeathRayUser, enemy, fl_DeathRayStart) && !IsPlayerInvis(enemy));
 }
+
+static float fl_previus_attribute_value[MAXTF2PLAYERS];
+static void SuperShotgun_Activate(int client, char abilityName[255])
+{
+	float Dmg_Bonus_Max = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Damage Bonus Max");
+	float Dmg_Bonus_Min = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Damage Bonus Min");
+
+	float KB_Max = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "KnockBack Max");
+	float KB_Min = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "KnockBack Min");
+
+	int weapon = GetPlayerWeaponSlot(client, 0);
+
+	float Ratio = CF_GetSpecialResource(client) / CF_GetMaxSpecialResource(client);
+
+	float Damage_Attribute = Dmg_Bonus_Min + (Dmg_Bonus_Max - Dmg_Bonus_Min) * Ratio;
+	float PushForce = -1.0 * (KB_Min + (KB_Max - KB_Min) * Ratio);
+
+	//CPrintToChatAll("Damage_Attribute: %f", Damage_Attribute);
+
+	SetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack", 0.0);	//make it so we can fire instantly.
+
+	TF2Attrib_SetByDefIndex(weapon, 1, Damage_Attribute);
+
+	fl_previus_attribute_value[client] = GetAttributeValue(weapon, 298, 1.0);
+	TF2Attrib_SetByDefIndex(weapon, 298, 0.0);
+
+	static float anglesB[3];
+	static float velocity[3];
+	GetClientEyeAngles(client, anglesB);
+	GetAngleVectors(anglesB, velocity, NULL_VECTOR, NULL_VECTOR);
+	float knockback = PushForce;
+	
+	ScaleVector(velocity, knockback);
+	if ((GetEntityFlags(client) & FL_ONGROUND) != 0 || GetEntProp(client, Prop_Send, "m_nWaterLevel") >= 1)
+		velocity[2] = fmax(velocity[2], 300.0*Ratio);
+	else
+		velocity[2] += 100.0*Ratio; // a little boost to alleviate arcing issues
+		
+	float newVel[3];
+	
+	newVel[0] = GetEntPropFloat(client, Prop_Send, "m_vecVelocity[0]");
+	newVel[1] = GetEntPropFloat(client, Prop_Send, "m_vecVelocity[1]");
+	newVel[2] = GetEntPropFloat(client, Prop_Send, "m_vecVelocity[2]");
+					
+	for (int i = 0; i < 3; i++)
+	{
+		velocity[i] += newVel[i];
+	}
+	
+	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, velocity);
+	
+	float ShakeRatio = Ratio+0.25;
+	if(ShakeRatio > 1.3)
+		ShakeRatio = 1.3;
+	Client_Shake(client, 0, 30.0 * ShakeRatio, 20.0 * ShakeRatio, 0.4 * ShakeRatio);
+
+	EmitSoundToAll("beams/beamstart5.wav", client, SNDCHAN_STATIC, 80, _, (Ratio > 0.8 ? 0.8 : Ratio), 45);
+
+	EmitSoundToClient(client, WidowCritSound[GetURandomInt() % sizeof(WidowCritSound)], _, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, 1.0, GetRandomInt(80, 125));
+
+	RequestFrame(Force_Weapon_Fire, client);
+}
+static void Force_Weapon_Fire(int client)
+{
+	SetForceButtonState(client, true, IN_ATTACK);
+	RequestFrames(Revert_Dmg_Bonus, 5, client);	//need to offset it more, otherwise the shot becomes unreliable
+}
+static void Revert_Dmg_Bonus(int client)
+{
+	int weapon = GetPlayerWeaponSlot(client, 0);
+	TF2Attrib_SetByDefIndex(weapon, 1, 1.0);
+	TF2Attrib_SetByDefIndex(weapon, 298, fl_previus_attribute_value[client]);
+	CF_SetSpecialResource(client, 0.0);
+	SetForceButtonState(client, false, IN_ATTACK);
+}
+
+static int i_PadParticle[MAXENTITIES][1];
+void OnBuildObject(Event event, const char[] name, bool dontBroadcast)
+{
+	int entity = event.GetInt("index");
+	int owner = GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
+	if(owner == -1)
+	{
+		return;
+	}
+
+	if(!CF_HasAbility(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS))
+	{
+		return;
+	}
+
+	TFObjectType obj_Type = TF2_GetObjectType(entity);
+
+	if(obj_Type != TFObject_Teleporter)
+		return;
+	
+	TFObjectMode obj_Mode = TF2_GetObjectMode(entity);
+
+	switch(obj_Mode)
+	{
+		//jump pad.
+		case TFObjectMode_Entrance:
+		{
+			SDKHook(entity, SDKHook_Touch, JumpPad_Touch);
+			fl_JumpPadRecharge[entity] = 0.0;
+			
+			SetEntProp(entity, Prop_Send, "m_iHighestUpgradeLevel", 3);	//Set Pads to level 3 for cosmetic reasons related to recharging
+			SetEntProp(entity, Prop_Send, "m_iUpgradeLevel", 3);
+			SetEntProp(entity, Prop_Send, "m_bMiniBuilding", true);			//Prevent upgrades and metal from gibs
+			SetEntProp(entity, Prop_Send, "m_iMaxHealth", CF_GetArgI(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Jump Pad Health"));			//Max HP reduced to what we want
+
+			SetVariantInt(RoundFloat(CF_GetArgI(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Jump Pad Health") * 0.5));
+			AcceptEntityInput(entity, "AddHealth", entity); //Spawns at 50% HP.
+			SetEntProp(entity, Prop_Send, "m_iTimesUsed", 0);
+			
+			//SetEntProp(entity, Prop_Send, "m_nBody", 2);	//Give the arrow to Exits as well.
+			SetEntPropFloat(entity, Prop_Send, "m_flModelScale", 0.5);
+			RequestFrame(ResetSkin, entity); //Setting m_bMiniBuilding tries to set the skin to a 'mini' skin. Since teles don't have one, reset the skin.
+			
+			SetEntProp(entity, Prop_Send, "m_bDisabled", true);
+			CreateTimer(0.1, Timer_BlockTeleEffects, EntIndexToEntRef(entity), TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
+			CreateTimer(0.1, Timer_HandlePadEffects, EntIndexToEntRef(entity), TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
+
+		}
+		//default exit.
+		case TFObjectMode_Exit:
+		{
+			SetEntProp(entity, Prop_Send, "m_iHighestUpgradeLevel", 3);	
+			SetEntProp(entity, Prop_Send, "m_iUpgradeLevel", 3);
+			SetEntProp(entity, Prop_Send, "m_bMiniBuilding", true);			//Prevent upgrades and metal from gibs
+			SetEntProp(entity, Prop_Send, "m_iMaxHealth", CF_GetArgI(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Teleporter Exit Health"));			//Max HP reduced to what we want
+
+			SetVariantInt(RoundFloat(CF_GetArgI(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Teleporter Exit Health") * 0.5));
+			AcceptEntityInput(entity, "AddHealth", entity); //Spawns at 50% HP.
+			SetEntProp(entity, Prop_Send, "m_iTimesUsed", 0);
+			RequestFrame(ResetSkin, entity); //Setting m_bMiniBuilding tries to set the skin to a 'mini' skin. Since teles don't have one, reset the skin.
+			SetEntProp(entity, Prop_Send, "m_bDisabled", true);
+
+			CreateTimer(0.1, Timer_BlockTeleEffects, EntIndexToEntRef(entity), TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
+
+		}
+	}
+}
+public void OnEntityDestroyed(int entity)
+{
+	if (IsValidEntity(entity) && entity < MAXENTITIES && entity > MaxClients)
+	{
+		for(int i=0 ; i < 1 ; i++)
+		{
+			int Particle = EntRefToEntIndex(i_PadParticle[entity][i]);
+			if(IsValidEntity(Particle) && Particle != 0)
+				RemoveEntity(Particle);
+			i_PadParticle[entity][i] = INVALID_ENT_REFERENCE;
+		}
+	}
+}
+
+// Taken from Engi Pads but changed.
+static void JumpPad_Touch(int entity, int other)
+{
+	if(!IsValidEntity(entity))
+	{
+		SDKUnhook(entity, SDKHook_Touch, JumpPad_Touch);
+		return;
+	}
+
+	if(!IsValidClient(other))
+		return;
+	
+	if(GetEntProp(entity, Prop_Send, "m_bCarried") || GetEntPropFloat(entity, Prop_Send, "m_flPercentageConstructed")<1.0)
+		return;
+
+	float GameTime = GetGameTime();
+
+	if(fl_JumpPadRecharge[entity] > GameTime)
+		return;
+
+	int owner = GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
+	if(!IsValidClient(owner))
+		return;
+
+	bool Allow_Enemy = view_as<bool>(CF_GetArgI(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Jump Pad Allow Enemies"));
+
+	if(!Allow_Enemy)
+	{
+		if(TF2_GetClientTeam(other) != TF2_GetClientTeam(owner))
+			return;
+	}
+
+	float Power = CF_GetArgF(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Jump Power");
+	float CoolDown = CF_GetArgF(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Jump Cooldown");
+	
+	fl_JumpPadRecharge[entity] = GameTime + CoolDown;
+
+	TF2_AddCondition(other, TFCond_TeleportedGlow, CoolDown);
+
+	EmitGameSoundToAll(JUMPPAD_IMPACT1, entity);
+	EmitGameSoundToAll(JUMPPAD_IMPACT2, entity);
+
+	DataPack pack = new DataPack();
+	pack.WriteCell(other);
+	pack.WriteFloat(Power);
+	RequestFrame(Teleport_JumpPad, pack);
+}
+static void Teleport_JumpPad(DataPack pack)
+{
+	ResetPack(pack);
+	int client = ReadPackCell(pack);
+	float Power = ReadPackFloat(pack);
+
+	// respect any existing velocity, but completely override Z
+	float playerVelocity[3];
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", playerVelocity);
+	playerVelocity[2] = Power;
+	SetEntPropVector(client, Prop_Data, "m_vecVelocity", playerVelocity);
+	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, playerVelocity);
+}
+
+static Action Timer_BlockTeleEffects(Handle timer, int Ref)
+{
+	int entity = EntRefToEntIndex(Ref);
+	if(entity != -1)
+	{
+		SetEntProp(entity, Prop_Send, "m_bDisabled", true);
+		return Plugin_Continue;
+	}
+
+	return Plugin_Stop;
+}
+static Action Timer_HandlePadEffects(Handle timer, int Ref)
+{
+	int entity = EntRefToEntIndex(Ref);
+	if(entity != -1)
+	{
+		float GameTime = GetGameTime();
+
+		if(fl_JumpPadRecharge[entity] > GameTime || GetEntPropFloat(entity, Prop_Send, "m_flPercentageConstructed") < 1.0)
+		{
+			int particle = EntRefToEntIndex(i_PadParticle[entity][0]);
+
+			if(IsValidEntity(particle) && particle != 0)
+				RemoveEntity(particle);
+		}
+		else
+		{
+			int particle = EntRefToEntIndex(i_PadParticle[entity][0]);
+			if(IsValidEntity(particle))
+				return Plugin_Continue;
+
+			float Loc[3]; GetAbsOrigin_main(entity, Loc);
+			Loc[2] += 2.0;
+			i_PadParticle[entity][0] = EntIndexToEntRef(ParticleEffectAt(Loc, "utaunt_portalswirl_purple_parent", 0.0));
+		}
+		return Plugin_Continue;
+	}
+
+	return Plugin_Stop;
+}
+
+
 
 //When a player becomes a character, this forward is called. This forward is best used for passive abilities.
 //For example, if our character plugin contains a passive ability that gives the character low gravity, we would
@@ -198,12 +747,158 @@ public void CF_OnCharacterCreated(int client)
 //This forward is best for cleaning up variables used by your ability. For example, if our character plugin
 //contains a passive ability that attaches a particle to the character, we would remove that particle in here
 //to prevent it from following the player's spectator camera while they're dead.
-public void CF_OnCharacterRemoved(int client)
+public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
+	if(reason == CF_CRR_SWITCHED_CHARACTER)
+	{
+		FakeClientCommand(client, "destory 0; destory 1; destory 2; destory 3");
+	}
+	b_has_pistol[client] = false;
+	b_DeathRay_Active[client] = false;
 	SDKUnhook(client, SDKHook_PreThink, OribtalDeathRay_Tick);
+}
+public Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int weapon)
+{
+	if (CF_HasAbility(attacker, THIS_PLUGIN_NAME, METAL_PISTOL))
+	{
+		int slot = CF_GetArgI(attacker, THIS_PLUGIN_NAME, METAL_PISTOL, "Weapon Slot");
+		if(IsPlayerHoldingWeapon(attacker, slot) && TF2_GetActiveWeapon(attacker) == weapon)
+		{
+			float amount = float(CF_GetArgI(attacker, THIS_PLUGIN_NAME, METAL_PISTOL, "Metal Gain On Hit"));
+			float MaxMetal = CF_GetMaxSpecialResource(attacker);//CF_GetArgI(attacker, THIS_PLUGIN_NAME, METAL_PISTOL, "Max Metal Gain");
+			float Current_Metal = CF_GetSpecialResource(attacker); //GetEntProp(attacker, Prop_Data, "m_iAmmo", 4, 3);
+			float Add_Metal = Current_Metal + amount;
+
+			if(Add_Metal > MaxMetal)
+				Add_Metal = MaxMetal;
+			CF_SetSpecialResource(attacker, Add_Metal);
+			//SetEntProp(attacker, Prop_Data, "m_iAmmo", Add_Metal, 4, 3);
+		}
+	}
+	return Plugin_Continue;
+}
+
+public Action CF_OnUltChargeGiven(int client, float &amt)
+{
+	if (b_DeathRay_Active[client] && amt > 0.0)
+	{
+		amt = 0.0;
+		return Plugin_Changed;
+	}
+	return Plugin_Continue;
+}
+public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result)
+{
+	if (!StrEqual(plugin, THIS_PLUGIN_NAME))
+		return Plugin_Continue;
+
+	if(type == CF_AbilityType_Ult)
+	{
+		if (StrContains(ability, ORBITAL_DEATH_RAY) != -1 && b_DeathRay_Active[client])
+		{
+			result = false;
+			return Plugin_Changed;
+		}
+	}
+	else if(type == CF_AbilityType_M2)
+	{
+		if (StrContains(ability, SUPER_SHOTGUN) != -1)
+		{
+			result = IsPlayerHoldingWeapon(client, 0);
+
+			if(GetEntPropFloat(GetPlayerWeaponSlot(client, 0), Prop_Send, "m_flNextPrimaryAttack") > GetGameTime())
+				result = false;
+			return Plugin_Changed;
+		}
+	}
+
+	
+	return Plugin_Continue;
 }
 
 //Stocks and such.
+
+#define	SHAKE_START					0			// Starts the screen shake for all players within the radius.
+#define	SHAKE_STOP					1			// Stops the screen shake for all players within the radius.
+#define	SHAKE_AMPLITUDE				2			// Modifies the amplitude of an active screen shake for all players within the radius.
+#define	SHAKE_FREQUENCY				3			// Modifies the frequency of an active screen shake for all players within the radius.
+#define	SHAKE_START_RUMBLEONLY		4			// Starts a shake effect that only rumbles the controller, no screen effect.
+#define	SHAKE_START_NORUMBLE		5			// Starts a shake that does NOT rumble the controller.
+
+stock bool Client_Shake(int client, int command=SHAKE_START, float amplitude=50.0, float frequency=150.0, float duration=3.0)
+{
+	if (command == SHAKE_STOP) {
+		amplitude = 0.0;
+	}
+	else if (amplitude <= 0.0) {
+		return false;
+	}
+
+	Handle userMessage = StartMessageOne("Shake", client);
+
+	if (userMessage == INVALID_HANDLE) {
+		return false;
+	}
+
+	if (GetFeatureStatus(FeatureType_Native, "GetUserMessageType") == FeatureStatus_Available
+		&& GetUserMessageType() == UM_Protobuf) {
+
+		PbSetInt(userMessage,   "command",		 command);
+		PbSetFloat(userMessage, "local_amplitude", amplitude);
+		PbSetFloat(userMessage, "frequency",	   frequency);
+		PbSetFloat(userMessage, "duration",		duration);
+	}
+	else {
+		BfWriteByte(userMessage,	command);	// Shake Command
+		BfWriteFloat(userMessage,	amplitude);	// shake magnitude/amplitude
+		BfWriteFloat(userMessage,	frequency);	// shake noise frequency
+		BfWriteFloat(userMessage,	duration);	// shake lasts this long
+	}
+
+	EndMessage();
+
+	return true;
+}
+stock void ResetSkin(int iEnt)
+{
+	if (IsValidEntity(iEnt))
+	{
+		int iTeam = GetEntProp(iEnt, Prop_Data, "m_iTeamNum");
+		SetEntProp(iEnt, Prop_Send, "m_nSkin", iTeam - 2);
+	}
+}
+stock int ParticleEffectAt(float position[3], const char[] effectName, float duration)
+{
+	int particle = CreateEntityByName("info_particle_system");
+	if (particle != -1)
+	{
+		TeleportEntity(particle, position, NULL_VECTOR, NULL_VECTOR);
+		SetEntPropFloat(particle, Prop_Data, "m_flSimulationTime", GetGameTime());
+		DispatchKeyValue(particle, "effect_name", effectName);
+
+		DispatchSpawn(particle);
+		if(effectName[0])
+		{
+			ActivateEntity(particle);
+			AcceptEntityInput(particle, "start");
+		}
+
+		SetEdictFlags(particle, (GetEdictFlags(particle) & ~FL_EDICT_ALWAYS));
+
+		if (duration > 0.0)
+		{
+			CreateTimer(duration, Timer_RemoveEntity, EntIndexToEntRef(particle), TIMER_FLAG_NO_MAPCHANGE);
+		}
+	}
+	return particle;
+}
+stock int[] GetColor(int client) 
+{ 
+	//the compiler didn't like me doing it one way, so I had to do it this way.
+	int color1[4], color2[4]; 
+	color1 = {255, 50, 50, 255}; color2 = {50, 50, 255, 255};
+	return (TF2_GetClientTeam(client) == TFTeam_Red ? color1 : color2); 
+}
 /**
  *  @param Origin - Input
  *  @param Target - Input
@@ -253,7 +948,7 @@ stock void Proper_To_Groud_Clip(float vecHull[3], float StepHeight = 300.0, floa
 	vecHullMins[2] *= -1.0;
 
 	Handle trace;
-	trace = TR_TraceHullFilterEx( startPostionTrace, endPostionTrace, vecHullMins, vecHull, MASK_PLAYERSOLID,HitOnlyWorld, 0);
+	trace = TR_TraceHullFilterEx( startPostionTrace, endPostionTrace, vecHullMins, vecHull, MASK_PLAYERSOLID,Generic_Laser_BEAM_TraceWallsOnly, 0);
 	if ( TR_GetFraction(trace) < 1.0)
 	{
 		// This is the point on the actual surface (the hull could have hit space)
@@ -271,46 +966,488 @@ stock void Proper_To_Groud_Clip(float vecHull[3], float StepHeight = 300.0, floa
 	delete trace;
 	//if it doesnt hit anything, then it just does buisness as usual
 }
-static bool HitOnlyWorld(int entity, int contentsMask, any iExclude)
+
+//taken from gadgeteer. modified
+static int Beacon_CreateProp(int owner, float Throw_Speed)
 {
-	return !entity;
+	float velocity = Throw_Speed;
+	
+	float pos[3], ang[3], vel[3];
+	GetClientEyePosition(owner, pos);
+	GetClientEyeAngles(owner, ang);
+	GetVelocityInDirection(ang, velocity, vel);
+	
+	TFTeam team = TF2_GetClientTeam(owner);
+	
+	float throwOffset = 45.0;
+	float fLen = throwOffset * Sine( DegToRad( ang[0] + 90.0 ) );
+	pos[0] = pos[0] + fLen * Cosine( DegToRad( ang[1] + 0.0) );
+	pos[1] = pos[1] + fLen * Sine( DegToRad( ang[1] + 0.0) );
+	pos[2] = pos[2] + throwOffset * Sine( DegToRad( -1 * (ang[0] + 0.0)) );
+
+	int toolbox = CreateEntityByName("prop_physics_override");
+	if (IsValidEntity(toolbox))
+	{
+		float gravity = 1.0;
+		SetEntityMoveType(toolbox, MOVETYPE_FLYGRAVITY);
+		SetEntityGravity(toolbox, gravity);
+		
+		//SET MODEL:
+
+		SetEntityModel(toolbox, BEACON_BASE_MODEL);
+		DispatchKeyValue(toolbox, "skin", team == TFTeam_Red ? "0" : "1");
+
+		
+		//SET SCALE:
+		DispatchKeyValue(toolbox, "modelscale", "1.0");
+		
+		//COLLISION RULES:
+		DispatchKeyValue(toolbox, "solid", "6");
+		DispatchKeyValue(toolbox, "spawnflags", "12288");
+		SetEntProp(toolbox, Prop_Send, "m_usSolidFlags", 8);
+		SetEntProp(toolbox, Prop_Data, "m_nSolidType", 2);
+		SetEntityCollisionGroup(toolbox, 23);
+		
+		//ACTIVATION:
+		DispatchKeyValueFloat(toolbox, "massScale", 1.0);
+		DispatchKeyValueFloat(toolbox, "intertiascale", 1.0);
+		DispatchSpawn(toolbox);
+		ActivateEntity(toolbox);
+		
+		//DAMAGE AND TEAM:
+		SetEntProp(toolbox, Prop_Data, "m_takedamage", 1, 1);
+		SetEntProp(toolbox, Prop_Send, "m_iTeamNum", view_as<int>(team));
+
+		for(int i= 0 ; i < 3 ; i++)
+		{
+			ang[i] = GetRandomFloat(0.0, 360.0);
+		}
+		TeleportEntity(toolbox, pos, ang, vel);
+
+		return toolbox;
+	}
+
+	return -1;
+}
+static void Beacon_CheckForCollision(int ref)
+{
+	int prop = EntRefToEntIndex(ref);
+	if (!IsValidEntity(prop))
+		return;
+		
+	int client = EntRefToEntIndex(i_beacon_owner[prop]);
+	if(!IsValidClient(client))
+		return;
+
+	float hullMin[3], hullMax[3];
+	hullMin[0] = -10.0;
+	hullMin[1] = hullMin[0];
+	hullMin[2] = hullMin[0];
+	hullMax[0] = -hullMin[0];
+	hullMax[1] = -hullMin[1];
+	hullMax[2] = -hullMin[2];
+	float pos[3]; GetAbsOrigin_main(prop, pos);
+	TR_TraceHullFilter(pos, pos, hullMin, hullMax, MASK_SHOT, Generic_Laser_BEAM_TraceWallsOnly, client);
+	if (TR_DidHit())
+	{
+		float Initiate_In = CF_GetArgF(client, THIS_PLUGIN_NAME, ORBITAL_DEATH_RAY, "WindUp"); //3.0;
+
+		float Sky_Loc[3]; Sky_Loc = pos; Sky_Loc[2]+=500.0;
+		TE_SetupBeamPoints(pos, Sky_Loc, BEAM_Laser, BEAM_Glow, 0, 0, Initiate_In, 15.0, 15.0, 0, 1.0, GetColor(client), 3);				
+		TE_SendToAll();
+
+		i_beacon_owner[prop] = INVALID_ENT_REFERENCE;
+
+		DataPack pack2 = new DataPack();
+		CreateDataTimer(Initiate_In, OffSetDeathRay_Spawn, pack2, TIMER_FLAG_NO_MAPCHANGE);
+		WritePackCell(pack2, EntIndexToEntRef(client));
+		WritePackCell(pack2, EntIndexToEntRef(prop));
+
+		TeleportEntity(prop, NULL_VECTOR, NULL_VECTOR, {0.0, 0.0,0.0});
+		SetEntityMoveType(prop, MOVETYPE_NONE);
+		return;
+	}
+	
+	RequestFrame(Beacon_CheckForCollision, ref);
+}
+//my beloved stocks that I cannot live without :3
+stock void Offset_Vector(float BEAM_BeamOffset[3], float Angles[3], float Result_Vec[3])
+{
+	float tmp[3];
+	float actualBeamOffset[3];
+
+	tmp[0] = BEAM_BeamOffset[0];
+	tmp[1] = BEAM_BeamOffset[1];
+	tmp[2] = 0.0;
+	VectorRotate(BEAM_BeamOffset, Angles, actualBeamOffset);
+	actualBeamOffset[2] = BEAM_BeamOffset[2];
+	Result_Vec[0] += actualBeamOffset[0];
+	Result_Vec[1] += actualBeamOffset[1];
+	Result_Vec[2] += actualBeamOffset[2];
+}
+//the attacker must be valid, same for enemy, otherwise why?
+stock int Check_Line_Of_Sight(int attacker, int enemy, float Override_Start[3] = {0.0,0.0,0.0}, float Override_End[3] =  {0.0,0.0,0.0})
+{
+	Generic_Laser_Trace Laser;
+	Laser.client = (attacker <= MaxClients ? attacker : -1); //-1 will block lag comp.
+	float pos_npc[3];
+	if(Override_Start[0] != 0.0 || Override_Start[1] != 0.0 || Override_Start[2] != 0.0)
+	{
+		pos_npc = Override_Start;
+	}
+	else
+	{
+		GetAbsOrigin_main(attacker, pos_npc); pos_npc[2]+=75.0;
+	}
+	float Enemy_Loc[3], vecAngles[3];
+	//get the enemy gamer's location.
+	if(Override_End[0] != 0.0 || Override_End[1] != 0.0 || Override_End[2] != 0.0)
+	{
+		Enemy_Loc = Override_End;
+	}
+	else
+	{
+		GetAbsOrigin_main(enemy, Enemy_Loc); Enemy_Loc[2]+=75.0;
+	}
+	
+	//get the angles from the current location of the vector to the enemy gamer
+	MakeVectorFromPoints(pos_npc, Enemy_Loc, vecAngles);
+	GetVectorAngles(vecAngles, vecAngles);
+	//get the estimated distance to the enemy gamer,
+	float Dist = GetVectorDistance(Enemy_Loc, pos_npc);
+	//do a trace from the current location of the vector to the enemy gamer.
+	Laser.DoForwardTrace_Custom(vecAngles, pos_npc, Dist);	//alongside that, use the estimated distance so that our end location from the trace is where the player is.
+	
+	
+	//debuging stuff
+	/*
+	float sky[3];
+	sky = Laser.End_Point;
+	sky[2] +=19999.0;
+	TE_SetupBeamPoints(Enemy_Loc, pos_npc, BEAM_Laser, 0, 0, 0, 5.0, 10.0, 5.0, 0, 0.1, {255,0,0,255}, 3);
+	TE_SendToAll();
+
+	TE_SetupBeamPoints(Laser.End_Point, pos_npc, BEAM_Laser, 0, 0, 0, 5.0, 10.0, 5.0, 0, 0.1, {0,255,0,255}, 3);
+	TE_SendToAll();
+
+	TE_SetupBeamPoints(Laser.End_Point, Enemy_Loc, BEAM_Laser, 0, 0, 0, 5.0, 10.0, 5.0, 0, 0.1, {0,0,255,255}, 3);
+	TE_SendToAll();
+
+	TE_SetupBeamPoints(Laser.End_Point, sky, BEAM_Laser, 0, 0, 0, 5.0, 10.0, 5.0, 0, 0.1, {255,255,255,255}, 3);
+	TE_SendToAll();
+	*/
+
+	//see if the vectors match up, if they do we can safely say the enemy gamer is in sight of the vector.
+	if(Similar_Vec(Laser.End_Point, Enemy_Loc))
+		return enemy;
+	else
+		return -1;
+}
+stock bool Similar_Vec(float Vec1[3], float Vec2[3])
+{
+	for(int i=0 ; i < 3 ; i ++)
+	{
+		if(!Similar(Vec1[i], Vec2[i]))
+			return false;
+	}
+	return true;
+}
+stock bool Similar(float val1, float val2)
+{
+	return fabs(val1 - val2) < 2.0;
+}
+stock void GetAbsOrigin_main(int client, float v[3])
+{
+	GetEntPropVector(client, Prop_Data, "m_vecAbsOrigin", v);
+}
+void RequestFrames(RequestFrameCallback func, int frames, any data=0)
+{
+	DataPack pack = new DataPack();
+	pack.WriteFunction(func);
+	pack.WriteCell(data);
+	pack.WriteCell(frames);
+	RequestFrame(RequestFramesCallback, pack);
 }
 
-//taken from zeina. modified
-static int Beacon_CreateProp(int client)
+public void RequestFramesCallback(DataPack pack)
 {
-	int prop = CreateEntityByName("prop_dynamic_override");
-	if (IsValidEntity(prop))
+	pack.Reset();
+	Function func = pack.ReadFunction();
+	any data = pack.ReadCell();
+
+	int frames = pack.ReadCell();
+	if(frames < 1)
 	{
-		TFTeam team = TF2_GetClientTeam(client);
-		SetEntPropEnt(prop, Prop_Send, "m_hOwnerEntity", client);
-		SetEntProp(prop, Prop_Send, "m_iTeamNum", team);
+		delete pack;
 		
-		int SaveTeam = GetEntProp(prop, Prop_Send, "m_iTeamNum");
-		if(SaveTeam == 2)
+		Call_StartFunction(null, func);
+		Call_PushCell(data);
+		Call_Finish();
+	}
+	else
+	{
+		pack.Position--;
+		pack.WriteCell(frames-1, false);
+		RequestFrame(RequestFramesCallback, pack);
+	}
+}
+
+static int i_traced_ents_amt;
+enum struct Generic_Laser_Trace
+{
+	int client;
+	float Start_Point[3];
+	float End_Point[3];
+	float Radius;
+	float Damage;
+	int damagetype;
+
+	bool player_check;
+
+	bool trace_hit;
+	bool trace_hit_enemy;
+
+	void DoForwardTrace_Basic(float Dist=-1.0, TraceEntityFilter Func_Trace = INVALID_FUNCTION)
+	{
+		if(Func_Trace==INVALID_FUNCTION)
+			Func_Trace = Generic_Laser_BEAM_TraceWallsOnly;
+
+		float Angles[3], startPoint[3], Loc[3];
+		GetClientEyeAngles(this.client, Angles);
+		GetClientEyePosition(this.client, startPoint);
+		CF_StartLagCompensation(this.client);
+		Handle trace = TR_TraceRayFilterEx(startPoint, Angles, 11, RayType_Infinite, Func_Trace, this.client);
+		CF_EndLagCompensation(this.client);
+		if (TR_DidHit(trace))
 		{
-			SetEntityModel(prop, BEACON_MODEL_RED);
+			TR_GetEndPosition(Loc, trace);
+			delete trace;
+
+
+			if(Dist !=-1.0)
+			{
+				ConformLineDistance(Loc, startPoint, Loc, Dist);
+			}
+			this.Start_Point = startPoint;
+			this.End_Point = Loc;
+			this.trace_hit=true;
 		}
 		else
 		{
-			SetEntityModel(prop, BEACON_MODEL_BLUE);
+			delete trace;
 		}
-		
-		DispatchSpawn(prop);
-	
-		AcceptEntityInput(prop, "Enable");
-		
-		float pos[3], ang[3];
-		GetClientEyeAngles(client, ang);
-		GetClientAbsOrigin(client, pos);
-		pos[2] += 20.0;
-		ang[0] = 0.0;
-		ang[2] = 0.0; //if somehow.
-
-		SetEntPropFloat(prop, Prop_Send, "m_flModelScale", 2.0); 
-
-
-		TeleportEntity(prop, pos, ang, NULL_VECTOR);
 	}
-	return prop;
+	void DoForwardTrace_Custom(float Angles[3], float startPoint[3], float Dist=-1.0, TraceEntityFilter Func_Trace = INVALID_FUNCTION)
+	{
+		if(Func_Trace==INVALID_FUNCTION)
+			Func_Trace = Generic_Laser_BEAM_TraceWallsOnly;
+
+		float Loc[3];
+		if(this.client !=-1)
+			CF_StartLagCompensation(this.client);
+		Handle trace = TR_TraceRayFilterEx(startPoint, Angles, 11, RayType_Infinite, Func_Trace, this.client);
+		if(this.client !=-1)
+			CF_EndLagCompensation(this.client);
+		if (TR_DidHit(trace))
+		{
+			TR_GetEndPosition(Loc, trace);
+			delete trace;
+
+
+			if(Dist !=-1.0)
+			{
+				ConformLineDistance(Loc, startPoint, Loc, Dist);
+			}
+			this.Start_Point = startPoint;
+			this.End_Point = Loc;
+			this.trace_hit=true;
+		}
+		else
+		{
+			delete trace;
+		}
+	}
+
+	void Deal_Damage(Function Attack_Function = INVALID_FUNCTION)
+	{
+
+		Zero(Generic_Laser_BEAM_HitDetected);
+
+		float hullMin[3], hullMax[3];
+		hullMin[0] = -this.Radius;
+		hullMin[1] = hullMin[0];
+		hullMin[2] = hullMin[0];
+		hullMax[0] = -hullMin[0];
+		hullMax[1] = -hullMin[1];
+		hullMax[2] = -hullMin[2];
+
+		i_traced_ents_amt = 0;
+		if(this.client !=-1)
+			CF_StartLagCompensation(this.client);
+		Handle trace = TR_TraceHullFilterEx(this.Start_Point, this.End_Point, hullMin, hullMax, 1073741824, Generic_Laser_BEAM_TraceUsers, this.client);	// 1073741824 is CONTENTS_LADDER?
+		delete trace;
+		if(this.client !=-1)
+			CF_EndLagCompensation(this.client);
+		
+				
+		for (int loop = 0; loop < i_traced_ents_amt; loop++)
+		{//so we don't have to loop through max ents worth of ents when we only have 1 valid
+			int victim = Generic_Laser_BEAM_HitDetected[loop];
+			if (victim)
+			{
+				this.trace_hit_enemy=true;
+				if(this.player_check)
+				{
+					if(Attack_Function && Attack_Function != INVALID_FUNCTION)
+					{	
+						Call_StartFunction(null, Attack_Function);
+						Call_PushCell(this.client);
+						Call_PushCell(victim);
+						Call_PushCell(this.damagetype);
+						Call_PushFloat(this.Damage);
+						Call_Finish();	
+					}
+				}
+				else
+				{
+					float playerPos[3];
+					GetEntPropVector(victim, Prop_Send, "m_vecOrigin", playerPos, 0);
+
+					SDKHooks_TakeDamage(victim, this.client, this.client, this.Damage, this.damagetype, -1, NULL_VECTOR, playerPos);
+
+					if(Attack_Function && Attack_Function != INVALID_FUNCTION)
+					{	
+						Call_StartFunction(null, Attack_Function);
+						Call_PushCell(this.client);
+						Call_PushCell(victim);
+						Call_PushCell(this.damagetype);
+						Call_PushFloat(this.Damage);
+						Call_Finish();
+
+						
+					}
+				}
+			}
+		}
+	}
+}
+
+stock bool Generic_Laser_BEAM_TraceWallsOnly(int entity, int contentsMask, int client)
+{
+	return !entity;
+}
+stock bool Generic_Laser_BEAM_TraceWallAndEnemies(int entity, int contentsMask, int client)
+{
+	if(CF_IsValidTarget(entity, grabEnemyTeam(client)))
+		return true;
+
+	return !entity;
+}
+
+bool Generic_Laser_BEAM_TraceUsers(int entity, int contentsMask, int client)
+{
+	if (IsValidEntity(entity))
+	{
+		if(client == -1 || CF_IsValidTarget(entity, grabEnemyTeam(client)))
+		{
+			for(int i=0 ; i < MAXENTITIES ; i++)
+			{
+				if(!Generic_Laser_BEAM_HitDetected[i])
+				{
+					i_traced_ents_amt++;	//so we don't have to loop through max ents worth of ents when we only have 1 valid
+					Generic_Laser_BEAM_HitDetected[i] = entity;
+					break;
+				}
+			}
+		}
+	}
+	return false;
+}
+//and the other stocks I need for my stocks to work
+stock float ConformAxisValue(float src, float dst, float distCorrectionFactor)
+{
+	return src - ((src - dst) * distCorrectionFactor);
+}
+stock float DEG2RAD(float n)
+{
+	return n * 0.017453;
+}
+
+stock float DotProduct(float v1[3], float v2[4])
+{
+	return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
+}
+
+stock void VectorRotate2(float in1[3], float in2[3][4], float out[3])
+{
+	out[0] = DotProduct(in1, in2[0]);
+	out[1] = DotProduct(in1, in2[1]);
+	out[2] = DotProduct(in1, in2[2]);
+}
+
+stock void AngleMatrix(float angles[3], float matrix[3][4])
+{
+	float sr = 0.0;
+	float sp = 0.0;
+	float sy = 0.0;
+	float cr = 0.0;
+	float cp = 0.0;
+	float cy = 0.0;
+	sy = Sine(DEG2RAD(angles[1]));
+	cy = Cosine(DEG2RAD(angles[1]));
+	sp = Sine(DEG2RAD(angles[0]));
+	cp = Cosine(DEG2RAD(angles[0]));
+	sr = Sine(DEG2RAD(angles[2]));
+	cr = Cosine(DEG2RAD(angles[2]));
+	matrix[0][0] = cp * cy;
+	matrix[1][0] = cp * sy;
+	matrix[2][0] = -sp;
+	float crcy = cr * cy;
+	float crsy = cr * sy;
+	float srcy = sr * cy;
+	float srsy = sr * sy;
+	matrix[0][1] = sp * srcy - crsy;
+	matrix[1][1] = sp * srsy + crcy;
+	matrix[2][1] = sr * cp;
+	matrix[0][2] = sp * crcy + srsy;
+	matrix[1][2] = sp * crsy - srcy;
+	matrix[2][2] = cr * cp;
+	matrix[0][3] = 0.0;
+	matrix[1][3] = 0.0;
+	matrix[2][3] = 0.0;
+}
+
+stock void VectorRotate(float inPoint[3], float angles[3], float outPoint[3])
+{
+	float matRotate[3][4];
+	AngleMatrix(angles, matRotate);
+	VectorRotate2(inPoint, matRotate, outPoint);
+}
+
+stock float ClampBeamWidth(float w) { return w > 128.0 ? 128.0 : w; }
+stock int GetR(int c) { return abs((c>>16)&0xff); }
+stock int GetG(int c) { return abs((c>>8 )&0xff); }
+stock int GetB(int c) { return abs((c    )&0xff); }
+stock float fabs(float x) { return x<0 ? -x : x; }
+stock int abs(int x) { return x < 0 ? -x : x; }
+// if the distance between two points is greater than max distance allowed
+// fills result with a new destination point that lines on the line between src and dst
+stock void ConformLineDistance(float result[3], const float src[3], const float dst[3], float maxDistance, bool canExtend = false)
+{
+	float distance = GetVectorDistance(src, dst);
+	if (distance <= maxDistance && !canExtend)
+	{
+		// everything's okay.
+		result[0] = dst[0];
+		result[1] = dst[1];
+		result[2] = dst[2];
+	}
+	else
+	{
+		// need to find a point at roughly maxdistance. (FP irregularities aside)
+		float distCorrectionFactor = maxDistance / distance;
+		result[0] = ConformAxisValue(src[0], dst[0], distCorrectionFactor);
+		result[1] = ConformAxisValue(src[1], dst[1], distCorrectionFactor);
+		result[2] = ConformAxisValue(src[2], dst[2], distCorrectionFactor);
+	}
 }
