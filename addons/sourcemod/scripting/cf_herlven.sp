@@ -474,7 +474,8 @@ static void OribtalDeathRay_Tick(int client)
 		Location[2]+=25.0;
 		i_DeathRayUser = client;
 		fl_DeathRayStart = Effect_Anchor_Loc;
-		int Target = CF_GetClosestTarget(Effect_Anchor_Loc, false, Travel_Dist, 0.0, grabEnemyTeam(client), THIS_PLUGIN_NAME, Can_I_SeeTarget_Deathray);
+		//do the los check from the anchor, but distance from the lasers loc
+		int Target = CF_GetClosestTarget(Location, false, Travel_Dist, 0.0, grabEnemyTeam(client), THIS_PLUGIN_NAME, Can_I_SeeTarget_Deathray);
 		Location[2]-=25.0;
 
 		if(CF_IsValidTarget(Target, grabEnemyTeam(client)))
