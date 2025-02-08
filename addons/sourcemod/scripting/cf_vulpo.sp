@@ -376,7 +376,7 @@ void OnBuildObject(Event event, const char[] name, bool dontBroadcast)
 		if(prefix[0])
 		{
 			FormatEx(buffer, sizeof(buffer), "%s_startlevel", prefix);
-			int value = CF_GetArgI(owner, PluginName, ABILITY_BUILDINGS, buffer);
+			int value = CF_GetArgI(owner, PluginName, ABILITY_BUILDINGS, buffer, -1);
 			if(value >= 0)
 			{
 				if(GetEntProp(entity, Prop_Send, "m_iHighestUpgradeLevel") < value)
@@ -387,12 +387,12 @@ void OnBuildObject(Event event, const char[] name, bool dontBroadcast)
 			}
 			
 			FormatEx(buffer, sizeof(buffer), "%s_upgradecost", prefix);
-			value = CF_GetArgI(owner, PluginName, ABILITY_BUILDINGS, buffer);
+			value = CF_GetArgI(owner, PluginName, ABILITY_BUILDINGS, buffer, -1);
 			if(value >= 0)
 				SetEntProp(entity, Prop_Send, "m_iUpgradeMetalRequired", value);
 			
 			FormatEx(buffer, sizeof(buffer), "%s_amplifier", prefix);
-			value = CF_GetArgI(owner, PluginName, ABILITY_BUILDINGS, buffer);
+			value = CF_GetArgI(owner, PluginName, ABILITY_BUILDINGS, buffer, -1);
 			if(value >= 0)
 			{
 				SetEntityModel(entity, AMP_MODEL);
@@ -403,7 +403,7 @@ void OnBuildObject(Event event, const char[] name, bool dontBroadcast)
 			else
 			{
 				FormatEx(buffer, sizeof(buffer), "%s_upgrademax", prefix);
-				value = CF_GetArgI(owner, PluginName, ABILITY_BUILDINGS, buffer);
+				value = CF_GetArgI(owner, PluginName, ABILITY_BUILDINGS, buffer, -1);
 				if(value >= 0)
 				{
 					DataPack pack;
