@@ -863,10 +863,12 @@ public Action CFC_OpenMenu(int client, int args)
  	
  	if (!isLore)
  	{
+		ReplaceString(desc, sizeof(desc), "\\n", "\n");
  		Format(title, sizeof(title), "%s\n\nSimilar TF2 Class: %s\nRole: %s\n\n%s", name, related, role, desc);
  	}
  	else
  	{
+		ReplaceString(lore, sizeof(lore), "\\n", "\n");
  		Format(title, sizeof(title), "%s\n\n%s", name, lore);
  	}
  	
