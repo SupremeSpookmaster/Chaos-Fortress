@@ -551,6 +551,7 @@ static void SuperShotgun_Activate(int client, char abilityName[255])
 
 	fl_previus_attribute_value[client] = GetAttributeValue(weapon, 298, 1.0);
 	TF2Attrib_SetByDefIndex(weapon, 298, 0.0);
+	CF_SetSpecialResource(client, 1.0);
 
 	static float anglesB[3];
 	static float velocity[3];
@@ -598,7 +599,6 @@ static void Revert_Dmg_Bonus(int client)
 	int weapon = GetPlayerWeaponSlot(client, 0);
 	TF2Attrib_SetByDefIndex(weapon, 1, 1.0);
 	TF2Attrib_SetByDefIndex(weapon, 298, fl_previus_attribute_value[client]);
-	CF_SetSpecialResource(client, 0.0);
 	SetForceButtonState(client, false, IN_ATTACK);
 }
 
