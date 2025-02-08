@@ -26,7 +26,7 @@ public void CFDMG_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor
 
 	Call_Finish();
 	
-	if (CF_GetRoundState() == 1 && attacker != victim)
+	if (CF_GetRoundState() == 1 && attacker != victim && damage > 0.0)
 	{
 		if (damage > float(GetClientHealth(victim)))
 			damage = float(GetClientHealth(victim));
