@@ -1225,10 +1225,11 @@ native bool CF_HasAbility(int client, char pluginName[255], char abilityName[255
  * @param pluginName	The plugin name of the ability, as specified in the config as "plugin_name".
  * @param abilityName	The ability name of the ability, as specified in the config as "ability_name".
  * @param argName		The arg to check.
+ * @param defaultVal		Default value to return if the arg is not found.
  *
  * @return An int equal to the value obtained from the given ability's specified arg, -1 if no such value was present.
  */
-native int CF_GetArgI(int client, char pluginName[255], char abilityName[255], char argName[255]);
+native int CF_GetArgI(int client, char pluginName[255], char abilityName[255], char argName[255], int defaultVal = 0);
 
 /**
  * Gets a float value from a specified ability's arg.
@@ -1237,10 +1238,11 @@ native int CF_GetArgI(int client, char pluginName[255], char abilityName[255], c
  * @param pluginName	The plugin name of the ability, as specified in the config as "plugin_name".
  * @param abilityName	The ability name of the ability, as specified in the config as "ability_name".
  * @param argName		The arg to check.
+ * @param defaultVal		Default value to return if the arg is not found.
  *
  * @return A float equal to the value obtained from the given ability's specified arg, -1.0 if no such value was present.
  */
-native float CF_GetArgF(int client, char pluginName[255], char abilityName[255], char argName[255]);
+native float CF_GetArgF(int client, char pluginName[255], char abilityName[255], char argName[255], float defaultVal = 0.0);
 
 /**
  * Gets an ability slot from a specified ability.

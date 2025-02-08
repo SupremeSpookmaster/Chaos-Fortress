@@ -2603,6 +2603,7 @@ public Native_CF_HasAbility(Handle plugin, int numParams)
 public Native_CF_GetArgI(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
+	int defaultVal = GetNativeCell(5);
 	
 	if (!CF_IsPlayerCharacter(client))
 		return -1;
@@ -2611,7 +2612,7 @@ public Native_CF_GetArgI(Handle plugin, int numParams)
 	
 	ConfigMap map = new ConfigMap(g_Characters[client].MapPath);
 	if (map == null)
-		return -1;
+		return defaultVal;
 		
 	GetNativeString(2, targetPlugin, sizeof(targetPlugin));
 	GetNativeString(3, targetAbility, sizeof(targetAbility));
@@ -2621,10 +2622,10 @@ public Native_CF_GetArgI(Handle plugin, int numParams)
 	if (abilities == null)
 	{
 		DeleteCfg(map);
-		return -1;
+		return defaultVal;
 	}
 		
-	int ReturnValue = -1;
+	int ReturnValue = defaultVal;
 		
 	int i = 1;
 	char secName[255];
@@ -2638,7 +2639,7 @@ public Native_CF_GetArgI(Handle plugin, int numParams)
 		
 		if (StrEqual(targetPlugin, pluginName) && StrEqual(targetAbility, abName))
 		{
-			ReturnValue = GetIntFromConfigMap(subsection, argName, -1);
+			ReturnValue = GetIntFromConfigMap(subsection, argName, defaultVal);
 			break;
 		}
 		
@@ -2655,15 +2656,16 @@ public Native_CF_GetArgI(Handle plugin, int numParams)
 public any Native_CF_GetArgF(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
+	float defaultVal = GetNativeCell(5);
 	
 	if (!CF_IsPlayerCharacter(client))
-		return -1.0;
+		return defaultVal;
 		
 	char targetPlugin[255], targetAbility[255], argName[255], pluginName[255], abName[255];
 	
 	ConfigMap map = new ConfigMap(g_Characters[client].MapPath);
 	if (map == null)
-		return -1.0;
+		return defaultVal;
 		
 	GetNativeString(2, targetPlugin, sizeof(targetPlugin));
 	GetNativeString(3, targetAbility, sizeof(targetAbility));
@@ -2673,10 +2675,10 @@ public any Native_CF_GetArgF(Handle plugin, int numParams)
 	if (abilities == null)
 	{
 		DeleteCfg(map);
-		return -1.0;
+		return defaultVal;
 	}
 		
-	float ReturnValue = -1.0;
+	float ReturnValue = defaultVal;
 		
 	int i = 1;
 	char secName[255];
@@ -2690,7 +2692,7 @@ public any Native_CF_GetArgF(Handle plugin, int numParams)
 		
 		if (StrEqual(targetPlugin, pluginName) && StrEqual(targetAbility, abName))
 		{
-			ReturnValue = GetFloatFromConfigMap(subsection, argName, -1.0);
+			ReturnValue = GetFloatFromConfigMap(subsection, argName, defaultVal);
 			break;
 		}
 		

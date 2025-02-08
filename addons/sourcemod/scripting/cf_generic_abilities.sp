@@ -666,7 +666,7 @@ public void Weapon_Activate(int client, char abilityName[255])
 	
 	bool visible = CF_GetArgI(client, GENERIC, abilityName, "visible") != 0;
 	bool unequip = CF_GetArgI(client, GENERIC, abilityName, "unequip") != 0;
-	b_WeaponForceFired[client] = CF_GetArgI(client, GENERIC, abilityName, "force_fire") != 0;
+	b_WeaponForceFired[client] = CF_GetArgI(client, GENERIC, abilityName, "force_fire", 0) != 0;
 	bool forceSwitch = (b_WeaponForceFired[client] || CF_GetArgI(client, GENERIC, abilityName, "force_switch") != 0);
 	f_ForceFireDelay[client] = CF_GetArgF(client, GENERIC, abilityName, "swap_delay");
 	
