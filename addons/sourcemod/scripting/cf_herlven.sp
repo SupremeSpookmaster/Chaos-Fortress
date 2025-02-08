@@ -130,7 +130,6 @@ stock void ResetToZero2(any[][] array, int length1, int length2)
 static float fl_JumpPadRecharge[MAXENTITIES];
 static int Generic_Laser_BEAM_HitDetected[MAXENTITIES];
 static int i_beacon_owner[MAXENTITIES];
-static bool b_has_pistol[MAXTF2PLAYERS];
 
 static const char DeathRayPassiveSounds[][] =
 {
@@ -175,7 +174,6 @@ public void OnMapStart()
 	PrecacheScriptSound(JUMPPAD_IMPACT2);
 	Zero(Generic_Laser_BEAM_HitDetected);
 	Zero(fl_JumpPadRecharge);
-	Zero(b_has_pistol);
 
 	PrecacheSound(DEATHRAY_TOUCHDOWN_SOUND, true);
 	PrecacheSound(DEATHRAY_THROW_SOUND, true);
@@ -717,24 +715,21 @@ static void JumpPad_Touch(int entity, int other)
 
 	float Power = CF_GetArgF(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Jump Power");
 	float CoolDown = CF_GetArgF(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Jump Cooldown");
-	
-	fl_JumpPadRecharge[entity] = GameTime + CoolDown;
-
-	TF2_AddCondition(other, TFCond_TeleportedGlow, CoolDown);
-
-	EmitGameSoundToAll(JUMPPAD_IMPACT1, entity);
-	EmitGameSoundToAll(JUMPPAD_IMPACT2, entity);
 
 	DataPack pack = new DataPack();
-	pack.WriteCell(other);
+	pack.WriteCell(EntIndexToEntRef(other));
+	pack.WriteCell(EntIndexToEntRef(entity));
 	pack.WriteFloat(Power);
+	pack.WriteFloat(CoolDown);
 	RequestFrame(Teleport_JumpPad, pack);
 }
 static void Teleport_JumpPad(DataPack pack)
 {
-	ResetPack(pack);
-	int client = ReadPackCell(pack);
-	float Power = ReadPackFloat(pack);
+	pack.Reset();
+	int client = EntRefToEntIndex(pack.ReadCell());
+	int pad = EntRefToEntIndex(pack.ReadCell());
+	float Power = pack.ReadFloat();
+	float CoolDown = pack.ReadFloat();
 
 	// respect any existing velocity, but completely override Z
 	float playerVelocity[3];
@@ -742,6 +737,13 @@ static void Teleport_JumpPad(DataPack pack)
 	playerVelocity[2] = Power;
 	SetEntPropVector(client, Prop_Data, "m_vecVelocity", playerVelocity);
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, playerVelocity);
+
+	fl_JumpPadRecharge[pad] = GetGameTime() + CoolDown;
+
+	TF2_AddCondition(client, TFCond_TeleportedGlow, CoolDown);
+
+	EmitGameSoundToAll(JUMPPAD_IMPACT1, pad);
+	EmitGameSoundToAll(JUMPPAD_IMPACT2, pad);
 }
 
 static Action Timer_BlockTeleEffects(Handle timer, int Ref)
@@ -804,9 +806,13 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 	{
 		FakeClientCommand(client, "destory 0; destory 1; destory 2; destory 3");
 	}
-	b_has_pistol[client] = false;
-	b_DeathRay_Active[client] = false;
-	SDKUnhook(client, SDKHook_PreThink, OribtalDeathRay_Tick);
+
+	//don't kill deathray on client death.
+	if(reason != CF_CRR_DEATH && reason != CF_CRR_RESPAWNED)
+	{
+		b_DeathRay_Active[client] = false;
+		SDKUnhook(client, SDKHook_PreThink, OribtalDeathRay_Tick);
+	}
 }
 public Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int weapon)
 {
