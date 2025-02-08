@@ -1203,16 +1203,7 @@ public void CFC_MapEnd()
 
 public void CF_DestroyAllBuildings(int client)
 {
-	for (int i = MaxClients + 1; i < 2049; i++)
-	{
-		if (!IsValidEntity(i))
-			continue;
-
-		if (IsABuilding(i) && (GetEntPropEnt(i, Prop_Send, "m_hBuilder") == client || GetEntPropEnt(i, Prop_Send, "m_hOwnerEntity") == client))
-		{
-			SDKHooks_TakeDamage(i, 0, 0, 999999999.0);
-		}
-	}
+	FakeClientCommand(client, "destroy 0; destroy 1; destroy 2; destroy 3");
 }
 
 /**
