@@ -804,7 +804,7 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
 	if(reason == CF_CRR_SWITCHED_CHARACTER)
 	{
-		FakeClientCommand(client, "destory 0; destory 1; destory 2; destory 3");
+		FakeClientCommand(client, "destroy 0; destroy 1; destroy 2; destroy 3");
 	}
 
 	//don't kill deathray on client death.

@@ -157,6 +157,7 @@ CF_StuckMethod g_StuckMethod[MAXPLAYERS + 1] = { CF_StuckMethod_None, ... };
 char s_OnResizeFailure[MAXPLAYERS + 1][255];
 char s_OnResizeSuccess[MAXPLAYERS + 1][255];
 bool b_WeaponForceFired[MAXPLAYERS + 1] = { false, ... };
+bool b_WeaponRevertWhenFired[2049] = { false, ... };
 int i_ForceFireSlot[MAXPLAYERS + 1] = { 0, ... };
 float f_ForceFireDelay[MAXPLAYERS + 1] = { 0.0, ... };
 
@@ -215,11 +216,18 @@ public void OnPluginStart()
 {
 }
 
+public void OnMapEnd()
+{
+	for (int i = 0; i < 2049; i++)
+		b_WeaponRevertWhenFired[i] = false;
+}
+
 public void OnEntityDestroyed(int entity)
 {
 	if (entity > 0 && entity < 2049)
 	{
 		Weapon_EndTime[entity] = 0.0;
+		b_WeaponRevertWhenFired[entity] = false;
 	}
 }
 
@@ -721,6 +729,7 @@ public void Weapon_Activate(int client, char abilityName[255])
 		DeleteCfg(map);
 		
 		EquipPlayerWeapon(client, weapon);
+		b_WeaponRevertWhenFired[weapon] = CF_GetArgI(client, GENERIC, abilityName, "revert_when_fired") != 0;
 		
 		if (duration > 0.0 && !b_WeaponForceFired[client])
 		{	
@@ -745,12 +754,43 @@ public void Weapon_Activate(int client, char abilityName[255])
 
 public Action TF2_CalcIsAttackCritical(int client, int weapon, char[]weaponname, bool &result)
 {
-	if (b_WeaponForceFired[client])
+	if (b_WeaponForceFired[client] || (IsValidEntity(weapon) && b_WeaponRevertWhenFired[weapon]))
 	{
+		if (b_WeaponForceFired[client])
+			CreateTimer(f_ForceFireDelay[client], Weapon_GiveBackAll, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+		else if (IsValidEntity(weapon) && b_WeaponRevertWhenFired[weapon])
+		{
+			DataPack pack = new DataPack();
+			CreateDataTimer(f_ForceFireDelay[client], Weapon_GiveBackSpecific, pack, TIMER_FLAG_NO_MAPCHANGE);
+			WritePackCell(pack, GetClientUserId(client));
+			for (int i = 0; i < 5; i++)
+			{
+				if (GetPlayerWeaponSlot(client, i) == weapon)
+				{
+					WritePackCell(pack, i);
+					break;
+				}
+			}
+		}
+
 		b_WeaponForceFired[client] = false;
+		b_WeaponRevertWhenFired[client] = false;
 		SetForceButtonState(client, false, IN_ATTACK);
-		CreateTimer(f_ForceFireDelay[client], Weapon_GiveBackAll, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
 	}
+
+	return Plugin_Continue;
+}
+
+public Action Weapon_GiveBackSpecific(Handle timer, DataPack pack)
+{
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	int slot = ReadPackCell(pack);
+	if (!IsValidMulti(client))
+		return Plugin_Continue;
+
+	TF2_RemoveWeaponSlot(client, slot);
+	ClientOldWeapons[client][slot].GiveBack(client);
 
 	return Plugin_Continue;
 }

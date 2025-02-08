@@ -1401,6 +1401,16 @@ stock void ForceViewmodelAnimation(int client, int sequence)
     SetEntProp(ent, Prop_Send, "m_nSequence", sequence);
 }
 
+stock void DoMuzzleParticle(int client, char effect[255])
+{
+	float ang[3], pos[3];
+	GetClientEyeAngles(client, ang);
+	GetClientAbsOrigin(client, pos);
+	pos[2] += 60.0 * CF_GetCharacterScale(client);
+	GetPointInDirection(pos, ang, 20.0, pos);
+	SpawnParticle(pos, effect, 2.0);
+}
+
 stock void HidePlayerWeapon(int client, float duration)
 {
 	int ent = TF2_GetActiveWeapon(client);

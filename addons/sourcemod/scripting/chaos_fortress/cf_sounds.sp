@@ -40,7 +40,7 @@ public void CFS_MakeNatives()
 
 public KeyValType GetRand(char Config[255], char Sound[255], char Output[255])
 {
-	if (StrEqual(Config, ""))	//This check should not be necessary, but line 37 throws errors if it's not here.
+	if (!Config[0])	//This check should not be necessary, but line 37 throws errors if it's not here.
 		return KeyValType_Null;
 
 	ConfigMap cfgMap = new ConfigMap(Config);
@@ -73,16 +73,31 @@ public KeyValType GetRand(char Config[255], char Sound[255], char Output[255])
 	
 	char OldKey[255];
 	Format(OldKey, sizeof(OldKey), "%s", key);
-	
+	KeyValType ReturnValue = KeyValType_Null;
 	if (StrContains(key, ".") != -1)
 	{
 		ReplaceString(key, sizeof(key), ".", "\\.");
+		Format(Output, sizeof(Output), "%s", OldKey);
+		PrintToServer("Section");
+		ReturnValue = KeyValType_Section;
 		#if defined DEBUG_SOUNDS
 		PrintToServer("CF_GetRandomSound retrieved a ConfigMap which contained a '.' in its path. New path: %s.%s", snd, key);
 		PrintToServer("The key itself is currently %s", key);
 		#endif
 	}
+	else
+	{
+		newMap.Get(key, Output, sizeof(Output));
+		ReturnValue = KeyValType_Value;
+		PrintToServer("Value");
+	}
+
+	PrintToServer("Output: %s", Output);
 	
+	/*char fullPath[255];
+	Format(fullPath, sizeof(fullPath), "character.sounds.%s.%s", Sound, key);
+	PrintToServer("Full path should be %s.", fullPath);
+
 	KeyValType ReturnValue = KeyValType_Null;
 	
 	switch(newMap.GetKeyValType(key))
@@ -91,9 +106,9 @@ public KeyValType GetRand(char Config[255], char Sound[255], char Output[255])
 		{
 			newMap.Get(key, Output, sizeof(Output));
 			
-			#if defined DEBUG_SOUNDS
+			//#if defined DEBUG_SOUNDS
 			PrintToServer("CF_GetRandomSound retrieved a ConfigMap with KeyValType_Value, the value is %s.", Output);
-			#endif
+			//#endif
 			
 			ReturnValue = KeyValType_Value;
 		}
@@ -101,19 +116,19 @@ public KeyValType GetRand(char Config[255], char Sound[255], char Output[255])
 		{
 			Format(Output, sizeof(Output), "%s", OldKey);
 			
-			#if defined DEBUG_SOUNDS
+			//#if defined DEBUG_SOUNDS
 			PrintToServer("CF_GetRandomSound retrieved a ConfigMap with KeyValType_Section, the section name is %s.", Output);
-			#endif
+			//#endif
 			
 			ReturnValue = KeyValType_Section;
 		}
 		default:
 		{
-			#if defined DEBUG_SOUNDS
+			//#if defined DEBUG_SOUNDS
 			PrintToServer("CF_GetRandomSound retrieved a ConfigMap with KeyValType_Null, meaning the section does not exist. This should not be possible.");
-			#endif
+			//#endif
 		}
-	}
+	}*/
 	
 	DeleteCfg(cfgMap);
 	return ReturnValue;
@@ -132,15 +147,16 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 	}
 	
 	char snd[255] = ""; char checkFile[255];
-	KeyValType kvType = CF_GetRandomSound(ourConf, Sound, snd, sizeof(snd));
 	Format(checkFile, sizeof(checkFile), "sound/");
+	KeyValType kvType = GetRand(ourConf, Sound, snd);//CF_GetRandomSound(ourConf, Sound, snd, sizeof(snd));
 	for (int i = 0; i < sizeof(snd); i++)
 	{
 		char character = snd[i];
 		if (!IsCharSoundscript(character))
 			Format(checkFile, sizeof(checkFile), "%s%c", checkFile, character);
 	}
-	
+
+	PrintToServer("Sound should be %s", checkFile);
 
 	if (!CheckFile(checkFile))
 		return false;
@@ -149,6 +165,8 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 		return false;
 
 	PrecacheSound(snd);
+
+	PrintToServer("Exists!");
 
 	int playMode = 0;
 	

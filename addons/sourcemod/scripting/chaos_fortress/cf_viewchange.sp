@@ -140,7 +140,7 @@ stock int TF2_GetClassnameSlot(const char[] classname, bool econ=false)
 	{
 		return econ ? TFWeaponSlot_Building : TFWeaponSlot_Secondary;
 	}
-	else if(!StrContains(classname, "tf_weapon_i") || !StrContains(classname, "tf_weapon_pda_engineer_d"))	// Invis & Destory PDA
+	else if(!StrContains(classname, "tf_weapon_i") || !StrContains(classname, "tf_weapon_pda_engineer_d"))	// Invis & Destruction PDA
 	{
 		return econ ? TFWeaponSlot_Item1 : TFWeaponSlot_Building;
 	}

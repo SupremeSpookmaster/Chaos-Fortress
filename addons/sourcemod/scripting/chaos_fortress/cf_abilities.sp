@@ -4750,6 +4750,7 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 				Call_PushCellRef(hs);
 				Call_PushCellRef(hsEffect);
 				Call_PushCellRef(crit);
+				Call_PushArray(hitPos, sizeof(hitPos));
 
 				Call_Finish();
 			}
