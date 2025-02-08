@@ -1883,6 +1883,11 @@ public void CF_DestroyAllBuildings(int client)
  	GetAngleVectors(angles, buffer, NULL_VECTOR, NULL_VECTOR);
  	for (int i = 0; i < 3; i++)
  		vel[i] = buffer[i] * force;
+
+	if (GetEntityFlags(client) & FL_ONGROUND != 0)
+	{
+		vel[2] += 200.0;
+	}
  		
  	if (OverrideCurrentVelocity)
  		TeleportEntity(client, _, _, vel);

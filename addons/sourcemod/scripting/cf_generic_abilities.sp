@@ -38,6 +38,7 @@ enum struct OldWeapon
 	char fireAbility[255]
 	char firePlugin[255]; 
 	char fireSound[255];
+	char fireSlot[255];
 	
 	bool visible;
 	
@@ -80,6 +81,7 @@ enum struct OldWeapon
 		GetAttribStringFromWeapon(weapon, this.atts);
 		CF_GetWeaponAbility(weapon, this.fireAbility, 255, this.firePlugin, 255);
 		CF_GetWeaponSound(weapon, this.fireSound, 255);
+		CF_GetWeaponAbilitySlot(weapon, this.fireSlot, 255);
 		this.visible = CF_GetWeaponVisibility(weapon);
 		
 		this.slot = weaponSlot;
@@ -98,7 +100,7 @@ enum struct OldWeapon
 		
 		if (!StrEqual(this.classname, ""))
 		{
-			ReturnValue = CF_SpawnWeapon(client, this.classname, this.itemIndex, this.itemLevel, this.quality, this.slot, this.reserve, this.clip, this.atts, "", this.visible, true, -1, false, this.fireAbility, this.firePlugin, this.fireSound, false);
+			ReturnValue = CF_SpawnWeapon(client, this.classname, this.itemIndex, this.itemLevel, this.quality, this.slot, this.reserve, this.clip, this.atts, this.fireSlot, this.visible, true, -1, false, this.fireAbility, this.firePlugin, this.fireSound, false);
 			
 			if (IsValidEntity(ReturnValue))
 			{
@@ -154,10 +156,15 @@ Handle g_BlockTimers[MAXPLAYERS+1][4];
 CF_StuckMethod g_StuckMethod[MAXPLAYERS + 1] = { CF_StuckMethod_None, ... };
 char s_OnResizeFailure[MAXPLAYERS + 1][255];
 char s_OnResizeSuccess[MAXPLAYERS + 1][255];
+bool b_WeaponForceFired[MAXPLAYERS + 1] = { false, ... };
+int i_ForceFireSlot[MAXPLAYERS + 1] = { 0, ... };
+float f_ForceFireDelay[MAXPLAYERS + 1] = { 0.0, ... };
 
 public void CF_OnCharacterCreated(int client)
 {
 	Generic_DeleteTimers(client);
+	b_WeaponForceFired[client] = false;
+	SetForceButtonState(client, false, IN_ATTACK);
 }
 
 public void Generic_DeleteTimers(int client)
@@ -622,30 +629,10 @@ public void Limit_Activate(int client, char abilityName[255])
 	}
 }
 
-public void Weapon_Activate(int client, char abilityName[255])
+public void Weapon_StoreOldWeapon(int client, int weaponSlot, float duration)
 {
-	char classname[255], atts[255], fireAbility[255], firePlugin[255], fireSound[255];
-	
-	CF_GetArgS(client, GENERIC, abilityName, "classname", classname, sizeof(classname));
-	CF_GetArgS(client, GENERIC, abilityName, "fire_ability", fireAbility, sizeof(fireAbility));
-	CF_GetArgS(client, GENERIC, abilityName, "fire_plugin", firePlugin, sizeof(firePlugin));
-	CF_GetArgS(client, GENERIC, abilityName, "fire_sound", fireSound, sizeof(fireSound));
-	CF_GetArgS(client, GENERIC, abilityName, "attributes", atts, sizeof(atts));
-	
-	int index = CF_GetArgI(client, GENERIC, abilityName, "index");
-	int level = CF_GetArgI(client, GENERIC, abilityName, "level");
-	int quality = CF_GetArgI(client, GENERIC, abilityName, "quality");
-	int weaponSlot = CF_GetArgI(client, GENERIC, abilityName, "weapon_slot");
-	int reserve = CF_GetArgI(client, GENERIC, abilityName, "reserve");
-	int clip = CF_GetArgI(client, GENERIC, abilityName, "clip");
-	
-	bool visible = CF_GetArgI(client, GENERIC, abilityName, "visible") != 0;
-	bool unequip = CF_GetArgI(client, GENERIC, abilityName, "unequip") != 0;
-	bool forceSwitch = CF_GetArgI(client, GENERIC, abilityName, "force_switch") != 0;
-	
-	float duration = CF_GetArgF(client, GENERIC, abilityName, "duration");
-	
 	int current = GetPlayerWeaponSlot(client, weaponSlot);
+
 	if (IsValidEntity(current) && duration > 0.0)
 	{
 		if (Weapon_EndTime[current] == 0.0)	//Make sure it is not also a timed weapon
@@ -657,8 +644,50 @@ public void Weapon_Activate(int client, char abilityName[255])
 			ClientOldWeapons[client][weaponSlot].Delete();
 		}
 	}
+}
+
+public void Weapon_Activate(int client, char abilityName[255])
+{
+	char classname[255], atts[255], fireAbility[255], firePlugin[255], fireSound[255], fireSlot[255];
 	
-	int weapon = CF_SpawnWeapon(client, classname, index, level, quality, weaponSlot, reserve, clip, atts, "", visible, unequip, -1, false, fireAbility, firePlugin, fireSound, false);
+	CF_GetArgS(client, GENERIC, abilityName, "classname", classname, sizeof(classname));
+	CF_GetArgS(client, GENERIC, abilityName, "fire_ability", fireAbility, sizeof(fireAbility));
+	CF_GetArgS(client, GENERIC, abilityName, "fire_plugin", firePlugin, sizeof(firePlugin));
+	CF_GetArgS(client, GENERIC, abilityName, "fire_sound", fireSound, sizeof(fireSound));
+	CF_GetArgS(client, GENERIC, abilityName, "fire_slot", fireSlot, sizeof(fireSlot));
+	CF_GetArgS(client, GENERIC, abilityName, "attributes", atts, sizeof(atts));
+	
+	int index = CF_GetArgI(client, GENERIC, abilityName, "index");
+	int level = CF_GetArgI(client, GENERIC, abilityName, "level");
+	int quality = CF_GetArgI(client, GENERIC, abilityName, "quality");
+	int weaponSlot = CF_GetArgI(client, GENERIC, abilityName, "weapon_slot");
+	int reserve = CF_GetArgI(client, GENERIC, abilityName, "reserve");
+	int clip = CF_GetArgI(client, GENERIC, abilityName, "clip");
+	
+	bool visible = CF_GetArgI(client, GENERIC, abilityName, "visible") != 0;
+	bool unequip = CF_GetArgI(client, GENERIC, abilityName, "unequip") != 0;
+	b_WeaponForceFired[client] = CF_GetArgI(client, GENERIC, abilityName, "force_fire") != 0;
+	bool forceSwitch = (b_WeaponForceFired[client] || CF_GetArgI(client, GENERIC, abilityName, "force_switch") != 0);
+	f_ForceFireDelay[client] = CF_GetArgF(client, GENERIC, abilityName, "swap_delay");
+	
+	float duration = CF_GetArgF(client, GENERIC, abilityName, "duration");
+	
+	if (b_WeaponForceFired[client])
+	{
+		for (int i = 0; i < 5; i++)
+		{
+			if (IsWeaponActive(client, i))
+				i_ForceFireSlot[client] = i;
+
+			Weapon_StoreOldWeapon(client, i, duration);
+		}
+
+		TF2_RemoveAllWeapons(client);
+	}
+	else
+		Weapon_StoreOldWeapon(client, weaponSlot, duration);
+	
+	int weapon = CF_SpawnWeapon(client, classname, index, level, quality, weaponSlot, reserve, clip, atts, fireSlot, visible, unequip, -1, false, fireAbility, firePlugin, fireSound, false);
 	if (IsValidEntity(weapon))
 	{
 		char conf[255], path[255];
@@ -693,7 +722,7 @@ public void Weapon_Activate(int client, char abilityName[255])
 		
 		EquipPlayerWeapon(client, weapon);
 		
-		if (duration > 0.0)
+		if (duration > 0.0 && !b_WeaponForceFired[client])
 		{	
 			Weapon_EndTime[weapon] = GetGameTime() + duration;
 			
@@ -705,7 +734,56 @@ public void Weapon_Activate(int client, char abilityName[255])
 		{
 			Weapon_SwitchToWeapon(client, weapon);
 		}
+
+		if (b_WeaponForceFired[client])
+		{
+			SetForceButtonState(client, true, IN_ATTACK);
+			b_WeaponForceFired[client] = true;
+		}
 	}
+}
+
+public Action TF2_CalcIsAttackCritical(int client, int weapon, char[]weaponname, bool &result)
+{
+	if (b_WeaponForceFired[client])
+	{
+		b_WeaponForceFired[client] = false;
+		SetForceButtonState(client, false, IN_ATTACK);
+		CreateTimer(f_ForceFireDelay[client], Weapon_GiveBackAll, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+	}
+
+	return Plugin_Continue;
+}
+
+public Action Weapon_GiveBackAll(Handle timer, int id)
+{
+	int client = GetClientOfUserId(id);
+	if (IsValidMulti(client))
+	{
+		for (int i = 0; i < 5; i++)
+		{
+			int wep = GetPlayerWeaponSlot(client, i);
+			if (IsValidEntity(wep))
+			{
+				TF2_RemoveWeaponSlot(client, i);
+				RemoveEntity(wep);
+			}
+
+			ClientOldWeapons[client][i].GiveBack(client);
+		}
+
+		int weapon = GetPlayerWeaponSlot(client, i_ForceFireSlot[client]);
+		if (IsValidEntity(weapon))
+		{
+			char classname[255];
+			GetEntityClassname(weapon, classname, sizeof(classname));
+			Format(classname, sizeof(classname), "use %s", classname);
+
+			FakeClientCommand(client, classname);
+		}
+	}
+
+	return Plugin_Continue;
 }
 
 public Action Weapon_PreThink(int client)
@@ -925,6 +1003,8 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 	{
 		f_CondEndTime[client][j] = 0.0;
 	}
+	b_WeaponForceFired[client] = false;
+	SetForceButtonState(client, false, IN_ATTACK);
 }
 
 public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
@@ -943,7 +1023,6 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 		}
 			
 		CF_GetAbilityConfigMapPath(attacker, GENERIC, ARCHETYPE, archetype, path, sizeof(path));
-		CPrintToChatAll("Path should be %s", path);
 		ConfigMap interactions = map.GetSection(path);
 		if (interactions != null)
 		{
@@ -985,7 +1064,6 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 		}
 			
 		CF_GetAbilityConfigMapPath(victim, GENERIC, ARCHETYPE, archetype, path, sizeof(path));
-		CPrintToChatAll("Path should be %s", path);
 		ConfigMap interactions = map.GetSection(path);
 		if (interactions != null)
 		{

@@ -4703,17 +4703,17 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 	Function checkFunction = GetNativeFunction(14);
 	GetNativeString(15, particle, sizeof(particle));
 
-	float startPos[3], endPos[3], shootPos[3], hitPos[3];
+	float startPos[3], endPos[3], shootPos[3], hitPos[3], shootAng[3];
 	GetClientAbsOrigin(client, startPos);
 	startPos[2] += 60.0 * CF_GetCharacterScale(client);
 
 	for (int i = 0; i < 3; i++)
-		ang[i] += GetRandomFloat(-spread, spread);
+		shootAng[i] = ang[i] + GetRandomFloat(-spread, spread);
 
-	GetPointInDirection(startPos, ang, 20.0, shootPos);
+	GetPointInDirection(startPos, shootAng, 20.0, shootPos);
 
 	GetClientEyePosition(client, startPos);
-	GetPointInDirection(startPos, ang, 9999.0, endPos);
+	GetPointInDirection(startPos, shootAng, 9999.0, endPos);
 
 	//TODO: Get impact effect/sound of hitPos, like what PNPCS does for its melee trace
 	ArrayList victims = CF_DoBulletTrace(client, startPos, endPos, pierce, checkTeam, checkPlugin, checkFunction, hitPos);
@@ -4778,7 +4778,6 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 				}
 
 				damageToDeal *= mult;
-				CPrintToChatAll("Falloff mult: %f", mult);
 			}
 		}
 
@@ -4805,7 +4804,6 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 			//	damageToDeal *= GetAttributeValue(weapon, )
 		}
 
-		CPrintToChatAll("Headshot: %i, damage: %.2f", hs, damageToDeal);
 		SDKHooks_TakeDamage(vic, client, client, damageToDeal, DMG_BULLET, (IsValidEntity(weapon) ? weapon : -1), _, hitPos);
 	}
 

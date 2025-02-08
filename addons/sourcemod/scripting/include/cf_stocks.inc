@@ -1369,6 +1369,29 @@ public Action delete_spellbook(Handle Fusion_delete_spellbook_handle, int client
 	return Plugin_Continue;
 }
 
+/**
+ * Checks if the weapon a player is currently holding matches a weapon in a specific slot.
+ *
+ * @param client		Client to check.
+ * @param slot		Weapon slot to check for.
+ *
+ * @return			True if the player is holding the given weapon slot, false otherwise.
+ */
+stock bool IsWeaponActive(int client, int slot)
+{
+	if (!IsValidMulti(client))
+	return false;
+	
+	if (!IsValidEntity(GetPlayerWeaponSlot(client, slot)))
+	return false;
+	
+	char ActiveWeapon[255], CheckWeapon[255];
+	GetClientWeapon(client, ActiveWeapon, sizeof(ActiveWeapon));
+	GetEntityClassname(GetPlayerWeaponSlot(client, slot), CheckWeapon, sizeof(CheckWeapon));
+	
+	return StrEqual(ActiveWeapon, CheckWeapon);
+}
+
 stock void ForceViewmodelAnimation(int client, int sequence)
 {
     int ent = GetEntPropEnt(client, Prop_Send, "m_hViewModel");

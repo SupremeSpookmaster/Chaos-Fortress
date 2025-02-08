@@ -935,7 +935,7 @@ native bool CF_IsPlayerCharacter(int client);
  * @param reserve		The weapon's reserve ammo.
  * @param clip			The ammo held in the weapon's clip/magazine/whatever.
  * @param att			The weapon's attributes.
- * @param override		Optional weapon model override (THIS IS UNIMPLEMENTED, USE A CUSTOM ATTRIBUTE INSTEAD)
+ * @param fireSlot		Ability slot to trigger when this weapon is fired.
  * @param visible		Should the weapon be visible?
  * @param unequip		Should whichever weapon(s) currently in this weapon's slot be removed before equipping this weapon?
  * @param ForceClass	Class to force this weapon to use the animations of, if using ViewChange. 1-9 for the mercs, anything above 9 is considered all-class. (UNIMPLEMENTED)
@@ -947,7 +947,7 @@ native bool CF_IsPlayerCharacter(int client);
  *
  * @return The entity index of the spawned weapon, -1 if not valid.
  */
-native int CF_SpawnWeapon(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255] = "", bool visible = true, bool unequip = true, int ForceClass = 0, bool spawn = false, char fireAbility[255] = "", char firePlugin[255] = "", char fireSound[255] = "", bool autoEquip = true);
+native int CF_SpawnWeapon(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char fireSlot[255] = "", bool visible = true, bool unequip = true, int ForceClass = 0, bool spawn = false, char fireAbility[255] = "", char firePlugin[255] = "", char fireSound[255] = "", bool autoEquip = true);
 
 /**
  * Gets the ability name and plugin name of a given weapon.
@@ -961,6 +961,17 @@ native int CF_SpawnWeapon(int client, char[] name, int index, int level, int qua
  * @return The ability and plugin names of the ability used by the given weapon when it attacks, stored in abBuffer and plugBuffer respectively.
  */
 native CF_GetWeaponAbility(int weapon, char abBuffer[255], int abLen, char plugBuffer[255], int plugLen);
+
+/**
+ * Gets the ability slot triggered when this weapon fires.
+ * 
+ * @param weapon		The weapon to check.
+ * @param buffer		Output buffer.
+ * @param size			Output buffer length.
+ * 
+ * @param	The ability slot, stored in the output buffer.
+ */
+native CF_GetWeaponAbilitySlot(int weapon, char[] buffer, int size);
 
 /**
  * Gets the sound slot used by a given weapon.

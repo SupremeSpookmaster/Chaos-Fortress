@@ -158,7 +158,8 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 	bool global = false;
 	int maxPitch = 100;
 	int minPitch = 100;
-	
+	int times = 1;
+
 	bool CanPlay = true;
 	
 	if (kvType == KeyValType_Section)
@@ -187,6 +188,7 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 			
 			minPitch = GetIntFromConfigMap(section, "pitch_min", 100);
 			maxPitch = GetIntFromConfigMap(section, "pitch_max", 100);
+			times = GetIntFromConfigMap(section, "times", 1);
 				
 			CanPlay = GetRandomFloat(0.0, 1.0) <= chance;
 			
@@ -229,33 +231,36 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 	{
 		TFTeam targTeam = TFTeam_Unassigned;
 		
-		switch(playMode)
+		for (int plays = 0; plays < times; plays++)
 		{
-			case 0:	//Everyone
+			switch(playMode)
 			{
-				EmitSoundToAll(snd, global ? SOUND_FROM_PLAYER : source, CF_SndChans[channel], level, _, volume, GetRandomInt(minPitch, maxPitch));
-			}
-			case 1:	//Self only
-			{
-				EmitSoundToClient(source, snd, _, CF_SndChans[channel], level, _, volume, GetRandomInt(minPitch, maxPitch));
-			}
-			case 2: //Allies only
-			{
-				targTeam = TF2_GetClientTeam(source);
-			}
-			case 3:	//Enemies only
-			{
-				targTeam = grabEnemyTeam(source);
-			}
-		}
-		
-		if (targTeam != TFTeam_Unassigned)
-		{
-			for (int i = 1; i <= MaxClients; i++)
-			{
-				if (IsValidMulti(i, false, _, true, targTeam) && i != source)
+				case 0:	//Everyone
 				{
-					EmitSoundToClient(i, snd, global ? SOUND_FROM_PLAYER : source, CF_SndChans[channel], level, _, volume, GetRandomInt(minPitch, maxPitch));
+					EmitSoundToAll(snd, global ? SOUND_FROM_PLAYER : source, CF_SndChans[channel], level, _, volume, GetRandomInt(minPitch, maxPitch));
+				}
+				case 1:	//Self only
+				{
+					EmitSoundToClient(source, snd, _, CF_SndChans[channel], level, _, volume, GetRandomInt(minPitch, maxPitch));
+				}
+				case 2: //Allies only
+				{
+					targTeam = TF2_GetClientTeam(source);
+				}
+				case 3:	//Enemies only
+				{
+					targTeam = grabEnemyTeam(source);
+				}
+			}
+			
+			if (targTeam != TFTeam_Unassigned)
+			{
+				for (int i = 1; i <= MaxClients; i++)
+				{
+					if (IsValidMulti(i, false, _, true, targTeam) && i != source)
+					{
+						EmitSoundToClient(i, snd, global ? SOUND_FROM_PLAYER : source, CF_SndChans[channel], level, _, volume, GetRandomInt(minPitch, maxPitch));
+					}
 				}
 			}
 		}

@@ -1,6 +1,7 @@
 #include "chaos_fortress/cf_viewchange.sp"
 
 char s_WeaponFireAbility[2049][255];
+char s_WeaponFireAbilitySlot[2049][255];
 char s_WeaponFirePlugin[2049][255];
 char s_WeaponFireSound[2049][255];
 
@@ -13,6 +14,7 @@ public void CFW_OnEntityDestroyed(int entity)
 {
 	i_CharacterParticleOwner[entity] = -1;
 	s_WeaponFireAbility[entity] = "";
+	s_WeaponFireAbilitySlot[entity] = "";
 	s_WeaponFirePlugin[entity] = "";
 	s_WeaponFireSound[entity] = "";
 	b_WeaponIsVisible[entity] = false;
@@ -36,6 +38,11 @@ public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] classname,
 	if (!StrEqual(s_WeaponFireAbility[weapon], ""))
 	{
 		CF_DoAbility(client, s_WeaponFirePlugin[weapon], s_WeaponFireAbility[weapon]);
+	}
+
+	if (!StrEqual(s_WeaponFireAbilitySlot[weapon], ""))
+	{
+		CF_DoAbilitySlot(client, StringToInt(s_WeaponFireAbilitySlot[weapon]));
 	}
 	
 	if (!StrEqual(s_WeaponFireSound[weapon], ""))
@@ -116,6 +123,7 @@ public void CFW_MakeNatives()
 {
 	CreateNative("CF_SpawnWeapon", Native_CF_SpawnWeapon);
 	CreateNative("CF_GetWeaponAbility", Native_CF_GetWeaponAbility);
+	CreateNative("CF_GetWeaponAbilitySlot", Native_CF_GetWeaponAbilitySlot);
 	CreateNative("CF_GetWeaponSound", Native_CF_GetWeaponSound);
 	CreateNative("CF_GetWeaponVisibility", Native_CF_GetWeaponVisibility);
 }
@@ -139,8 +147,8 @@ public Native_CF_SpawnWeapon(Handle plugin, int numParams)
  	char att[255];
  	GetNativeString(9, att, sizeof(att));
  	
- 	char override[255];
- 	GetNativeString(10, override, sizeof(override));
+ 	char abilitySlot[255];
+ 	GetNativeString(10, abilitySlot, sizeof(abilitySlot));
  	
  	bool visible = GetNativeCell(11) != 0;
  	bool unequip = GetNativeCell(12) != 0;
@@ -153,14 +161,14 @@ public Native_CF_SpawnWeapon(Handle plugin, int numParams)
  	bool autoEquip = GetNativeCell(18);
  	
 	b_EquippingWeapon[client] = true;
- 	int weapon = SpawnWeapon_Special(client, name, index, level, qual, slot, reserve, clip, att, override, visible, unequip, ForceClass, spawn, fireAbility, firePlugin, fireSound, autoEquip);
+ 	int weapon = SpawnWeapon_Special(client, name, index, level, qual, slot, reserve, clip, att, abilitySlot, visible, unequip, ForceClass, spawn, fireAbility, firePlugin, fireSound, autoEquip);
 	b_EquippingWeapon[client] = false;
 
 	return weapon;
  }
 
 //Credit to Artvin and Batfoxkid for this, I just took it from Zombie Riot and modified some things.
-stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char override[255], bool visible, bool unequip, int ForceClass, bool spawn, char fireAbility[255], char firePlugin[255], char fireSound[255], bool autoEquip)
+stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int qual, int slot, int reserve, int clip, const char[] att, char abilitySlot[255], bool visible, bool unequip, int ForceClass, bool spawn, char fireAbility[255], char firePlugin[255], char fireSound[255], bool autoEquip)
 {
 	if(StrEqual(name, "saxxy", false))	// if "saxxy" is specified as the name, replace with appropiate name
 	{ 
@@ -273,6 +281,7 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 	}
 	
 	strcopy(s_WeaponFireAbility[entity], 255, fireAbility);
+	strcopy(s_WeaponFireAbilitySlot[entity], 255, abilitySlot);
 	strcopy(s_WeaponFirePlugin[entity], 255, firePlugin);
 	strcopy(s_WeaponFireSound[entity], 255, fireSound);
 	b_WeaponIsVisible[entity] = visible;
@@ -337,6 +346,19 @@ public Native_CF_GetWeaponAbility(Handle plugin, int numParams)
 	
 	SetNativeString(2, s_WeaponFireAbility[ent], abLen);
 	SetNativeString(4, s_WeaponFirePlugin[ent], plugLen);
+}
+
+public Native_CF_GetWeaponAbilitySlot(Handle plugin, int numParams)
+{
+	int ent = GetNativeCell(1);
+	
+	if (!IsValidEntity(ent))
+	{
+		SetNativeString(2, "", GetNativeCell(3));
+		return;
+	}
+	
+	SetNativeString(2, s_WeaponFireAbilitySlot[ent], GetNativeCell(3));
 }
 
 public Native_CF_GetWeaponSound(Handle plugin, int numParams)
