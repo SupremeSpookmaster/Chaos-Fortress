@@ -4801,11 +4801,16 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 			}
 		}
 
-		if (crit)
+		if (crit && !IsABuilding(vic))
 		{
 			damageToDeal *= 3.0;
 			//if (IsValidEntity(weapon))	//TODO
 			//	damageToDeal *= GetAttributeValue(weapon, )
+		}
+
+		if (IsValidEntity(weapon) && IsABuilding(vic))
+		{
+			damage *= GetAttributeValue(weapon, 137, 1.0) * GetAttributeValue(weapon, 775, 1.0);
 		}
 
 		SDKHooks_TakeDamage(vic, client, client, damageToDeal, DMG_BULLET, (IsValidEntity(weapon) ? weapon : -1), _, hitPos);
