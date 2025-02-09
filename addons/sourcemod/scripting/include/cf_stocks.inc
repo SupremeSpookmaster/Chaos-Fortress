@@ -1401,6 +1401,24 @@ stock void ForceViewmodelAnimation(int client, int sequence)
     SetEntProp(ent, Prop_Send, "m_nSequence", sequence);
 }
 
+stock void DestroyAllBuildings(int client, char[] building, bool erase)
+{
+	int ent = -1;
+	while ((ent = FindEntityByClassname(ent, building)) != INVALID_ENT_REFERENCE)
+	{
+		if (GetEntPropEnt(ent, Prop_Send, "m_hBuilder") == client)
+		{
+			if (erase)
+				AcceptEntityInput(ent, "Kill");
+			else
+			{
+				SetVariantInt(999999);
+				AcceptEntityInput(ent, "RemoveHealth");
+			}
+		}
+	}
+}
+
 stock void DoMuzzleParticle(int client, char effect[255])
 {
 	float ang[3], pos[3];

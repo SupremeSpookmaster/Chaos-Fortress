@@ -1205,7 +1205,9 @@ public void CFC_MapEnd()
 
 public void CF_DestroyAllBuildings(int client)
 {
-	FakeClientCommand(client, "destroy 0; destroy 1; destroy 2; destroy 3");
+	DestroyAllBuildings(client, "obj_sentrygun", false);
+	DestroyAllBuildings(client, "obj_dispenser", false);
+	DestroyAllBuildings(client, "obj_teleporter", false);
 }
 
 /**
