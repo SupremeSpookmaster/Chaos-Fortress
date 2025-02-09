@@ -188,7 +188,7 @@ public void CF_MapStart()
  */
 public void CF_SetGameRules(int admin)
 {
-	DeleteCfg(GameRules);
+	//DeleteCfg(GameRules);
 	GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 	
 	if (GameRules == null)
