@@ -7,6 +7,8 @@
 #define PRIMARY_FIRE		"kranz_primary_fire"
 #define SOLVER				"kranz_problem_solver"
 #define OBLITERATOR			"kranz_obliterator"
+#define VFX					"kranz_ult_vfx"
+#define RUSH				"kranz_bayonet"
 
 #define PARTICLE_SOLVER_MUZZLE				"ExplosionCore_MidAir"
 #define PARTICLE_OBLITERATOR_TRACER_RED		"sniper_dxhr_rail_red"
@@ -15,12 +17,21 @@
 #define PARTICLE_OBLITERATOR_EXPLODE_BLUE	"powerup_supernova_explode_blue"
 #define PARTICLE_OBLITERATOR_MUZZLE_RED		"drg_cow_explosioncore_normal"
 #define PARTICLE_OBLITERATOR_MUZZLE_BLUE	"drg_cow_explosioncore_normal_blue"
+#define PARTICLE_RUSH_COLLIDE				"target_break_initial_dust"
 
 #define SND_OBLITERATOR_EXPLODE				")weapons/cow_mangler_explode.wav"
+#define SND_OBLITERATOR_LOOP				"weapons/rocket_pack_boosters_loop.wav"
+#define SND_OBLITERATOR_EXPIRED				"weapons/rocket_pack_boosters_shutdown.wav"
+#define SND_RUSH_COLLIDE					")weapons/bumper_car_hit_ball.wav"
+#define SND_RUSH_END						"weapons/discipline_device_power_down.wav"
 
 public void OnMapStart()
 {
 	PrecacheSound(SND_OBLITERATOR_EXPLODE);
+	PrecacheSound(SND_OBLITERATOR_LOOP);
+	PrecacheSound(SND_OBLITERATOR_EXPIRED);
+	PrecacheSound(SND_RUSH_COLLIDE);
+	PrecacheSound(SND_RUSH_END);
 }
 
 public void OnPluginStart()
@@ -45,6 +56,16 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	if (StrContains(abilityName, OBLITERATOR) != -1)
 	{
 		Obliterator_Activate(client, abilityName);
+	}
+
+	if (StrContains(abilityName, VFX) != -1)
+	{
+		VFX_Activate(client, abilityName);
+	}
+
+	if (StrContains(abilityName, RUSH) != -1)
+	{
+		Rush_Activate(client, abilityName);
 	}
 }
 
@@ -202,12 +223,200 @@ public bool PrimaryFire_Trace(entity, contentsMask, user)
 	return team == view_as<int>(grabEnemyTeam(user));
 }
 
+float f_VFXEndTime[MAXPLAYERS + 1] = { 0.0, ... };
+
+public void VFX_Activate(int client, char abilityName[255])
+{
+	float duration = CF_GetArgF(client, KRANZ, abilityName, "duration");
+	if (duration > 0.0)
+	{
+		TF2_AddCondition(client, TFCond_CritHype, duration);
+		f_VFXEndTime[client] = GetGameTime() + duration + 0.2;
+		EmitSoundToClient(client, SND_OBLITERATOR_LOOP);
+	}
+}
+
+public Action TF2_CalcIsAttackCritical(int client, int weapon, char[]weaponname, bool &result)
+{
+	if (f_VFXEndTime[client] >= GetGameTime())
+	{
+		f_VFXEndTime[client] = 0.0;
+		TF2_RemoveCondition(client, TFCond_CritHype);
+		EmitSoundToClient(client, SND_OBLITERATOR_EXPIRED);
+		StopSound(client, SNDCHAN_AUTO, SND_OBLITERATOR_LOOP);
+	}
+
+	return Plugin_Continue;
+}
+
 public void CF_OnCharacterCreated(int client)
 {
+	if (f_VFXEndTime[client] >= GetGameTime())
+	{
+		f_VFXEndTime[client] = 0.0;
+		TF2_RemoveCondition(client, TFCond_CritHype);
+		EmitSoundToClient(client, SND_OBLITERATOR_EXPIRED);
+		StopSound(client, SNDCHAN_AUTO, SND_OBLITERATOR_LOOP);
+	}
 
+	Rush_DeleteTimer(client);
 }
 
 public void CF_OnCharacterRemoved(int client)
 {
+	if (f_VFXEndTime[client] >= GetGameTime())
+	{
+		f_VFXEndTime[client] = 0.0;
+		TF2_RemoveCondition(client, TFCond_CritHype);
+		EmitSoundToClient(client, SND_OBLITERATOR_EXPIRED);
+		StopSound(client, SNDCHAN_AUTO, SND_OBLITERATOR_LOOP);
+	}
+
+	Rush_DeleteTimer(client);
+}
+
+public void TF2_OnConditionRemoved(int client, TFCond condition)
+{
+	if (condition == TFCond_CritHype && CF_HasAbility(client, KRANZ, VFX))
+	{
+		if (f_VFXEndTime[client] >= GetGameTime())
+		{
+			EmitSoundToClient(client, SND_OBLITERATOR_EXPIRED);
+			StopSound(client, SNDCHAN_AUTO, SND_OBLITERATOR_LOOP);
+			CF_PlayRandomSound(client, "", "sound_obliterator_expired");
+		}
+	}
+}
+
+float Rush_Speed[MAXPLAYERS + 1] = { 0.0, ... };
+float Rush_DMG[MAXPLAYERS + 1] = { 0.0, ... };
+float Rush_DMGMax[MAXPLAYERS + 1] = { 0.0, ... };
+float Rush_Requirement[MAXPLAYERS + 1] = { 0.0, ... };
+float Rush_KB[MAXPLAYERS + 1] = { 0.0, ... };
+float Rush_MinSpeed[MAXPLAYERS + 1] = { 0.0, ... };
+
+Handle Rush_Timer[MAXPLAYERS + 1] = { null, ... };
+
+public void Rush_Activate(int client, char abilityName[255])
+{
+	float duration = CF_GetArgF(client, KRANZ, abilityName, "duration");
+	if (duration > 0.0)
+	{
+		Rush_Speed[client] = CF_GetArgF(client, KRANZ, abilityName, "speed");
+		Rush_DMG[client] = CF_GetArgF(client, KRANZ, abilityName, "damage_base");
+		Rush_DMGMax[client] = CF_GetArgF(client, KRANZ, abilityName, "damage_max");
+		Rush_Requirement[client] = CF_GetArgF(client, KRANZ, abilityName, "damage_speed");
+		Rush_KB[client] = CF_GetArgF(client, KRANZ, abilityName, "knockback");
+		Rush_MinSpeed[client] = CF_GetArgF(client, KRANZ, abilityName, "damage_min");
+
+		CF_ApplyTemporarySpeedChange(client, 0, Rush_Speed[client], 0.0, 0, 9999.0);
+		SetForceButtonState(client, true, IN_WALK);
+		
+		SDKUnhook(client, SDKHook_StartTouch, Rush_OnTouch);
+		SDKHook(client, SDKHook_StartTouch, Rush_OnTouch);
+
+		DataPack pack = new DataPack();
+		Rush_Timer[client] = CreateDataTimer(duration, Rush_End, pack);
+		WritePackCell(pack, GetClientUserId(client));
+		WritePackCell(pack, client);
+	}
+}
+
+public Action Rush_OnTouch(int client, int other)
+{
+	if (CF_IsValidTarget(other, grabEnemyTeam(client)))
+	{
+		float pos[3], vel[3];
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vel);
+		float current = GetVectorLength(vel);
+		if (current < Rush_MinSpeed[client])
+			return Plugin_Continue;
+
+		CF_WorldSpaceCenter(other, pos);
+		SpawnShaker(pos, 14, 100, 2, 4, 4);
+		SpawnParticle(pos, PARTICLE_RUSH_COLLIDE, 2.0);
+		EmitSoundToAll(SND_RUSH_COLLIDE, client, _, _, _, _, GetRandomInt(80, 110));
+
+		if (IsValidMulti(other))
+		{
+			float ang[3];
+			GetClientAbsAngles(client, ang);
+			CF_ApplyKnockback(other, Rush_KB[client], ang);
+		}
+
+		float damage = Rush_DMG[client];
+		if (current >= Rush_Requirement[client])
+			damage += Rush_DMGMax[client];
+		else if (current > Rush_MinSpeed[client])
+			damage += ((current - Rush_MinSpeed[client]) / (Rush_Requirement[client] - Rush_MinSpeed[client])) * Rush_DMGMax[client];
+
+		SDKHooks_TakeDamage(other, client, client, damage, DMG_CLUB);
+		CF_ApplyTemporarySpeedChange(client, 0, -Rush_Speed[client], 0.0, 0, 9999.0, false);
+		EmitSoundToClient(client, SND_RUSH_END);
+		Rush_DeleteTimer(client);
+	}
+
+	return Plugin_Continue;
+}
+
+public Action Rush_End(Handle timer, DataPack pack)
+{
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	int slot = ReadPackCell(pack);
+
+	Rush_Timer[slot] = null;
+
+	if (IsValidMulti(client))
+	{
+		CF_ApplyTemporarySpeedChange(client, 0, -Rush_Speed[client], 0.0, 0, 9999.0, false);
+		EmitSoundToClient(client, SND_RUSH_END);
+		SDKUnhook(client, SDKHook_StartTouch, Rush_OnTouch);
+		SetForceButtonState(client, false, IN_WALK);
+	}
+
+	return Plugin_Continue;
+}
+
+public void Rush_DeleteTimer(int client)
+{
+	if (Rush_Timer[client] != null)
+	{
+		delete Rush_Timer[client];
+		Rush_Timer[client] = null;
+
+		SDKUnhook(client, SDKHook_StartTouch, Rush_OnTouch);
+		SetForceButtonState(client, false, IN_WALK);
+	}
+}
+
+public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result)
+{
+	if (f_VFXEndTime[client] >= GetGameTime() && TF2_IsPlayerInCondition(client, TFCond_CritHype))
+	{
+		result = false;
+		return Plugin_Changed;
+	}
+
+	return Plugin_Continue;
+}
+
+//Because the user can hold the OB1-TR-8R for as long as they want, don't let them gain ult charge until it has been fired:
+public Action CF_OnUltChargeGiven(int client, float &amt)
+{
+	if (f_VFXEndTime[client] >= GetGameTime() && amt > 0.0)
+	{
+		amt = 0.0;
+		return Plugin_Changed;
+	}
 	
+	return Plugin_Continue;
+}
+
+public void OnMapEnd()
+{
+	for (int i = 0; i <= MaxClients; i++)
+	{
+		Rush_DeleteTimer(i);
+	}
 }

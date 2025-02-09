@@ -656,7 +656,7 @@ public void Weapon_StoreOldWeapon(int client, int weaponSlot, float duration)
 
 public void Weapon_Activate(int client, char abilityName[255])
 {
-	char classname[255], atts[255], fireAbility[255], firePlugin[255], fireSound[255], fireSlot[255];
+	char classname[255], atts[255], fireAbility[255], firePlugin[255], fireSound[255], fireSlot[255], deploySound[255];
 	
 	CF_GetArgS(client, GENERIC, abilityName, "classname", classname, sizeof(classname));
 	CF_GetArgS(client, GENERIC, abilityName, "fire_ability", fireAbility, sizeof(fireAbility));
@@ -664,6 +664,7 @@ public void Weapon_Activate(int client, char abilityName[255])
 	CF_GetArgS(client, GENERIC, abilityName, "fire_sound", fireSound, sizeof(fireSound));
 	CF_GetArgS(client, GENERIC, abilityName, "fire_slot", fireSlot, sizeof(fireSlot));
 	CF_GetArgS(client, GENERIC, abilityName, "attributes", atts, sizeof(atts));
+	CF_GetArgS(client, GENERIC, abilityName, "sound_deployed", deploySound, sizeof(deploySound));
 	
 	int index = CF_GetArgI(client, GENERIC, abilityName, "index");
 	int level = CF_GetArgI(client, GENERIC, abilityName, "level");
@@ -698,6 +699,9 @@ public void Weapon_Activate(int client, char abilityName[255])
 	int weapon = CF_SpawnWeapon(client, classname, index, level, quality, weaponSlot, reserve, clip, atts, fireSlot, visible, unequip, -1, false, fireAbility, firePlugin, fireSound, false);
 	if (IsValidEntity(weapon))
 	{
+		if (deploySound[0])
+			CF_PlayRandomSound(client, "", deploySound);
+			
 		char conf[255], path[255];
 		CF_GetPlayerConfig(client, conf, sizeof(conf));
 		ConfigMap map = new ConfigMap(conf);

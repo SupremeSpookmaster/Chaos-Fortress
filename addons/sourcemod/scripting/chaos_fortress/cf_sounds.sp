@@ -78,7 +78,6 @@ public KeyValType GetRand(char Config[255], char Sound[255], char Output[255])
 	{
 		ReplaceString(key, sizeof(key), ".", "\\.");
 		Format(Output, sizeof(Output), "%s", OldKey);
-		PrintToServer("Section");
 		ReturnValue = KeyValType_Section;
 		#if defined DEBUG_SOUNDS
 		PrintToServer("CF_GetRandomSound retrieved a ConfigMap which contained a '.' in its path. New path: %s.%s", snd, key);
@@ -89,10 +88,7 @@ public KeyValType GetRand(char Config[255], char Sound[255], char Output[255])
 	{
 		newMap.Get(key, Output, sizeof(Output));
 		ReturnValue = KeyValType_Value;
-		PrintToServer("Value");
 	}
-
-	PrintToServer("Output: %s", Output);
 	
 	/*char fullPath[255];
 	Format(fullPath, sizeof(fullPath), "character.sounds.%s.%s", Sound, key);
@@ -156,8 +152,6 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 			Format(checkFile, sizeof(checkFile), "%s%c", checkFile, character);
 	}
 
-	PrintToServer("Sound should be %s", checkFile);
-
 	if (!CheckFile(checkFile))
 		return false;
 	
@@ -165,8 +159,6 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 		return false;
 
 	PrecacheSound(snd);
-
-	PrintToServer("Exists!");
 
 	int playMode = 0;
 	
