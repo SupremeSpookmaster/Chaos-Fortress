@@ -126,8 +126,6 @@ stock void ResetToZero2(any[][] array, int length1, int length2)
 
 //
 
-
-static float fl_JumpPadRecharge[MAXENTITIES];
 static int Generic_Laser_BEAM_HitDetected[MAXENTITIES];
 static int i_beacon_owner[MAXENTITIES];
 
@@ -173,7 +171,6 @@ public void OnMapStart()
 	PrecacheScriptSound(JUMPPAD_IMPACT1);
 	PrecacheScriptSound(JUMPPAD_IMPACT2);
 	Zero(Generic_Laser_BEAM_HitDetected);
-	Zero(fl_JumpPadRecharge);
 
 	PrecacheSound(DEATHRAY_TOUCHDOWN_SOUND, true);
 	PrecacheSound(DEATHRAY_THROW_SOUND, true);
@@ -228,6 +225,8 @@ enum struct DeathRay_Data
 	float Location[3];		//the location the beam is at.
 
 	float Anchor_Loc[3];	//the sky location its anchored to.
+
+	float BeamDist;
 }
 static DeathRay_Data struct_DeathRayData[MAXTF2PLAYERS];
 void Orbital_Death_Ray_Activate(int client)
@@ -458,7 +457,10 @@ static void OribtalDeathRay_Tick(int client)
 	Effect_Anchor_Loc = struct_DeathRayData[client].Anchor_Loc;
 	float Dist = GetVectorDistance(Location, Effect_Anchor_Loc)*1.1;
 
-	Move_Vector_Towards_Target(Effect_Anchor_Loc, Location, Effect_EndLoc, Dist);
+	if(struct_DeathRayData[client].BeamDist < Dist)
+		struct_DeathRayData[client].BeamDist = Dist;
+
+	Move_Vector_Towards_Target(Effect_Anchor_Loc, Location, Effect_EndLoc, struct_DeathRayData[client].BeamDist);
 
 	float Radius = struct_DeathRayData[client].Radius;
 	if(update)
@@ -491,7 +493,20 @@ static void OribtalDeathRay_Tick(int client)
 		}
 
 		Generic_Laser_Trace Laser;
+
+		float Angles[3];
+		MakeVectorFromPoints(Effect_Anchor_Loc, Location, Angles);
+		GetVectorAngles(Angles, Angles);
+
 		Laser.client = client;
+		Laser.DoForwardTrace_Custom(Angles, Effect_Anchor_Loc);
+		
+		float Trace_Dist = GetVectorDistance(Laser.Start_Point, Laser.End_Point);
+		if(Trace_Dist > Dist)
+			struct_DeathRayData[client].BeamDist = Trace_Dist;
+		else
+			struct_DeathRayData[client].BeamDist = Dist;
+		
 		Laser.Damage = struct_DeathRayData[client].Damage;
 		Laser.damagetype = DMG_PLASMA|DMG_PREVENT_PHYSICS_FORCE;
 		Laser.Radius =  Radius;
@@ -585,22 +600,45 @@ static void SuperShotgun_Activate(int client, char abilityName[255])
 
 	EmitSoundToClient(client, WidowCritSound[GetURandomInt() % sizeof(WidowCritSound)], _, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, 1.0, GetRandomInt(80, 125));
 
-	RequestFrame(Force_Weapon_Fire, client);
+	Force_Weapon_Fire(EntIndexToEntRef(client));
+	//RequestFrame(Force_Weapon_Fire, EntIndexToEntRef(client));	
+	//it being a frame later breaks lag comp since its a forced fire. However, it being used the same frame Mouse 2 is fired doesn't break lag comp?
+	//Dunno, but it sure as hell feels better to use with high ping.
 }
-static void Force_Weapon_Fire(int client)
+static void Force_Weapon_Fire(int ref)
 {
+	int client = EntRefToEntIndex(ref);
+	if(!IsValidClient(client))
+		return;
+		
 	SetForceButtonState(client, true, IN_ATTACK);
-	RequestFrames(Revert_Dmg_Bonus, 5, client);	//need to offset it more, otherwise the shot becomes unreliable
+	RequestFrames(Revert_Dmg_Bonus, 5, ref);	//need to offset it more, otherwise the shot becomes unreliable
 }
-static void Revert_Dmg_Bonus(int client)
+static void Revert_Dmg_Bonus(int ref)
 {
+	int client = EntRefToEntIndex(ref);
+	if(!IsValidClient(client))
+		return;
+
 	int weapon = GetPlayerWeaponSlot(client, 0);
+	if(!IsValidEntity(weapon))
+		return;
+
 	TF2Attrib_SetByDefIndex(weapon, 1, 1.0);
 	TF2Attrib_SetByDefIndex(weapon, 298, fl_previus_attribute_value[client]);
 	SetForceButtonState(client, false, IN_ATTACK);
 }
 
-static int i_PadParticle[MAXENTITIES][1];
+enum struct PadData
+{
+	int Particle;
+
+	float CD;
+	float Recharge;
+	float Power;
+	bool AllowEnemy;
+}
+static PadData structPadData[MAXENTITIES];
 void OnBuildObject(Event event, const char[] name, bool dontBroadcast)
 {
 	int entity = event.GetInt("index");
@@ -628,7 +666,15 @@ void OnBuildObject(Event event, const char[] name, bool dontBroadcast)
 		case TFObjectMode_Entrance:
 		{
 			SDKHook(entity, SDKHook_Touch, JumpPad_Touch);
-			fl_JumpPadRecharge[entity] = 0.0;
+
+			float Power = CF_GetArgF(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Jump Power");
+			float CoolDown = CF_GetArgF(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Jump Cooldown");
+
+			structPadData[entity].CD = CoolDown;
+			structPadData[entity].Recharge = 0.0;
+			structPadData[entity].AllowEnemy = view_as<bool>(CF_GetArgI(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Jump Pad Allow Enemies"));
+			structPadData[entity].Power = Power;
+
 			
 			SetEntProp(entity, Prop_Send, "m_iHighestUpgradeLevel", 3);	//Set Pads to level 3 for cosmetic reasons related to recharging
 			SetEntProp(entity, Prop_Send, "m_iUpgradeLevel", 3);
@@ -641,11 +687,16 @@ void OnBuildObject(Event event, const char[] name, bool dontBroadcast)
 			
 			//SetEntProp(entity, Prop_Send, "m_nBody", 2);	//Give the arrow to Exits as well.
 			SetEntPropFloat(entity, Prop_Send, "m_flModelScale", 0.5);
-			RequestFrame(ResetSkin, entity); //Setting m_bMiniBuilding tries to set the skin to a 'mini' skin. Since teles don't have one, reset the skin.
+			RequestFrame(ResetSkin, EntIndexToEntRef(entity)); //Setting m_bMiniBuilding tries to set the skin to a 'mini' skin. Since teles don't have one, reset the skin.
 			
 			SetEntProp(entity, Prop_Send, "m_bDisabled", true);
 			CreateTimer(0.1, Timer_BlockTeleEffects, EntIndexToEntRef(entity), TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
 			CreateTimer(0.1, Timer_HandlePadEffects, EntIndexToEntRef(entity), TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
+
+			DataPack pack = new DataPack();
+			CreateDataTimer(1.0, Timer_KeepTeleMaxHealth, pack, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);		//no need to update constantly.
+			pack.WriteCell(EntIndexToEntRef(entity));
+			pack.WriteCell(CF_GetArgI(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Jump Pad Health"));
 
 		}
 		//default exit.
@@ -659,11 +710,16 @@ void OnBuildObject(Event event, const char[] name, bool dontBroadcast)
 			SetVariantInt(RoundFloat(CF_GetArgI(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Teleporter Exit Health") * 0.5));
 			AcceptEntityInput(entity, "AddHealth", entity); //Spawns at 50% HP.
 			SetEntProp(entity, Prop_Send, "m_iTimesUsed", 0);
-			RequestFrame(ResetSkin, entity); //Setting m_bMiniBuilding tries to set the skin to a 'mini' skin. Since teles don't have one, reset the skin.
+			RequestFrame(ResetSkin, EntIndexToEntRef(entity)); //Setting m_bMiniBuilding tries to set the skin to a 'mini' skin. Since teles don't have one, reset the skin.
 			SetEntProp(entity, Prop_Send, "m_bDisabled", true);
 
 			CreateTimer(0.1, Timer_BlockTeleEffects, EntIndexToEntRef(entity), TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
 
+			DataPack pack = new DataPack();
+			CreateDataTimer(1.0, Timer_KeepTeleMaxHealth, pack, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);		//no need to update constantly.
+			pack.WriteCell(EntIndexToEntRef(entity));
+			pack.WriteCell(CF_GetArgI(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Teleporter Exit Health"));
+		
 		}
 	}
 }
@@ -671,13 +727,10 @@ public void OnEntityDestroyed(int entity)
 {
 	if (IsValidEntity(entity) && entity < MAXENTITIES && entity > MaxClients)
 	{
-		for(int i=0 ; i < 1 ; i++)
-		{
-			int Particle = EntRefToEntIndex(i_PadParticle[entity][i]);
-			if(IsValidEntity(Particle) && Particle != 0)
-				RemoveEntity(Particle);
-			i_PadParticle[entity][i] = INVALID_ENT_REFERENCE;
-		}
+		int Particle = EntRefToEntIndex(structPadData[entity].Particle);
+		if(IsValidEntity(Particle) && Particle != 0)
+			RemoveEntity(Particle);
+		structPadData[entity].Particle = INVALID_ENT_REFERENCE;
 	}
 }
 
@@ -698,14 +751,14 @@ static void JumpPad_Touch(int entity, int other)
 
 	float GameTime = GetGameTime();
 
-	if(fl_JumpPadRecharge[entity] > GameTime)
+	if(structPadData[entity].Recharge > GameTime)
 		return;
 
 	int owner = GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
 	if(!IsValidClient(owner))
 		return;
 
-	bool Allow_Enemy = view_as<bool>(CF_GetArgI(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Jump Pad Allow Enemies"));
+	bool Allow_Enemy = structPadData[entity].AllowEnemy;
 
 	if(!Allow_Enemy)
 	{
@@ -713,8 +766,8 @@ static void JumpPad_Touch(int entity, int other)
 			return;
 	}
 
-	float Power = CF_GetArgF(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Jump Power");
-	float CoolDown = CF_GetArgF(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Jump Cooldown");
+	float Power = structPadData[entity].Power;
+	float CoolDown = structPadData[entity].CD;
 
 	DataPack pack = new DataPack();
 	pack.WriteCell(EntIndexToEntRef(other));
@@ -738,7 +791,7 @@ static void Teleport_JumpPad(DataPack pack)
 	SetEntPropVector(client, Prop_Data, "m_vecVelocity", playerVelocity);
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, playerVelocity);
 
-	fl_JumpPadRecharge[pad] = GetGameTime() + CoolDown;
+	structPadData[pad].Recharge = GetGameTime() + CoolDown;
 
 	TF2_AddCondition(client, TFCond_TeleportedGlow, CoolDown);
 
@@ -757,6 +810,26 @@ static Action Timer_BlockTeleEffects(Handle timer, int Ref)
 
 	return Plugin_Stop;
 }
+static Action Timer_KeepTeleMaxHealth(Handle timer, DataPack pack)
+{
+	pack.Reset();
+	int entity = EntRefToEntIndex(pack.ReadCell());
+	if(entity != -1)
+	{
+		int owner = GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
+		if(IsValidClient(owner))
+		{
+			int maxhealth = pack.ReadCell();
+			SetEntProp(entity, Prop_Send, "m_iMaxHealth", maxhealth);
+			int current = GetEntProp(entity, Prop_Data, "m_iHealth");
+			if(current > maxhealth)
+				SetEntProp(entity, Prop_Send, "m_iHealth", maxhealth);
+		}
+		return Plugin_Continue;
+	}
+
+	return Plugin_Stop;
+}
 static Action Timer_HandlePadEffects(Handle timer, int Ref)
 {
 	int entity = EntRefToEntIndex(Ref);
@@ -764,22 +837,22 @@ static Action Timer_HandlePadEffects(Handle timer, int Ref)
 	{
 		float GameTime = GetGameTime();
 
-		if(fl_JumpPadRecharge[entity] > GameTime || GetEntPropFloat(entity, Prop_Send, "m_flPercentageConstructed") < 1.0)
+		if(structPadData[entity].Recharge > GameTime || GetEntPropFloat(entity, Prop_Send, "m_flPercentageConstructed") < 1.0 || GetEntProp(entity, Prop_Send, "m_bCarried"))
 		{
-			int particle = EntRefToEntIndex(i_PadParticle[entity][0]);
+			int particle = EntRefToEntIndex(structPadData[entity].Particle);
 
 			if(IsValidEntity(particle) && particle != 0)
 				RemoveEntity(particle);
 		}
 		else
 		{
-			int particle = EntRefToEntIndex(i_PadParticle[entity][0]);
+			int particle = EntRefToEntIndex(structPadData[entity].Particle);
 			if(IsValidEntity(particle))
 				return Plugin_Continue;
 
 			float Loc[3]; GetAbsOrigin_main(entity, Loc);
 			Loc[2] += 2.0;
-			i_PadParticle[entity][0] = EntIndexToEntRef(ParticleEffectAt(Loc, "utaunt_portalswirl_purple_parent", 0.0));
+			structPadData[entity].Particle = EntIndexToEntRef(ParticleEffectAt(Loc, "utaunt_portalswirl_purple_parent", 0.0));
 		}
 		return Plugin_Continue;
 	}
@@ -916,8 +989,9 @@ stock bool Client_Shake(int client, int command=SHAKE_START, float amplitude=50.
 
 	return true;
 }
-stock void ResetSkin(int iEnt)
+stock void ResetSkin(int Ref)
 {
+	int iEnt = EntRefToEntIndex(Ref);
 	if (IsValidEntity(iEnt))
 	{
 		int iTeam = GetEntProp(iEnt, Prop_Data, "m_iTeamNum");
