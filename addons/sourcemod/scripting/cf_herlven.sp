@@ -225,6 +225,8 @@ enum struct DeathRay_Data
 	float Location[3];		//the location the beam is at.
 
 	float Anchor_Loc[3];	//the sky location its anchored to.
+
+	float BeamDist;
 }
 static DeathRay_Data struct_DeathRayData[MAXTF2PLAYERS];
 void Orbital_Death_Ray_Activate(int client)
@@ -455,7 +457,10 @@ static void OribtalDeathRay_Tick(int client)
 	Effect_Anchor_Loc = struct_DeathRayData[client].Anchor_Loc;
 	float Dist = GetVectorDistance(Location, Effect_Anchor_Loc)*1.1;
 
-	Move_Vector_Towards_Target(Effect_Anchor_Loc, Location, Effect_EndLoc, Dist);
+	if(struct_DeathRayData[client].BeamDist < Dist)
+		struct_DeathRayData[client].BeamDist = Dist;
+
+	Move_Vector_Towards_Target(Effect_Anchor_Loc, Location, Effect_EndLoc, struct_DeathRayData[client].BeamDist);
 
 	float Radius = struct_DeathRayData[client].Radius;
 	if(update)
@@ -488,7 +493,20 @@ static void OribtalDeathRay_Tick(int client)
 		}
 
 		Generic_Laser_Trace Laser;
+
+		float Angles[3];
+		MakeVectorFromPoints(Effect_Anchor_Loc, Location, Angles);
+		GetVectorAngles(Angles, Angles);
+
 		Laser.client = client;
+		Laser.DoForwardTrace_Custom(Angles, Effect_Anchor_Loc);
+		
+		float Trace_Dist = GetVectorDistance(Laser.Start_Point, Laser.End_Point);
+		if(Trace_Dist > Dist)
+			struct_DeathRayData[client].BeamDist = Trace_Dist;
+		else
+			struct_DeathRayData[client].BeamDist = Dist;
+		
 		Laser.Damage = struct_DeathRayData[client].Damage;
 		Laser.damagetype = DMG_PLASMA|DMG_PREVENT_PHYSICS_FORCE;
 		Laser.Radius =  Radius;
