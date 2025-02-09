@@ -230,7 +230,7 @@ public void VFX_Activate(int client, char abilityName[255])
 	float duration = CF_GetArgF(client, KRANZ, abilityName, "duration");
 	if (duration > 0.0)
 	{
-		TF2_AddCondition(client, TFCond_CritHype, duration);
+		TF2_AddCondition(client, TFCond_FocusBuff, duration);
 		f_VFXEndTime[client] = GetGameTime() + duration + 0.2;
 		EmitSoundToClient(client, SND_OBLITERATOR_LOOP);
 	}
@@ -241,7 +241,7 @@ public Action TF2_CalcIsAttackCritical(int client, int weapon, char[]weaponname,
 	if (f_VFXEndTime[client] >= GetGameTime())
 	{
 		f_VFXEndTime[client] = 0.0;
-		TF2_RemoveCondition(client, TFCond_CritHype);
+		TF2_RemoveCondition(client, TFCond_FocusBuff);
 		EmitSoundToClient(client, SND_OBLITERATOR_EXPIRED);
 		StopSound(client, SNDCHAN_AUTO, SND_OBLITERATOR_LOOP);
 	}
@@ -254,7 +254,7 @@ public void CF_OnCharacterCreated(int client)
 	if (f_VFXEndTime[client] >= GetGameTime())
 	{
 		f_VFXEndTime[client] = 0.0;
-		TF2_RemoveCondition(client, TFCond_CritHype);
+		TF2_RemoveCondition(client, TFCond_FocusBuff);
 		EmitSoundToClient(client, SND_OBLITERATOR_EXPIRED);
 		StopSound(client, SNDCHAN_AUTO, SND_OBLITERATOR_LOOP);
 	}
@@ -267,7 +267,7 @@ public void CF_OnCharacterRemoved(int client)
 	if (f_VFXEndTime[client] >= GetGameTime())
 	{
 		f_VFXEndTime[client] = 0.0;
-		TF2_RemoveCondition(client, TFCond_CritHype);
+		TF2_RemoveCondition(client, TFCond_FocusBuff);
 		EmitSoundToClient(client, SND_OBLITERATOR_EXPIRED);
 		StopSound(client, SNDCHAN_AUTO, SND_OBLITERATOR_LOOP);
 	}
@@ -277,7 +277,7 @@ public void CF_OnCharacterRemoved(int client)
 
 public void TF2_OnConditionRemoved(int client, TFCond condition)
 {
-	if (condition == TFCond_CritHype && CF_HasAbility(client, KRANZ, VFX))
+	if (condition == TFCond_FocusBuff && CF_HasAbility(client, KRANZ, VFX))
 	{
 		if (f_VFXEndTime[client] >= GetGameTime())
 		{
@@ -392,7 +392,7 @@ public void Rush_DeleteTimer(int client)
 
 public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result)
 {
-	if (f_VFXEndTime[client] >= GetGameTime() && TF2_IsPlayerInCondition(client, TFCond_CritHype))
+	if (f_VFXEndTime[client] >= GetGameTime() && TF2_IsPlayerInCondition(client, TFCond_FocusBuff))
 	{
 		result = false;
 		return Plugin_Changed;
