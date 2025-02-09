@@ -837,7 +837,7 @@ static Action Timer_HandlePadEffects(Handle timer, int Ref)
 	{
 		float GameTime = GetGameTime();
 
-		if(structPadData[entity].Recharge > GameTime || GetEntPropFloat(entity, Prop_Send, "m_flPercentageConstructed") < 1.0)
+		if(structPadData[entity].Recharge > GameTime || GetEntPropFloat(entity, Prop_Send, "m_flPercentageConstructed") < 1.0 || GetEntProp(entity, Prop_Send, "m_bCarried"))
 		{
 			int particle = EntRefToEntIndex(structPadData[entity].Particle);
 
