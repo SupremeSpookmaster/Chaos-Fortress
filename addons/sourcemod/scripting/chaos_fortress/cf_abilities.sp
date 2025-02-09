@@ -101,7 +101,8 @@ GlobalForward g_OnHUDDisplayed;
 
 Handle SDKStartLagCompensation;
 Handle SDKFinishLagCompensation;
-Address CLagCompensationManager;
+Address CStartLagCompensationManager;
+Address CEndLagCompensationManager;
 Address SDKGetCurrentCommand;
 
 int i_GenericProjectileOwner[2049] = { -1, ... };
@@ -263,6 +264,7 @@ public void CFA_MakeForwards()
 		LogError("[Gamedata] Could not find CLagCompensationManager::FinishLagCompensation");
 
 	DHook_CreateDetour(gd, "CLagCompensationManager::StartLagCompensation", _, DHook_StartLagCompensation);
+	DHook_CreateDetour(gd, "CLagCompensationManager::FinishLagCompensation", _, DHook_EndLagCompensation);
 
 	SDKGetCurrentCommand = view_as<Address>(gd.GetOffset("GetCurrentCommand"));
 	if(SDKGetCurrentCommand == view_as<Address>(-1))
@@ -4829,7 +4831,7 @@ void SDKCall_FinishLagCompensation(int client)
 {
 	if(SDKStartLagCompensation && SDKFinishLagCompensation && SDKGetCurrentCommand != view_as<Address>(-1))
 	{
-		Address value = DHook_GetLagCompensationManager();
+		Address value = CEndLagCompensationManager;
 		if(value)
 			SDKCall(SDKFinishLagCompensation, value, client);
 	}
@@ -4839,19 +4841,20 @@ void SDKCall_StartLagCompensation(int client)
 {
 	if(SDKStartLagCompensation && SDKFinishLagCompensation && SDKGetCurrentCommand != view_as<Address>(-1))
 	{
-		Address value = DHook_GetLagCompensationManager();
+		Address value = CStartLagCompensationManager;
 		if(value)
-			SDKCall(SDKStartLagCompensation, value, client, GetEntityAddress(client) + SDKGetCurrentCommand);
+			SDKCall(SDKStartLagCompensation, value, client, (GetEntityAddress(client) + view_as<Address>(3512)));
 	}
 }
 
-Address DHook_GetLagCompensationManager()
-{
-	return CLagCompensationManager;
-}
 
 static MRESReturn DHook_StartLagCompensation(Address address)
 {
-	CLagCompensationManager = address;
+	CStartLagCompensationManager = address;
+	return MRES_Ignored;
+}
+static MRESReturn DHook_EndLagCompensation(Address address)
+{
+	CEndLagCompensationManager = address;
 	return MRES_Ignored;
 }
