@@ -299,6 +299,7 @@ float Rush_DMGMax[MAXPLAYERS + 1] = { 0.0, ... };
 float Rush_Requirement[MAXPLAYERS + 1] = { 0.0, ... };
 float Rush_KB[MAXPLAYERS + 1] = { 0.0, ... };
 float Rush_MinSpeed[MAXPLAYERS + 1] = { 0.0, ... };
+float Rush_HitboxScale[MAXPLAYERS + 1] = { 0.0, ... };
 bool Rush_Active[MAXPLAYERS + 1] = { false, ... };
 
 Handle Rush_Timer[MAXPLAYERS + 1] = { null, ... };
@@ -314,6 +315,7 @@ public void Rush_Activate(int client, char abilityName[255])
 		Rush_Requirement[client] = CF_GetArgF(client, KRANZ, abilityName, "damage_speed");
 		Rush_KB[client] = CF_GetArgF(client, KRANZ, abilityName, "knockback");
 		Rush_MinSpeed[client] = CF_GetArgF(client, KRANZ, abilityName, "damage_min");
+		Rush_HitboxScale[client] = CF_GetArgF(client, KRANZ, abilityName, "hitbox_scale", 3.0);
 
 		CF_ApplyTemporarySpeedChange(client, 0, Rush_Speed[client], 0.0, 0, 9999.0);
 		
@@ -342,19 +344,13 @@ public void Rush_CheckBump(int id)
 	float current = GetVectorLength(vel);
 	if (current >= Rush_MinSpeed[client])
 	{
-		float pos[3], mins[3], maxs[3];
+		float pos[3];
 		GetClientAbsOrigin(client, pos);
-		GetClientMins(client, mins);
-		GetClientMaxs(client, maxs);
-		ScaleVector(mins, 1.5);
-		ScaleVector(maxs, 1.5);
 
-		CF_StartLagCompensation(client);
-		TR_TraceHullFilter(pos, pos, mins, maxs, MASK_SHOT, CFTrace_OnlyHitEnemies, client);
-		int other = TR_GetEntityIndex();
-		CF_EndLagCompensation(client);
+		float dist;
+		int other = CF_GetClosestTarget(pos, true, dist, Rush_HitboxScale[client], grabEnemyTeam(client));
 
-		if (other > 0 && other < 2049)
+		if (other > 0 && other < 2049 && dist <= Rush_HitboxScale[client])
 		{
 			CF_WorldSpaceCenter(other, pos);
 			SpawnShaker(pos, 14, 100, 2, 4, 4);
