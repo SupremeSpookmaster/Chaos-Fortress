@@ -176,6 +176,7 @@ public void Generic_DeleteTimers(int client)
 		{
 			delete g_BlockTimers[client][i];
 			g_BlockTimers[client][i] = null;
+			CF_UnblockAbilitySlot(client, view_as<CF_AbilityType>(i));
 		}
 	}
 	

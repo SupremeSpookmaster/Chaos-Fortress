@@ -224,6 +224,7 @@ public bool PrimaryFire_Trace(entity, contentsMask, user)
 }
 
 float f_VFXEndTime[MAXPLAYERS + 1] = { 0.0, ... };
+float f_UltEndTime[MAXPLAYERS + 1] = { 0.0, ... };
 
 public void VFX_Activate(int client, char abilityName[255])
 {
@@ -244,6 +245,7 @@ public Action TF2_CalcIsAttackCritical(int client, int weapon, char[]weaponname,
 		TF2_RemoveCondition(client, TFCond_FocusBuff);
 		EmitSoundToClient(client, SND_OBLITERATOR_EXPIRED);
 		StopSound(client, SNDCHAN_AUTO, SND_OBLITERATOR_LOOP);
+		f_UltEndTime[client] = GetGameTime() + 1.0;
 	}
 
 	return Plugin_Continue;
@@ -260,6 +262,7 @@ public void CF_OnCharacterCreated(int client)
 	}
 
 	Rush_DeleteTimer(client);
+	f_UltEndTime[client] = 0.0;
 }
 
 public void CF_OnCharacterRemoved(int client)
@@ -273,6 +276,7 @@ public void CF_OnCharacterRemoved(int client)
 	}
 
 	Rush_DeleteTimer(client);
+	f_UltEndTime[client] = 0.0;
 }
 
 public void TF2_OnConditionRemoved(int client, TFCond condition)
@@ -284,6 +288,7 @@ public void TF2_OnConditionRemoved(int client, TFCond condition)
 			EmitSoundToClient(client, SND_OBLITERATOR_EXPIRED);
 			StopSound(client, SNDCHAN_AUTO, SND_OBLITERATOR_LOOP);
 			CF_PlayRandomSound(client, "", "sound_obliterator_expired");
+			f_UltEndTime[client] = GetGameTime() + 1.0;
 		}
 	}
 }
@@ -294,6 +299,7 @@ float Rush_DMGMax[MAXPLAYERS + 1] = { 0.0, ... };
 float Rush_Requirement[MAXPLAYERS + 1] = { 0.0, ... };
 float Rush_KB[MAXPLAYERS + 1] = { 0.0, ... };
 float Rush_MinSpeed[MAXPLAYERS + 1] = { 0.0, ... };
+bool Rush_Active[MAXPLAYERS + 1] = { false, ... };
 
 Handle Rush_Timer[MAXPLAYERS + 1] = { null, ... };
 
@@ -310,10 +316,9 @@ public void Rush_Activate(int client, char abilityName[255])
 		Rush_MinSpeed[client] = CF_GetArgF(client, KRANZ, abilityName, "damage_min");
 
 		CF_ApplyTemporarySpeedChange(client, 0, Rush_Speed[client], 0.0, 0, 9999.0);
-		SetForceButtonState(client, true, IN_WALK);
 		
-		SDKUnhook(client, SDKHook_StartTouch, Rush_OnTouch);
-		SDKHook(client, SDKHook_StartTouch, Rush_OnTouch);
+		Rush_Active[client] = true;
+		RequestFrame(Rush_CheckBump, GetClientUserId(client));
 
 		DataPack pack = new DataPack();
 		Rush_Timer[client] = CreateDataTimer(duration, Rush_End, pack);
@@ -322,41 +327,62 @@ public void Rush_Activate(int client, char abilityName[255])
 	}
 }
 
-public Action Rush_OnTouch(int client, int other)
+public void Rush_CheckBump(int id)
 {
-	if (CF_IsValidTarget(other, grabEnemyTeam(client)))
+	int client = GetClientOfUserId(id);
+
+	if (!IsValidMulti(client))
+		return;
+
+	if (!Rush_Active[client])
+		return;
+
+	float vel[3];
+	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vel);
+	float current = GetVectorLength(vel);
+	if (current >= Rush_MinSpeed[client])
 	{
-		float pos[3], vel[3];
-		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vel);
-		float current = GetVectorLength(vel);
-		if (current < Rush_MinSpeed[client])
-			return Plugin_Continue;
+		float pos[3], mins[3], maxs[3];
+		GetClientAbsOrigin(client, pos);
+		GetClientMins(client, mins);
+		GetClientMaxs(client, maxs);
+		ScaleVector(mins, 1.5);
+		ScaleVector(maxs, 1.5);
 
-		CF_WorldSpaceCenter(other, pos);
-		SpawnShaker(pos, 14, 100, 2, 4, 4);
-		SpawnParticle(pos, PARTICLE_RUSH_COLLIDE, 2.0);
-		EmitSoundToAll(SND_RUSH_COLLIDE, client, _, _, _, _, GetRandomInt(80, 110));
+		CF_StartLagCompensation(client);
+		TR_TraceHullFilter(pos, pos, mins, maxs, MASK_SHOT, CFTrace_OnlyHitEnemies, client);
+		int other = TR_GetEntityIndex();
+		CF_EndLagCompensation(client);
 
-		if (IsValidMulti(other))
+		if (other > 0 && other < 2049)
 		{
-			float ang[3];
-			GetClientAbsAngles(client, ang);
-			CF_ApplyKnockback(other, Rush_KB[client], ang);
+			CF_WorldSpaceCenter(other, pos);
+			SpawnShaker(pos, 14, 100, 2, 4, 4);
+			SpawnParticle(pos, PARTICLE_RUSH_COLLIDE, 2.0);
+			EmitSoundToAll(SND_RUSH_COLLIDE, client, _, _, _, _, GetRandomInt(80, 110));
+
+			if (IsValidMulti(other))
+			{
+				float ang[3];
+				GetClientAbsAngles(client, ang);
+				CF_ApplyKnockback(other, Rush_KB[client], ang);
+			}
+
+			float damage = Rush_DMG[client];
+			if (current >= Rush_Requirement[client])
+				damage += Rush_DMGMax[client];
+			else if (current > Rush_MinSpeed[client])
+				damage += ((current - Rush_MinSpeed[client]) / (Rush_Requirement[client] - Rush_MinSpeed[client])) * Rush_DMGMax[client];
+
+			SDKHooks_TakeDamage(other, client, client, damage, DMG_CLUB);
+			CF_ApplyTemporarySpeedChange(client, 0, -Rush_Speed[client], 0.0, 0, 9999.0, false);
+			EmitSoundToClient(client, SND_RUSH_END);
+			Rush_DeleteTimer(client);
+			return;
 		}
-
-		float damage = Rush_DMG[client];
-		if (current >= Rush_Requirement[client])
-			damage += Rush_DMGMax[client];
-		else if (current > Rush_MinSpeed[client])
-			damage += ((current - Rush_MinSpeed[client]) / (Rush_Requirement[client] - Rush_MinSpeed[client])) * Rush_DMGMax[client];
-
-		SDKHooks_TakeDamage(other, client, client, damage, DMG_CLUB);
-		CF_ApplyTemporarySpeedChange(client, 0, -Rush_Speed[client], 0.0, 0, 9999.0, false);
-		EmitSoundToClient(client, SND_RUSH_END);
-		Rush_DeleteTimer(client);
 	}
 
-	return Plugin_Continue;
+	RequestFrame(Rush_CheckBump, id);
 }
 
 public Action Rush_End(Handle timer, DataPack pack)
@@ -371,8 +397,7 @@ public Action Rush_End(Handle timer, DataPack pack)
 	{
 		CF_ApplyTemporarySpeedChange(client, 0, -Rush_Speed[client], 0.0, 0, 9999.0, false);
 		EmitSoundToClient(client, SND_RUSH_END);
-		SDKUnhook(client, SDKHook_StartTouch, Rush_OnTouch);
-		SetForceButtonState(client, false, IN_WALK);
+		Rush_Active[client] = false;
 	}
 
 	return Plugin_Continue;
@@ -385,14 +410,13 @@ public void Rush_DeleteTimer(int client)
 		delete Rush_Timer[client];
 		Rush_Timer[client] = null;
 
-		SDKUnhook(client, SDKHook_StartTouch, Rush_OnTouch);
-		SetForceButtonState(client, false, IN_WALK);
+		Rush_Active[client] = false;
 	}
 }
 
 public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result)
 {
-	if (f_VFXEndTime[client] >= GetGameTime() && TF2_IsPlayerInCondition(client, TFCond_FocusBuff))
+	if ((f_VFXEndTime[client] >= GetGameTime() && TF2_IsPlayerInCondition(client, TFCond_FocusBuff)) || f_UltEndTime[client] >= GetGameTime())
 	{
 		result = false;
 		return Plugin_Changed;
