@@ -1671,13 +1671,12 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 			CF_PlayRandomSound(client, "", soundSlot);
 		}
 
-		if (type != CF_AbilityType_Ult && (b_ResourceIsUlt[client] && b_UsingResources[client]))
+		if (type != CF_AbilityType_Ult && b_UsingResources[client])
 		{
-			CF_GiveUltCharge(client, -cost);
-		}
-		else if (b_UsingResources[client])
-		{
-			CF_GiveSpecialResource(client, -cost);
+			if (b_ResourceIsUlt[client])
+				CF_GiveUltCharge(client, -cost);
+			else
+				CF_GiveSpecialResource(client, -cost);
 		}
 		
 		if (!AbilityUsesStocks(client, type))
