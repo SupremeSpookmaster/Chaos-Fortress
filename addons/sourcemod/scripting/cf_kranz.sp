@@ -164,10 +164,12 @@ public void Solver_Hit(int attacker, int victim, float &baseDamage, bool &allowF
 
 	hsEffect = PrimaryFire_HSEffect;
 
-	Solver_TotalKB[victim] += Solver_KB;
+	if (IsValidClient(victim))
+		Solver_TotalKB[victim] += Solver_KB;
 }
 
 float Obliterator_Radius, Obliterator_FalloffStart, Obliterator_FalloffMax, Obliterator_Damage;
+bool Obliterator_AllowBodyShot;
 TFTeam Obliterator_Team;
 
 public void Obliterator_Activate(int client, char abilityName[255])
@@ -185,6 +187,7 @@ public void Obliterator_Activate(int client, char abilityName[255])
 	Obliterator_FalloffStart = CF_GetArgF(client, KRANZ, abilityName, "blast_falloff_start");
 	Obliterator_FalloffMax = CF_GetArgF(client, KRANZ, abilityName, "blast_falloff_max");
 	Obliterator_Damage = CF_GetArgF(client, KRANZ, abilityName, "blast_damage");
+	Obliterator_AllowBodyShot = CF_GetArgI(client, KRANZ, abilityName, "blast_bodyshots", 1) > 0;
 
 	Obliterator_Team = TF2_GetClientTeam(client);
 	DoMuzzleParticle(client, (Obliterator_Team == TFTeam_Red ? PARTICLE_OBLITERATOR_MUZZLE_RED : PARTICLE_OBLITERATOR_MUZZLE_BLUE));
@@ -204,7 +207,7 @@ public void Obliterator_Hit(int attacker, int victim, float &baseDamage, bool &a
 
 	hsEffect = PrimaryFire_HSEffect;
 
-	if (isHeadshot)
+	if (isHeadshot || Obliterator_AllowBodyShot)
 	{
 		EmitSoundToAll(SND_OBLITERATOR_EXPLODE, victim);
 		SpawnParticle(hitPos, (Obliterator_Team == TFTeam_Red ? PARTICLE_OBLITERATOR_EXPLODE_RED : PARTICLE_OBLITERATOR_EXPLODE_BLUE), 2.0);
