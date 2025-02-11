@@ -133,6 +133,7 @@ public OnMapEnd()
 	CFS_MapEnd();
 	CFB_MapEnd();
 	CFW_MapEnd();
+	CFCore_MapEnd();
 }
 
 public Action PlayerKilled(Event hEvent, const char[] sEvName, bool bDontBroadcast)

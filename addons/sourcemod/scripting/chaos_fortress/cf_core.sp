@@ -87,12 +87,6 @@ public void CF_OnPluginStart()
 	g_WeaponDropLifespan = FindConVar("tf_dropped_weapon_lifetime");
 	g_WeaponDropLifespan.IntValue = 0;
 	
-	g_ChatMessages = CreateArray(255);
-	g_ChatIntervals = CreateArray(255);
-	g_ChatTimes = CreateArray(255);
-	
-	CreateTimer(1.0, Timer_ChatMessages, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
-	
 	SteamWorks_SetGameDescription(GAME_DESCRIPTION);
 }
 
@@ -179,6 +173,19 @@ public void CF_MapStart()
 	for (int i = 0; i < (sizeof(g_ArrowImpactSounds_Player));   i++) { PrecacheSound(g_ArrowImpactSounds_Player[i]);   }
 
 	CreateTimer(0.1, CFA_HUDTimer, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+
+	g_ChatMessages = CreateArray(255);
+	g_ChatIntervals = CreateArray(255);
+	g_ChatTimes = CreateArray(255);
+	
+	CreateTimer(1.0, Timer_ChatMessages, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+}
+
+public void CFCore_MapEnd()
+{
+	delete g_ChatMessages;
+	delete g_ChatIntervals;
+	delete g_ChatTimes;
 }
 
 /**
