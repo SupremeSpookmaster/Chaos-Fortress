@@ -1740,7 +1740,7 @@ native void CF_DoAbilitySlot(int client, int slot);
 
 /**
  * Performs a trace ray from startPos to endPos, and returns an ArrayList of players who were caught.
- * This is automatically lag-compensated.
+ * This is automatically lag-compensated, but DOES NOT automatically check for line-of-sight.
  * Can be paired with CF_TraceShot to determine if a given victim was headshot, as well as to get the individual hit positions of every victim hit by this trace.
  * 
  * @param client			The client to trace for.
@@ -1758,7 +1758,7 @@ native ArrayList CF_DoBulletTrace(int client, float startPos[3], float endPos[3]
 
 /**
  * Performs a trace ray from startPos to endPos, and checks to see if the trace goes through the target.
- * This is automatically lag-compensated.
+ * This is automatically lag-compensated, but DOES NOT automatically check for line-of-sight.
  * 
  * @param user		The client who is running the trace.
  * @param target	The target to check for headshots.
@@ -1774,7 +1774,7 @@ native void CF_TraceShot(int user, int target, float startPos[3], float endPos[3
 
 /**
  * Automatically sets up and calls CF_DoBulletTrace and CF_TraceShot, then deals damage to every enemy it hits.
- * This is automatically lag-compensated.
+ * This is automatically lag-compensated, and also automatically checks for line-of-sight.
  * 
  * @param client		The client to fire the bullet.
  * @param ang			The angle of the shot.
@@ -1799,3 +1799,16 @@ native void CF_TraceShot(int user, int target, float startPos[3], float endPos[3
  * @param particle		Bullet tracer particle to use. Must be a multi-point particle.
  */
 native void CF_FireGenericBullet(int client, float ang[3], float damage, float hsMult = 1.0, float spread = 0.0, char[] hitPlugin = "", Function hitFunction = INVALID_FUNCTION, float falloffStart = 0.0, float falloffEnd = 0.0, float falloffMax = 0.0, int pierce = 0, TFTeam team, char[] plugin = "", Function filter = INVALID_FUNCTION, char[] particle = "bullet_shotgun_tracer01_red");
+
+/**
+ * Checks if there is an uninterrupted line of sight between the starting and ending positions.
+ * Combat entities such as players, projectiles, sentries, etc do not block this line of sight.
+ * 
+ * @param startPos		The starting position of the LOS check.
+ * @param endPos		The ending position of the LOS check.
+ * @param entity		Optional variable in which to store the index of the entity blocking the LOS, if there is one.
+ * @param point			Optional output buffer in which to store the position at which the LOS is blocked, if it is.
+ * 
+ * @return	True if there is a valid line of sight between the two points, false otherwise.
+ */
+native bool CF_HasLineOfSight(float startPos[3], float endPos[3], int &entity = 0, float point[3] = NULL_VECTOR);

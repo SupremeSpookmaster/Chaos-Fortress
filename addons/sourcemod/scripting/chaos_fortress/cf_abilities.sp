@@ -195,6 +195,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_DoBulletTrace", Native_CF_DoBulletTrace);
 	CreateNative("CF_TraceShot", Native_CF_TraceShot);
 	CreateNative("CF_FireGenericBullet", Native_CF_FireGenericBullet);
+	CreateNative("CF_HasLineOfSight", Native_CF_HasLineOfSight);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -4718,7 +4719,13 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 	GetClientEyePosition(client, startPos);
 	GetPointInDirection(startPos, shootAng, 9999.0, endPos);
 
-	//TODO: Get impact effect/sound of hitPos, like what PNPCS does for its melee trace
+	if (!CF_HasLineOfSight(startPos, endPos, _, endPos))
+	{
+		float eyePos[3];
+		GetClientEyePosition(client, eyePos);
+		UTIL_ImpactTrace(client, eyePos, DMG_BULLET);
+	}
+
 	ArrayList victims = CF_DoBulletTrace(client, startPos, endPos, pierce, checkTeam, checkPlugin, checkFunction, hitPos);
 	SpawnParticle_ControlPoints(shootPos, hitPos, particle, 2.0);
 
@@ -4819,6 +4826,25 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 	delete victims;
 }
 
+public any Native_CF_HasLineOfSight(Handle plugin, int numParams)
+{
+	float start[3], end[3], intersection[3];
+	GetNativeArray(1, start, sizeof(start));
+	GetNativeArray(2, end, sizeof(end));
+
+	TR_TraceRayFilter(start, end, MASK_SHOT, RayType_EndPoint, CF_LOSTrace);
+
+	if (TR_DidHit())
+	{
+		SetNativeCellRef(3, TR_GetEntityIndex());
+		TR_GetEndPosition(intersection);
+		SetNativeArray(4, intersection, sizeof(intersection));
+		return false;
+	}
+
+	return true;
+}
+
 public bool CF_OnlyHitTarget(int entity, int contentsMask, int target)
 {
 	return target == entity;
@@ -4851,7 +4877,6 @@ void SDKCall_StartLagCompensation(int client)
 			SDKCall(SDKStartLagCompensation, value, client, (GetEntityAddress(client) + view_as<Address>(3512)));
 	}
 }
-
 
 static MRESReturn DHook_StartLagCompensation(Address address)
 {

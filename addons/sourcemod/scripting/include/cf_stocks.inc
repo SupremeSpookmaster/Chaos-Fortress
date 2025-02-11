@@ -3101,6 +3101,9 @@ stock bool Brush_Is_Solid(int entity)
 {
 	char entname[255];
 	GetEntityClassname(entity, entname, sizeof(entname));
+
+	if (StrContains(entname, "prop_physics") != -1 || StrContains(entname, "tf_projectile") != -1)
+		return true;
 	
 	if (StrContains(entname, "info_") != -1 || StrContains(entname, "trigger_") != -1)
 	{
@@ -3119,6 +3122,69 @@ stock bool Brush_Is_Solid(int entity)
 	}
 
 	return ((GetEntProp(entity, Prop_Send, "m_nSolidType") != 0) && ((GetEntProp(entity, Prop_Send, "m_usSolidFlags") & 4) == 0));
+}
+
+stock void UTIL_ImpactTrace(int client, const float start[3], int iDamageType, const char[] pCustomImpactName = "Impact")
+{
+	if(TR_GetEntityIndex() == -1 || TR_GetFraction() == 1.0)
+	{ 
+		//+check sky
+		return;
+	}
+	float origin[3]; TR_GetEndPosition(origin);
+
+	TE_SetupEffectDispatch(origin, start, NULL_VECTOR, NULL_VECTOR, 0, 0.0, 1.0, 0, 0,
+		getEffectDispatchStringTableIndex(pCustomImpactName), 0, iDamageType, TR_GetHitGroup(), TR_GetEntityIndex(), 0, 0.0, false,
+		NULL_VECTOR, NULL_VECTOR, false, 0, NULL_VECTOR);
+	TE_SendToAll();
+}
+
+stock void TE_SetupEffectDispatch(const float origin[3], const float start[3], const float angles[3], const float normal[3],
+	int flags, float magnitude, float scale, int attachmentIndex, int surfaceProp, int effectName, int material, int damageType,
+	int hitbox, int entindex, int color, float radius, bool customColors, const float customColor1[3], const float customColor2[3],
+	bool controlPoint1, int cp1ParticleAttachment, const float cp1Offset[3])
+{
+	TE_Start("EffectDispatch");
+	TE_WriteFloat("m_vOrigin[0]", origin[0]);
+	TE_WriteFloat("m_vOrigin[1]", origin[1]);
+	TE_WriteFloat("m_vOrigin[2]", origin[2]);
+	TE_WriteFloat("m_vStart[0]", start[0]);
+	TE_WriteFloat("m_vStart[1]", start[1]);
+	TE_WriteFloat("m_vStart[2]", start[2]);
+	TE_WriteVector("m_vAngles", angles);
+	TE_WriteVector("m_vNormal", normal);
+	TE_WriteNum("m_fFlags", flags);
+	TE_WriteFloat("m_flMagnitude", magnitude);
+	TE_WriteFloat("m_flScale", scale);
+	TE_WriteNum("m_nAttachmentIndex", attachmentIndex);
+	TE_WriteNum("m_nSurfaceProp", surfaceProp);
+	TE_WriteNum("m_iEffectName", effectName);
+	TE_WriteNum("m_nMaterial", material);
+	TE_WriteNum("m_nDamageType", damageType);
+	TE_WriteNum("m_nHitBox", hitbox);
+	TE_WriteNum("entindex", entindex);
+	TE_WriteNum("m_nColor", color);
+	TE_WriteFloat("m_flRadius", radius);
+	TE_WriteNum("m_bCustomColors", customColors);
+	//TE_WriteVector("m_CustomColors.m_vecColor1", customColor1);
+	//TE_WriteVector("m_CustomColors.m_vecColor2", customColor2);
+	TE_WriteNum("m_bControlPoint1", controlPoint1);
+	TE_WriteNum("m_ControlPoint1.m_eParticleAttachment", cp1ParticleAttachment);
+	TE_WriteFloat("m_ControlPoint1.m_vecOffset[0]", cp1Offset[0]);
+	TE_WriteFloat("m_ControlPoint1.m_vecOffset[1]", cp1Offset[1]);
+	TE_WriteFloat("m_ControlPoint1.m_vecOffset[2]", cp1Offset[2]);
+}
+
+stock int getEffectDispatchStringTableIndex(const char[] effectName){
+	static int table = INVALID_STRING_TABLE;
+	if(table == INVALID_STRING_TABLE){
+		table = FindStringTable("EffectDispatch");
+	}
+	int index;
+	if( (index = FindStringIndex(table, effectName)) != INVALID_STRING_INDEX)
+		return index;
+	AddToStringTable(table, effectName);
+	return FindStringIndex(table, effectName);
 }
 
 stock ArrayList SortListByDistance(float pos[3], ArrayList list)
