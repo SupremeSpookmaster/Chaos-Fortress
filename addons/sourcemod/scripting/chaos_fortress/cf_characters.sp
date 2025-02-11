@@ -1403,11 +1403,6 @@ public void CF_DestroyAllBuildings(int client)
  	DeleteCfg(GameRules);
  	DeleteCfg(map);
  	
- 	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
- 	SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
-	SDKUnhook(client, SDKHook_OnTakeDamageAlivePost, CFDMG_OnTakeDamageAlive_Post);
- 	SDKHook(client, SDKHook_OnTakeDamageAlivePost, CFDMG_OnTakeDamageAlive_Post);
- 	
  	CFA_UpdateMadeCharacter(client);
 	CF_SetRespawnTime(client);
  	

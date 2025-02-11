@@ -249,18 +249,30 @@ public void RoundEnd(Event hEvent, const char[] sEvName, bool bDontBroadcast)
 
 public void PlayerSpawn(Event gEvent, const char[] sEvName, bool bDontBroadcast)
 {
-	float duration = GetSpawnGrace();
+	int client = GetClientOfUserId(gEvent.GetInt("userid"));
 
-	if (duration > 0.0)
+	if (IsValidClient(client))
 	{
-		int client = GetClientOfUserId(gEvent.GetInt("userid"));
-		
-		if (IsValidClient(client))
+		float duration = GetSpawnGrace();
+
+		if (duration > 0.0)
 		{
 			TF2_AddCondition(client, TFCond_Buffed, duration);
 			TF2_AddCondition(client, TFCond_UberchargedCanteen, duration);
 			EmitSoundToClient(client, SND_RESPAWN);
 		}
+	}
+}
+
+public void HookForDamage(int id)
+{
+	int client = GetClientOfUserId(id);
+	if (IsValidClient(client))
+	{
+		SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
+ 		SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
+		SDKUnhook(client, SDKHook_OnTakeDamageAlivePost, CFDMG_OnTakeDamageAlive_Post);
+ 		SDKHook(client, SDKHook_OnTakeDamageAlivePost, CFDMG_OnTakeDamageAlive_Post);
 	}
 }
 
@@ -270,6 +282,7 @@ public void PlayerReset(Event gEvent, const char[] sEvName, bool bDontBroadcast)
 	
 	if (IsValidClient(client))
 	{
+		RequestFrame(HookForDamage, GetClientUserId(client));
 		//Do it twice in a row because otherwise your viewmodels get screwed the first time you spawn.
 		//I have no clue why. Yes, I tried delaying the class change by a frame. No, it did not work.
 		//Yes, I am aware this is EXTREMELY suboptimal, no I am not happy I had to do it, but I'm sick of trying to make this thing work seamlessly so I just tossed in a hack and called it a day.
