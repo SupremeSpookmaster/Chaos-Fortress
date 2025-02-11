@@ -2508,3 +2508,59 @@ public void PNPC_OnPNPCDestroyed(int entity)
 		Support_RemovePanicParticle(entity);
 	}
 }
+
+public void PNPC_OnTouch(PNPC npc, int entity, char[] classname)
+{
+	if (!Toss_IsSupportDrone[npc.Index] || StrContains(classname, "tf_projectile") == -1)
+		return;
+
+	int launcher = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
+	int entityOwner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
+
+	float healPerScrap = TF2CustAttr_GetFloat(launcher, "toolbox drone heal per scrap", 0.0);
+	float healCost = TF2CustAttr_GetFloat(launcher, "toolbox drone heal cost", 0.0);
+	float totalHealing = 60.0;
+	
+	if (healPerScrap > 0.0 && healCost > 0.0)
+	{
+		float resources = CF_GetSpecialResource(entityOwner);
+		if (resources < healCost)
+			return;
+			
+		if (healCost > resources)
+			healCost = resources;
+			
+		float current = float(npc.i_Health); 
+		float maxHP = float(npc.i_MaxHealth);
+		
+		totalHealing = healPerScrap * healCost;
+		float afterHeals = current + totalHealing;
+		if (afterHeals > maxHP)
+		{
+			totalHealing -= (afterHeals - maxHP);
+		}
+		
+		npc.i_Health += RoundToFloor(totalHealing);
+		
+		float finalCost = totalHealing / healPerScrap;
+		CF_GiveSpecialResource(entityOwner, -finalCost);
+	}
+	else
+		return;
+		
+	float pos[3];
+	CF_WorldSpaceCenter(entity, pos);
+	SpawnParticle(pos, npc.i_Team == TFTeam_Red ? PARTICLE_TOSS_HEAL_RED : PARTICLE_TOSS_HEAL_BLUE, 3.0);
+	EmitSoundToClient(entityOwner, SOUND_TOSS_HEAL);
+		
+	char amountHealed[16];
+	Format(amountHealed, sizeof(amountHealed), "+%i", RoundToCeil(totalHealing));
+	int text = WorldText_Create(pos, NULL_VECTOR, amountHealed, 15.0, _, _, _, 120, 255, 120, 255);
+	if (IsValidEntity(text))
+	{
+		Text_Owner[text] = GetClientUserId(entityOwner);
+		SDKHook(text, SDKHook_SetTransmit, Text_Transmit);
+			
+		WorldText_MimicHitNumbers(text);
+	}
+}
