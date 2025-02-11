@@ -1808,7 +1808,8 @@ native void CF_FireGenericBullet(int client, float ang[3], float damage, float h
  * @param endPos		The ending position of the LOS check.
  * @param entity		Optional variable in which to store the index of the entity blocking the LOS, if there is one.
  * @param point			Optional output buffer in which to store the position at which the LOS is blocked, if it is.
+ * @param user			Optional entity to exclude from the LOS trace.
  * 
  * @return	True if there is a valid line of sight between the two points, false otherwise.
  */
-native bool CF_HasLineOfSight(float startPos[3], float endPos[3], int &entity = 0, float point[3] = NULL_VECTOR);
+native bool CF_HasLineOfSight(float startPos[3], float endPos[3], int &entity = 0, float point[3] = NULL_VECTOR, int user = -1);

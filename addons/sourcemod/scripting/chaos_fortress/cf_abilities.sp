@@ -4831,8 +4831,9 @@ public any Native_CF_HasLineOfSight(Handle plugin, int numParams)
 	float start[3], end[3], intersection[3];
 	GetNativeArray(1, start, sizeof(start));
 	GetNativeArray(2, end, sizeof(end));
+	int user = GetNativeCell(5);
 
-	TR_TraceRayFilter(start, end, MASK_SHOT, RayType_EndPoint, CF_LOSTrace);
+	TR_TraceRayFilter(start, end, MASK_SHOT, RayType_EndPoint, CF_LOSTrace, user);
 
 	if (TR_DidHit())
 	{

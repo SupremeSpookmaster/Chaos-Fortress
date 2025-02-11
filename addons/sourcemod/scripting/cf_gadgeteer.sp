@@ -99,12 +99,14 @@
 #define PARTICLE_SUPPORT_BOX_TRAIL_RED 	"healshot_trail_red"
 #define PARTICLE_SUPPORT_BOX_TRAIL_BLUE	"healshot_trail_blue"
 #define PARTICLE_SUPPORT_DAMAGED		"dispenserdamage_3"
+#define PARTICLE_DRONE_TRACER_RED		"bullet_tracer_raygun_red_crit"
+#define PARTICLE_DRONE_TRACER_BLUE		"bullet_tracer_raygun_blue_crit"
 
 #define MODEL_TARGETING		"models/fake_particles/plane.mdl"
 
 //TODO: Add the powerup_supernova_strike tracer to supercharged combat drone shots
 
-//int LASER_MODEL = -1;
+int Laser_Model = -1;
 //int GLOW_MODEL = -1;
 
 public void OnMapStart()
@@ -169,6 +171,7 @@ public void OnMapStart()
 	PrecacheSound(SOUND_SUPPORT_BOX_BREAK);
 	PrecacheSound(SOUND_SUPPORT_PANIC_BEGIN);
 
+	Laser_Model = PrecacheModel("materials/sprites/laserbeam.vmt")
 	/*LASER_MODEL = PrecacheModel("materials/sprites/laser.vmt", false);
 	GLOW_MODEL = PrecacheModel("sprites/glow02.vmt", true);*/
 }
@@ -222,6 +225,7 @@ float Toss_NextBounce[2049] = { 0.0, ... };
 float Toss_AutoDetTime[2049] = { 0.0, ... };
 float Toss_MinVel[2049] = { 0.0, ... };
 float Toss_MarkTime[MAXPLAYERS + 1] = { 0.0, ... };
+float f_NextWrangleBeam[2049] = { 0.0, ... };
 float Toss_FacingAng[2049][3];
 
 bool Toss_IsToolbox[2049] = { false, ... };
@@ -523,6 +527,8 @@ enum struct CustomSentry
 	float previousRoll;
 	float nextTargetTime;
 	float nextScanSound;
+	float turnRate_Wrangled;
+	float fireRate_Wrangled;
 	
 	bool exists;
 	bool shooting;
@@ -547,6 +553,8 @@ enum struct CustomSentry
 		this.superchargeDuration_Hitscan = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_duration_hitscan");
 		this.superchargeFire_Hitscan = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_fire_hitscan");
 		this.superchargeTurn_Hitscan = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_turn_hitscan");
+		this.turnRate_Wrangled = CF_GetArgF(client, GADGETEER, abilityName, "rotation_wrangled");
+		this.fireRate_Wrangled = CF_GetArgF(client, GADGETEER, abilityName, "rate_wrangled");
 	}
 	
 	//Copies a toolbox's stats into this Drone.
@@ -569,6 +577,8 @@ enum struct CustomSentry
 		this.superchargeDuration_Hitscan = other.superchargeDuration_Hitscan;
 		this.superchargeFire_Hitscan = other.superchargeFire_Hitscan;
 		this.superchargeTurn_Hitscan = other.superchargeTurn_Hitscan;
+		this.turnRate_Wrangled = other.turnRate_Wrangled;
+		this.fireRate_Wrangled = other.fireRate_Wrangled;
 	}
 	
 	//Activates the Drone's custom sentry logic and sets its VFX.
@@ -735,7 +745,9 @@ enum struct CustomSentry
 						randVel[vec] = GetRandomFloat(200.0, 800.0);
 				}
 				
-				int gear = SpawnPhysicsProp(Model_Gears[GetRandomInt(0, sizeof(Model_Gears) - 1)], 0, "0", 99999.0, true, 1.0, pos, randAng, randVel, 5.0);
+				char model[255];
+				model = Model_Gears[GetRandomInt(0, sizeof(Model_Gears) - 1)];
+				int gear = SpawnPhysicsProp(model, 0, "0", 99999.0, true, 1.0, pos, randAng, randVel, 5.0);
 				
 				if (IsValidEntity(gear))
 				{
@@ -755,6 +767,21 @@ enum struct CustomSentry
 		this.exists = false;
 		this.shooting = false;
 		this.text = 0;
+	}
+
+	bool Wrangled()
+	{
+		int user = GetClientOfUserId(this.owner);
+		if (!IsValidMulti(user))
+			return false;
+
+		int weapon = TF2_GetActiveWeapon(user);
+		if (!IsValidEntity(weapon))
+			return false;
+
+		char classname[255];
+		GetEntityClassname(weapon, classname, sizeof(classname));
+		return (StrEqual(classname, "tf_weapon_laser_pointer"));
 	}
 }
 
@@ -827,6 +854,12 @@ public bool Toss_OnlyHitEnemies(entity, contentsMask)
 	return (otherTeam == TFTeam_Blue && thisTeam == TFTeam_Red) || (otherTeam == TFTeam_Red && thisTeam == TFTeam_Blue);
 }
 
+//A trace which returns true as long as the entity is solid, and NOT on the given team.
+public bool Toss_OnlyHitSolids(entity, contentsMask, TFTeam team)
+{
+	return (Brush_Is_Solid(entity) && !CF_IsValidTarget(entity, team));
+}
+
 int ToolboxToIgnore;
 //A trace which returns true as long as the entity is not a client or a specified toolbox (ToolboxToIgnore).
 public bool Toss_IgnoreThisToolbox(entity, contentsMask)
@@ -863,7 +896,8 @@ public void Toss_CustomSentryLogic(int ref)
 	
 	int owner = GetClientOfUserId(Toss_SentryStats[entity].owner);
 	int target = EntRefToEntIndex(Toss_SentryStats[entity].target);
-	float turnSpeed = Toss_SentryStats[entity].turnRate;
+	bool wrangled = Toss_SentryStats[entity].Wrangled();
+	float turnSpeed = (wrangled ? Toss_SentryStats[entity].turnRate_Wrangled : Toss_SentryStats[entity].turnRate);
 	
 	if (gt <= Toss_SentryStats[entity].superchargeEndTime)
 		turnSpeed *= (Toss_SentryStats[entity].superchargedType == 1 ? Toss_SentryStats[entity].superchargeTurn_Hitscan : Toss_SentryStats[entity].superchargeTurn);
@@ -894,60 +928,144 @@ public void Toss_CustomSentryLogic(int ref)
 		TeleportEntity(entity, NULL_VECTOR, NULL_VECTOR, vel);
 	}
 	
-	SentryBeingChecked = entity;
-	//We do not currently have a target or our target is hiding behind something, find a new target:
-	if (!Toss_IsValidTarget(target) && gt >= Toss_SentryStats[entity].nextTargetTime)
-	{
-		target = Toss_GetClosestTarget(entity, team == TFTeam_Red ? TFTeam_Blue : TFTeam_Red, distance);
-		if (IsValidEntity(target))
-		{
-			if (distance > Toss_SentryStats[entity].radiusDetection)
-				target = -1;
-			else
-			{
-				EmitSoundToAll(SOUND_TOSS_TARGETLOCKED, entity, _, _, _, _, _, -1);
-				
-				if (IsValidClient(target))
-					EmitSoundToClient(target, SOUND_TOSS_TARGETWARNING, _, _, 110);
-			}
-		}
-	}
-	
-	if (Toss_IsValidTarget(target))	//We have a target, rotate to face them and fire if we are able.
+	if (wrangled)
 	{
 		StopSound(entity, SNDCHAN_AUTO, SOUND_DRONE_SCANNING);
-		
-		int marked = Toss_GetMarkedTarget(entity);
-		if (IsValidMulti(marked, _, _, true, grabEnemyTeam(owner)))
-			target = marked;
-		
-		float otherPos[3];
-		CF_WorldSpaceCenter(target, otherPos);
-		//GetClientAbsOrigin(target, otherPos);
-		
-		//The target has escaped our firing radius, unlock.
-		if (GetVectorDistance(pos, otherPos) > Toss_SentryStats[entity].radiusFire)
+		StopSound(entity, SNDCHAN_AUTO, SOUND_DRONE_SCANNING);
+
+		float userAng[3], userPos[3], targPos[3], targAng[3], dummyAng[3];
+		GetClientEyePosition(owner, userPos);
+		GetClientEyeAngles(owner, userAng);
+		GetPointInDirection(userPos, userAng, 9999.0, targPos);
+
+		TR_TraceRayFilter(userPos, targPos, MASK_SHOT, RayType_EndPoint, Toss_OnlyHitSolids, team);
+		TR_GetEndPosition(targPos); 
+
+		GetAngleToPoint(entity, targPos, dummyAng, targAng);
+			
+		for (int i = 0; i < 3; i++)
 		{
-			target = -1;
-			Toss_SentryStats[entity].target = -1;
-			EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
-			EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
-			Toss_SentryStats[entity].nextScanSound = gt + scan_sound_time;
+			angles[i] = ApproachAngle(targAng[i], angles[i], turnSpeed);
 		}
-		else	//The target is still in our firing radius, turn to face them and fire if able.
+				
+		/*if (angles[2] != 0.0)
 		{
-			//otherPos[2] += 40.0 * (CF_GetCharacterScale(target));
-			float dummyAng[3], targAng[3];
-			GetAngleToPoint(entity, otherPos, dummyAng, targAng);
-		
-			bool CanShoot = true;
-			for (int i = 0; i < 2; i++)
+			angles[2] = ApproachAngle(0.0, angles[2], turnSpeed);
+		}*/
+				
+		TeleportEntity(entity, NULL_VECTOR, angles, vel);
+
+		if (f_NextWrangleBeam[entity] <= gt)
+		{
+			GetPointInDirection(pos, angles, 9999.0, targPos);
+			TR_TraceRayFilter(pos, targPos, MASK_SHOT, RayType_EndPoint, Toss_OnlyHitSolids, team);
+			TR_GetEndPosition(targPos);
+
+			float wrangleBeamPos[3], wrangleBeamAng[3];
+			GetEntityAttachment(entity, LookupEntityAttachment(entity, "muzzle"), wrangleBeamPos, wrangleBeamAng);
+
+			int r = 255, b = 120;
+			if (team == TFTeam_Blue)
 			{
-				angles[i] = ApproachAngle(targAng[i], angles[i], turnSpeed);
-				float test1 = NormalizeAngle(targAng[i]);
-				float diff = GetDifference(angles[i], test1);
-				if (diff > 0.5)
-					CanShoot = false;
+				b = 255;
+				r = 120;
+			}
+			SpawnBeam_Vectors(wrangleBeamPos, targPos, 0.1, r, 120, b, 255, Laser_Model, 1.0, 1.0, 1, 0.0, owner);
+			for (int targ = 1; targ <= MaxClients; targ++)
+			{
+				if (IsValidClient(targ) && targ != owner)
+					SpawnBeam_Vectors(wrangleBeamPos, targPos, 0.1, r, 120, b, 120, Laser_Model, 1.0, 1.0, 1, 0.0, targ);
+			}
+
+			f_NextWrangleBeam[entity] = gt + 0.05;
+		}
+
+		if (gt >= Toss_SentryStats[entity].NextShot && GetClientButtons(owner) & IN_ATTACK != 0)
+		{
+			Toss_SentryFire(entity, gt, pos, angles, team, owner);
+		}
+	}
+	else
+	{
+		SentryBeingChecked = entity;
+		//We do not currently have a target or our target is hiding behind something, find a new target:
+		if (!Toss_IsValidTarget(target) && gt >= Toss_SentryStats[entity].nextTargetTime)
+		{
+			target = Toss_GetClosestTarget(entity, team == TFTeam_Red ? TFTeam_Blue : TFTeam_Red, distance);
+			if (IsValidEntity(target))
+			{
+				if (distance > Toss_SentryStats[entity].radiusDetection)
+					target = -1;
+				else
+				{
+					EmitSoundToAll(SOUND_TOSS_TARGETLOCKED, entity, _, _, _, _, _, -1);
+					
+					if (IsValidClient(target))
+						EmitSoundToClient(target, SOUND_TOSS_TARGETWARNING, _, _, 110);
+				}
+			}
+		}
+		
+		if (Toss_IsValidTarget(target))	//We have a target, rotate to face them and fire if we are able.
+		{
+			StopSound(entity, SNDCHAN_AUTO, SOUND_DRONE_SCANNING);
+			StopSound(entity, SNDCHAN_AUTO, SOUND_DRONE_SCANNING);
+			
+			int marked = Toss_GetMarkedTarget(entity);
+			if (IsValidMulti(marked, _, _, true, grabEnemyTeam(owner)))
+				target = marked;
+			
+			float otherPos[3];
+			CF_WorldSpaceCenter(target, otherPos);
+			//GetClientAbsOrigin(target, otherPos);
+			
+			//The target has escaped our firing radius, unlock.
+			if (GetVectorDistance(pos, otherPos) > Toss_SentryStats[entity].radiusFire)
+			{
+				target = -1;
+				Toss_SentryStats[entity].target = -1;
+				EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
+				EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
+				Toss_SentryStats[entity].nextScanSound = gt + scan_sound_time;
+			}
+			else	//The target is still in our firing radius, turn to face them and fire if able.
+			{
+				//otherPos[2] += 40.0 * (CF_GetCharacterScale(target));
+				float dummyAng[3], targAng[3];
+				GetAngleToPoint(entity, otherPos, dummyAng, targAng);
+			
+				bool CanShoot = true;
+				for (int i = 0; i < 2; i++)
+				{
+					angles[i] = ApproachAngle(targAng[i], angles[i], turnSpeed);
+					float test1 = NormalizeAngle(targAng[i]);
+					float diff = GetDifference(angles[i], test1);
+					if (diff > 0.5)
+						CanShoot = false;
+				}
+				
+				if (angles[2] != 0.0)
+				{
+					angles[2] = ApproachAngle(0.0, angles[2], turnSpeed);
+				}
+				
+				TeleportEntity(entity, NULL_VECTOR, angles, vel);
+				
+				if (gt >= Toss_SentryStats[entity].NextShot && CanShoot)
+				{
+					Toss_SentryFire(entity, gt, pos, angles, team, owner);
+				}
+				
+				Toss_SentryStats[entity].target = EntIndexToEntRef(target);
+			}
+		}
+		else	//We did not find a target, keep rotating normally.
+		{
+			turnSpeed *= 0.5;
+			
+			if (angles[0] != 0.0)
+			{
+				angles[0] = ApproachAngle(0.0, angles[0], turnSpeed);
 			}
 			
 			if (angles[2] != 0.0)
@@ -955,81 +1073,22 @@ public void Toss_CustomSentryLogic(int ref)
 				angles[2] = ApproachAngle(0.0, angles[2], turnSpeed);
 			}
 			
+			float turnDir = Toss_SentryStats[entity].turnDirection;
+			angles[1] = ApproachAngle(Toss_SentryStats[entity].startingYaw + (turnDir * 45.0), angles[1], turnSpeed);
+			
+			float diff = GetAngleDifference(angles[1], Toss_SentryStats[entity].startingYaw + (turnDir * 45.0));
+			
+			if (GetDifference(diff, turnSpeed) < turnSpeed)
+				Toss_SentryStats[entity].turnDirection *= -1.0;
+				
 			TeleportEntity(entity, NULL_VECTOR, angles, vel);
 			
-			if (gt >= Toss_SentryStats[entity].NextShot && CanShoot)
+			if (gt >= Toss_SentryStats[entity].nextScanSound)
 			{
-				Toss_SentryStats[entity].NextShot = gt + (Toss_SentryStats[entity].fireRate / (gt <= Toss_SentryStats[entity].superchargeEndTime ? (Toss_SentryStats[entity].superchargedType == 1 ? Toss_SentryStats[entity].superchargeFire_Hitscan : Toss_SentryStats[entity].superchargeFire) : 1.0));
-				
-				//Run a traceray to see if our shot will hit the target, or any other target on their team for that matter.
-				int victim = target;
-				Toss_TraceTeam = GetEntProp(entity, Prop_Send, "m_iTeamNum");
-				TR_TraceRayFilter(pos, angles, MASK_SHOT, RayType_Infinite, Toss_OnlyHitEnemies);
-				victim = TR_GetEntityIndex();
-				
-				//This just gets the location where the beam should be fired.
-				int r = 255;
-				int b = 120;
-				if (team == TFTeam_Blue)
-				{
-					r = 120;
-					b = 255;
-				}
-				
-				Toss_TraceTarget = target;
-				GetPointFromAngles(pos, angles, 99999.0, otherPos, Toss_IgnoreAllButTarget, MASK_SHOT);
-				
-				int muzzle = AttachParticleToEntity(entity, team == TFTeam_Red ? PARTICLE_MUZZLE_RED_2 : PARTICLE_MUZZLE_BLUE_2, "muzzle", 2.0);
-				if (IsValidEntity(muzzle))
-				{
-					GetEntPropVector(muzzle, Prop_Data, "m_vecAbsOrigin", pos);
-				}
-				
-				SpawnBeam_Vectors(pos, otherPos, 0.1, 255, 255, 255, 255, PrecacheModel("materials/sprites/lgtning.vmt"), 1.0, 1.0, _, 0.0);
-				SpawnBeam_Vectors(pos, otherPos, 0.1, r, 120, b, 255, PrecacheModel("materials/sprites/lgtning.vmt"), 4.0, 4.0, _, 0.0);
-				SpawnBeam_Vectors(pos, otherPos, 0.1, r, 120, b, 120, PrecacheModel("materials/sprites/glow02.vmt"), 8.0, 8.0, _, 0.0);
-				SpawnBeam_Vectors(pos, otherPos, 0.15, r, 120, b, 80, PrecacheModel("materials/sprites/glow02.vmt"), 12.0, 12.0, _, 0.0);
-				SpawnBeam_Vectors(pos, otherPos, 0.2, r, 120, b, 40, PrecacheModel("materials/sprites/glow02.vmt"), 16.0, 16.0, _, 0.0);
-				
-				//Deal damage if the victim is valid.
-				if (IsValidEntity(victim))
-					SDKHooks_TakeDamage(victim, entity, owner, Toss_SentryStats[entity].damage, DMG_BULLET, _, _, _, false);
-				
-				EmitSoundToAll(gt <= Toss_SentryStats[entity].superchargeEndTime ? SOUND_TOSS_SHOOT_SUPERCHARGE : SOUND_TOSS_SHOOT, entity, _, _, _, _, _, -1);
+				EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
+				EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
+				Toss_SentryStats[entity].nextScanSound = gt + scan_sound_time;
 			}
-			
-			Toss_SentryStats[entity].target = EntIndexToEntRef(target);
-		}
-	}
-	else	//We did not find a target, keep rotating normally.
-	{
-		turnSpeed *= 0.5;
-		
-		if (angles[0] != 0.0)
-		{
-			angles[0] = ApproachAngle(0.0, angles[0], turnSpeed);
-		}
-		
-		if (angles[2] != 0.0)
-		{
-			angles[2] = ApproachAngle(0.0, angles[2], turnSpeed);
-		}
-		
-		float turnDir = Toss_SentryStats[entity].turnDirection;
-		angles[1] = ApproachAngle(Toss_SentryStats[entity].startingYaw + (turnDir * 45.0), angles[1], turnSpeed);
-		
-		float diff = GetAngleDifference(angles[1], Toss_SentryStats[entity].startingYaw + (turnDir * 45.0));
-		
-		if (GetDifference(diff, turnSpeed) < turnSpeed)
-			Toss_SentryStats[entity].turnDirection *= -1.0;
-			
-		TeleportEntity(entity, NULL_VECTOR, angles, vel);
-		
-		if (gt >= Toss_SentryStats[entity].nextScanSound)
-		{
-			EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
-			EmitSoundToAll(SOUND_DRONE_SCANNING, entity);
-			Toss_SentryStats[entity].nextScanSound = gt + scan_sound_time;
 		}
 	}
 	
@@ -1038,6 +1097,55 @@ public void Toss_CustomSentryLogic(int ref)
 	Toss_SentryStats[entity].previousRoll = angles[2];
 		
 	RequestFrame(Toss_CustomSentryLogic, ref);
+}
+
+public void Toss_SentryFire(int entity, float gt, float pos[3], float angles[3], TFTeam team, int owner)
+{
+	Toss_SentryStats[entity].NextShot = gt + ((Toss_SentryStats[entity].Wrangled() ? Toss_SentryStats[entity].fireRate_Wrangled : Toss_SentryStats[entity].fireRate) / (gt <= Toss_SentryStats[entity].superchargeEndTime ? (Toss_SentryStats[entity].superchargedType == 1 ? Toss_SentryStats[entity].superchargeFire_Hitscan : Toss_SentryStats[entity].superchargeFire) : 1.0));
+					
+					//CF_FireGenericBullet(owner, angles, Toss_SentryStats[entity].damage, _, _, _, _, 99999.0, 99999.0, _, _, grabEnemyTeam(owner), _, _, _, pos);
+
+	float endPos[3], hitPos[3];
+	GetPointInDirection(pos, angles, 99999.0, endPos);
+
+	if (!CF_HasLineOfSight(pos, endPos, _, endPos, entity))
+	{
+		UTIL_ImpactTrace(owner, pos, DMG_BULLET);
+	}
+
+	ArrayList victims = CF_DoBulletTrace(owner, pos, endPos, 0, grabEnemyTeam(owner), _, _, endPos);
+	for (int i = 0; i < GetArraySize(victims); i++)
+	{
+		int vic = GetArrayCell(victims, i);
+						
+		CF_TraceShot(owner, vic, pos, endPos, _, false, hitPos);
+		SDKHooks_TakeDamage(vic, entity, owner, Toss_SentryStats[entity].damage, DMG_BULLET, _, _, hitPos);
+	}
+	delete victims;
+
+	int muzzle = AttachParticleToEntity(entity, team == TFTeam_Red ? PARTICLE_MUZZLE_RED_2 : PARTICLE_MUZZLE_BLUE_2, "muzzle", 2.0);
+	if (IsValidEntity(muzzle))
+	{
+		GetEntPropVector(muzzle, Prop_Data, "m_vecAbsOrigin", pos);
+	}
+			
+	//This looks really cool, but after a while it just inexplicably wigs out and stops spawning tracers, which makes it really hard to find the drone.
+	//SpawnParticle_ControlPoints(pos, endPos, team == TFTeam_Red ? PARTICLE_DRONE_TRACER_RED : PARTICLE_DRONE_TRACER_BLUE, 0.5);
+
+	int r = 255;
+	int b = 120;
+	if (team == TFTeam_Blue)
+	{
+		r = 120;
+		b = 255;
+	}
+	SpawnBeam_Vectors(pos, endPos, 0.1, 255, 255, 255, 255, PrecacheModel("materials/sprites/lgtning.vmt"), 1.0, 1.0, _, 0.0);
+	SpawnBeam_Vectors(pos, endPos, 0.1, r, 120, b, 255, PrecacheModel("materials/sprites/lgtning.vmt"), 4.0, 4.0, _, 0.0);
+	SpawnBeam_Vectors(pos, endPos, 0.1, r, 120, b, 120, PrecacheModel("materials/sprites/glow02.vmt"), 8.0, 8.0, _, 0.0);
+	SpawnBeam_Vectors(pos, endPos, 0.15, r, 120, b, 80, PrecacheModel("materials/sprites/glow02.vmt"), 12.0, 12.0, _, 0.0);
+	SpawnBeam_Vectors(pos, endPos, 0.2, r, 120, b, 40, PrecacheModel("materials/sprites/glow02.vmt"), 16.0, 16.0, _, 0.0);
+
+	EmitSoundToAll(gt <= Toss_SentryStats[entity].superchargeEndTime ? SOUND_TOSS_SHOOT_SUPERCHARGE : SOUND_TOSS_SHOOT, entity, _, 80, _, _, _, -1);
 }
 
 //Gets the closest target for a Drone to shoot at.
