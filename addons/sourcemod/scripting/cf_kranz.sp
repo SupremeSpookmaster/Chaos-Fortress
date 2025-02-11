@@ -348,36 +348,42 @@ public void Rush_CheckBump(int id)
 	if (current >= Rush_MinSpeed[client])
 	{
 		float pos[3];
-		GetClientAbsOrigin(client, pos);
+		CF_WorldSpaceCenter(client, pos);
 
 		float dist;
 		int other = CF_GetClosestTarget(pos, true, dist, Rush_HitboxScale[client], grabEnemyTeam(client));
 
 		if (other > 0 && other < 2049 && dist <= Rush_HitboxScale[client])
 		{
-			CF_WorldSpaceCenter(other, pos);
-			SpawnShaker(pos, 14, 100, 2, 4, 4);
-			SpawnParticle(pos, PARTICLE_RUSH_COLLIDE, 2.0);
-			EmitSoundToAll(SND_RUSH_COLLIDE, client, _, _, _, _, GetRandomInt(80, 110));
+			float vicPos[3];
+			CF_WorldSpaceCenter(other, vicPos);
 
-			if (IsValidMulti(other))
+			if (CF_HasLineOfSight(pos, vicPos))
 			{
-				float ang[3];
-				GetClientAbsAngles(client, ang);
-				CF_ApplyKnockback(other, Rush_KB[client], ang);
+				pos = vicPos;
+				SpawnShaker(pos, 14, 100, 2, 4, 4);
+				SpawnParticle(pos, PARTICLE_RUSH_COLLIDE, 2.0);
+				EmitSoundToAll(SND_RUSH_COLLIDE, client, _, _, _, _, GetRandomInt(80, 110));
+
+				if (IsValidMulti(other))
+				{
+					float ang[3];
+					GetClientAbsAngles(client, ang);
+					CF_ApplyKnockback(other, Rush_KB[client], ang);
+				}
+
+				float damage = Rush_DMG[client];
+				if (current >= Rush_Requirement[client])
+					damage += Rush_DMGMax[client];
+				else if (current > Rush_MinSpeed[client])
+					damage += ((current - Rush_MinSpeed[client]) / (Rush_Requirement[client] - Rush_MinSpeed[client])) * Rush_DMGMax[client];
+
+				SDKHooks_TakeDamage(other, client, client, damage, DMG_CLUB);
+				CF_ApplyTemporarySpeedChange(client, 0, -Rush_Speed[client], 0.0, 0, 9999.0, false);
+				EmitSoundToClient(client, SND_RUSH_END);
+				Rush_DeleteTimer(client);
+				return;
 			}
-
-			float damage = Rush_DMG[client];
-			if (current >= Rush_Requirement[client])
-				damage += Rush_DMGMax[client];
-			else if (current > Rush_MinSpeed[client])
-				damage += ((current - Rush_MinSpeed[client]) / (Rush_Requirement[client] - Rush_MinSpeed[client])) * Rush_DMGMax[client];
-
-			SDKHooks_TakeDamage(other, client, client, damage, DMG_CLUB);
-			CF_ApplyTemporarySpeedChange(client, 0, -Rush_Speed[client], 0.0, 0, 9999.0, false);
-			EmitSoundToClient(client, SND_RUSH_END);
-			Rush_DeleteTimer(client);
-			return;
 		}
 	}
 

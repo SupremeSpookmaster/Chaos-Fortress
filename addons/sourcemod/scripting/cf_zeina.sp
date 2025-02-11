@@ -451,8 +451,14 @@ void ZeinaInitiateSlash(int client, char abilityName[255])
 		int victim = SensalHitList.Get(i);
 		if(IsValidTarget(client, victim))
 		{
-			GetEntPropVector(victim, Prop_Data, "m_vecAbsOrigin", playerPos, 0);
-			SDKHooks_TakeDamage(victim, client, client, damage_enemy / 3.0, DMG_CLUB | DMG_CRIT, -1, NULL_VECTOR, playerPos, false);
+			float vicPos[3];
+			CF_WorldSpaceCenter(victim, vicPos);
+
+			if(CF_HasLineOfSight(belowBossEyes, vicPos))
+			{
+				GetEntPropVector(victim, Prop_Data, "m_vecAbsOrigin", playerPos, 0);
+				SDKHooks_TakeDamage(victim, client, client, damage_enemy / 3.0, DMG_CLUB | DMG_CRIT, -1, NULL_VECTOR, playerPos, false);
+			}
 		}
 	}
 
