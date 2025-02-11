@@ -1629,7 +1629,7 @@ native bool CF_IsValidTarget(int entity, TFTeam team, char[] plugin = "", Functi
  * Retrieves the entity nearest to the given point, with optional filters so that only certain entities are included.
  *
  * @param pos				The position to search from.
- * @param IncludeEntities	If set to true, this native will cycle through ALL entities instead of just players, which is much more expensive. Only set to true if you absolutely need to.
+ * @param IncludeEntities	If set to true, this native will cycle through ALL entities instead of just players.
  * @param distance			Optional return parameter in which the distance from "pos" too the nearest entity will be stored.
  * @param maxDistance		The maximum possible distance an entity can be from "pos" to be counted. <= 0.0: no limit.
  * @param team				The team an entity must be on in order to be counted, or TFTeam_Unassigned to ignore teams.

@@ -395,7 +395,7 @@ void ZeinaInitiateSlash(int client, char abilityName[255])
 	GetClientEyeAngles(client, Angles);
 	GetAngleVectors(Angles, vecForward, NULL_VECTOR, NULL_VECTOR);
 
-	float VectorForward = 350.0; //a really high number.
+	float VectorForward = 150.0; //a really high number.
 	pos2[0] = belowBossEyes[0] + vecForward[0] * VectorForward;
 	pos2[1] = belowBossEyes[1] + vecForward[1] * VectorForward;
 	pos2[2] = belowBossEyes[2] + vecForward[2] * VectorForward;
