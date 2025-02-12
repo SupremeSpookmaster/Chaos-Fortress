@@ -348,7 +348,7 @@ Action OnShortCircuit(int entity)
 		}
 	}
 
-	CF_GiveUltCharge(owner, 65.0, CF_ResourceType_Generic);
+	//CF_GiveUltCharge(owner, 65.0, CF_ResourceType_Generic);
 
 	RemoveEntity(entity);
 	return Plugin_Stop;
