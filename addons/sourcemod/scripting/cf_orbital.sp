@@ -806,7 +806,7 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 		return Plugin_Changed;
 	}
 	
-	if (Taser_Active[inflictor])
+	if (IsValidEntity(inflictor) && Taser_Active[inflictor])
 	{
 		strcopy(console, sizeof(console), "Taser Bolt");
 		strcopy(weapon, sizeof(weapon), "righteous_bison");

@@ -524,14 +524,14 @@ public void OnMapEnd()
 
 public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], char console[255], int &custom, int deadRinger, int &critType, int &damagebits)
 {
-	if (Discard_isSkull[inflictor])
+	if (IsValidEntity(inflictor) && Discard_isSkull[inflictor])
 	{
 		strcopy(console, sizeof(console), "Skull Servant");
 		strcopy(weapon, sizeof(weapon), "spellbook_fireball");
 
 		return Plugin_Changed;
 	}
-	else if (GetGameTime() <= Calcium_EndTime[attacker])
+	else if (IsValidClient(attacker) && GetGameTime() <= Calcium_EndTime[attacker])
 	{
 		critType = 2;
 		strcopy(console, sizeof(console), "CALCIUM CATACLYSM");

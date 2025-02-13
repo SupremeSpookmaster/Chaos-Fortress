@@ -772,7 +772,7 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 {
 	Action ReturnValue = Plugin_Continue;
 
-	if (b_IsHeavyDraw[inflictor])
+	if (IsValidEntity(inflictor) && b_IsHeavyDraw[inflictor])
 	{
 		critType = 2;
 		ReturnValue = Plugin_Changed;
