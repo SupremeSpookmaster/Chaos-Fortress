@@ -148,6 +148,9 @@ stock bool CF_LOSTrace(int entity, int contentsmask, int target)
 
 stock int GetTeam(int entity)
 {
+	if (!IsValidEntity(entity))
+		return 0;
+		
 	return GetEntProp(entity, Prop_Send, "m_iTeamNum");
 }
 
