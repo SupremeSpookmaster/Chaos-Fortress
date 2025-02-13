@@ -240,6 +240,8 @@ public void Draw_DelayedArrowModification(int ref)
 	
 	float damage = 50.0 + (70.0 * (duration_charged / requiredChargeTime));
 	damage *= GetAttributeValue(huntsman, 2, 1.0);
+	if (duration_charged / requiredChargeTime >= 1.0)
+		damage *= GetAttributeValue(huntsman, 304, 1.0);
 	
 	DataPack pack = new DataPack();
 	WritePackCell(pack, EntIndexToEntRef(entity));

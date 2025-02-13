@@ -2317,7 +2317,7 @@ public void Support_Logic(int drone)
 				PNPC_WorldSpaceCenter(i, targPos);
 				if (GetVectorDistance(selfPos, targPos) <= Toss_SupportStats[drone].healRadius && Toss_HasLineOfSight(drone, i))
 				{
-					CF_HealPlayer(i, owner, (target == i ? targHeals : otherHeals), 1.0);
+					CF_HealPlayer_WithAttributes(i, owner, (target == i ? targHeals : otherHeals), 1.0);
 					if (!b_HealingClient[drone][i])
 					{
 						int startParticle, endParticle;

@@ -1626,6 +1626,44 @@ stock float GetAttributeValue(int entity, int attribute, float defaultVal)
 	return TF2Attrib_GetValue(addy);
 }
 
+stock float GetTotalAttributeValue(int client, int attribute, float baseVal)
+{
+	if (!IsValidMulti(client))
+		return baseVal;
+
+	//First: Check all weapon slots.
+	for (int i = 0; i < 5; i++)
+	{
+		int weapon = GetPlayerWeaponSlot(client, i);
+		if (IsValidEntity(weapon))
+		{
+			baseVal *= GetAttributeValue(weapon, attribute, 1.0);
+		}
+	}
+
+	//Now: Check all wearables.
+	int wearable = -1;
+	while ((wearable = FindEntityByClassname(wearable, "tf_wearable")) != -1)
+	{
+		int owner = GetEntPropEnt(wearable, Prop_Send, "m_hOwnerEntity");
+		if (owner == client)
+		{
+			baseVal *= GetAttributeValue(wearable, attribute, 1.0);
+		}
+	}
+	wearable = -1;
+	while ((wearable = FindEntityByClassname(wearable, "tf_wearable_*")) != -1)
+	{
+		int owner = GetEntPropEnt(wearable, Prop_Send, "m_hOwnerEntity");
+		if (owner == client)
+		{
+			baseVal *= GetAttributeValue(wearable, attribute, 1.0);
+		}
+	}
+
+	return baseVal;
+}
+
 //Thanks, Artvin:
 stock float[] GetWorldSpaceCenter(int client)
 {

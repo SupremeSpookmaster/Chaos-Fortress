@@ -163,6 +163,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_BlockAbilitySlot", Native_CF_BlockAbilitySlot);
 	CreateNative("CF_UnblockAbilitySlot", Native_CF_UnblockAbilitySlot);
 	CreateNative("CF_HealPlayer", Native_CF_HealPlayer);
+	CreateNative("CF_HealPlayer_WithAttributes", Native_CF_HealPlayer_WithAttributes);
 	CreateNative("CF_FireGenericRocket", Native_CF_FireGenericRocket);
 	CreateNative("CF_GenericAOEDamage", Native_CF_GenericAOEDamage);
 	CreateNative("CF_CreateHealthPickup", Native_CF_CreateHealthPickup);
@@ -662,9 +663,7 @@ public void CFA_PlayerKilled(int attacker, int victim)
 	if (CF_IsPlayerCharacter(attacker) && attacker != victim)
 	{
 		CF_GiveSpecialResource(attacker, 1.0, CF_ResourceType_Kill);
-		
-		if (CF_GetRoundState() == 1)
-			CF_GiveUltCharge(attacker, 1.0, CF_ResourceType_Kill);
+		CF_GiveUltCharge(attacker, 1.0, CF_ResourceType_Kill);
 		
 		CF_PlayRandomSound(attacker, "", "sound_kill");
 	}
@@ -1112,6 +1111,7 @@ public void CFA_MapEnd()
 		b_HeldM2BlocksOthers[i] = false;
 		b_HeldM3BlocksOthers[i] = false;
 		b_HeldReloadBlocksOthers[i] = false;
+		b_ResourceIsMetal[i] = false;
 
 		i_HealingDone[i] = 0;
 		i_UltWeaponSlot[i] = -1;
@@ -1970,11 +1970,15 @@ public void CFA_UltMessage(int client)
 	Format(message, sizeof(message), "%s%N{default}: My {olive}%s{default} is ", (team == TFTeam_Red ? "{red}" : "{blue}"), client, s_UltName[client]);
 
 	if (charge >= 1.0)
+	{
 		Format(message, sizeof(message), "%s{green}FULLY CHARGED{default}!", message);
+		CF_PlayRandomSound(client, "", "sound_ultimate_ready");
+	}
 	else
 	{
 		Format(message, sizeof(message), "%s{yellow}%iPCNTG{default} charged!", message, RoundToFloor(100.0 * charge));
 		ReplaceString(message, sizeof(message), "PCNTG", "%%");
+		CF_PlayRandomSound(client, "", "sound_ultimate_not_ready_callout");
 	}
 
 	for (int i = 1; i <= MaxClients; i++)
@@ -2082,7 +2086,7 @@ public Native_CF_SetSpecialResource(Handle plugin, int numParams)
 		}
 		
 		float oldResources = CF_GetSpecialResource(client);
-		
+
 		f_Resources[client] = amt;
 		if (b_ResourceIsMetal[client])
 			SetEntProp(client, Prop_Send, "m_iAmmo", RoundFloat(f_Resources[client]), 4, 3);
@@ -3028,6 +3032,20 @@ public Native_CF_HealPlayer(Handle plugin, int numParams)
 		
 		CFA_AddHealingPoints(healer, healingDone);
 	}
+}
+
+public Native_CF_HealPlayer_WithAttributes(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	int healer = GetNativeCell(2);
+	int amt = GetNativeCell(3);
+	float hpMult = GetNativeCell(4);
+	
+	if (!IsValidMulti(client))
+		return;
+
+	amt *= GetTotalAttributeValue(client, 854, 1.0) * GetTotalAttributeValue(client, 69, 1.0) * GetTotalAttributeValue(client, 70, 1.0);
+	CF_HealPlayer(client, healer, amt, hpMult);
 }
 
 public void CFA_GiveChargesForHealing(int healer, float healingDone)
@@ -3988,7 +4006,7 @@ public void FakeHealthKit_Think(DataPack pack)
 					healing = amt * maxHP;
 				}
 				
-				CF_HealPlayer(i, owner, RoundFloat(healing), hpMult);
+				CF_HealPlayer_WithAttributes(i, owner, RoundFloat(healing), hpMult);
 				EmitSoundToClient(i, snd, _, _, 120);
 				
 				delete pack;

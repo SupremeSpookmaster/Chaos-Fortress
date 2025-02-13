@@ -28,13 +28,14 @@ public void CFDMG_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor
 	
 	if (CF_GetRoundState() == 1 && attacker != victim && damage > 0.0)
 	{
-		if (damage > float(GetClientHealth(victim)))
-			damage = float(GetClientHealth(victim));
+		float dmgForResource = damage;
+		if (dmgForResource > CF_GetCharacterMaxHealth(victim))
+			dmgForResource = CF_GetCharacterMaxHealth(victim);
 			
-		CF_GiveSpecialResource(attacker, damage, CF_ResourceType_DamageDealt);
-		CF_GiveUltCharge(attacker, damage, CF_ResourceType_DamageDealt);
-		CF_GiveSpecialResource(victim, damage, CF_ResourceType_DamageTaken);
-		CF_GiveUltCharge(victim, damage, CF_ResourceType_DamageTaken);
+		CF_GiveSpecialResource(attacker, dmgForResource, CF_ResourceType_DamageDealt);
+		CF_GiveUltCharge(attacker, dmgForResource, CF_ResourceType_DamageDealt);
+		CF_GiveSpecialResource(victim, dmgForResource, CF_ResourceType_DamageTaken);
+		CF_GiveUltCharge(victim, dmgForResource, CF_ResourceType_DamageTaken);
 	}
 }
 

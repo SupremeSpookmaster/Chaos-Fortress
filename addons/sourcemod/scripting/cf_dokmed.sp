@@ -323,7 +323,7 @@ public MRESReturn Bottle_Shatter(int bottle, int owner, int teamNum)
 				
 				CF_ApplyTemporarySpeedChange(i, Flask_SpeedMode[bottle], Flask_SpeedAmt[bottle], Flask_SpeedDuration[bottle], Flask_SpeedMaxMode[bottle], Flask_SpeedMax[bottle], true);
 				
-				CF_HealPlayer(i, owner, RoundFloat(Flask_HealInst[bottle]), Flask_HealOverheal[bottle]);
+				CF_HealPlayer_WithAttributes(i, owner, RoundFloat(Flask_HealInst[bottle]), Flask_HealOverheal[bottle]);
 				if (Flask_HealDuration[bottle] > 0.0)
 				{
 					DataPack pack = new DataPack();
@@ -462,7 +462,7 @@ public void Flask_HealOverTime(DataPack pack)
 		
 	if (gt >= nextHeal)
 	{
-		CF_HealPlayer(client, healer, amt, overheal);
+		CF_HealPlayer_WithAttributes(client, healer, amt, overheal);
 		nextHeal = gt + interval;
 	}
 	
@@ -568,7 +568,7 @@ public void Surgery_Teleport(int client)
 			GetClientAbsOrigin(i, pos);
 			if (GetVectorDistance(pos, Surgery_Destination[client]) <= Surgery_HealingRadius[client])
 			{
-				CF_HealPlayer(i, client, RoundFloat(Surgery_HealingAmt[client]), Surgery_HealingOverheal[client]);
+				CF_HealPlayer_WithAttributes(i, client, RoundFloat(Surgery_HealingAmt[client]), Surgery_HealingOverheal[client]);
 				CF_AttachParticle(i, team == TFTeam_Red ? PARTICLE_HEALING_BURST_RED : PARTICLE_HEALING_BURST_BLUE, "root", _, 2.0);
 				EmitSoundToClient(i, SOUND_FLASK_HEAL);
 			}
@@ -779,7 +779,7 @@ public Action Medigun_PreThink(int client)
 			int heals = RoundToFloor(Medigun_HealBucket[client]);
 			float remainder = Medigun_HealBucket[client] - float(heals);
 			
-			CF_HealPlayer(client, client, heals, Medigun_HealCap[client]);
+			CF_HealPlayer_WithAttributes(client, client, heals, Medigun_HealCap[client]);
 			Medigun_HealBucket[client] = remainder;
 		}
 	}
@@ -1286,7 +1286,7 @@ public Action Time_PreThink(int client)
 					
 				if (Heal)
 				{
-					CF_HealPlayer(i, client, Time_Healing[client], Time_HealingOverheal[client]);
+					CF_HealPlayer_WithAttributes(i, client, Time_Healing[client], Time_HealingOverheal[client]);
 					CF_AttachParticle(i, team == TFTeam_Red ? PARTICLE_HEALING_BURST_RED : PARTICLE_HEALING_BURST_BLUE, "root", _, 2.0);
 				}
 			}

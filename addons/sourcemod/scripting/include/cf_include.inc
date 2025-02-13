@@ -143,7 +143,12 @@ stock bool CF_LOSTrace(int entity, int contentsmask, int target)
 	if (IsValidClient(entity) || entity == target || IsABuilding(entity))
 		return false;
 
-	return Brush_Is_Solid(entity);
+	return Brush_Is_Solid(entity) && !CF_IsValidTarget(entity, view_as<TFTeam>(GetTeam(target)));
+}
+
+stock int GetTeam(int entity)
+{
+	return GetEntProp(entity, Prop_Send, "m_iTeamNum");
 }
 
   ////////////////////////////////////////
@@ -1361,6 +1366,7 @@ native CF_UnblockAbilitySlot(int client, CF_AbilityType type);
 
 /**
  * Heals a specified player for a specified amount, and gives the healer credit for it.
+ * This method ignores weapon/wearable attributes which affect healing received from healers; to include those attributes, use CF_HealPlayer_WithAttributes.
  *
  * @param client				The client to heal.
  * @param healer				The client who performed the healing (does not need to be a valid client).
@@ -1368,6 +1374,17 @@ native CF_UnblockAbilitySlot(int client, CF_AbilityType type);
  * @param hpMult				The maximum percentage of the client's max HP for this to heal to. For example: 1.5 would allow this instance to heal the client up to a maximum of 150% of their max HP.
  */
 native CF_HealPlayer(int client, int healer, int amt, float hpMult);
+
+/**
+ * Heals a specified player for a specified amount, and gives the healer credit for it.
+ * This method bypasses weapon attributes which affect healing received.
+ *
+ * @param client				The client to heal.
+ * @param healer				The client who performed the healing (does not need to be a valid client).
+ * @param amt					The amount of healing given.
+ * @param hpMult				The maximum percentage of the client's max HP for this to heal to. For example: 1.5 would allow this instance to heal the client up to a maximum of 150% of their max HP.
+ */
+native CF_HealPlayer_WithAttributes(int client, int healer, int amt, float hpMult);
 
 /**
  * Launches a generic rocket, as if the user had fired a rocket launcher.
