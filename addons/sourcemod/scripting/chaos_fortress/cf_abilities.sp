@@ -77,6 +77,8 @@ bool b_HeldM3BlocksOthers[MAXPLAYERS + 1] = { false, ... };
 bool b_HeldReloadBlocksOthers[MAXPLAYERS + 1] = { false, ... };
 bool b_IsMedigunShield[2049] = { false, ... };
 
+bool critHit, miniCritHit, headshotKill;
+
 GlobalForward g_OnAbility;
 GlobalForward g_OnUltUsed;
 GlobalForward g_OnM2Used;
@@ -4817,12 +4819,16 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 				EmitSoundToAll(g_MiniCritHits[GetRandomInt(0, sizeof(g_MiniCritHits) - 1)], vic);
 				EmitSoundToClient(client, g_MiniCritHits[GetRandomInt(0, sizeof(g_MiniCritHits) - 1)]);
 				SpawnParticle(hitPos, PARTICLE_MINICRIT, 2.0);
+				miniCritHit = true;
+				headshotKill = true;
 			}
 			else if (crit || hsEffect >= 2)
 			{
 				EmitSoundToAll(g_CritHits_Victim[GetRandomInt(0, sizeof(g_CritHits_Victim) - 1)], vic);
 				EmitSoundToClient(client, g_CritHits[GetRandomInt(0, sizeof(g_CritHits) - 1)]);
 				SpawnParticle(hitPos, PARTICLE_CRIT, 2.0);
+				critHit = true;
+				headshotKill = true;
 			}
 		}
 
@@ -4839,6 +4845,9 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 		}
 
 		SDKHooks_TakeDamage(vic, client, client, damageToDeal, DMG_BULLET, (IsValidEntity(weapon) ? weapon : -1), _, hitPos);
+		headshotKill = false;
+		miniCritHit = false;
+		critHit = false;
 	}
 
 	delete victims;
@@ -4906,4 +4915,23 @@ static MRESReturn DHook_EndLagCompensation(Address address)
 {
 	CEndLagCompensationManager = address;
 	return MRES_Ignored;
+}
+
+public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], char console[255], int &custom, int deadRinger, int &critType, int &damagebits)
+{
+	Action returnVal = Plugin_Continue;
+
+	if (headshotKill)
+	{
+		strcopy(console, sizeof(console), "headshot");
+		strcopy(weapon, sizeof(weapon), "headshot");
+		returnVal = Plugin_Changed;
+	}
+
+	if (critHit)
+		critType = 2;
+	else if (miniCritHit)
+		critType = 1;
+
+	return returnVal;
 }
