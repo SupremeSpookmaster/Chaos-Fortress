@@ -4814,13 +4814,15 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 
 		if ((hs && hsEffect > 0) || crit)
 		{
+			if (hs)
+				headshotKill = true;
+
 			if (hsEffect == 1 && !crit)
 			{
 				EmitSoundToAll(g_MiniCritHits[GetRandomInt(0, sizeof(g_MiniCritHits) - 1)], vic);
 				EmitSoundToClient(client, g_MiniCritHits[GetRandomInt(0, sizeof(g_MiniCritHits) - 1)]);
 				SpawnParticle(hitPos, PARTICLE_MINICRIT, 2.0);
 				miniCritHit = true;
-				headshotKill = true;
 			}
 			else if (crit || hsEffect >= 2)
 			{
@@ -4828,7 +4830,6 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 				EmitSoundToClient(client, g_CritHits[GetRandomInt(0, sizeof(g_CritHits) - 1)]);
 				SpawnParticle(hitPos, PARTICLE_CRIT, 2.0);
 				critHit = true;
-				headshotKill = true;
 			}
 		}
 
