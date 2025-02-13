@@ -300,6 +300,9 @@ public void Bottle_Spin(int ref)
 	}
 }
 
+bool b_Cocainum;
+bool b_Telefrag;
+
 public MRESReturn Bottle_Shatter(int bottle, int owner, int teamNum)
 {
 	float gt = GetGameTime();
@@ -347,7 +350,9 @@ public MRESReturn Bottle_Shatter(int bottle, int owner, int teamNum)
 		}
 	}
 	
+	b_Cocainum = true;
 	Handle victims = CF_GenericAOEDamage(owner, bottle, bottle, Flask_DMGInst[bottle], DMG_GENERIC, Flask_Radius[bottle], pos, 99999.0, 0.0, false, false);
+	b_Cocainum = false;
 	
 	for (int i = 0; i < GetArraySize(victims); i++)
 	{
@@ -415,10 +420,12 @@ public void Flask_DMGOverTime(DataPack pack)
 		
 	if (gt >= nextHit)
 	{
+		b_Cocainum = true;
 		if (IsValidClient(attacker))
 			SDKHooks_TakeDamage(client, attacker, attacker, dmg, DMG_GENERIC);
 		else
 			SDKHooks_TakeDamage(client, 0, 0, dmg, DMG_GENERIC);
+		b_Cocainum = false;
 
 		float scale = CF_GetCharacterScale(client);
 		TFTeam team = TF2_GetClientTeam(client);
@@ -557,7 +564,9 @@ public void Surgery_Teleport(int client)
 	SpawnShaker(Surgery_Destination[client], 8, 100, 4, 4, 4);
 	Overlay_Flash(client, GetRandomInt(1, 1000) != 777 ? "lights/white005" : "models/player/medic/medic_head_red", 0.1);
 		
+	b_Telefrag = true;
 	Handle victims = CF_GenericAOEDamage(client, client, client, Surgery_DMG[client], DMG_GENERIC | DMG_CLUB | DMG_ALWAYSGIB, Surgery_DMGRadius[client], Surgery_Destination[client], Surgery_DMGFalloffStart[client], Surgery_DMGFalloffMax[client], _, false);
+	b_Telefrag = false;
 	delete victims;
 	
 	for (int i = 1; i <= MaxClients; i++)
@@ -1446,4 +1455,23 @@ public void OnEntityDestroyed(int entity)
 {
 	if (entity > 0 && entity < 2049)
 		b_FadingOut[entity] = false;
+}
+
+public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], char console[255], int &custom, int deadRinger, int &critType, int &damagebits)
+{
+	if (b_Cocainum)
+	{
+		strcopy(console, sizeof(console), "Cocainum");
+		strcopy(weapon, sizeof(weapon), "mannpower_plague");
+		return Plugin_Changed;
+	}
+	else if (b_Telefrag)
+	{
+		critType = 2;
+		strcopy(console, sizeof(console), "Surprise Surgery");
+		strcopy(weapon, sizeof(weapon), "spellbook_teleport");
+		return Plugin_Changed;
+	}
+
+	return Plugin_Continue;
 }

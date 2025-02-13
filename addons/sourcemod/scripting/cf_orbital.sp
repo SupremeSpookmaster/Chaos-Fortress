@@ -712,6 +712,8 @@ public Action Strike_VFX(Handle vfx, DataPack pack)
 	return Plugin_Continue;
 }
 
+bool b_OrbitalStrike;
+
 public Action Strike_DealDamage(Handle smackthoserats, DataPack pack)
 {
 	ResetPack(pack);
@@ -737,7 +739,9 @@ public Action Strike_DealDamage(Handle smackthoserats, DataPack pack)
 	if (GetGameTime() > endTime || !IsValidClient(client))
 		return Plugin_Continue;
 
+	b_OrbitalStrike = true;
 	Handle victims = CF_GenericAOEDamage(client, client, client, damage, DMG_CLUB|DMG_BLAST|DMG_ALWAYSGIB, radius, groundZero, falloffStart, falloffMax, true, false);
+	b_OrbitalStrike = false;
 	delete victims;
 
 	int r = 255;
@@ -789,5 +793,25 @@ public Action Strike_DealDamage(Handle smackthoserats, DataPack pack)
 	}
 	WritePackFloat(pack2, startTime);
 	
+	return Plugin_Continue;
+}
+
+public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], char console[255], int &custom, int deadRinger, int &critType, int &damagebits)
+{
+	if (b_OrbitalStrike)
+	{
+		critType = 2;
+		strcopy(console, sizeof(console), "ORBITAL STRIKE");
+		strcopy(weapon, sizeof(weapon), "firedeath");
+		return Plugin_Changed;
+	}
+	
+	if (Taser_Active[inflictor])
+	{
+		strcopy(console, sizeof(console), "Taser Bolt");
+		strcopy(weapon, sizeof(weapon), "righteous_bison");
+		return Plugin_Changed;
+	}
+
 	return Plugin_Continue;
 }

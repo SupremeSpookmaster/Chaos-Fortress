@@ -231,6 +231,7 @@ public void Absorb_HealOnDelay(DataPack pack)
 }
 
 bool Discard_VMAnim[MAXPLAYERS + 1] = { false, ... };
+bool Discard_isSkull[2049] = { false, ... };
 
 int Discard_Particle[2049] = { -1, ... };
 
@@ -270,6 +271,7 @@ public void Discard_Activate(int client, char abilityName[255])
 		Discard_DecayAmt[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "decay");
 		Discard_DecayMax[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "decay_max");
 		Discard_BurnTime[skull] = CF_GetArgF(client, SPOOKMASTER, abilityName, "afterburn");
+		Discard_isSkull[skull] = true;
 		
 		SetEntityModel(skull, MODEL_DISCARD);
 		DispatchKeyValue(skull, "modelscale", "1.45");
@@ -288,6 +290,12 @@ public void Discard_Activate(int client, char abilityName[255])
 		CF_ForceViewmodelAnimation(client, "spell_fire");
 		Discard_VMAnim[client] = true;
 	}
+}
+
+public void OnEntityDestroyed(int entity)
+{
+	if (entity > 0 && entity < 2049)
+		Discard_isSkull[entity] = false;
 }
 
 public void CF_OnForcedVMAnimEnd(int client, char sequence[255])
@@ -512,4 +520,29 @@ public void OnMapEnd()
 {
 	for (int i = 0; i <= MaxClients; i++)
 		Calcium_EndTime[i] = 0.0;
+}
+
+public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], char console[255], int &custom, int deadRinger, int &critType, int &damagebits)
+{
+	if (Discard_isSkull[inflictor])
+	{
+		strcopy(console, sizeof(console), "Skull Servant");
+		strcopy(weapon, sizeof(weapon), "spellbook_fireball");
+
+		return Plugin_Changed;
+	}
+	else if (GetGameTime() <= Calcium_EndTime[attacker])
+	{
+		critType = 2;
+		strcopy(console, sizeof(console), "CALCIUM CATACLYSM");
+
+		if (StrContains(weapon, "tf_weapon_") != -1)
+			strcopy(weapon, sizeof(weapon), "purgatory");
+		else
+			strcopy(weapon, sizeof(weapon), "spellbook_lightning");
+
+		return Plugin_Changed;
+	}
+
+	return Plugin_Continue;
 }

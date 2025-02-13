@@ -73,7 +73,10 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 		Volley_Activate(client, abilityName);
 }
 
+bool b_BlastBolt = false;
+
 bool b_IsVolleyArrow[2049] = { false, ... };
+bool b_IsHeavyDraw[2049] = { false, ... };
 bool b_DrawActive[MAXPLAYERS + 1] = { false, ... };
 
 float f_DrawChargeStartTime[MAXPLAYERS + 1] = { 0.0, ... };
@@ -251,6 +254,8 @@ public void Draw_DelayedArrowModification(int ref)
 	WritePackFloat(pack, damage);
 	WritePackCell(pack, GetClientUserId(owner));
 	RequestFrame(Draw_ApplyVelocity, pack);
+
+	b_IsHeavyDraw[entity] = true;
 }
 
 public void Draw_ApplyVelocity(DataPack pack)
@@ -373,7 +378,9 @@ public Action Explosive_OnTouch(int entity, int other)
 	float pos[3];
 	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
 	
+	b_BlastBolt = true;
 	Handle victims = CF_GenericAOEDamage(owner, entity, entity, f_ExplosiveDMG[entity], DMG_BLAST | DMG_CLUB | DMG_ALWAYSGIB, f_ExplosiveRadius[entity], pos, f_ExplosiveFalloffStart[entity], f_ExplosiveFalloffMax[entity]);
+	b_BlastBolt = false;
 	delete victims;
 	
 	SpawnSpriteExplosion(pos, 1);
@@ -757,5 +764,33 @@ public void OnEntityDestroyed(int entity)
 		b_ArrowWillTriggerVolley[entity] = false;
 		b_IsVolleyArrow[entity] = false;
 		i_VolleyOwner[entity] = -1;
+		b_IsHeavyDraw[entity] = false;
 	}
+}
+
+public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], char console[255], int &custom, int deadRinger, int &critType, int &damagebits)
+{
+	Action ReturnValue = Plugin_Continue;
+
+	if (b_IsHeavyDraw[inflictor])
+	{
+		critType = 2;
+		ReturnValue = Plugin_Changed;
+		strcopy(console, sizeof(console), "Heavy Draw");
+		strcopy(weapon, sizeof(weapon), "huntsman_flyingburn");
+	}
+
+	if (b_BlastBolt)
+	{
+		if (!b_IsHeavyDraw[inflictor])
+			strcopy(console, sizeof(console), "Blast Bolt");
+		else
+			strcopy(console, sizeof(console), "Heavy Blast Bolt");
+
+		strcopy(weapon, sizeof(weapon), "firedeath");
+
+		ReturnValue = Plugin_Changed;
+	}
+
+	return ReturnValue;
 }
