@@ -1049,7 +1049,9 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 		f_CondEndTime[client][j] = 0.0;
 	}
 	b_WeaponForceFired[client] = false;
-	SetForceButtonState(client, false, IN_ATTACK);
+
+	if (IsValidClient(client))
+		SetForceButtonState(client, false, IN_ATTACK);
 }
 
 public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
