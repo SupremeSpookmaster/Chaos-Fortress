@@ -3046,7 +3046,11 @@ public Native_CF_HealPlayer_WithAttributes(Handle plugin, int numParams)
 	if (!IsValidMulti(client))
 		return;
 
-	amt *= GetTotalAttributeValue(client, 854, 1.0) * GetTotalAttributeValue(client, 69, 1.0) * GetTotalAttributeValue(client, 70, 1.0);
+	float multiplier = GetTotalAttributeValue(client, 854, 1.0) * GetTotalAttributeValue(client, 69, 1.0) * GetTotalAttributeValue(client, 70, 1.0);
+	float amtFloat = float(amt);
+	amtFloat *= multiplier;
+	amt = RoundFloat(amtFloat);
+	
 	CF_HealPlayer(client, healer, amt, hpMult);
 }
 
