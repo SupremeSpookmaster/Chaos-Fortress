@@ -145,18 +145,18 @@
 		{
 			"CBaseEntity::WorldSpaceCenter"		
 			{
-				"linux"		"156"
-				"windows"	"155"
+				"linux"		"157"
+				"windows"	"156"
 			}
 			"CTFBaseRocket::Explode"
 			{
-				"linux"		"240"
-				"windows"	"239"
+				"linux"		"241"
+				"windows"	"240"
 			}
 			"GetCurrentCommand"
 			{
-				"linux"		"3512"
-				"windows"	"3512"
+				"linux"		"3513"
+				"windows"	"3513"
 			}
 			"CLagCompensationManager::FrameUpdatePostEntityThink_OFFSET"
 			{
@@ -169,10 +169,10 @@
 			"CTFPlayer::WantsLagCompensationOnEntity"
 			{
 				"library"	"server"
-				"linux"		"335"
-				"windows"		"334"
-				"linux64"		"335"
-				"windows64"		"334"
+				"linux"		"336"
+				"windows"		"335"
+				"linux64"		"336"
+				"windows64"		"335"
 			}
 		}
 	}
