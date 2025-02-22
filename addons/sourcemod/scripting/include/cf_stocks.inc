@@ -1667,6 +1667,9 @@ stock float GetTotalAttributeValue(int client, int attribute, float baseVal)
 //An extension of TF2Util_CanWeaponAttack, which checks for m_flNextPrimaryAttack, as well as ammo.
 stock bool CanWeaponAttack(int client, int weapon)
 {
+	if (!IsValidEntity(weapon) || weapon < MaxClients)
+		return false;
+		
 	if (!TF2Util_CanWeaponAttack(weapon))
 		return false;
 
