@@ -1664,6 +1664,29 @@ stock float GetTotalAttributeValue(int client, int attribute, float baseVal)
 	return baseVal;
 }
 
+//An extension of TF2Util_CanWeaponAttack, which checks for m_flNextPrimaryAttack, as well as ammo.
+stock bool CanWeaponAttack(int client, int weapon)
+{
+	if (!TF2Util_CanWeaponAttack(weapon))
+		return false;
+
+	float gt = GetGameTime();
+	if (GetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack") > gt)
+		return false;
+
+	if (!IsWeaponMelee(client, weapon))
+	{
+		//TODO check ammo
+	}
+
+	return true;
+}
+
+stock bool IsWeaponMelee(int client, int weapon)
+{
+	return (weapon == GetPlayerWeaponSlot(client, 2));
+}
+
 //Thanks, Artvin:
 stock float[] GetWorldSpaceCenter(int client)
 {

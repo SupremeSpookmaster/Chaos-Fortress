@@ -650,6 +650,14 @@ forward void CF_OnForcedVMAnimEnd(int client, char sequence[255]);
  */
 forward void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, int &b, int &a);
 
+/**
+ * Called when a player uses a weapon.
+ * 
+ * @param client	The client who attacked.
+ * @param weapon	The weapon which was used.
+ */
+forward void CF_OnWeaponAttack(int client, int weapon);
+
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
 ///////////////////////////////////////
