@@ -21,6 +21,7 @@
 #define SCALE				"generic_scale_ability"
 #define SHAKE				"generic_shake"
 #define ARCHETYPE			"generic_archetype_modifiers"
+#define RESOURCE_VFX		"generic_resource_particles"
 
 float Weapon_EndTime[2049] = { 0.0, ... };
 
@@ -166,6 +167,152 @@ public void CF_OnCharacterCreated(int client)
 	Generic_DeleteTimers(client);
 	b_WeaponForceFired[client] = false;
 	SetForceButtonState(client, false, IN_ATTACK);
+
+	if (CF_HasAbility(client, GENERIC, RESOURCE_VFX))
+		RVFX_Prepare(client);
+}
+
+enum struct ResourceParticle
+{
+	float minResource; 
+	float maxResource;
+	float xOff;
+	float yOff;
+	float zOff;
+	float lifespan;
+
+	bool active;
+	bool ignoreActiveState;
+	bool isUlt;
+
+	char effect_Red[255];
+	char effect_Blue[255];
+	char point[255];
+
+	int index;
+
+	void CreateFromArgs(ConfigMap path)
+	{
+		this.minResource = GetFloatFromConfigMap(path, "min_resource", 0.0);
+		this.maxResource = GetFloatFromConfigMap(path, "max_resource", 0.0);
+		this.xOff = GetFloatFromConfigMap(path, "x_offset", 0.0);
+		this.yOff = GetFloatFromConfigMap(path, "y_offset", 0.0);
+		this.zOff = GetFloatFromConfigMap(path, "z_offset", 0.0);
+		this.lifespan = GetFloatFromConfigMap(path, "lifespan", 0.0);
+		this.ignoreActiveState = GetBoolFromConfigMap(path, "multiple", false);
+		this.isUlt = GetBoolFromConfigMap(path, "use_ult", false);
+		path.Get("effect_red", this.effect_Red, 255);
+		path.Get("effect_blue", this.effect_Blue, 255);
+		path.Get("point", this.point, 255);
+	}
+
+	void CheckAttach(int client, float amt, bool isUlt)
+	{
+		if (isUlt != this.isUlt)
+			return;
+
+		if (amt >= this.minResource && (amt < this.maxResource || this.maxResource <= 0.0) && (!this.active || this.ignoreActiveState))
+		{
+			this.AttachParticle(client);
+		}
+	}
+
+	void CheckDetach(int client, float amt, bool isUlt)
+	{
+		if (isUlt != this.isUlt)
+			return;
+
+		if ((amt >= this.maxResource && this.maxResource > 0.0) || amt < this.minResource)
+		{
+			this.RemoveParticle();
+		}
+	}
+
+	void AttachParticle(int client)
+	{
+		this.index = EntIndexToEntRef(CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? this.effect_Red : this.effect_Blue, this.point, true, this.lifespan, this.xOff, this.yOff, this.zOff));
+		this.active = true;
+	}
+
+	void RemoveParticle()
+	{
+		int effect = this.GetParticle();
+		if (IsValidEntity(effect))
+			RemoveEntity(effect);
+
+		this.index = -1;
+		this.active = false;
+	}
+
+	int GetParticle() { if (this.index == 0) { return -1; } return EntRefToEntIndex(this.index); }
+}
+
+ResourceParticle RVFX_Particles[MAXPLAYERS + 1][32];
+int RVFX_NumParticles[MAXPLAYERS + 1] = { 0, ... };
+
+public void RVFX_Prepare(int client)
+{
+	char conf[255], slot[255], path[255];
+	CF_GetPlayerConfig(client, conf, sizeof(conf));
+	ConfigMap map = new ConfigMap(conf);
+	if (map == null)
+		return;
+
+	Format(slot, sizeof(slot), "effect_1");
+	int cell = 0;
+	RVFX_NumParticles[client] = 0;
+	CF_GetAbilityConfigMapPath(client, GENERIC, RESOURCE_VFX, slot, path, sizeof(path));
+	ConfigMap effectMap = map.GetSection(path);
+	while (effectMap != null)
+	{
+		RVFX_Particles[client][cell].CreateFromArgs(effectMap);
+
+		cell++;
+		RVFX_NumParticles[client]++;
+
+		Format(slot, sizeof(slot), "effect_%i", cell + 1);
+		CF_GetAbilityConfigMapPath(client, GENERIC, RESOURCE_VFX, slot, path, sizeof(path));
+		effectMap = map.GetSection(path);
+	}
+
+	DeleteCfg(map);
+}
+
+public void RVFX_DeleteAll(int client)
+{
+	for (int i = 0; i < RVFX_NumParticles[client]; i++)
+	{
+		RVFX_Particles[client][i].RemoveParticle();
+	}
+	RVFX_NumParticles[client] = 0;
+}
+
+public Action CF_OnSpecialResourceApplied(int client, float current, float &amt)
+{
+	if (!CF_HasAbility(client, GENERIC, RESOURCE_VFX))
+		return Plugin_Continue;
+
+	for (int i = 0; i < RVFX_NumParticles[client]; i++)
+	{
+		RVFX_Particles[client][i].CheckAttach(client, amt, false);
+		RVFX_Particles[client][i].CheckDetach(client, amt, false);
+	}
+
+	return Plugin_Continue;
+}
+
+public Action CF_OnUltChargeApplied(int client, float current, float &amt)
+{
+	if (!CF_HasAbility(client, GENERIC, RESOURCE_VFX))
+		return Plugin_Continue;
+
+	for (int i = 0; i < RVFX_NumParticles[client]; i++)
+	{
+		RVFX_Particles[client][i].CheckAttach(client, amt, true);
+		RVFX_Particles[client][i].CheckDetach(client, amt, true);
+	}
+
+	return Plugin_Continue;
 }
 
 public void Generic_DeleteTimers(int client)
@@ -1051,7 +1198,10 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 	b_WeaponForceFired[client] = false;
 
 	if (IsValidClient(client))
+	{
+		RVFX_DeleteAll(client);
 		SetForceButtonState(client, false, IN_ATTACK);
+	}
 }
 
 public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)

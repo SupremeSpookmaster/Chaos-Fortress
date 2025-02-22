@@ -59,6 +59,8 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 int Harvester_LeftParticle[MAXPLAYERS + 1] = { -1, ... };
 int Harvester_RightParticle[MAXPLAYERS + 1] = { -1, ... };
 
+float Harvester_Min[MAXPLAYERS + 1] = { 0.0, ... };
+
 float Discard_Bonus[MAXPLAYERS + 1] = { 0.0, ... };
 
 public Action CF_OnSpecialResourceApplied(int client, float current, float &amt)
@@ -66,7 +68,7 @@ public Action CF_OnSpecialResourceApplied(int client, float current, float &amt)
 	if (!CF_HasAbility(client, SPOOKMASTER, HARVESTER))
 		return Plugin_Continue;
 		
-	if (amt > 0.0)
+	if (amt >= Harvester_Min[client])
 	{
 		int L = EntRefToEntIndex(Harvester_LeftParticle[client]);
 		int R = EntRefToEntIndex(Harvester_RightParticle[client]);
@@ -514,6 +516,8 @@ public void CF_OnCharacterCreated(int client)
 {
 	if (CF_HasAbility(client, SPOOKMASTER, ABSORB) && Absorb_Uses[client] > 0)
 		Absorb_SetStats(client, float(Absorb_Uses[client]));
+	if (CF_HasAbility(client, SPOOKMASTER, HARVESTER))
+		Harvester_Min[client] = CF_GetArgF(client, SPOOKMASTER, HARVESTER, "min_resources", 0.0);
 }
 
 public void OnMapEnd()

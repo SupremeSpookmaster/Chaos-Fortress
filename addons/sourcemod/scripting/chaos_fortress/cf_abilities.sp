@@ -1614,7 +1614,7 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 		
 		if (type == CF_AbilityType_Ult)
 		{
-			f_UltCharge[client] = 0.0;
+			CF_SetUltCharge(client, 0.0, true);
 			bool played = CF_PlayRandomSound(client, "", "sound_ultimate_activation");
 			
 			if (!played)
