@@ -332,6 +332,8 @@ public void Rush_Activate(int client, char abilityName[255])
 	}
 }
 
+bool b_RushIn;
+
 public void Rush_CheckBump(int id)
 {
 	int client = GetClientOfUserId(id);
@@ -378,7 +380,9 @@ public void Rush_CheckBump(int id)
 				else if (current > Rush_MinSpeed[client])
 					damage += ((current - Rush_MinSpeed[client]) / (Rush_Requirement[client] - Rush_MinSpeed[client])) * Rush_DMGMax[client];
 
+				b_RushIn = true;
 				SDKHooks_TakeDamage(other, client, client, damage, DMG_CLUB);
+				b_RushIn = false;
 				CF_ApplyTemporarySpeedChange(client, 0, -Rush_Speed[client], 0.0, 0, 9999.0, false);
 				EmitSoundToClient(client, SND_RUSH_END);
 				Rush_DeleteTimer(client);
@@ -448,4 +452,18 @@ public void OnMapEnd()
 	{
 		Rush_DeleteTimer(i);
 	}
+}
+
+public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], char console[255], int &custom, int deadRinger, int &critType, int &damagebits)
+{
+	Action ReturnValue = Plugin_Continue;
+
+	if (b_RushIn)
+	{
+		ReturnValue = Plugin_Changed;
+		strcopy(console, sizeof(console), "Rush In!");
+		strcopy(weapon, sizeof(weapon), "demoshield");
+	}
+
+	return ReturnValue;
 }

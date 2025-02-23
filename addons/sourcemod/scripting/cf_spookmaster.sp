@@ -8,6 +8,7 @@
 #define ABSORB			"soul_absorption"
 #define DISCARD			"soul_discard"
 #define CALCIUM			"calcium_cataclysm"
+#define BOLT			"necrotic_bolt"
 
 #define PARTICLE_DISCARD_RED		"spell_fireball_small_red"
 #define PARTICLE_DISCARD_BLUE		"spell_fireball_small_blue"
@@ -17,28 +18,24 @@
 #define PARTICLE_DISCARD_EXPLODE2_BLUE	"spell_batball_impact_blue"
 #define PARTICLE_CALCIUM_SPARKS_RED			"drg_cow_explosion_sparkles_charged"
 #define PARTICLE_CALCIUM_SPARKS_BLUE		"drg_cow_explosion_sparkles_charged_blue"
-#define PARTICLE_CALCIUM_CHAIN_RED		"dxhr_lightningball_hit_zap_red"
+#define PARTICLE_CALCIUM_CHAIN_RED		"spell_lightningball_hit_zap_red"
 #define PARTICLE_CALCIUM_CHAIN_BLUE		"dxhr_lightningball_hit_zap_blue"
 #define PARTICLE_ABSORB_1				"eye_powerup_green_lvl_1"
 #define PARTICLE_ABSORB_2				"eye_powerup_green_lvl_2"
 #define PARTICLE_ABSORB_3				"eye_powerup_green_lvl_3"
 #define PARTICLE_ABSORB_4				"eye_powerup_green_lvl_4"
+#define PARTICLE_BOLT_MUZZLE			"merasmus_bomb_explosion"
+#define PARTICLE_BOLT_HIT				"merasmus_blood"
 
 #define SOUND_DISCARD_EXPLODE		")misc/halloween/spell_fireball_impact.wav"
 
 #define MODEL_DISCARD				"models/props_mvm/mvm_human_skull_collide.mdl"
-
-int lgtModel;
-int glowModel;
 
 public void OnMapStart()
 {
 	PrecacheSound(SOUND_DISCARD_EXPLODE, true);
 	
 	PrecacheModel(MODEL_DISCARD, true);
-	
-	lgtModel = PrecacheModel("materials/sprites/lgtning.vmt");
-	glowModel = PrecacheModel("materials/sprites/glow02.vmt");
 }
 
 public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
@@ -54,6 +51,86 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 		
 	if (StrContains(abilityName, CALCIUM) != -1)
 		Calcium_Activate(client, abilityName);
+
+	if (StrContains(abilityName, BOLT) != -1)
+		NecroBolt_Activate(client, abilityName);
+}
+
+bool NecroBolt_HSFalloff = false;
+int NecroBolt_HSEffect = 1;
+float NecroBolt_Range = 0.0;
+bool b_NecroBolt = false;
+
+public void NecroBolt_Activate(int client, char abilityName[255])
+{
+	float damage = CF_GetArgF(client, SPOOKMASTER, abilityName, "damage");
+	float hsMult = CF_GetArgF(client, SPOOKMASTER, abilityName, "hs_mult");
+	NecroBolt_HSEffect = CF_GetArgI(client, SPOOKMASTER, abilityName, "hs_fx");
+	NecroBolt_HSFalloff = CF_GetArgI(client, SPOOKMASTER, abilityName, "hs_falloff") > 0;
+	float falloffStart = CF_GetArgF(client, SPOOKMASTER, abilityName, "falloff_start");
+	float falloffEnd = CF_GetArgF(client, SPOOKMASTER, abilityName, "falloff_end");
+	float falloffMax = CF_GetArgF(client, SPOOKMASTER, abilityName, "falloff_max");
+	int pierce = CF_GetArgI(client, SPOOKMASTER, abilityName, "pierce");
+	float spread = CF_GetArgF(client, SPOOKMASTER, abilityName, "spread");
+	NecroBolt_Range = CF_GetArgF(client, SPOOKMASTER, abilityName, "range", 600.0);
+
+	float ang[3];
+	GetClientEyeAngles(client, ang);
+
+	b_NecroBolt = true;
+	CF_FireGenericBullet(client, ang, damage, hsMult, spread, SPOOKMASTER, NecroBolt_Hit, falloffStart, falloffEnd, falloffMax, pierce, grabEnemyTeam(client), _, _, "");
+	b_NecroBolt = false;
+
+	float startPos[3], endPos[3], shootPos[3], hitPos[3], shootAng[3];
+	GetClientAbsOrigin(client, startPos);
+	startPos[2] += 60.0 * CF_GetCharacterScale(client);
+
+	for (int i = 0; i < 3; i++)
+		shootAng[i] = ang[i] + GetRandomFloat(-spread, spread);
+
+	GetPointInDirection(startPos, shootAng, 20.0, shootPos);
+
+	GetClientEyePosition(client, startPos);
+	GetPointInDirection(startPos, shootAng, NecroBolt_Range, endPos);
+
+	if (!CF_HasLineOfSight(startPos, endPos, _, endPos))
+	{
+		float eyePos[3];
+		GetClientEyePosition(client, eyePos);
+		UTIL_ImpactTrace(client, eyePos, DMG_BULLET);
+	}
+
+	ArrayList victims = CF_DoBulletTrace(client, startPos, endPos, pierce, grabEnemyTeam(client), _, _, hitPos);
+	delete victims;
+	
+	SpawnBeam_Vectors(shootPos, hitPos, 0.4, 20, 255, 120, 255, PrecacheModel("materials/sprites/lgtning.vmt"), 2.0, 2.0, _, 0.0);
+	SpawnBeam_Vectors(shootPos, hitPos, 0.4, 20, 255, 20, 255, PrecacheModel("materials/sprites/glow02.vmt"), 2.0, 2.0, _, 0.0);
+	SpawnBeam_Vectors(shootPos, hitPos, 0.4, 20, 255, 120, 180, PrecacheModel("materials/sprites/lgtning.vmt"), 4.0, 4.0, _, 2.5);
+	SpawnBeam_Vectors(shootPos, hitPos, 0.4, 20, 255, 120, 80, PrecacheModel("materials/sprites/lgtning.vmt"), 2.0, 2.0, _, 5.0);
+}
+
+public void NecroBolt_Hit(int attacker, int victim, float &baseDamage, bool &allowFalloff, bool &isHeadshot, int &hsEffect, bool &crit, float hitPos[3])
+{
+	float pos[3], vicPos[3];
+	CF_WorldSpaceCenter(attacker, pos);
+	CF_WorldSpaceCenter(victim, vicPos);
+	if (GetVectorDistance(pos, vicPos) > NecroBolt_Range)
+	{
+		baseDamage = 0.0;
+		isHeadshot = false;
+		hsEffect = 0;
+	}
+	else
+	{
+		if (isHeadshot)
+		{
+			allowFalloff = NecroBolt_HSFalloff;
+		}
+
+		SpawnParticle(hitPos, PARTICLE_BOLT_HIT, 2.0);
+
+		hsEffect = NecroBolt_HSEffect;
+	}
 }
 
 int Harvester_LeftParticle[MAXPLAYERS + 1] = { -1, ... };
@@ -436,12 +513,7 @@ public void Calcium_ShockPlayer(int attacker, int victim, float radius, int prev
 		GetClientAbsOrigin(previousVictim, prevPos);
 		prevPos[2] += 40.0;
 		
-		SpawnBeam_Vectors(prevPos, pos, 0.5, team == TFTeam_Red ? 255 : 0, 120, team == TFTeam_Red ? 0 : 255, 255, lgtModel, 4.0, 4.1, 1, 4.0);
-		SpawnBeam_Vectors(prevPos, pos, 0.5, team == TFTeam_Red ? 60 : 0, 255, team == TFTeam_Red ? 0 : 60, 150, lgtModel, 2.0, 2.1, 1, 2.0);
-		SpawnBeam_Vectors(prevPos, pos, 0.5, team == TFTeam_Red ? 255 : 0, 120, team == TFTeam_Red ? 0 : 255, 255, lgtModel, 4.0, 4.1, 1, 12.0);
-		SpawnBeam_Vectors(prevPos, pos, 0.5, team == TFTeam_Red ? 60 : 0, 255, team == TFTeam_Red ? 0 : 60, 150, lgtModel, 2.0, 2.1, 1, 8.0);
-		SpawnBeam_Vectors(prevPos, pos, 0.5, team == TFTeam_Red ? 255 : 0, 120, team == TFTeam_Red ? 0 : 255, 255, glowModel, 4.0, 4.1, 1, 4.0);
-		SpawnBeam_Vectors(prevPos, pos, 0.5, team == TFTeam_Red ? 255 : 0, 120, team == TFTeam_Red ? 0 : 255, 255, glowModel, 4.0, 4.1, 1, 12.0);
+		SpawnParticle_ControlPoints(prevPos, pos, team == TFTeam_Red ? PARTICLE_CALCIUM_CHAIN_RED : PARTICLE_CALCIUM_CHAIN_BLUE, 0.5);
 	}
 	
 	SDKHooks_TakeDamage(victim, attacker, attacker, Calcium_Damage[attacker], DMG_CLUB | DMG_BLAST | DMG_ALWAYSGIB);
@@ -532,6 +604,13 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 	{
 		strcopy(console, sizeof(console), "Skull Servant");
 		strcopy(weapon, sizeof(weapon), "spellbook_fireball");
+
+		return Plugin_Changed;
+	}
+	else if (b_NecroBolt)
+	{
+		strcopy(console, sizeof(console), "Necrotic Bolt");
+		strcopy(weapon, sizeof(weapon), "merasmus_zap");
 
 		return Plugin_Changed;
 	}
