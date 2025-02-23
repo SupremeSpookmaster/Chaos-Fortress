@@ -196,10 +196,9 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		}
 	}
 
-	int acWep = TF2_GetActiveWeapon(client);
-	if (IsValidEntity(acWep) && ReturnValue != Plugin_Handled && ReturnValue != Plugin_Stop && (buttons & IN_ATTACK != 0) && CanWeaponAttack(client, acWep))
+	if (IsValidEntity(weapon) && ReturnValue != Plugin_Handled && ReturnValue != Plugin_Stop && (buttons & IN_ATTACK != 0) && CanWeaponAttack(client, weapon))
 	{
-		CFW_OnWeaponFire(client, acWep);
+		CFW_OnWeaponFire(client, weapon);
 	}
 
 	b_M2Down[client] = (buttons & IN_ATTACK2 != 0);
