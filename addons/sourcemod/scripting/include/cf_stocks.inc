@@ -1678,9 +1678,8 @@ stock bool CanWeaponAttack(int client, int weapon)
 		return false;
 
 	if (!IsWeaponMelee(client, weapon))
-	{
-		//TODO check ammo
-	}
+		if (GetClip(weapon) <= 0)
+			return false;
 
 	return true;
 }
