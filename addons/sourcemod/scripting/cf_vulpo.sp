@@ -130,6 +130,9 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 
 public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
+	if (!IsValidClient(victim))
+		return Plugin_Continue;
+		
 	if(CircuitBuffTimer[victim])
 	{
 		damage *= 0.85;

@@ -1397,6 +1397,9 @@ public Action CF_OnCalcAttackInterval(int client, int weapon, int slot, char cla
 
 public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
+	if (!IsValidClient(victim))
+		return Plugin_Continue;
+		
 	float mult = Medigun_GetResMult(victim);
 	if (mult != 1.0)
 	{
@@ -1409,6 +1412,9 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 
 public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
+	if (!IsValidClient(victim))
+		return Plugin_Continue;
+
 	float mult = Medigun_GetDMGMult(victim);
 	if (mult != 1.0)
 	{

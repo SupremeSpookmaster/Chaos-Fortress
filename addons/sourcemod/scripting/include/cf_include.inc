@@ -250,7 +250,7 @@ forward Action CF_OnPlayerCrouch(int client, int &buttons, int &impulse, int &we
 forward void CF_OnPlayerCallForMedic(int client);
 
 /**
- * Called when a character takes damage, before any modifications have been made by Chaos Fortress.
+ * Called when a character or building takes damage, before any modifications have been made by Chaos Fortress.
  *
  * For the sake of organization and to avoid plugin execution conflicts: 
  *
@@ -259,7 +259,7 @@ forward void CF_OnPlayerCallForMedic(int client);
  * - Put anything which depends on the damage dealt (for example: gaining 1 imaginary token for every 40 points of damage dealt) in 
  * 		CF_OnTakeDamageAlive_Post.
  *
- * @param victim					The player who took damage.
+ * @param victim					The entity which took damage.
  * @param attacker					The player who dealt the damage.
  * @param inflictor					The entity which inflicted the damage (EX: Engineer's sentry gun in vanilla TF2)
  * @param damage					The damage dealt.
@@ -275,10 +275,10 @@ forward Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflicto
 	float damageForce[3], float damagePosition[3], int &damagecustom);
 	
 /**
- * Called when a character takes damage, after CF_OnTakeDamageAlive_Pre has been called.
+ * Called when a character or building takes damage, after CF_OnTakeDamageAlive_Pre has been called.
  * This is where you should put your damage bonuses.
  *
- * @param victim					The player who took damage.
+ * @param victim					The entity which took damage.
  * @param attacker					The player who dealt the damage.
  * @param inflictor					The entity which inflicted the damage (EX: Engineer's sentry gun in vanilla TF2)
  * @param damage					The damage dealt.
@@ -294,10 +294,10 @@ forward Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflic
 	float damageForce[3], float damagePosition[3], int &damagecustom);
 
 /**
- * Called when a character takes damage, after CF_OnTakeDamageAlive_Pre and CF_OnTakeDamageAlive_Bonus have been called.
+ * Called when a character or building takes damage, after CF_OnTakeDamageAlive_Pre and CF_OnTakeDamageAlive_Bonus have been called.
  * This is where you should put your damage penalties/resistances.
  *
- * @param victim					The player who took damage.
+ * @param victim					The entity which took damage.
  * @param attacker					The player who dealt the damage.
  * @param inflictor					The entity which inflicted the damage (EX: Engineer's sentry gun in vanilla TF2)
  * @param damage					The damage dealt.
@@ -313,10 +313,10 @@ forward Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &i
 	float damageForce[3], float damagePosition[3], int &damagecustom);
 	
 /**
- * Called when a character takes damage, after all of Chaos Fortress' other OnTakeDamageAlive forwards have been called.
+ * Called when a character or building takes damage, after all of Chaos Fortress' other OnTakeDamage forwards have been called.
  * This is where you should put anything that depends on damage dealt, such as gaining 1 imaginary token for every 40 points of damage dealt.
  *
- * @param victim					The player who took damage.
+ * @param victim					The entity which took damage.
  * @param attacker					The player who dealt the damage.
  * @param inflictor					The entity which inflicted the damage (EX: Engineer's sentry gun in vanilla TF2)
  * @param damage					The damage dealt.

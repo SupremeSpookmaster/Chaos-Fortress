@@ -14,6 +14,66 @@ public void CFDMG_MakeForwards()
 	g_PostDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Post", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Float, Param_Cell);
 }
 
+public void CFDMG_OnEntityCreated(int entity, const char[] classname)
+{
+	if (StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_dispenser") || StrEqual(classname, "obj_teleporter"))
+	{
+		SDKHook(entity, SDKHook_OnTakeDamage, CFDMG_OnBuildingDamaged);
+	}
+}
+
+public Action CFDMG_OnBuildingDamaged(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, Float:damageForce[3], Float:damagePosition[3])
+{
+	Action ReturnValue = Plugin_Continue;
+	Action newValue;
+	
+	int damagecustom = 0;	//This is not used for anything, I only have it because I can't compile this without passing a variable and I really don't feel like restructuring this right now.
+	//First, we call PreDamage:
+	ReturnValue = CFDMG_CallDamageForward(g_PreDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
+	
+	//Next, we call BonusDamage:
+	if (ReturnValue != Plugin_Handled && ReturnValue != Plugin_Stop)
+	{
+		newValue = CFDMG_CallDamageForward(g_BonusDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
+		if (newValue > ReturnValue)
+		{
+			ReturnValue = newValue;
+		}
+	}
+	
+	//After that, we call ResistanceDamage:
+	if (ReturnValue != Plugin_Handled && ReturnValue != Plugin_Stop)
+	{
+		newValue = CFDMG_CallDamageForward(g_ResistanceDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
+		if (newValue > ReturnValue)
+		{
+			ReturnValue = newValue;
+		}
+	}
+
+	if (ReturnValue != Plugin_Handled && ReturnValue != Plugin_Stop)
+	{
+		Call_StartForward(g_PostDamageForward);
+
+		Call_PushCell(victim);
+		Call_PushCell(attacker);
+		Call_PushCell(inflictor);
+		Call_PushFloat(damage);
+		Call_PushCell(weapon);
+
+		Call_Finish();
+		
+		if (CF_GetRoundState() == 1 && attacker != victim && damage > 0.0)
+		{
+			float dmgForResource = damage;
+			CF_GiveSpecialResource(attacker, dmgForResource, CF_ResourceType_DamageDealt);
+			CF_GiveUltCharge(attacker, dmgForResource, CF_ResourceType_DamageDealt);
+		}
+	}
+
+	return ReturnValue;
+}
+
 public void CFDMG_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, const float damageForce[3], const float damagePosition[3], int damagecustom)
 {
 	Call_StartForward(g_PostDamageForward);

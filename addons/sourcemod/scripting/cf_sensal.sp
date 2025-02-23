@@ -218,6 +218,8 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 
 public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
+	if (!IsValidClient(victim))
+		return Plugin_Continue;
 
 	if(VulnStacks[victim] > 0 && !(damagetype & DMG_CRIT))
 	{
@@ -820,6 +822,9 @@ Action ShieldSetTransmit(int entity, int client)
 
 public Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int weapon)
 {
+	if (!IsValidClient(victim))
+		return Plugin_Continue;
+
 	if(ShieldEntRef[victim] != -1)
 	{
 		TempomaryShield[victim] -= RoundToNearest(damage);

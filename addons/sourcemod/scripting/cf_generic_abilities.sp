@@ -1206,6 +1206,9 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 
 public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
+	if (!IsValidClient(victim))
+		return Plugin_Continue;
+
 	if (CF_HasAbility(attacker, GENERIC, ARCHETYPE) && !IsInvuln(victim))
 	{
 		char archetype[255];
@@ -1247,6 +1250,9 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 
 public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
+	if (!IsValidClient(victim))
+		return Plugin_Continue;
+		
 	if (CF_HasAbility(victim, GENERIC, ARCHETYPE) && !IsInvuln(victim))
 	{
 		char archetype[255];
