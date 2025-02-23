@@ -33,7 +33,7 @@ public void CFW_MakeForwards()
 	g_CalcAttackRate = new GlobalForward("CF_OnCalcAttackInterval", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_String, Param_FloatByRef);
 }
 
-public void CFW_OnWeaponFire(int client, int weapon)
+public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] classname, bool &result)
 {
 	if (!StrEqual(s_WeaponFireAbility[weapon], ""))
 	{
@@ -49,15 +49,14 @@ public void CFW_OnWeaponFire(int client, int weapon)
 	{
 		CF_PlayRandomSound(client, "", s_WeaponFireSound[weapon]);
 	}
-
-	char classname[255];
-	GetEntityClassname(weapon, classname, sizeof(classname));
 	
 	DataPack pack = new DataPack();
 	WritePackCell(pack, GetClientUserId(client));
 	WritePackCell(pack, EntIndexToEntRef(weapon));
 	WritePackString(pack, classname);
 	RequestFrame(CFW_AttackRate, pack);
+	
+	return Plugin_Continue;
 }
 
 public void CFW_AttackRate(DataPack pack)

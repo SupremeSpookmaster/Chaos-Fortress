@@ -195,12 +195,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			ReturnValue = newValue;
 		}
 	}
-
-	if (IsValidEntity(weapon) && ReturnValue != Plugin_Handled && ReturnValue != Plugin_Stop && (buttons & IN_ATTACK != 0) && CanWeaponAttack(client, weapon))
-	{
-		CFW_OnWeaponFire(client, weapon);
-	}
-
+	
 	b_M2Down[client] = (buttons & IN_ATTACK2 != 0);
 	b_M3Down[client] = (buttons & IN_ATTACK3 != 0);
 	b_ReloadDown[client] = (buttons & IN_RELOAD != 0);
