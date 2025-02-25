@@ -14,6 +14,15 @@ public void CFDMG_MakeForwards()
 	g_PostDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Post", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Float, Param_Cell);
 }
 
+#if defined _pnpc_included_
+
+public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inflictor, int attacker, int &damagetype, int &damagecustom, float damageForce[3], float damagePosition[3])
+{
+	return CFDMG_OnNonPlayerDamaged(npc.Index, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, npc.b_IsABuilding);
+}
+
+#endif
+
 public void CFDMG_OnEntityCreated(int entity, const char[] classname)
 {
 	if (StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_dispenser") || StrEqual(classname, "obj_teleporter"))
@@ -23,6 +32,11 @@ public void CFDMG_OnEntityCreated(int entity, const char[] classname)
 }
 
 public Action CFDMG_OnBuildingDamaged(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, Float:damageForce[3], Float:damagePosition[3])
+{
+	return CFDMG_OnNonPlayerDamaged(victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, true);
+}
+
+public Action CFDMG_OnNonPlayerDamaged(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], bool isBuilding)
 {
 	Action ReturnValue = Plugin_Continue;
 	Action newValue;
@@ -51,6 +65,7 @@ public Action CFDMG_OnBuildingDamaged(int victim, int &attacker, int &inflictor,
 		}
 	}
 
+	//Finally, call PostDamage and then give resources/ult charge:
 	if (ReturnValue != Plugin_Handled && ReturnValue != Plugin_Stop)
 	{
 		Call_StartForward(g_PostDamageForward);
@@ -66,8 +81,8 @@ public Action CFDMG_OnBuildingDamaged(int victim, int &attacker, int &inflictor,
 		if (CF_GetRoundState() == 1 && attacker != victim && damage > 0.0)
 		{
 			float dmgForResource = damage;
-			CF_GiveSpecialResource(attacker, dmgForResource, CF_ResourceType_DamageDealt);
-			CF_GiveUltCharge(attacker, dmgForResource, CF_ResourceType_DamageDealt);
+			CF_GiveSpecialResource(attacker, dmgForResource, (isBuilding ? CF_ResourceType_BuildingDamage : CF_ResourceType_DamageDealt));
+			CF_GiveUltCharge(attacker, dmgForResource, (isBuilding ? CF_ResourceType_BuildingDamage : CF_ResourceType_DamageDealt));
 		}
 	}
 

@@ -37,7 +37,9 @@ enum CF_ResourceType
     CF_ResourceType_DamageTaken,
     CF_ResourceType_Healing,
     CF_ResourceType_Kill,
-    CF_ResourceType_Percentage
+    CF_ResourceType_Percentage,
+	CF_ResourceType_BuildingDamage,
+	CF_ResourceType_Destruction
 };
 
 enum CF_AbilityType
@@ -1068,6 +1070,8 @@ native int CF_AttachWearable(int client, int index, char classname[255], bool vi
  *						CF_ResourceType_Healing: directly adds "coefficient" * on_heal to the user's current ult charge.
  *						CF_ResourceType_Kill: directly adds "coefficient" * on_kill to the user's current ult charge.
  *						CF_ResourceType_Percentage: directly fills the user's ult charge by "coefficient"-percent. IE 0.2 would fill ult charge by 20%.
+ *						CF_ResourceType_BuildingDamage: directly adds "coefficient" * on_damage_building to the user's current ult charge.
+ *						CF_ResourceType_Destruction: directly adds "coefficient" * on_kill_building to the user's current ult charge.
  * @param IgnoreCD		If set to true, the ult charge is given even if the user's ultimate is on cooldown.
  *
  */
@@ -1106,6 +1110,8 @@ native float CF_GetUltCharge(int client);
  *						CF_ResourceType_Healing: directly adds "coefficient" * on_heal to the user's current resources.
  *						CF_ResourceType_Kill: directly adds "coefficient" * on_kill to the user's current resources.
  *						CF_ResourceType_Percentage: directly fills the user's resources by "coefficient"-percent. IE 0.2 would fill resources by 20%.
+*						CF_ResourceType_BuildingDamage: directly adds "coefficient" * on_damage_building to the user's current ult charge.
+ *						CF_ResourceType_Destruction: directly adds "coefficient" * on_kill_building to the user's current ult charge.
  *
  */
 native CF_GiveSpecialResource(int client, float coefficient, CF_ResourceType ResourceType = CF_ResourceType_Generic);

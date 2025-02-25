@@ -5,6 +5,8 @@ float f_UltChargeOnDamage[MAXPLAYERS + 1] = { 0.0, ... };
 float f_UltChargeOnHurt[MAXPLAYERS + 1] = { 0.0, ... };
 float f_UltChargeOnHeal[MAXPLAYERS + 1] = { 0.0, ... };
 float f_UltChargeOnKill[MAXPLAYERS + 1] = { 0.0, ... };
+float f_UltChargeOnBuildingDamage[MAXPLAYERS + 1] = { 0.0, ... };
+float f_UltChargeOnDestruction[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ResourceRegenInterval[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ResourceRegenNext[MAXPLAYERS + 1] = { 0.0, ... };
 float f_UltCD[MAXPLAYERS + 1] = { 0.0, ... };
@@ -25,6 +27,8 @@ float f_ResourcesOnDamage[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ResourcesOnHurt[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ResourcesOnHeal[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ResourcesOnKill[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ResourcesOnBuildingDamage[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ResourcesOnDestruction[MAXPLAYERS + 1] = { 0.0, ... };
 float f_NextResourceRegen[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ResourcesSinceLastGain[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ResourcesToTriggerSound[MAXPLAYERS + 1] = { 0.0, ... };
@@ -691,6 +695,8 @@ public bool CFA_InitializeUltimate(int client, ConfigMap map)
 		f_UltChargeOnHurt[client] = GetFloatFromConfigMap(subsection, "on_hurt", 0.0);
 		f_UltChargeOnHeal[client] = GetFloatFromConfigMap(subsection, "on_heal", 0.0);
 		f_UltChargeOnKill[client] = GetFloatFromConfigMap(subsection, "on_kill", 0.0);
+		f_UltChargeOnBuildingDamage[client] = GetFloatFromConfigMap(subsection, "on_damage_building", 0.0);
+		f_UltChargeOnDestruction[client] = GetFloatFromConfigMap(subsection, "on_kill_building", 0.0);
 		f_UltCD[client] = GetFloatFromConfigMap(subsection, "cooldown", 0.0);
 		f_UltScale[client] = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
 		b_UltIsGrounded[client] = GetBoolFromConfigMap(subsection, "grounded", false);
@@ -999,6 +1005,8 @@ public void CFA_InitializeResources(int client, ConfigMap map, bool NewChar)
 			f_ResourcesOnHurt[client] = GetFloatFromConfigMap(subsection, "on_hurt", 0.0);
 			f_ResourcesOnHeal[client] = GetFloatFromConfigMap(subsection, "on_heal", 0.0);
 			f_ResourcesOnKill[client] = GetFloatFromConfigMap(subsection, "on_kill", 0.0);
+			f_ResourcesOnBuildingDamage[client] = GetFloatFromConfigMap(subsection, "on_damage_building", 0.0);
+			f_ResourcesOnDestruction[client] = GetFloatFromConfigMap(subsection, "on_kill_building", 0.0);
 			
 			f_ResourcesToTriggerSound[client] = GetFloatFromConfigMap(subsection, "sound_amt", 0.0);
 			f_ResourcesSinceLastGain[client] = 0.0;
@@ -1040,6 +1048,8 @@ public void CFA_MapEnd()
 		f_UltChargeOnHeal[i] = 0.0;
 		f_ResourceRegenInterval[i] = 0.0;
 		f_UltChargeOnKill[i] = 0.0;
+		f_UltChargeOnBuildingDamage[i] = 0.0;
+		f_UltChargeOnDestruction[i] = 0.0;
 		f_ResourceRegenNext[i] = 0.0;
 		f_UltCD[i] = 0.0;
 		f_UltCDEndTime[i] = 0.0;
@@ -1059,6 +1069,8 @@ public void CFA_MapEnd()
 		f_ResourcesOnHurt[i] = 0.0;
 		f_ResourcesOnHeal[i] = 0.0;
 		f_ResourcesOnKill[i] = 0.0;
+		f_ResourcesOnBuildingDamage[i] = 0.0;
+		f_ResourcesOnDestruction[i] = 0.0;
 		f_NextResourceRegen[i] = 0.0;
 		f_ResourcesSinceLastGain[i] = 0.0;
 		f_ResourcesToTriggerSound[i] = 0.0;
@@ -1895,6 +1907,14 @@ public Native_CF_GiveUltCharge(Handle plugin, int numParams)
 			{
 				amt = f_UltChargeRequired[client] * amt * 0.01;
 			}
+			case CF_ResourceType_BuildingDamage:
+			{
+				amt *= f_UltChargeOnBuildingDamage[client];
+			}
+			case CF_ResourceType_Destruction:
+			{
+				amt *= f_UltChargeOnDestruction[client];
+			}
 		}
 	}
 	
@@ -2040,6 +2060,14 @@ public Native_CF_GiveSpecialResource(Handle plugin, int numParams)
 			case CF_ResourceType_Percentage:
 			{
 				amt = f_ResourceMax[client] * amt * 0.01;
+			}
+			case CF_ResourceType_BuildingDamage:
+			{
+				amt *= f_ResourcesOnBuildingDamage[client];
+			}
+			case CF_ResourceType_Destruction:
+			{
+				amt *= f_ResourcesOnDestruction[client];
 			}
 		}
 	}
@@ -3191,6 +3219,10 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 	delete AOE_Hits;
 	AOE_Hits = CreateArray(255);
 	
+	//TODO: Modify generic explosion native to use filter functions and on-hit functions, then un-comment this.
+	//#if defined _pnpc_included_
+	//PNPC_Explosion(groundZero, radius, dmg, falloffStart, radius, falloffMax, inflictor, weapon, attacker, damagetype, skipDefault, ignoreInvuln, includeUser);
+	//#else
 	TR_EnumerateEntitiesSphere(groundZero, radius, PARTITION_NON_STATIC_EDICTS, GenericAOE_Trace, attacker);
 	
 	for (int i = 0; i < GetArraySize(AOE_Hits); i++)
@@ -3264,6 +3296,7 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 	delete AOE_Hits;
 	
 	return ReturnValue;
+	//#endif
 }
 
 public bool GenericAOE_Trace(int entity, int attacker)
