@@ -15,6 +15,7 @@
 #include <dhooks>
 #include <collisionhook>
 #include <cf_include>
+#tryinclude <pnpc>
 
 #define EXPLOSION_PARTICLE_LARGE_1 "fireSmoke_collumn_mvmAcres"
 #define EXPLOSION_PARTICLE_LARGE_2 "hightower_explosion"
@@ -1481,6 +1482,15 @@ stock void GetAttribStringFromWeapon(int weapon, char output[255])
 	if (!IsValidEntity(weapon))
 		return;
 		
+	#if defined _pnpc_included_
+	float range = 1.0, bounds = 1.0;
+	int owner = GetEntPropEnt(weapon, Prop_Send, "m_hOwnerEntity");
+	if (IsValidClient(owner))
+	{
+		PNPC_GetCustomMeleeAttributes(owner, range, bounds);
+	}
+	#endif
+
 	int indices[20];
 	TF2Attrib_ListDefIndices(weapon, indices, sizeof(indices));
 	
@@ -1492,13 +1502,22 @@ stock void GetAttribStringFromWeapon(int weapon, char output[255])
 				
 			if (addy != Address_Null)
 			{
+				float value = TF2Attrib_GetValue(addy);
+
+				#if defined _pnpc_included_
+				if (indices[i] == 263)
+					value = bounds;
+				else if (indices[i] == 264)
+					value = range;
+				#endif
+
 				if (i != 0)
 				{
-					Format(output, 255, "%s ; %i ; %f", output, indices[i], TF2Attrib_GetValue(addy));
+					Format(output, 255, "%s ; %i ; %f", output, indices[i], value);
 				}
 				else
 				{
-					Format(output, 255, "%i ; %f", indices[i], TF2Attrib_GetValue(addy));
+					Format(output, 255, "%i ; %f", indices[i], value);
 				}
 			}
 		}
