@@ -1477,6 +1477,24 @@ stock void StringToLower(char input[255])
 	}
 }
 
+stock int GetBuildingHealth(int entity)
+{
+	if (!IsABuilding(entity))
+		return 0;
+
+	char classname[255];
+	GetEntityClassname(entity, classname, sizeof(classname));
+
+	if (StrEqual(classname, "obj_sentrygun"))
+		return GetEntData(entity, FindSendPropInfo("CObjectSentrygun", "m_iHealth"), 4);
+	else if (StrEqual(classname, "obj_dispenser"))
+		return GetEntData(entity, FindSendPropInfo("CObjectDispenser", "m_iHealth"), 4);
+	else if (StrEqual(classname, "obj_teleporter"))
+		return GetEntData(entity, FindSendPropInfo("CObjectTeleporter", "m_iHealth"), 4);
+
+	return 0;
+}
+
 stock void GetAttribStringFromWeapon(int weapon, char output[255])
 {
 	if (!IsValidEntity(weapon))

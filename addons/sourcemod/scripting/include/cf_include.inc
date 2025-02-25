@@ -253,6 +253,7 @@ forward void CF_OnPlayerCallForMedic(int client);
 
 /**
  * Called when a character or building takes damage, before any modifications have been made by Chaos Fortress.
+ * If the Portable NPC System is installed, this also gets called when a PNPC is damaged.
  *
  * For the sake of organization and to avoid plugin execution conflicts: 
  *
@@ -278,6 +279,7 @@ forward Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflicto
 	
 /**
  * Called when a character or building takes damage, after CF_OnTakeDamageAlive_Pre has been called.
+ * If the Portable NPC System is installed, this also gets called when a PNPC is damaged.
  * This is where you should put your damage bonuses.
  *
  * @param victim					The entity which took damage.
@@ -297,6 +299,7 @@ forward Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflic
 
 /**
  * Called when a character or building takes damage, after CF_OnTakeDamageAlive_Pre and CF_OnTakeDamageAlive_Bonus have been called.
+ * If the Portable NPC System is installed, this also gets called when a PNPC is damaged.
  * This is where you should put your damage penalties/resistances.
  *
  * @param victim					The entity which took damage.
@@ -316,6 +319,7 @@ forward Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &i
 	
 /**
  * Called when a character or building takes damage, after all of Chaos Fortress' other OnTakeDamage forwards have been called.
+ * If the Portable NPC System is installed, this also gets called when a PNPC is damaged.
  * This is where you should put anything that depends on damage dealt, such as gaining 1 imaginary token for every 40 points of damage dealt.
  *
  * @param victim					The entity which took damage.

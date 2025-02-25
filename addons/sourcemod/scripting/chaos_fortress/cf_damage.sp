@@ -80,9 +80,24 @@ public Action CFDMG_OnNonPlayerDamaged(int victim, int &attacker, int &inflictor
 		
 		if (CF_GetRoundState() == 1 && attacker != victim && damage > 0.0)
 		{
-			float dmgForResource = damage;
-			CF_GiveSpecialResource(attacker, dmgForResource, (isBuilding ? CF_ResourceType_BuildingDamage : CF_ResourceType_DamageDealt));
-			CF_GiveUltCharge(attacker, dmgForResource, (isBuilding ? CF_ResourceType_BuildingDamage : CF_ResourceType_DamageDealt));
+			int health = GetBuildingHealth(victim);
+
+			#if defined _pnpc_included_
+			if (PNPC_IsNPC(victim))
+				health = view_as<PNPC>(victim).i_Health;
+			#endif
+
+			if (RoundFloat(damage) >= health)
+			{
+				CF_GiveSpecialResource(attacker, 1.0, (isBuilding ? CF_ResourceType_Destruction : CF_ResourceType_Kill));
+				CF_GiveUltCharge(attacker, 1.0, (isBuilding ? CF_ResourceType_Destruction : CF_ResourceType_Kill));
+			}
+			else
+			{
+				float dmgForResource = damage;
+				CF_GiveSpecialResource(attacker, dmgForResource, (isBuilding ? CF_ResourceType_BuildingDamage : CF_ResourceType_DamageDealt));
+				CF_GiveUltCharge(attacker, dmgForResource, (isBuilding ? CF_ResourceType_BuildingDamage : CF_ResourceType_DamageDealt));
+			}
 		}
 	}
 
