@@ -112,6 +112,11 @@
 int Laser_Model = -1;
 //int GLOW_MODEL = -1;
 
+public void OnPluginStart()
+{
+	HookEvent("player_builtobject", Gadgeteer_OnBuildingConstructed);
+}
+
 public void OnMapStart()
 {
 	PrecacheModel(MODEL_TOSS);
@@ -2399,6 +2404,9 @@ public void Support_DeleteBeam(int startPoint, int endPoint)
 
 public void Support_Activate(int client, char abilityName[255])
 {
+	if (CF_GetArgI(client, GADGETEER, abilityName, "has_toolbox", 0) <= 0)
+		return;
+
 	int toolbox = MakeToolbox(client, abilityName, true);
 	if (IsValidEntity(toolbox))
 	{
@@ -2465,12 +2473,34 @@ public void Support_Command(int client, char abilityName[255])
 
 public bool Command_OnlyPlayers(int target)
 {
-	if (target == Command_User)
-		CPrintToChatAll("Target %N is user", target);
-	else if (!IsValidMulti(target))
-		CPrintToChatAll("Target %i is invalid or not alive", target);
-
 	return target != Command_User && IsValidMulti(target); 
+}
+
+void Gadgeteer_OnBuildingConstructed(Event event, const char[] name, bool dontBroadcast)
+{
+	int entity = event.GetInt("index");
+	int owner = GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
+	if(owner != -1 && CF_HasAbility(owner, GADGETEER, SUPPORTDRONE))
+	{
+		if (CF_GetArgI(owner, GADGETEER, SUPPORTDRONE, "has_toolbox", 0) > 0)
+			return;
+
+		float cost = CF_GetArgF(owner, GADGETEER, SUPPORTDRONE, "cost", 400.0);
+		if (CF_GetSpecialResource(owner) < cost)
+		{
+			EmitSoundToClient(owner, NOPE);
+			PrintCenterText(owner, "A Support Drone costs %i Metal!", RoundFloat(cost));
+			RemoveEntity(entity);
+			CF_SilenceCharacter(owner, 0.2);
+			return;
+		}
+
+		Toss_SupportStats[entity].CreateFromArgs(owner, SUPPORTDRONE);
+		Toss_ToolboxOwner[entity] = GetClientUserId(owner);
+		Toss_SpawnSupportDrone(entity, false, 0);
+		CF_GiveSpecialResource(owner, -cost);
+		CF_PlayRandomSound(owner, "", "sound_support_drone_built");
+	}
 }
 
 public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inflictor, int attacker, int &damagetype, int &damagecustom)
