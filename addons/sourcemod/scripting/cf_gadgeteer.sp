@@ -69,6 +69,8 @@
 #define SOUND_SUPPORT_BUILD_FINISHED	")weapons/sentry_finish.wav"
 #define SOUND_SUPPORT_BOX_BREAK			")physics/wood/wood_crate_break4.wav"
 #define SOUND_SUPPORT_PANIC_BEGIN		")vo/bot_worker/tinybot_crosspaths_06.mp3"
+#define SOUND_SUPPORT_COMMANDED			"ui/cyoa_ping_in_progress.wav"
+#define NOPE							"replay/record_fail.wav"
 
 #define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
 #define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
@@ -101,6 +103,7 @@
 #define PARTICLE_SUPPORT_DAMAGED		"dispenserdamage_3"
 #define PARTICLE_DRONE_TRACER_RED		"bullet_tracer_raygun_red_crit"
 #define PARTICLE_DRONE_TRACER_BLUE		"bullet_tracer_raygun_blue_crit"
+#define PARTICLE_SUPPORT_COMMANDED		"ping_circle"
 
 #define MODEL_TARGETING		"models/fake_particles/plane.mdl"
 
@@ -170,6 +173,8 @@ public void OnMapStart()
 	PrecacheSound(SOUND_SUPPORT_BUILD_FINISHED);
 	PrecacheSound(SOUND_SUPPORT_BOX_BREAK);
 	PrecacheSound(SOUND_SUPPORT_PANIC_BEGIN);
+	PrecacheSound(SOUND_SUPPORT_COMMANDED);
+	PrecacheSound(NOPE);
 
 	Laser_Model = PrecacheModel("materials/sprites/laserbeam.vmt")
 	/*LASER_MODEL = PrecacheModel("materials/sprites/laser.vmt", false);
@@ -347,6 +352,8 @@ enum struct SupportDroneStats
 		int target = GetClientOfUserId(this.targetOverride);
 		if (IsValidMulti(target, true, true, true, TF2_GetClientTeam(owner)))
 			return target;
+		else
+			this.targetOverride = -1;
 
 		//Check 2: We have not commanded the Support Drone to target a specific player, check to see if we have a valid target already chosen.
 		//If we do, make sure we haven't reached the minimum healing duration yet.
@@ -795,6 +802,9 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 
 	if (StrContains(abilityName, SUPPORTDRONE) != -1)
 		Support_Activate(client, abilityName);
+
+	if (StrContains(abilityName, COMMAND) != -1)
+		Support_Command(client, abilityName);
 }
 
 //Prevents a point_worldtext entity from being seen by anyone other than its owner.
@@ -2395,6 +2405,72 @@ public void Support_Activate(int client, char abilityName[255])
 		Toss_IsSupportDrone[toolbox] = true;
 		Toss_SupportStats[toolbox].CreateFromArgs(client, abilityName);
 	}
+}
+
+int Command_User = -1;
+
+public void Support_Command(int client, char abilityName[255])
+{
+	int supportDrone = EntRefToEntIndex(Toss_SupportDrone[client]);
+	if (!IsValidEntity(supportDrone))
+	{
+		PrintCenterText(client, "You don't have an active Support Drone!");
+		EmitSoundToClient(client, NOPE);
+		return;
+	}
+
+	float ang[3];
+	GetClientEyeAngles(client, ang);
+
+	if (ang[0] <= -60.0)
+	{
+		EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+		EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+		PrintCenterText(client, "Your Support Drone is now targeting you!");
+		Toss_SupportStats[supportDrone].targetOverride = GetClientUserId(client);
+	}
+	else
+	{
+		float startPos[3], endPos[3];
+		GetClientEyePosition(client, startPos);
+		GetPointInDirection(startPos, ang, 99999.0, endPos);
+		CF_HasLineOfSight(startPos, endPos, _, endPos);
+
+		Command_User = client;
+		ArrayList targets = CF_DoBulletTrace(client, startPos, endPos, 0, TF2_GetClientTeam(client), GADGETEER, Command_OnlyPlayers);
+
+		if (GetArraySize(targets) < 1)
+		{
+			PrintCenterText(client, "Did not find a valid target!");
+			EmitSoundToClient(client, NOPE);
+		}
+		else
+		{
+			int target = GetArrayCell(targets, 0);
+			Toss_SupportStats[supportDrone].targetOverride = GetClientUserId(target);
+
+			float pos[3];
+			GetClientAbsOrigin(target, pos);
+			SpawnParticle(pos, PARTICLE_SUPPORT_COMMANDED, 2.0);
+			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+			char charName[255];
+			CF_GetCharacterName(target, charName, sizeof(charName));
+			PrintCenterText(client, "Your Support Drone is now targeting %s (%N)", charName, target);
+		}
+
+		delete targets;
+	}
+}
+
+public bool Command_OnlyPlayers(int target)
+{
+	if (target == Command_User)
+		CPrintToChatAll("Target %N is user", target);
+	else if (!IsValidMulti(target))
+		CPrintToChatAll("Target %i is invalid or not alive", target);
+
+	return target != Command_User && IsValidMulti(target); 
 }
 
 public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inflictor, int attacker, int &damagetype, int &damagecustom)
