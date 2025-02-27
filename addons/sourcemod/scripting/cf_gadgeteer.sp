@@ -10,6 +10,7 @@
 #define TOSS			"gadgeteer_sentry_toss"
 #define SUPPORTDRONE	"gadgeteer_support_drone"
 #define COMMAND			"gadgeteer_command_support_drone"
+#define ANNIHILATION	"gadgeteer_annihilation"
 
 #define MODEL_TOSS		"models/weapons/w_models/w_toolbox.mdl"
 #define MODEL_HOOK		"models/props_mining/cranehook001.mdl"
@@ -71,6 +72,11 @@
 #define SOUND_SUPPORT_PANIC_BEGIN		")vo/bot_worker/tinybot_crosspaths_06.mp3"
 #define SOUND_SUPPORT_COMMANDED			"ui/cyoa_ping_in_progress.wav"
 #define NOPE							"replay/record_fail.wav"
+#define SOUND_TELE_WAVE					")mvm/mvm_tele_deliver.wav"
+#define SOUND_BUSTER_LOOP				")mvm/sentrybuster/mvm_sentrybuster_loop.wav"
+#define SOUND_BUSTER_WINDUP				")mvm/sentrybuster/mvm_sentrybuster_spin.wav"
+#define SOUND_BUSTER_EXPLODE			")mvm/sentrybuster/mvm_sentrybuster_explode.wav"
+#define SOUND_BUSTER_STEP				")mvm/sentrybuster/mvm_sentrybuster_step_01.wav"
 
 #define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
 #define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
@@ -110,7 +116,8 @@
 //TODO: Add the powerup_supernova_strike tracer to supercharged combat drone shots
 
 int Laser_Model = -1;
-//int GLOW_MODEL = -1;
+int Lightning_Model = -1;
+int GLOW_MODEL = -1;
 
 public void OnPluginStart()
 {
@@ -180,10 +187,16 @@ public void OnMapStart()
 	PrecacheSound(SOUND_SUPPORT_PANIC_BEGIN);
 	PrecacheSound(SOUND_SUPPORT_COMMANDED);
 	PrecacheSound(NOPE);
+	PrecacheSound(SOUND_TELE_WAVE);
+	PrecacheSound(SOUND_BUSTER_EXPLODE);
+	PrecacheSound(SOUND_BUSTER_LOOP);
+	PrecacheSound(SOUND_BUSTER_STEP);
+	PrecacheSound(SOUND_BUSTER_WINDUP);
 
-	Laser_Model = PrecacheModel("materials/sprites/laserbeam.vmt")
-	/*LASER_MODEL = PrecacheModel("materials/sprites/laser.vmt", false);
-	GLOW_MODEL = PrecacheModel("sprites/glow02.vmt", true);*/
+	Laser_Model = PrecacheModel("materials/sprites/laserbeam.vmt");
+	Lightning_Model = PrecacheModel("materials/sprites/lgtning.vmt");
+	//LASER_MODEL = PrecacheModel("materials/sprites/laser.vmt", false);
+	GLOW_MODEL = PrecacheModel("sprites/glow02.vmt", true);
 }
 
 public const char Toss_BuildSFX[][] =
@@ -810,6 +823,9 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 
 	if (StrContains(abilityName, COMMAND) != -1)
 		Support_Command(client, abilityName);
+
+	if (StrContains(abilityName, ANNIHILATION) != -1)
+		Annihilation_Activate(client, abilityName);
 }
 
 //Prevents a point_worldtext entity from being seen by anyone other than its owner.
@@ -2669,4 +2685,9 @@ public void PNPC_OnTouch(PNPC npc, int entity, char[] classname)
 			
 		WorldText_MimicHitNumbers(text);
 	}
+}
+
+public void Annihilation_Activate(int client, char abilityName[255])
+{
+
 }
