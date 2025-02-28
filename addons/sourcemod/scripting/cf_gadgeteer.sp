@@ -36,6 +36,12 @@
 #define MODEL_SUPPORT_BOX_GIB_3	"models/props_junk/wood_crate001a_chunk03.mdl"
 #define MODEL_SUPPORT_BOX_GIB_4	"models/props_junk/wood_crate001a_chunk07.mdl"
 #define MODEL_SUPPORT_BOX_GIB_5	"models/props_junk/wood_crate001a_chunk01.mdl"
+#define MODEL_ANNIHILATION_TELEPORTER		"models/buildables/teleporter_light.mdl"
+#define MODEL_ANNIHILATION_BUSTER			"models/bots/demo/bot_sentry_buster.mdl"
+#define MODEL_TELE_GIB_1		"models/buildables/gibs/teleporter_gib1.mdl"
+#define MODEL_TELE_GIB_2		"models/buildables/gibs/teleporter_gib2.mdl"
+#define MODEL_TELE_GIB_3		"models/buildables/gibs/teleporter_gib3.mdl"
+#define MODEL_TELE_GIB_4		"models/buildables/gibs/teleporter_gib4.mdl"
 
 #define SOUND_TOSS_BUILD_1	"weapons/neon_sign_hit_01.wav"
 #define SOUND_TOSS_BUILD_2	"weapons/neon_sign_hit_02.wav"
@@ -77,6 +83,9 @@
 #define SOUND_BUSTER_WINDUP				")mvm/sentrybuster/mvm_sentrybuster_spin.wav"
 #define SOUND_BUSTER_EXPLODE			")mvm/sentrybuster/mvm_sentrybuster_explode.wav"
 #define SOUND_BUSTER_STEP				")mvm/sentrybuster/mvm_sentrybuster_step_01.wav"
+#define SOUND_TELE_LOOP					")weapons/teleporter_spin3.wav"
+#define SOUND_TELE_SPAWNED				")mvm/giant_common/giant_common_explodes_02.wav"
+#define SOUND_TELE_DESTROYED			")weapons/teleporter_explode.wav"
 
 #define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
 #define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
@@ -110,14 +119,18 @@
 #define PARTICLE_DRONE_TRACER_RED		"bullet_tracer_raygun_red_crit"
 #define PARTICLE_DRONE_TRACER_BLUE		"bullet_tracer_raygun_blue_crit"
 #define PARTICLE_SUPPORT_COMMANDED		"ping_circle"
+#define PARTICLE_ANNIHILATION_TELE_RED_1	"raygun_projectile_red_crit"
+#define PARTICLE_ANNIHILATION_TELE_RED_2	"teleporter_red_charged_level3"
+#define PARTICLE_ANNIHILATION_TELE_BLU_1	"raygun_projectile_blue_crit"
+#define PARTICLE_ANNIHILATION_TELE_BLU_2	"teleporter_blue_charged_level3"
+#define PARTICLE_TELE_SPAWNED_RED			"drg_cow_explosioncore_charged"
+#define PARTICLE_TELE_SPAWNED_BLUE			"drg_cow_explosioncore_charged_blue"
 
 #define MODEL_TARGETING		"models/fake_particles/plane.mdl"
 
-//TODO: Add the powerup_supernova_strike tracer to supercharged combat drone shots
-
 int Laser_Model = -1;
 int Lightning_Model = -1;
-int GLOW_MODEL = -1;
+int Glow_Model = -1;
 
 public void OnPluginStart()
 {
@@ -151,6 +164,12 @@ public void OnMapStart()
 	PrecacheModel(MODEL_SUPPORT_BOX_GIB_3);
 	PrecacheModel(MODEL_SUPPORT_BOX_GIB_4);
 	PrecacheModel(MODEL_SUPPORT_BOX_GIB_5);
+	PrecacheModel(MODEL_ANNIHILATION_BUSTER);
+	PrecacheModel(MODEL_ANNIHILATION_TELEPORTER);
+	PrecacheModel(MODEL_TELE_GIB_1);
+	PrecacheModel(MODEL_TELE_GIB_2);
+	PrecacheModel(MODEL_TELE_GIB_3);
+	PrecacheModel(MODEL_TELE_GIB_4);
 
 	PrecacheSound(SOUND_TOSS_BUILD_1);
 	PrecacheSound(SOUND_TOSS_BUILD_2);
@@ -192,11 +211,13 @@ public void OnMapStart()
 	PrecacheSound(SOUND_BUSTER_LOOP);
 	PrecacheSound(SOUND_BUSTER_STEP);
 	PrecacheSound(SOUND_BUSTER_WINDUP);
+	PrecacheSound(SOUND_TELE_LOOP);
+	PrecacheSound(SOUND_TELE_SPAWNED);
+	PrecacheSound(SOUND_TELE_DESTROYED);
 
 	Laser_Model = PrecacheModel("materials/sprites/laserbeam.vmt");
 	Lightning_Model = PrecacheModel("materials/sprites/lgtning.vmt");
-	//LASER_MODEL = PrecacheModel("materials/sprites/laser.vmt", false);
-	GLOW_MODEL = PrecacheModel("sprites/glow02.vmt", true);
+	Glow_Model = PrecacheModel("sprites/glow02.vmt");
 }
 
 public const char Toss_BuildSFX[][] =
@@ -1917,13 +1938,15 @@ public void Toss_DeleteSentries(int client)
 		SDKHooks_TakeDamage(support, 0, 0, 999999.0, _, _, _, _, false);
 	}
 }
-
+bool Annihilation_IsTele[2049] = { false, ... };
 //Resets global variables associated with given entities when they are destroyed.
 //Also triggers Drone destruction effects if the entity is a Drone.
 public void OnEntityDestroyed(int entity)
 {
 	if (entity > 0 && entity < 2049)
 	{
+		StopSound(entity, SNDCHAN_AUTO, SOUND_TELE_LOOP);
+
 		if (Toss_Owner[entity] != -1)
 		{
 			int owner = GetClientOfUserId(Toss_Owner[entity]);
@@ -1955,6 +1978,7 @@ public void OnEntityDestroyed(int entity)
 		Toss_ToolboxOwner[entity] = -1;
 		Toss_IsToolbox[entity] = false;
 		Toss_IsSupportDrone[entity] = false;
+		Annihilation_IsTele[entity] = false;
 
 		for (int i = 0; i <= MaxClients; i++)
 		{
@@ -2247,17 +2271,13 @@ public void Toss_SpawnSupportOnDelay(DataPack pack)
 		view_as<PNPC>(drone).AddGib(MODEL_SUPPORT_GIB_4, "bip_base");
 		view_as<PNPC>(drone).AddGib(MODEL_SUPPORT_GIB_5, "laser_bone");
 		view_as<PNPC>(drone).f_HealthBarHeight = 60.0;
+		view_as<PNPC>(drone).b_IsABuilding = true;
 		Toss_SupportStats[drone].isBuilding = true;
 		Toss_SupportStats[drone].lastBuildHealth = 1;
 		Toss_SupportStats[drone].owner = GetClientUserId(owner);
 		Toss_SupportDrone[owner] = EntIndexToEntRef(drone);
 		Toss_IsSupportDrone[drone] = true;
 		EmitSoundToAll(SOUND_SUPPORT_BUILD_BEGIN, drone);
-
-		//TODO: Fix Drones instantly disappearing if they spawn too close to a solid object
-		//	- Maybe add something like "PNPC_ExcludeFromPathing" so devs can choose specific entities that should not block pathing?
-		//ALSO: Fix allied collisions
-		//ALSO ALSO: Allow Support Drones to be healed by friendly Rescue Ranger bolts, but NOTHING ELSE.
 	}
 }
 
@@ -2629,11 +2649,18 @@ public void PNPC_OnPNPCDestroyed(int entity)
 		EmitSoundToAll(SOUND_SUPPORT_DESTROYED, entity, _, 120);
 		Support_RemovePanicParticle(entity);
 	}
+	else if (Annihilation_IsTele[entity])
+	{
+		float pos[3];
+		PNPC_WorldSpaceCenter(entity, pos);
+		SpawnParticle(pos, PARTICLE_TOSS_DESTROYED);
+		EmitSoundToAll(SOUND_TELE_DESTROYED, entity, _, 120, _, _, 80);
+	}
 }
 
 public void PNPC_OnTouch(PNPC npc, int entity, char[] classname)
 {
-	if (!Toss_IsSupportDrone[npc.Index] || StrContains(classname, "tf_projectile") == -1)
+	if (!npc.b_IsABuilding || StrContains(classname, "tf_projectile") == -1)
 		return;
 
 	int launcher = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
@@ -2687,7 +2714,115 @@ public void PNPC_OnTouch(PNPC npc, int entity, char[] classname)
 	}
 }
 
+int Annihilation_Owner[2049] = { -1, ... };
+float f_NextTeleBeam[2049] = { 0.0, ... };
+
 public void Annihilation_Activate(int client, char abilityName[255])
 {
+	float pos[3];
+	if (Annihilation_GetSpawnPos(client, abilityName, pos))
+	{
+		char teleName[255];
+		Format(teleName, sizeof(teleName), "Annihilation Teleporter (%N)", client);
+		int team = view_as<int>(TF2_GetClientTeam(client));
 
+		float maxHP = CF_GetArgF(client, GADGETEER, abilityName, "tele_hp", 3000.0);
+		int tele = PNPC(MODEL_ANNIHILATION_TELEPORTER, view_as<TFTeam>(team), RoundFloat(maxHP), RoundFloat(maxHP), team - 2, 1.33, 0.0, Annihilation_TeleThink, GADGETEER, 0.0, pos, NULL_VECTOR, _, _, teleName).Index;
+		
+		view_as<PNPC>(tele).f_Gravity = 9999.0;
+		view_as<PNPC>(tele).SetSequence("running");
+		view_as<PNPC>(tele).SetPlaybackRate(1.0);
+		view_as<PNPC>(tele).SetBleedParticle("buildingdamage_sparks2");
+		view_as<PNPC>(tele).AddGib(MODEL_TELE_GIB_1, "arm_attach_r");
+		view_as<PNPC>(tele).AddGib(MODEL_TELE_GIB_2, "centre_attach");
+		view_as<PNPC>(tele).AddGib(MODEL_TELE_GIB_3, "arm_attach_l");
+		view_as<PNPC>(tele).AddGib(MODEL_TELE_GIB_4, "centre_attach2");
+		view_as<PNPC>(tele).f_HealthBarHeight = 60.0;
+		view_as<PNPC>(tele).b_IsABuilding = true;
+
+		Annihilation_Owner[tele] = GetClientUserId(client);
+		f_NextTeleBeam[tele] = 0.0;
+		Annihilation_IsTele[tele] = true;
+
+		AttachParticleToEntity(tele, (team == 2 ? PARTICLE_ANNIHILATION_TELE_RED_1 : PARTICLE_ANNIHILATION_TELE_BLU_1), "arm_attach_L", 0.0);
+		AttachParticleToEntity(tele, (team == 2 ? PARTICLE_ANNIHILATION_TELE_RED_1 : PARTICLE_ANNIHILATION_TELE_BLU_1), "arm_attach_R", 0.0);
+		//AttachParticleToEntity(tele, (team == 2 ? PARTICLE_ANNIHILATION_TELE_RED_2 : PARTICLE_ANNIHILATION_TELE_BLU_2), "centre_attach", 0.0);
+
+		EmitSoundToAll(SOUND_TELE_LOOP, tele, _, 110, _, _, 80);
+		EmitSoundToAll(SOUND_TELE_SPAWNED, tele, _, 120, _, _, 90);
+		SpawnParticle(pos, (team == 2 ? PARTICLE_TELE_SPAWNED_RED : PARTICLE_TELE_SPAWNED_BLUE), 2.0);
+	}
+}
+
+public void Annihilation_TeleThink(int tele)
+{
+	PNPC npc = view_as<PNPC>(tele);
+	int client = Annihilation_GetOwner(tele);
+	if (!IsValidClient(client) || CF_IsEntityInSpawn(tele, TFTeam_Red) || CF_IsEntityInSpawn(tele, TFTeam_Blue))
+	{
+		npc.Gib();
+		return;
+	}
+
+	float gt = GetGameTime();
+	if (gt >= f_NextTeleBeam[tele])
+	{
+		float beamPos1[3], beamPos2[3];
+		GetEntityAttachment(tele, LookupEntityAttachment(tele, "centre_attach"), beamPos1, beamPos2);
+		beamPos2 = beamPos1;
+		beamPos2[2] += 9999.0;
+
+		int color[4];
+		color[0] = 255;
+		color[1] = 60;
+		color[2] = 60;
+		color[3] = 180;
+
+		if (TF2_GetClientTeam(client) == TFTeam_Blue)
+		{
+			color[0] = 60; color[2] = 255;
+		}
+
+		TE_SetupBeamPoints(beamPos1, beamPos2, Laser_Model, Glow_Model, 0, 0, 0.1, 24.0, 24.0, 0, 12.0, color, 45);				
+		TE_SendToAll();
+
+		color[3] = 255;
+		TE_SetupBeamPoints(beamPos1, beamPos2, Lightning_Model, Glow_Model, 0, 0, 0.1, 8.0, 8.0, 0, 24.0, color, 60);				
+		TE_SendToAll();
+
+		f_NextTeleBeam[tele] = gt + 0.08;
+	}
+}
+
+int Annihilation_GetOwner(int entity) { return GetClientOfUserId(Annihilation_Owner[entity]); }
+
+bool Annihilation_GetSpawnPos(int client, char abilityName[255], float endPos[3] = NULL_VECTOR)
+{
+	float ang[3], startPos[3];
+	GetClientEyePosition(client, startPos);
+	GetClientEyeAngles(client, ang);
+	GetPointInDirection(startPos, ang, CF_GetArgF(client, GADGETEER, abilityName, "tele_spawndist", 200.0), endPos);
+
+	//Make sure we actually have line-of-sight to the spawn position:
+	CF_HasLineOfSight(startPos, endPos, _, endPos, client);
+
+	//Put the spawn position on the ground:
+	startPos = endPos;
+	endPos[2] -= 9999.0;
+	if (!CF_HasLineOfSight(startPos, endPos, _, endPos, client))
+		endPos[2] += 30.0;
+
+	//TODO: Eventually implement logic to check if the point is in a spawn room
+	return true;
+}
+
+public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result)
+{
+	if (StrEqual(plugin, GADGETEER) && StrContains(ability, ANNIHILATION) != -1)
+	{
+		result = Annihilation_GetSpawnPos(client, ability);
+		return Plugin_Changed;
+	}
+
+	return Plugin_Continue;
 }
