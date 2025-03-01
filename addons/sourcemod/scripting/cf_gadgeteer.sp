@@ -86,6 +86,7 @@
 #define SOUND_TELE_LOOP					")weapons/teleporter_spin3.wav"
 #define SOUND_TELE_SPAWNED				")mvm/giant_common/giant_common_explodes_02.wav"
 #define SOUND_TELE_DESTROYED			")weapons/teleporter_explode.wav"
+#define SOUND_TELE_SD_WARNING			")weapons/medi_shield_burn_05.wav"
 
 #define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
 #define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
@@ -125,6 +126,11 @@
 #define PARTICLE_ANNIHILATION_TELE_BLU_2	"teleporter_blue_charged_level3"
 #define PARTICLE_TELE_SPAWNED_RED			"drg_cow_explosioncore_charged"
 #define PARTICLE_TELE_SPAWNED_BLUE			"drg_cow_explosioncore_charged_blue"
+#define PARTICLE_TELE_WAVE_1_RED			"powerup_supernova_explode_red"
+#define PARTICLE_TELE_WAVE_1_BLUE			"powerup_supernova_explode_blue"
+#define PARTICLE_TELE_WAVE_2_RED			"powerup_supernova_explode_red"
+#define PARTICLE_TELE_WAVE_2_BLUE			"powerup_supernova_explode_blue"
+#define PARTICLE_ANNIHILATION_TELE_BOOM		"hightower_explosion"
 
 #define MODEL_TARGETING		"models/fake_particles/plane.mdl"
 
@@ -214,6 +220,7 @@ public void OnMapStart()
 	PrecacheSound(SOUND_TELE_LOOP);
 	PrecacheSound(SOUND_TELE_SPAWNED);
 	PrecacheSound(SOUND_TELE_DESTROYED);
+	PrecacheSound(SOUND_TELE_SD_WARNING);
 
 	Laser_Model = PrecacheModel("materials/sprites/laserbeam.vmt");
 	Lightning_Model = PrecacheModel("materials/sprites/lgtning.vmt");
@@ -1949,7 +1956,9 @@ enum struct AA_Tele
 
 	float f_NextTeleBeam;
 	float f_NextBusterWave;
-	float f_SDTime;
+	float f_SDStartTime;
+	float f_SDBlastTime;
+	float f_NextBlastWarning;
 	
 	float f_SDDuration;
 	float f_SDRadius;
@@ -1957,6 +1966,15 @@ enum struct AA_Tele
 	float f_SDFalloffStart;
 	float f_SDFalloffMax;
 	float f_WaveInterval;
+
+	float f_BusterHP;
+	float f_BusterSpeed;
+	float f_BusterDistance;
+	float f_BusterRadius;
+	float f_BusterSDTime;
+	float f_BusterDMG;
+	float f_BusterFalloffStart;
+	float f_BusterFalloffMax;
 }
 
 AA_Tele TeleStats[2049];
@@ -2769,11 +2787,33 @@ public void Annihilation_Activate(int client, char abilityName[255])
 		maxs[0] = 39.206;
 		maxs[1] = 26.71;
 		maxs[2] = 15.271;
-		
+
 		view_as<PNPC>(tele).SetBoundingBox(mins, maxs);
 
 		TeleStats[tele].owner = GetClientUserId(client);
 		TeleStats[tele].f_NextTeleBeam = 0.0;
+		TeleStats[tele].f_NextBusterWave = 0.0;
+		TeleStats[tele].f_NextBlastWarning = 0.0;
+		TeleStats[tele].f_SDStartTime = GetGameTime() + CF_GetArgF(client, GADGETEER, abilityName, "tele_duration", 2.0);
+		TeleStats[tele].f_SDDuration = CF_GetArgF(client, GADGETEER, abilityName, "tele_sdtime", 4.0);
+		TeleStats[tele].f_SDBlastTime = TeleStats[tele].f_SDStartTime + TeleStats[tele].f_SDDuration;
+		TeleStats[tele].f_SDRadius = CF_GetArgF(client, GADGETEER, abilityName, "tele_radius", 4.0);
+		TeleStats[tele].f_SDDMG = CF_GetArgF(client, GADGETEER, abilityName, "tele_dmg", 800.0);
+		TeleStats[tele].f_SDFalloffStart = CF_GetArgF(client, GADGETEER, abilityName, "tele_falloff_start", 300.0);
+		TeleStats[tele].f_SDFalloffMax = CF_GetArgF(client, GADGETEER, abilityName, "tele_falloff_max", 0.5);
+
+		TeleStats[tele].f_BusterHP = CF_GetArgF(client, GADGETEER, abilityName, "buster_hp", 150.0);
+		TeleStats[tele].f_BusterSpeed = CF_GetArgF(client, GADGETEER, abilityName, "buster_speed", 380.0);
+		TeleStats[tele].f_BusterDistance = CF_GetArgF(client, GADGETEER, abilityName, "buster_distance", 100.0);
+		TeleStats[tele].f_BusterRadius = CF_GetArgF(client, GADGETEER, abilityName, "buster_radius", 200.0);
+		TeleStats[tele].f_BusterSDTime = CF_GetArgF(client, GADGETEER, abilityName, "buster_sdtime", 2.0);
+		TeleStats[tele].f_BusterDMG = CF_GetArgF(client, GADGETEER, abilityName, "buster_dmg", 200.0);
+		TeleStats[tele].f_BusterFalloffStart = CF_GetArgF(client, GADGETEER, abilityName, "buster_falloff_start", 80.0);
+		TeleStats[tele].f_BusterFalloffMax = CF_GetArgF(client, GADGETEER, abilityName, "buster_falloff_max", 0.5);
+
+		TeleStats[tele].f_WaveInterval = CF_GetArgF(client, GADGETEER, abilityName, "waves_interval", 2.0);
+		TeleStats[tele].i_WaveCount = CF_GetArgI(client, GADGETEER, abilityName, "waves_count", 3);
+
 		Annihilation_IsTele[tele] = true;
 
 		AttachParticleToEntity(tele, (team == 2 ? PARTICLE_ANNIHILATION_TELE_RED_1 : PARTICLE_ANNIHILATION_TELE_BLU_1), "arm_attach_L", 0.0);
@@ -2796,6 +2836,19 @@ public void Annihilation_TeleThink(int tele)
 		return;
 	}
 
+	TFTeam team = TF2_GetClientTeam(client);
+
+	int color[4];
+	color[0] = 255;
+	color[1] = 60;
+	color[2] = 60;
+	color[3] = 180;
+
+	if (team == TFTeam_Blue)
+	{
+		color[0] = 60; color[2] = 255;
+	}
+
 	float gt = GetGameTime();
 	if (gt >= TeleStats[tele].f_NextTeleBeam)
 	{
@@ -2803,17 +2856,6 @@ public void Annihilation_TeleThink(int tele)
 		GetEntityAttachment(tele, LookupEntityAttachment(tele, "centre_attach"), beamPos1, beamPos2);
 		beamPos2 = beamPos1;
 		beamPos2[2] += 9999.0;
-
-		int color[4];
-		color[0] = 255;
-		color[1] = 60;
-		color[2] = 60;
-		color[3] = 180;
-
-		if (TF2_GetClientTeam(client) == TFTeam_Blue)
-		{
-			color[0] = 60; color[2] = 255;
-		}
 
 		TE_SetupBeamPoints(beamPos1, beamPos2, Laser_Model, Glow_Model, 0, 0, 0.1, 24.0, 24.0, 0, 12.0, color, 45);				
 		TE_SendToAll();
@@ -2823,6 +2865,58 @@ public void Annihilation_TeleThink(int tele)
 		TE_SendToAll();
 
 		TeleStats[tele].f_NextTeleBeam = gt + 0.08;
+	}
+	
+	if (gt >= TeleStats[tele].f_SDStartTime)
+	{
+		if (gt >= TeleStats[tele].f_SDBlastTime)
+		{
+			float pos[3];
+			CF_WorldSpaceCenter(tele, pos);
+			SpawnParticle(pos, PARTICLE_ANNIHILATION_TELE_BOOM, 2.0);
+			pos[2] += 40.0;
+
+			CF_GenericAOEDamage(client, client, client, TeleStats[tele].f_SDDMG, DMG_BLAST|DMG_CLUB|DMG_ALWAYSGIB, TeleStats[tele].f_SDRadius, pos, TeleStats[tele].f_SDFalloffStart, TeleStats[tele].f_BusterFalloffMax, _, false);
+			SpawnShaker(pos, 14, 400, 4, 4, 4);
+			npc.Gib();
+			return;
+		}
+		else
+		{
+			float rate = 1.0;
+			float timeUntil = TeleStats[tele].f_SDBlastTime - gt;
+			float percentageReady = 1.0 - (timeUntil / TeleStats[tele].f_SDDuration);
+			rate = 1.5 * percentageReady;
+			npc.SetPlaybackRate(rate);
+
+			float pos[3], trash[3];
+			GetEntityAttachment(tele, LookupEntityAttachment(tele, "centre_attach"), pos, trash);
+			int alpha = 40 + RoundFloat(215.0 * percentageReady);
+			spawnRing_Vector(pos, TeleStats[tele].f_SDRadius * 2.0, 0.0, 0.0, 0.0, Laser_Model, color[0], color[1], color[2], alpha, 1, 0.25, 8.0, 0.0, 16);
+
+			if (gt >= TeleStats[tele].f_NextBlastWarning)
+			{
+				spawnRing_Vector(pos, TeleStats[tele].f_SDRadius * 2.0, 0.0, 0.0, 0.0, Laser_Model, color[0], color[1], color[2], alpha, 1, 0.25, 8.0, 0.0, 16, 1.0);
+
+				int pitch = 60 + RoundFloat(80.0 * percentageReady);
+				EmitSoundToAll(SOUND_TELE_SD_WARNING, tele, _, 120, _, _, pitch);
+
+				TeleStats[tele].f_NextBlastWarning = gt + ((0.25 * TeleStats[tele].f_SDDuration) * (1.0 - percentageReady));
+			}
+		}
+	}
+	else if (gt >= TeleStats[tele].f_NextBusterWave)
+	{
+		float pos[3], ang[3];
+		GetEntityAttachment(tele, LookupEntityAttachment(tele, "centre_attach"), pos, ang);
+		SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_TELE_WAVE_1_RED : PARTICLE_TELE_WAVE_1_BLUE, 1.0);
+		SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_TELE_WAVE_2_RED : PARTICLE_TELE_WAVE_2_BLUE, 1.0);
+
+		//TODO: Spawn the busters!
+		pos[2] += 20.0;
+			
+		EmitSoundToAll(SOUND_TELE_WAVE, tele, _, 120, _, _, GetRandomInt(80, 100));
+		TeleStats[tele].f_NextBusterWave = gt + TeleStats[tele].f_WaveInterval;
 	}
 }
 
