@@ -37,7 +37,7 @@
 #define MODEL_SUPPORT_BOX_GIB_4	"models/props_junk/wood_crate001a_chunk07.mdl"
 #define MODEL_SUPPORT_BOX_GIB_5	"models/props_junk/wood_crate001a_chunk01.mdl"
 #define MODEL_ANNIHILATION_TELEPORTER		"models/buildables/teleporter_light.mdl"
-#define MODEL_ANNIHILATION_BUSTER			"models/bots/demo/bot_sentry_buster.mdl"
+#define MODEL_ANNIHILATION_BUSTER			"models/chaos_fortress/gadgeteer/annihilation_buster.mdl"
 #define MODEL_TELE_GIB_1		"models/buildables/gibs/teleporter_gib1.mdl"
 #define MODEL_TELE_GIB_2		"models/buildables/gibs/teleporter_gib2.mdl"
 #define MODEL_TELE_GIB_3		"models/buildables/gibs/teleporter_gib3.mdl"
@@ -1911,7 +1911,10 @@ public void CF_OnCharacterCreated(int client)
 public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
 	if (reason == CF_CRR_SWITCHED_CHARACTER || reason == CF_CRR_DISCONNECT || reason == CF_CRR_ROUNDSTATE_CHANGED)
+	{
 		Toss_DeleteSentries(client);
+		Annihilation_DestroyTeleporter(client);
+	}
 		
 	b_ToolboxVM[client] = false;
 }
@@ -1939,6 +1942,25 @@ public void Toss_DeleteSentries(int client)
 	}
 }
 bool Annihilation_IsTele[2049] = { false, ... };
+enum struct AA_Tele
+{
+	int owner;
+	int i_WaveCount;
+
+	float f_NextTeleBeam;
+	float f_NextBusterWave;
+	float f_SDTime;
+	
+	float f_SDDuration;
+	float f_SDRadius;
+	float f_SDDMG;
+	float f_SDFalloffStart;
+	float f_SDFalloffMax;
+	float f_WaveInterval;
+}
+
+AA_Tele TeleStats[2049];
+
 //Resets global variables associated with given entities when they are destroyed.
 //Also triggers Drone destruction effects if the entity is a Drone.
 public void OnEntityDestroyed(int entity)
@@ -1979,6 +2001,7 @@ public void OnEntityDestroyed(int entity)
 		Toss_IsToolbox[entity] = false;
 		Toss_IsSupportDrone[entity] = false;
 		Annihilation_IsTele[entity] = false;
+		TeleStats[entity].owner = -1;
 
 		for (int i = 0; i <= MaxClients; i++)
 		{
@@ -2714,14 +2737,13 @@ public void PNPC_OnTouch(PNPC npc, int entity, char[] classname)
 	}
 }
 
-int Annihilation_Owner[2049] = { -1, ... };
-float f_NextTeleBeam[2049] = { 0.0, ... };
-
 public void Annihilation_Activate(int client, char abilityName[255])
 {
 	float pos[3];
 	if (Annihilation_GetSpawnPos(client, abilityName, pos))
 	{
+		Annihilation_DestroyTeleporter(client);
+
 		char teleName[255];
 		Format(teleName, sizeof(teleName), "Annihilation Teleporter (%N)", client);
 		int team = view_as<int>(TF2_GetClientTeam(client));
@@ -2740,13 +2762,23 @@ public void Annihilation_Activate(int client, char abilityName[255])
 		view_as<PNPC>(tele).f_HealthBarHeight = 60.0;
 		view_as<PNPC>(tele).b_IsABuilding = true;
 
-		Annihilation_Owner[tele] = GetClientUserId(client);
-		f_NextTeleBeam[tele] = 0.0;
+		float mins[3], maxs[3];
+		mins[0] = -26.71;
+		mins[1] = -26.71;
+		mins[2] = -0.25;
+		maxs[0] = 39.206;
+		maxs[1] = 26.71;
+		maxs[2] = 15.271;
+		
+		view_as<PNPC>(tele).SetBoundingBox(mins, maxs);
+
+		TeleStats[tele].owner = GetClientUserId(client);
+		TeleStats[tele].f_NextTeleBeam = 0.0;
 		Annihilation_IsTele[tele] = true;
 
 		AttachParticleToEntity(tele, (team == 2 ? PARTICLE_ANNIHILATION_TELE_RED_1 : PARTICLE_ANNIHILATION_TELE_BLU_1), "arm_attach_L", 0.0);
 		AttachParticleToEntity(tele, (team == 2 ? PARTICLE_ANNIHILATION_TELE_RED_1 : PARTICLE_ANNIHILATION_TELE_BLU_1), "arm_attach_R", 0.0);
-		//AttachParticleToEntity(tele, (team == 2 ? PARTICLE_ANNIHILATION_TELE_RED_2 : PARTICLE_ANNIHILATION_TELE_BLU_2), "centre_attach", 0.0);
+		AttachParticleToEntity(tele, (team == 2 ? PARTICLE_ANNIHILATION_TELE_RED_2 : PARTICLE_ANNIHILATION_TELE_BLU_2), "centre_attach2", 0.0, _, _, 3.33);
 
 		EmitSoundToAll(SOUND_TELE_LOOP, tele, _, 110, _, _, 80);
 		EmitSoundToAll(SOUND_TELE_SPAWNED, tele, _, 120, _, _, 90);
@@ -2765,7 +2797,7 @@ public void Annihilation_TeleThink(int tele)
 	}
 
 	float gt = GetGameTime();
-	if (gt >= f_NextTeleBeam[tele])
+	if (gt >= TeleStats[tele].f_NextTeleBeam)
 	{
 		float beamPos1[3], beamPos2[3];
 		GetEntityAttachment(tele, LookupEntityAttachment(tele, "centre_attach"), beamPos1, beamPos2);
@@ -2790,11 +2822,11 @@ public void Annihilation_TeleThink(int tele)
 		TE_SetupBeamPoints(beamPos1, beamPos2, Lightning_Model, Glow_Model, 0, 0, 0.1, 8.0, 8.0, 0, 24.0, color, 60);				
 		TE_SendToAll();
 
-		f_NextTeleBeam[tele] = gt + 0.08;
+		TeleStats[tele].f_NextTeleBeam = gt + 0.08;
 	}
 }
 
-int Annihilation_GetOwner(int entity) { return GetClientOfUserId(Annihilation_Owner[entity]); }
+int Annihilation_GetOwner(int entity) { return GetClientOfUserId(TeleStats[entity].owner); }
 
 bool Annihilation_GetSpawnPos(int client, char abilityName[255], float endPos[3] = NULL_VECTOR)
 {
@@ -2814,6 +2846,29 @@ bool Annihilation_GetSpawnPos(int client, char abilityName[255], float endPos[3]
 
 	//TODO: Eventually implement logic to check if the point is in a spawn room
 	return true;
+}
+
+public bool Annihilation_HasTeleporter(int client, int &entity)
+{
+	for (int i = 0; i <= 2048; i++)
+	{
+		if (Annihilation_GetOwner(i) == client)
+		{
+			entity = i;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+public void Annihilation_DestroyTeleporter(int client)
+{
+	int tele;
+	if (Annihilation_HasTeleporter(client, tele))
+	{
+		view_as<PNPC>(tele).Gib();
+	}
 }
 
 public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result)
