@@ -128,9 +128,11 @@
 #define PARTICLE_TELE_SPAWNED_BLUE			"drg_cow_explosioncore_charged_blue"
 #define PARTICLE_TELE_WAVE_1_RED			"powerup_supernova_explode_red"
 #define PARTICLE_TELE_WAVE_1_BLUE			"powerup_supernova_explode_blue"
-#define PARTICLE_TELE_WAVE_2_RED			"powerup_supernova_explode_red"
-#define PARTICLE_TELE_WAVE_2_BLUE			"powerup_supernova_explode_blue"
+#define PARTICLE_TELE_WAVE_2_RED			"teleportedin_red"
+#define PARTICLE_TELE_WAVE_2_BLUE			"teleportedin_blue"
 #define PARTICLE_ANNIHILATION_TELE_BOOM		"hightower_explosion"
+#define PARTICLE_BUSTER_LIGHT_RED			"raygun_projectile_red"
+#define PARTICLE_BUSTER_LIGHT_BLUE			"raygun_projectile_blue"
 
 #define MODEL_TARGETING		"models/fake_particles/plane.mdl"
 
@@ -1971,10 +1973,22 @@ enum struct AA_Tele
 	float f_BusterSpeed;
 	float f_BusterDistance;
 	float f_BusterRadius;
-	float f_BusterSDTime;
+	float f_BusterSDDuration;
 	float f_BusterDMG;
 	float f_BusterFalloffStart;
 	float f_BusterFalloffMax;
+
+	bool b_AboutToBlowUp;
+
+	void GetBusterStats(AA_Tele other)
+	{
+		this.f_BusterRadius = other.f_BusterRadius;
+		this.f_BusterDistance = other.f_BusterDistance;
+		this.f_BusterSDDuration = other.f_BusterSDDuration;
+		this.f_BusterDMG = other.f_BusterDMG;
+		this.f_BusterFalloffStart = other.f_BusterFalloffStart;
+		this.f_BusterFalloffMax = other.f_BusterFalloffMax;
+	}
 }
 
 AA_Tele TeleStats[2049];
@@ -1986,6 +2000,8 @@ public void OnEntityDestroyed(int entity)
 	if (entity > 0 && entity < 2049)
 	{
 		StopSound(entity, SNDCHAN_AUTO, SOUND_TELE_LOOP);
+		StopSound(entity, SNDCHAN_AUTO, SOUND_BUSTER_LOOP);
+		StopSound(entity, SNDCHAN_AUTO, SOUND_BUSTER_WINDUP);
 
 		if (Toss_Owner[entity] != -1)
 		{
@@ -2806,7 +2822,7 @@ public void Annihilation_Activate(int client, char abilityName[255])
 		TeleStats[tele].f_BusterSpeed = CF_GetArgF(client, GADGETEER, abilityName, "buster_speed", 380.0);
 		TeleStats[tele].f_BusterDistance = CF_GetArgF(client, GADGETEER, abilityName, "buster_distance", 100.0);
 		TeleStats[tele].f_BusterRadius = CF_GetArgF(client, GADGETEER, abilityName, "buster_radius", 200.0);
-		TeleStats[tele].f_BusterSDTime = CF_GetArgF(client, GADGETEER, abilityName, "buster_sdtime", 2.0);
+		TeleStats[tele].f_BusterSDDuration = CF_GetArgF(client, GADGETEER, abilityName, "buster_sdtime", 2.0);
 		TeleStats[tele].f_BusterDMG = CF_GetArgF(client, GADGETEER, abilityName, "buster_dmg", 200.0);
 		TeleStats[tele].f_BusterFalloffStart = CF_GetArgF(client, GADGETEER, abilityName, "buster_falloff_start", 80.0);
 		TeleStats[tele].f_BusterFalloffMax = CF_GetArgF(client, GADGETEER, abilityName, "buster_falloff_max", 0.5);
@@ -2878,6 +2894,10 @@ public void Annihilation_TeleThink(int tele)
 
 			CF_GenericAOEDamage(client, client, client, TeleStats[tele].f_SDDMG, DMG_BLAST|DMG_CLUB|DMG_ALWAYSGIB, TeleStats[tele].f_SDRadius, pos, TeleStats[tele].f_SDFalloffStart, TeleStats[tele].f_BusterFalloffMax, _, false);
 			SpawnShaker(pos, 14, 400, 4, 4, 4);
+
+			float force[3];
+			Annihilation_GetUpwardForce(force);
+			npc.PunchForce(force, true);
 			npc.Gib();
 			return;
 		}
@@ -2912,12 +2932,116 @@ public void Annihilation_TeleThink(int tele)
 		SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_TELE_WAVE_1_RED : PARTICLE_TELE_WAVE_1_BLUE, 1.0);
 		SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_TELE_WAVE_2_RED : PARTICLE_TELE_WAVE_2_BLUE, 1.0);
 
-		//TODO: Spawn the busters!
-		pos[2] += 20.0;
+		for (int i = 0; i < TeleStats[tele].i_WaveCount; i++)
+		{
+			float randAng[3], vel[3], skyPos[3];
+			randAng[1] = GetRandomFloat(0.0, 360.0);
+			//CNavArea navi = PNPC_GetRandomNearbyArea(pos, 200.0);
+			//navi.GetCenter(pos);
+			//SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_TELE_WAVE_2_RED : PARTICLE_TELE_WAVE_2_BLUE, 1.0);
+			//skyPos = pos;
+			//skyPos[2] += 9999.0;
+			//TE_SetupBeamPoints(pos, skyPos, Lightning_Model, Glow_Model, 0, 0, 0.33, 8.0, 8.0, 0, 24.0, color, 45);				
+			//TE_SendToAll();
+			pos[2] += 20.0;
+
+			char busterName[255];
+			Format(busterName, sizeof(busterName), "Annihilation Buster (%N)", client);
+			int teamNum = view_as<int>(TF2_GetClientTeam(client));
+
+			int buster = PNPC(MODEL_ANNIHILATION_BUSTER, team, RoundFloat(TeleStats[tele].f_BusterHP), RoundFloat(TeleStats[tele].f_BusterHP), teamNum - 2, 0.66, TeleStats[tele].f_BusterSpeed, Annihilation_BusterThink, GADGETEER, 0.0, pos, randAng, _, _, busterName).Index;
+			
+			view_as<PNPC>(buster).f_Gravity = 9999.0;
+			view_as<PNPC>(buster).SetSequence("Run_MELEE");
+			view_as<PNPC>(buster).SetPlaybackRate(1.0);
+			view_as<PNPC>(buster).SetBleedParticle("buildingdamage_sparks2");
+
+			//TODO: Change gibs
+			view_as<PNPC>(buster).AddGib(MODEL_TELE_GIB_1, "arm_attach_r");
+			view_as<PNPC>(buster).AddGib(MODEL_TELE_GIB_2, "centre_attach");
+			view_as<PNPC>(buster).AddGib(MODEL_TELE_GIB_3, "arm_attach_l");
+			view_as<PNPC>(buster).AddGib(MODEL_TELE_GIB_4, "centre_attach2");
+			view_as<PNPC>(buster).f_HealthBarHeight = 60.0;
+			view_as<PNPC>(buster).b_IsABuilding = true;
+			
+			randAng[0] = -45.0;
+			GetVelocityInDirection(randAng, 800.0, vel);
+			//TODO: Implement PNPC setvel native
+
+			EmitSoundToAll(SOUND_BUSTER_LOOP, buster, _, _, _, _, 110);
+
+			TeleStats[buster].GetBusterStats(TeleStats[tele]);
+			TeleStats[buster].owner = GetClientUserId(client);
+			TeleStats[buster].b_AboutToBlowUp = false;
+		}
 			
 		EmitSoundToAll(SOUND_TELE_WAVE, tele, _, 120, _, _, GetRandomInt(80, 100));
 		TeleStats[tele].f_NextBusterWave = gt + TeleStats[tele].f_WaveInterval;
 	}
+}
+
+public void Annihilation_BusterThink(int buster)
+{
+	PNPC npc = view_as<PNPC>(buster);
+	int client = Annihilation_GetOwner(buster);
+	if (!IsValidClient(client) || CF_IsEntityInSpawn(buster, TFTeam_Red) || CF_IsEntityInSpawn(buster, TFTeam_Blue))
+	{
+		npc.Gib();
+		return;
+	}
+
+	//TFTeam team = TF2_GetClientTeam(client);
+	float gt = GetGameTime();
+
+	float pos[3];
+	CF_WorldSpaceCenter(buster, pos);
+
+	if (TeleStats[buster].b_AboutToBlowUp)
+	{
+		if (gt >= TeleStats[buster].f_SDBlastTime)
+		{
+			//TODO: Explode
+
+			float force[3];
+			Annihilation_GetUpwardForce(force);
+			npc.PunchForce(force, true);
+			npc.Gib();
+		}
+	}
+	else
+	{
+		npc.i_PathTarget = CF_GetClosestTarget(pos, true, _, _, grabEnemyTeam(client));
+		if (!IsValidEntity(npc.i_PathTarget) || (IsValidClient(npc.i_PathTarget) && !IsPlayerAlive(npc.i_PathTarget)))
+		{
+			npc.StopPathing();
+		}
+		else
+		{
+			float theirPos[3];
+			CF_WorldSpaceCenter(npc.i_PathTarget, theirPos);
+			if (GetVectorDistance(pos, theirPos) <= TeleStats[buster].f_BusterDistance && GetEntityFlags(buster) & FL_ONGROUND != 0)
+			{
+				float rate = 1.0 / TeleStats[buster].f_BusterSDDuration;
+				npc.SetPlaybackRate(rate);
+				npc.SetSequence("sentry_buster_preExplode");
+				npc.SetPlaybackRate(rate);
+				TeleStats[buster].b_AboutToBlowUp = true;
+				TeleStats[buster].f_SDBlastTime = gt + TeleStats[buster].f_BusterSDDuration;
+				npc.StopPathing();
+				EmitSoundToAll(SOUND_BUSTER_WINDUP, buster, _, 110, _, _, 110);
+			}
+			else
+				npc.StartPathing();
+		}
+	}
+}
+
+void Annihilation_GetUpwardForce(float output[3])
+{
+	float ang[3];
+	ang[0] = GetRandomFloat(-80.0, -90.0);
+	ang[1] = GetRandomFloat(0.0, 360.0);
+	GetVelocityInDirection(ang, 1200.0, output);
 }
 
 int Annihilation_GetOwner(int entity) { return GetClientOfUserId(TeleStats[entity].owner); }
