@@ -357,8 +357,6 @@ public Action GetOwner(int ent)
 
 Handle HudSync;
 
-bool b_HUDTimerActive = false;
-
 #define NOPE				"replay/record_fail.wav"
 #define HEAL_DEFAULT		"items/smallmedkit1.wav"
 #define HEAL_DEFAULT_MODEL	"models/items/medkit_medium.mdl"
@@ -394,8 +392,6 @@ static char g_CritHits_Victim[][] = {
 public void CFA_MapStart()
 {
 	HudSync = CreateHudSynchronizer();
-
-	b_HUDTimerActive = false;
 	
 	PrecacheSound(NOPE);
 	PrecacheSound(HEAL_DEFAULT);
@@ -4336,15 +4332,9 @@ public Action OnSpellSpawn(int ent)
 
 bool IsCasting(int client) { return b_Casting[client]; }
 
-bool b_VMHideWeapon[MAXPLAYERS + 1] = { false, ... };
 bool b_VMBlockSwitch[MAXPLAYERS + 1] = { false, ... };
-bool b_VMBlockAttack[MAXPLAYERS + 1] = { false, ... };
 
 float f_VMAnimEndTime[MAXPLAYERS + 1] = { 0.0, ... };
-
-int VMAnim_FakeVM[MAXPLAYERS+1] = { -1, ... };
-
-char VMAnim_ForcedSequence[MAXPLAYERS + 1][255];
 
 //TODO: Make this work with custom weapon models.
 public Native_CF_ForceViewmodelAnimation(Handle plugin, int numParams)

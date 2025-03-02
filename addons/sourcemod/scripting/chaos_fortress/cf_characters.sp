@@ -1170,21 +1170,6 @@ public void CF_ResetMadeStatus(int client)
 	}
 }
 
-void CFC_WeaponEquipped(int client, int weapon)
-{
-	if (!CF_IsPlayerCharacter(client))
-		return;
-		
-	/*if (!g_Characters[client].HasCustomArms)
-		return;
-		
-	int model = PrecacheModel(g_Characters[client].Arms);
-
-	SetEntityModel(weapon, g_Characters[client].Arms);
-	SetEntProp(weapon, Prop_Send, "m_nCustomViewmodelModelIndex", model);
-	SetEntProp(weapon, Prop_Send, "m_iViewModelIndex", model);*/
-}
-
 public void CFC_MapEnd()
 {
 	delete CF_Characters_Configs;

@@ -217,15 +217,14 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 		--count;
 		
 	TF2Items_SetNumAttributes(hWeapon, count / 2);
-	int skin = 0;
-	
+
 	for(int i; i < count; i += 2)
 	{
 		int attrib = StringToInt(atts[i]);
 		if(attrib)
 		{
 			if (attrib == 834)
-				skin = RoundFloat(StringToFloat(atts[i + 1]));
+				TF2Items_SetAttribute(hWeapon, i == 0 ? 0 : i / 2, attrib, view_as<float>(RoundFloat(StringToFloat(atts[i + 1]))));
 			else
 				TF2Items_SetAttribute(hWeapon, i == 0 ? 0 : i / 2, attrib, StringToFloat(atts[i + 1]));
 		}
@@ -248,12 +247,6 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 	}
 
 	SetEntProp(entity, Prop_Send, "m_iAccountID", GetSteamAccountID(client, false));
-
-	if (skin > 0)
-	{
-		CPrintToChat(client, "Your skin is %i", skin);
-		TF2Attrib_SetByDefIndex(entity, 834, view_as<float>(skin));
-	}
 
 	if(visible)
 	{
@@ -340,7 +333,7 @@ public void CFW_GiveAmmoOnDelay(DataPack pack)
 }
 
 //Don't let characters who just happen to be spies or engineers have sappers or PDAs.
-/*public Action TF2Items_OnGiveNamedItem(client, String:classname[], iItemDefinitionIndex, &Handle:hItem)
+public Action TF2Items_OnGiveNamedItem(client, String:classname[], iItemDefinitionIndex, &Handle:hItem)
 {
 	if (b_EquippingWeapon[client])
 		return Plugin_Continue;
@@ -349,7 +342,7 @@ public void CFW_GiveAmmoOnDelay(DataPack pack)
     {    case 735, 736, 810, 831, 933, 1080, 1102, 25, 26, 28, 737: return Plugin_Handled;    }
 
     return Plugin_Continue;
-}*/
+}
 
 public Native_CF_GetWeaponAbility(Handle plugin, int numParams)
 {
