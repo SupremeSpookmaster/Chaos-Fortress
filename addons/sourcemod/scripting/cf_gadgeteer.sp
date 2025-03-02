@@ -2581,6 +2581,16 @@ void Gadgeteer_OnBuildingConstructed(Event event, const char[] name, bool dontBr
 		if (CF_GetArgI(owner, GADGETEER, SUPPORTDRONE, "has_toolbox", 0) > 0)
 			return;
 
+		if (TF2_GetObjectType(entity) == TFObject_Sentry)
+		{
+			if (CF_GetSpecialResource(owner) < 100.0)
+				PrintCenterText(owner, "Not enough metal for a sentry!");
+			else
+				CF_GiveSpecialResource(owner, -100.0);
+
+			return;
+		}
+
 		float cost = CF_GetArgF(owner, GADGETEER, SUPPORTDRONE, "cost", 400.0);
 		if (CF_GetSpecialResource(owner) < cost)
 		{
@@ -2708,6 +2718,10 @@ public void PNPC_OnPNPCDestroyed(int entity)
 		SpawnParticle(pos, PARTICLE_TOSS_DESTROYED);
 		EmitSoundToAll(SOUND_SUPPORT_DESTROYED, entity, _, 120);
 		Support_RemovePanicParticle(entity);
+
+		int owner = GetClientOfUserId(Toss_SupportStats[entity].owner);
+		if (IsValidMulti(owner))
+			CF_PlayRandomSound(owner, "", "sound_support_drone_destroyed");
 	}
 	else if (Annihilation_IsTele[entity])
 	{
@@ -2959,9 +2973,9 @@ public void Annihilation_TeleThink(int tele)
 			view_as<PNPC>(buster).f_HealthBarHeight = 60.0;
 			view_as<PNPC>(buster).b_IsABuilding = true;
 			
-			randAng[0] = -45.0;
-			GetVelocityInDirection(randAng, 450.0, vel);
-			view_as<PNPC>(buster).SetVelocity(vel);
+			//randAng[0] = -45.0;
+			//GetVelocityInDirection(randAng, 450.0, vel);
+			//view_as<PNPC>(buster).SetVelocity(vel);
 
 			EmitSoundToAll(SOUND_BUSTER_LOOP, buster, _, _, _, _, 110);
 			AttachParticleToEntity(buster, team == TFTeam_Red ? PARTICLE_BUSTER_GLOW_RED : PARTICLE_BUSTER_GLOW_BLUE, "root", 4.0);
@@ -2998,13 +3012,16 @@ public void Annihilation_BusterThink(int buster)
 
 	if (TeleStats[buster].b_AboutToBlowUp)
 	{
+		npc.StopPathing();
+		float vel[3];
+		npc.SetVelocity(vel);
 		if (gt >= TeleStats[buster].f_SDBlastTime)
 		{
 			SpawnParticle(pos, PARTICLE_BUSTER_EXPLODE, 2.0);
 			EmitSoundToAll(SOUND_BUSTER_EXPLODE, buster, _, 110, _, _, GetRandomInt(80, 120));
 
 			pos[2] += 40.0;
-			CF_GenericAOEDamage(client, client, client, TeleStats[buster].f_BusterDMG, DMG_BLAST|DMG_CLUB|DMG_ALWAYSGIB, TeleStats[buster].f_BusterRadius, pos, TeleStats[buster].f_BusterFalloffStart, TeleStats[buster].f_BusterFalloffMax, _, false);
+			CF_GenericAOEDamage(client, client, client, TeleStats[buster].f_BusterDMG, DMG_BLAST|DMG_CLUB|DMG_ALWAYSGIB, TeleStats[buster].f_BusterRadius, pos, TeleStats[buster].f_BusterFalloffStart, TeleStats[buster].f_BusterFalloffMax, true, false);
 			SpawnShaker(pos, 12, 200, 4, 4, 4);
 
 			float force[3];
@@ -3026,8 +3043,9 @@ public void Annihilation_BusterThink(int buster)
 			CF_WorldSpaceCenter(npc.i_PathTarget, theirPos);
 			if (GetVectorDistance(pos, theirPos) <= TeleStats[buster].f_BusterDistance && GetEntityFlags(buster) & FL_ONGROUND != 0)
 			{
-				float rate = 1.0 / TeleStats[buster].f_BusterSDDuration;
+				float rate = 2.0 / TeleStats[buster].f_BusterSDDuration;
 				npc.SetPlaybackRate(rate);
+				npc.SetCycle(0.0);
 				npc.SetSequence("sentry_buster_preExplode");
 				npc.SetPlaybackRate(rate);
 				TeleStats[buster].b_AboutToBlowUp = true;
