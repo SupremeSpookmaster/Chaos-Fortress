@@ -133,6 +133,9 @@
 #define PARTICLE_ANNIHILATION_TELE_BOOM		"hightower_explosion"
 #define PARTICLE_BUSTER_LIGHT_RED			"raygun_projectile_red"
 #define PARTICLE_BUSTER_LIGHT_BLUE			"raygun_projectile_blue"
+#define PARTICLE_BUSTER_EXPLODE				"rd_robot_explosion"
+#define PARTICLE_BUSTER_GLOW_RED			"player_recent_teleport_red"
+#define PARTICLE_BUSTER_GLOW_BLUE			"player_recent_teleport_blue"
 
 #define MODEL_TARGETING		"models/fake_particles/plane.mdl"
 
@@ -2934,15 +2937,8 @@ public void Annihilation_TeleThink(int tele)
 
 		for (int i = 0; i < TeleStats[tele].i_WaveCount; i++)
 		{
-			float randAng[3], vel[3], skyPos[3];
+			float randAng[3], vel[3];
 			randAng[1] = GetRandomFloat(0.0, 360.0);
-			//CNavArea navi = PNPC_GetRandomNearbyArea(pos, 200.0);
-			//navi.GetCenter(pos);
-			//SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_TELE_WAVE_2_RED : PARTICLE_TELE_WAVE_2_BLUE, 1.0);
-			//skyPos = pos;
-			//skyPos[2] += 9999.0;
-			//TE_SetupBeamPoints(pos, skyPos, Lightning_Model, Glow_Model, 0, 0, 0.33, 8.0, 8.0, 0, 24.0, color, 45);				
-			//TE_SendToAll();
 			pos[2] += 20.0;
 
 			char busterName[255];
@@ -2951,7 +2947,6 @@ public void Annihilation_TeleThink(int tele)
 
 			int buster = PNPC(MODEL_ANNIHILATION_BUSTER, team, RoundFloat(TeleStats[tele].f_BusterHP), RoundFloat(TeleStats[tele].f_BusterHP), teamNum - 2, 0.66, TeleStats[tele].f_BusterSpeed, Annihilation_BusterThink, GADGETEER, 0.0, pos, randAng, _, _, busterName).Index;
 			
-			view_as<PNPC>(buster).f_Gravity = 9999.0;
 			view_as<PNPC>(buster).SetSequence("Run_MELEE");
 			view_as<PNPC>(buster).SetPlaybackRate(1.0);
 			view_as<PNPC>(buster).SetBleedParticle("buildingdamage_sparks2");
@@ -2965,10 +2960,11 @@ public void Annihilation_TeleThink(int tele)
 			view_as<PNPC>(buster).b_IsABuilding = true;
 			
 			randAng[0] = -45.0;
-			GetVelocityInDirection(randAng, 800.0, vel);
-			//TODO: Implement PNPC setvel native
+			GetVelocityInDirection(randAng, 450.0, vel);
+			view_as<PNPC>(buster).SetVelocity(vel);
 
 			EmitSoundToAll(SOUND_BUSTER_LOOP, buster, _, _, _, _, 110);
+			AttachParticleToEntity(buster, team == TFTeam_Red ? PARTICLE_BUSTER_GLOW_RED : PARTICLE_BUSTER_GLOW_BLUE, "root", 4.0);
 
 			TeleStats[buster].GetBusterStats(TeleStats[tele]);
 			TeleStats[buster].owner = GetClientUserId(client);
@@ -3000,7 +2996,11 @@ public void Annihilation_BusterThink(int buster)
 	{
 		if (gt >= TeleStats[buster].f_SDBlastTime)
 		{
-			//TODO: Explode
+			SpawnParticle(pos, PARTICLE_BUSTER_EXPLODE, 2.0);
+			EmitSoundToAll(SOUND_BUSTER_EXPLODE, buster, _, 110, _, _, GetRandomInt(80, 120));
+
+			CF_GenericAOEDamage(client, client, client, TeleStats[buster].f_BusterDMG, DMG_BLAST|DMG_CLUB|DMG_ALWAYSGIB, TeleStats[buster].f_BusterRadius, pos, TeleStats[buster].f_BusterFalloffStart, TeleStats[buster].f_BusterFalloffMax, _, false);
+			SpawnShaker(pos, 12, 200, 4, 4, 4);
 
 			float force[3];
 			Annihilation_GetUpwardForce(force);
