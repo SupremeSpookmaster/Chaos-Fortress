@@ -232,6 +232,8 @@ public void OnMapStart()
 	Glow_Model = PrecacheModel("sprites/glow02.vmt");
 }
 
+float f_NextTargetTime[2049] = { 0.0, ... };
+
 public const char Toss_BuildSFX[][] =
 {
 	SOUND_TOSS_BUILD_1,
@@ -1980,6 +1982,8 @@ enum struct AA_Tele
 	float f_BusterDMG;
 	float f_BusterFalloffStart;
 	float f_BusterFalloffMax;
+	float f_AutoDetTime;
+	float f_BusterAutoDet;
 
 	bool b_AboutToBlowUp;
 
@@ -1991,6 +1995,7 @@ enum struct AA_Tele
 		this.f_BusterDMG = other.f_BusterDMG;
 		this.f_BusterFalloffStart = other.f_BusterFalloffStart;
 		this.f_BusterFalloffMax = other.f_BusterFalloffMax;
+		this.f_BusterAutoDet = other.f_BusterAutoDet;
 	}
 }
 
@@ -2039,6 +2044,7 @@ public void OnEntityDestroyed(int entity)
 		Toss_IsSupportDrone[entity] = false;
 		Annihilation_IsTele[entity] = false;
 		TeleStats[entity].owner = -1;
+		f_NextTargetTime[entity] = 0.0;
 
 		for (int i = 0; i <= MaxClients; i++)
 		{
@@ -2843,6 +2849,7 @@ public void Annihilation_Activate(int client, char abilityName[255])
 		TeleStats[tele].f_BusterDMG = CF_GetArgF(client, GADGETEER, abilityName, "buster_dmg", 200.0);
 		TeleStats[tele].f_BusterFalloffStart = CF_GetArgF(client, GADGETEER, abilityName, "buster_falloff_start", 80.0);
 		TeleStats[tele].f_BusterFalloffMax = CF_GetArgF(client, GADGETEER, abilityName, "buster_falloff_max", 0.5);
+		TeleStats[tele].f_BusterAutoDet = CF_GetArgF(client, GADGETEER, abilityName, "buster_auto_det", 6.0);
 
 		TeleStats[tele].f_WaveInterval = CF_GetArgF(client, GADGETEER, abilityName, "waves_interval", 2.0);
 		TeleStats[tele].i_WaveCount = CF_GetArgI(client, GADGETEER, abilityName, "waves_count", 3);
@@ -2983,6 +2990,7 @@ public void Annihilation_TeleThink(int tele)
 			TeleStats[buster].GetBusterStats(TeleStats[tele]);
 			TeleStats[buster].owner = GetClientUserId(client);
 			TeleStats[buster].b_AboutToBlowUp = false;
+			TeleStats[buster].f_AutoDetTime = GetGameTime() + TeleStats[buster].f_BusterAutoDet;
 		}
 			
 		EmitSoundToAll(SOUND_TELE_WAVE, tele, _, 120, _, _, GetRandomInt(80, 100));
@@ -3032,29 +3040,46 @@ public void Annihilation_BusterThink(int buster)
 	}
 	else
 	{
-		npc.i_PathTarget = CF_GetClosestTarget(pos, true, _, _, grabEnemyTeam(client), GADGETEER, Annihilation_NoTargetsInSpawn);
-		if (!IsValidEntity(npc.i_PathTarget) || (IsValidClient(npc.i_PathTarget) && !IsPlayerAlive(npc.i_PathTarget)))
+		if (gt >= f_NextTargetTime[buster])
 		{
-			npc.StopPathing();
-		}
-		else
-		{
-			float theirPos[3];
-			CF_WorldSpaceCenter(npc.i_PathTarget, theirPos);
-			if (GetVectorDistance(pos, theirPos) <= TeleStats[buster].f_BusterDistance && GetEntityFlags(buster) & FL_ONGROUND != 0)
+			npc.i_PathTarget = CF_GetClosestTarget(pos, true, _, _, grabEnemyTeam(client), GADGETEER, Annihilation_NoTargetsInSpawn);
+			if (!IsValidEntity(npc.i_PathTarget) || (IsValidClient(npc.i_PathTarget) && !IsPlayerAlive(npc.i_PathTarget)))
 			{
-				float rate = 2.0 / TeleStats[buster].f_BusterSDDuration;
-				npc.SetPlaybackRate(rate);
-				npc.SetCycle(0.0);
-				npc.SetSequence("sentry_buster_preExplode");
-				npc.SetPlaybackRate(rate);
-				TeleStats[buster].b_AboutToBlowUp = true;
-				TeleStats[buster].f_SDBlastTime = gt + TeleStats[buster].f_BusterSDDuration;
 				npc.StopPathing();
-				EmitSoundToAll(SOUND_BUSTER_WINDUP, buster, _, 110, _, _, 110);
 			}
 			else
-				npc.StartPathing();
+			{
+				float theirPos[3];
+				CF_WorldSpaceCenter(npc.i_PathTarget, theirPos);
+				if (GetVectorDistance(pos, theirPos) <= TeleStats[buster].f_BusterDistance && GetEntityFlags(buster) & FL_ONGROUND != 0)
+				{
+					float rate = 2.0 / TeleStats[buster].f_BusterSDDuration;
+					npc.SetPlaybackRate(rate);
+					npc.SetCycle(0.0);
+					npc.SetSequence("sentry_buster_preExplode");
+					npc.SetPlaybackRate(rate);
+					TeleStats[buster].b_AboutToBlowUp = true;
+					TeleStats[buster].f_SDBlastTime = gt + TeleStats[buster].f_BusterSDDuration;
+					npc.StopPathing();
+					EmitSoundToAll(SOUND_BUSTER_WINDUP, buster, _, 110, _, _, 110);
+				}
+				else
+					npc.StartPathing();
+			}
+
+			f_NextTargetTime[buster] = gt + 0.2;
+		}
+		else if (gt >= TeleStats[buster].f_AutoDetTime)
+		{
+			float rate = 2.0 / TeleStats[buster].f_BusterSDDuration;
+			npc.SetPlaybackRate(rate);
+			npc.SetCycle(0.0);
+			npc.SetSequence("sentry_buster_preExplode");
+			npc.SetPlaybackRate(rate);
+			TeleStats[buster].b_AboutToBlowUp = true;
+			TeleStats[buster].f_SDBlastTime = gt + TeleStats[buster].f_BusterSDDuration;
+			npc.StopPathing();
+			EmitSoundToAll(SOUND_BUSTER_WINDUP, buster, _, 110, _, _, 110);
 		}
 	}
 }
