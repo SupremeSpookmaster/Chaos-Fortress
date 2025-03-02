@@ -2982,6 +2982,10 @@ public void Annihilation_BusterThink(int buster)
 	int client = Annihilation_GetOwner(buster);
 	if (!IsValidClient(client) || CF_IsEntityInSpawn(buster, TFTeam_Red) || CF_IsEntityInSpawn(buster, TFTeam_Blue))
 	{
+		float ang[3], vel[3];
+		npc.GetAbsAngles(ang);
+		GetVelocityInDirection(ang, npc.f_Speed, vel);
+		npc.PunchForce(vel, true);
 		npc.Gib();
 		return;
 	}
@@ -2990,7 +2994,7 @@ public void Annihilation_BusterThink(int buster)
 	float gt = GetGameTime();
 
 	float pos[3];
-	CF_WorldSpaceCenter(buster, pos);
+	npc.GetAbsOrigin(pos);
 
 	if (TeleStats[buster].b_AboutToBlowUp)
 	{
@@ -2999,6 +3003,7 @@ public void Annihilation_BusterThink(int buster)
 			SpawnParticle(pos, PARTICLE_BUSTER_EXPLODE, 2.0);
 			EmitSoundToAll(SOUND_BUSTER_EXPLODE, buster, _, 110, _, _, GetRandomInt(80, 120));
 
+			pos[2] += 40.0;
 			CF_GenericAOEDamage(client, client, client, TeleStats[buster].f_BusterDMG, DMG_BLAST|DMG_CLUB|DMG_ALWAYSGIB, TeleStats[buster].f_BusterRadius, pos, TeleStats[buster].f_BusterFalloffStart, TeleStats[buster].f_BusterFalloffMax, _, false);
 			SpawnShaker(pos, 12, 200, 4, 4, 4);
 
@@ -3010,7 +3015,7 @@ public void Annihilation_BusterThink(int buster)
 	}
 	else
 	{
-		npc.i_PathTarget = CF_GetClosestTarget(pos, true, _, _, grabEnemyTeam(client));
+		npc.i_PathTarget = CF_GetClosestTarget(pos, true, _, _, grabEnemyTeam(client), GADGETEER, Annihilation_NoTargetsInSpawn);
 		if (!IsValidEntity(npc.i_PathTarget) || (IsValidClient(npc.i_PathTarget) && !IsPlayerAlive(npc.i_PathTarget)))
 		{
 			npc.StopPathing();
@@ -3034,6 +3039,11 @@ public void Annihilation_BusterThink(int buster)
 				npc.StartPathing();
 		}
 	}
+}
+
+public bool Annihilation_NoTargetsInSpawn(int ent)
+{
+	return !(CF_IsEntityInSpawn(ent, TFTeam_Red) || CF_IsEntityInSpawn(ent, TFTeam_Blue));
 }
 
 void Annihilation_GetUpwardForce(float output[3])
