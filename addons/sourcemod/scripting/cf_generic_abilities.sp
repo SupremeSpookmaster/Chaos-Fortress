@@ -22,6 +22,7 @@
 #define SHAKE				"generic_shake"
 #define ARCHETYPE			"generic_archetype_modifiers"
 #define RESOURCE_VFX		"generic_resource_particles"
+#define SELF_HEAL			"generic_self_heal"
 
 float Weapon_EndTime[2049] = { 0.0, ... };
 
@@ -458,6 +459,22 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	{
 		Shake_Activate(client, abilityName);
 	}
+
+	if (StrContains(abilityName, SELF_HEAL) != -1)
+	{
+		SelfHeal_Activate(client, abilityName);
+	}
+}
+
+public void SelfHeal_Activate(int client, char abilityName[255])
+{
+	float amt = CF_GetArgF(client, GENERIC, abilityName, "amt");
+	if (CF_GetArgI(client, GENERIC, abilityName, "mode", 0) > 0)
+		amt *= CF_GetCharacterMaxHealth(client);
+
+	float mult = CF_GetArgF(client, GENERIC, abilityName, "overheal", 1.0);
+
+	CF_HealPlayer(client, client, RoundFloat(amt), mult);
 }
 
 public void Shake_Activate(int client, char abilityName[255])
