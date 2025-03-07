@@ -331,6 +331,27 @@ forward Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &i
  * @return	Return Plugin_Continue to proceed as normal, Plugin_Changed if you changed any of the values, Plugin_Stop or Plugin_Handled to prevent the damage altogether.
  */
 forward Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int weapon);
+
+/**
+ * Only works if the Portable NPC System is installed, and its custom melee hitreg is enabled.
+ * Called when the PNPCS custom melee hitreg detects a hit.
+ * Return true to allow the attack to backstab, otherwise return false.
+ * 
+ * @param attacker		The client who initiated the melee attack.
+ * @param victom		The client who was hit.
+ * @param forceStab		Set to true to force the attack to be a backstab, *if* this forward returns true.
+ */
+forward bool CF_OnCheckCanBackstab(int attacker, int victim, bool &forceStab);
+
+/**
+ * Only works if the Portable NPC System is installed, and its custom melee hitreg is enabled.
+ * Called when the PNPCS custom melee initiates a backstab.
+ * 
+ * @param attacker		The client who landed the backstab.
+ * @param victim		The enemy who was stabbed.
+ * @param damage		Can be modified to change the damage the backstab should deal.
+ */
+forward void CF_OnBackstab(int attacker, int victim, float &damage);
 	
 /**
  * Called when a simulated medigun shield created by CF_CreateShieldWall is damaged.
