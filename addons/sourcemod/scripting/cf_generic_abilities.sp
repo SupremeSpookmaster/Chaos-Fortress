@@ -23,6 +23,7 @@
 #define ARCHETYPE			"generic_archetype_modifiers"
 #define RESOURCE_VFX		"generic_resource_particles"
 #define SELF_HEAL			"generic_self_heal"
+#define ATKSPEED			"generic_attackspeed"
 
 float Weapon_EndTime[2049] = { 0.0, ... };
 
@@ -162,12 +163,15 @@ bool b_WeaponForceFired[MAXPLAYERS + 1] = { false, ... };
 bool b_WeaponRevertWhenFired[2049] = { false, ... };
 int i_ForceFireSlot[MAXPLAYERS + 1] = { 0, ... };
 float f_ForceFireDelay[MAXPLAYERS + 1] = { 0.0, ... };
+float ATKSpeed_EndTime[MAXPLAYERS + 1] = { 0.0, ... };
 
 public void CF_OnCharacterCreated(int client)
 {
 	Generic_DeleteTimers(client);
 	b_WeaponForceFired[client] = false;
+	ATKSpeed_EndTime[client] = 0.0;
 	SetForceButtonState(client, false, IN_ATTACK);
+	Conds_ClearAll(client);
 
 	if (CF_HasAbility(client, GENERIC, RESOURCE_VFX))
 		RVFX_Prepare(client);
@@ -464,6 +468,30 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	{
 		SelfHeal_Activate(client, abilityName);
 	}
+
+	if (StrContains(abilityName, ATKSPEED) != -1)
+	{
+		ATKSpeed_Activate(client, abilityName);
+	}
+}
+
+float ATKSpeed_Amt[MAXPLAYERS + 1][3];
+
+public void ATKSpeed_Activate(int client, char abilityName[255])
+{
+	ATKSpeed_Amt[client][0] = CF_GetArgF(client, GENERIC, abilityName, "primary", 1.0);
+	ATKSpeed_Amt[client][1] = CF_GetArgF(client, GENERIC, abilityName, "secondary", 1.0);
+	ATKSpeed_Amt[client][2] = CF_GetArgF(client, GENERIC, abilityName, "melee", 1.0);
+	ATKSpeed_EndTime[client] = GetGameTime() + CF_GetArgF(client, GENERIC, abilityName, "duration");
+}
+
+public Action CF_OnCalcAttackInterval(int client, int weapon, int slot, char classname[255], float &rate)
+{
+	if (GetGameTime() > ATKSpeed_EndTime[client] || slot < 0 || slot > 2)
+		return Plugin_Continue;
+		
+	rate *= ATKSpeed_Amt[client][slot];
+	return Plugin_Changed;
 }
 
 public void SelfHeal_Activate(int client, char abilityName[255])
@@ -1071,6 +1099,7 @@ public void Conds_Activate(int client, char abilityName[255])
 {
 	char condStr[255];
 	CF_GetArgS(client, GENERIC, abilityName, "conds", condStr, sizeof(condStr));
+	bool reset = CF_GetArgI(client, GENERIC, abilityName, "reset", 0) > 0;
 	
 	char conds[32][32];
 	int num = ExplodeString(condStr, ";", conds, 32, 32);
@@ -1085,10 +1114,14 @@ public void Conds_Activate(int client, char abilityName[255])
 			float duration = StringToFloat(conds[i + 1]);
 			int condNum = view_as<int>(cond);
 			
-			if (gt > f_CondEndTime[client][condNum])
+			if (gt > f_CondEndTime[client][condNum] || reset)
 			{
-				TF2_AddCondition(client, cond);
-				i_NumConds[client]++;
+				if (gt > f_CondEndTime[client][condNum])
+				{
+					TF2_AddCondition(client, cond);
+					i_NumConds[client]++;
+				}
+
 				f_CondEndTime[client][condNum] = gt + duration;
 			}
 			else
@@ -1098,12 +1131,32 @@ public void Conds_Activate(int client, char abilityName[255])
 		}
 	}
 	
-	SDKUnhook(client, SDKHook_PreThink, Conds_PreThink);
-	SDKHook(client, SDKHook_PreThink, Conds_PreThink);
+	RequestFrame(Conds_Check, GetClientUserId(client));
 }
 
-public Action Conds_PreThink(int client)
+public void Conds_ClearAll(int client)
 {
+	if (!IsValidClient(client))
+		return;
+
+	for (int i = 0; i < 131; i++)
+	{
+		if (f_CondEndTime[client][i] <= 0.0)
+			continue;
+			
+		if (IsPlayerAlive(client))
+			TF2_RemoveCondition(client, view_as<TFCond>(i));
+
+		f_CondEndTime[client][i] = 0.0;
+	}
+}
+
+public void Conds_Check(int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client))
+		return;
+
 	float gt = GetGameTime();
 	
 	for (int i = 0; i < 131; i++)
@@ -1117,9 +1170,9 @@ public Action Conds_PreThink(int client)
 	}
 	
 	if (i_NumConds[client] < 1)
-		return Plugin_Stop;
+		return;
 		
-	return Plugin_Continue;
+	RequestFrame(Conds_Check, id);
 }
 
 public void Cooldown_Activate(int client, char abilityName[255])
@@ -1198,6 +1251,7 @@ public void Wearable_Activate(int client, char abilityName[255])
 public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
 	Weapon_ClearAllOldWeapons(client);
+	Conds_ClearAll(client);
 	for (int i = 0; i < 4; i++)
 	{
 		Limit_NumUses[client][i] = 0;

@@ -238,13 +238,13 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 	if (autoEquip)
 		EquipPlayerWeapon(client, entity);
 
-	if(StrEqual(name, "tf_weapon_builder"))
+	/*if(StrEqual(name, "tf_weapon_builder"))
 	{
 		SetEntProp(entity, Prop_Send, "m_aBuildableObjectTypes", true, _, 0);
 		SetEntProp(entity, Prop_Send, "m_aBuildableObjectTypes", true, _, 1);
 		SetEntProp(entity, Prop_Send, "m_aBuildableObjectTypes", true, _, 2);
 		SetEntProp(entity, Prop_Send, "m_aBuildableObjectTypes", false, _, 3);
-	}
+	}*/
 
 	SetEntProp(entity, Prop_Send, "m_iAccountID", GetSteamAccountID(client, false));
 
