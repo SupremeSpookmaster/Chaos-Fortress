@@ -1524,10 +1524,10 @@ public void CF_DestroyAllBuildings(int client)
  {
  	TF2_RemoveAllWeapons(client);
  	
- 	for (int i = 1; i <= 5; i++)	//Extra security measure. Also guarantees items like engineer's PDAs and spy's sapper get removed, which TF2_RemoveAllWeapons does not do.
+ 	/*for (int i = 1; i <= 5; i++)	//Extra security measure. Also guarantees items like engineer's PDAs and spy's sapper get removed, which TF2_RemoveAllWeapons does not do.
  	{
  		TF2_RemoveWeaponSlot(client, i);
- 	}
+ 	}*/
 		
 	int i = 1;
 	char secName[255];

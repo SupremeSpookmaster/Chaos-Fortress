@@ -20,7 +20,7 @@ public void CFW_OnEntityDestroyed(int entity)
 	b_WeaponIsVisible[entity] = false;
 }
 
-public void CFW_MapEnd()
+public void CFW_MapChange()
 {
 	for (int i = 0; i <= MaxClients; i++)
 	{
@@ -332,14 +332,14 @@ public void CFW_GiveAmmoOnDelay(DataPack pack)
 	CFW_SetAmmo(client, weapon, clip, reserve);
 }
 
-//Don't let characters who just happen to be spies or engineers have sappers or PDAs.
+//Don't let characters who just happen to be spies or engineers have sappers, PDAs, disguise kits, or invis watches.
 public Action TF2Items_OnGiveNamedItem(client, String:classname[], iItemDefinitionIndex, &Handle:hItem)
 {
 	if (b_EquippingWeapon[client])
 		return Plugin_Continue;
 
     switch (iItemDefinitionIndex)
-    {    case 735, 736, 810, 831, 933, 1080, 1102, 25, 26, 28, 737: return Plugin_Handled;    }
+    {    case 735, 736, 810, 831, 933, 1080, 1102, 25, 26, 28, 737, 27, 30, 212, 59, 60, 297, 947: return Plugin_Handled;    }
 
     return Plugin_Continue;
 }
