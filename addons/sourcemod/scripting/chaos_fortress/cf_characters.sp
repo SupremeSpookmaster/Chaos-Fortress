@@ -209,6 +209,7 @@ bool b_SpawnPreviewParticleNextFrame[MAXPLAYERS + 1] = { false, ... };
 
 int i_CharacterParticleOwner[2049] = { -1, ... };
 int i_DialogueReduction[MAXPLAYERS + 1] = { 0, ... };
+int i_DetailedDescPage[MAXPLAYERS + 1] = { -1, ... };
 
 bool b_DisplayRole = true;
 bool b_CharacterApplied[MAXPLAYERS + 1] = { false, ... }; //Whether or not the client's character has been applied to them already. If true: skip MakeCharacter for that client. Set to false automatically on death, round end, disconnect, and if the player changes their character selection.
@@ -492,7 +493,7 @@ public CFC_Menu(Menu CFC_Menu, MenuAction action, int client, int param)
 		char conf[255];
 		GetArrayString(CF_Characters_Configs, param, conf, 255);
 
-		CFC_BuildInfoMenu(client, conf, false, false);		
+		CFC_BuildInfoMenu(client, conf, false, false, -1);		
 	} 
 	else if (action == MenuAction_End)
 	{
@@ -532,6 +533,7 @@ public Action CFC_OpenMenu(int client, int args)
 	CopyMenu(menu, CF_CharactersMenu);
 	menu.Display(client, MENU_TIME_FOREVER);
 	b_ReadingLore[client] = false;
+	i_DetailedDescPage[client] = -1;
 	
 	#if defined USE_PREVIEWS
 	if (!CF_PreviewModelActive(client))
@@ -765,7 +767,9 @@ public Action CFC_OpenMenu(int client, int args)
  }
  #endif
  
- public void CFC_BuildInfoMenu(int client, char config[255], bool isLore, bool justReading)
+int i_NumItemsInInfoMenu[MAXPLAYERS + 1] = { 0, ... };
+
+ public void CFC_BuildInfoMenu(int client, char config[255], bool isLore, bool justReading, int detailedDescPage)
  {
  	if (!IsValidClient(client))
 		return;
@@ -861,49 +865,85 @@ public Action CFC_OpenMenu(int client, int args)
  	}
  	#endif
  	
- 	if (!isLore)
+ 	if (!isLore && detailedDescPage < 0)
  	{
 		ReplaceString(desc, sizeof(desc), "\\n", "\n");
  		Format(title, sizeof(title), "%s\n\nSimilar TF2 Class: %s\nRole: %s\n\n%s", name, related, role, desc);
  	}
- 	else
+ 	else if (isLore)
  	{
 		ReplaceString(lore, sizeof(lore), "\\n", "\n");
  		Format(title, sizeof(title), "%s\n\n%s", name, lore);
  	}
+	else if (detailedDescPage >= 0)
+	{
+		char detailedPage[255], path[32];
+		Format(path, sizeof(path), "desc_detailed.%i", detailedDescPage + 1);
+		section.Get(path, detailedPage, sizeof(detailedPage));
+
+		ReplaceString(detailedPage, sizeof(detailedPage), "\\n", "\n");
+ 		Format(title, sizeof(title), "%s\n\n%s", name, detailedPage);
+	}
  	
  	s_CharacterConfigInMenu[client] = config;
  	
  	Menu menu = new Menu(CFC_InfoMenu);
  	menu.SetTitle(title);
+	i_NumItemsInInfoMenu[client] = 0;
  	
  	Format(name, sizeof(name), "Spawn As %s", name);
- 	menu.AddItem("Select", name);
+ 	CFC_AddItemToInfoMenu(client, menu, "Select", name);
  	
- 	if (!isLore)
+ 	if (!isLore && detailedDescPage < 0)
  	{
-	 	if (StrEqual(lore, ""))
+		if (StrEqual(lore, ""))
 	 	{
-	 		menu.AddItem("Lore", "(No Lore)", ITEMDRAW_DISABLED);
+	 		CFC_AddItemToInfoMenu(client, menu, "Lore", "(No Lore)", ITEMDRAW_DISABLED);
 	 	}
 	 	else
 	 	{
-	 		menu.AddItem("Lore", "View Lore");
+	 		CFC_AddItemToInfoMenu(client, menu, "Lore", "View Lore");
 	 	}
-	 }
-	 else
-	 {
-	 	menu.AddItem("Lore", "View Gameplay Description");
-	 }
+
+		if (section.GetSection("desc_detailed") == null)
+	 	{
+	 		CFC_AddItemToInfoMenu(client, menu, "Detailed Gameplay Description", "(No Detailed Gameplay Description)", ITEMDRAW_DISABLED);
+	 	}
+	 	else
+	 	{
+	 		CFC_AddItemToInfoMenu(client, menu, "Detailed Gameplay Description", "View Detailed Gameplay Description");
+	 	}
+	}
+	else if (isLore)
+	{
+		CFC_AddItemToInfoMenu(client, menu, "Lore", "Return to Overview");
+	}
+	else if (detailedDescPage >= 0)
+	{
+		CFC_AddItemToInfoMenu(client, menu, "Detailed Gameplay Description", "Return to Overview");
+
+		CFC_AddItemToInfoMenu(client, menu, "Previous Page", "Previous Page", (detailedDescPage == 0 ? ITEMDRAW_DISABLED : ITEMDRAW_DEFAULT));
+		
+		char checkSection[255], dummy[32];
+		Format(checkSection, sizeof(checkSection), "desc_detailed.%i", detailedDescPage + 2);
+		CFC_AddItemToInfoMenu(client, menu, "Next Page", "Next Page", (section.Get(checkSection, dummy, sizeof(dummy)) == 0 ? ITEMDRAW_DISABLED : ITEMDRAW_DEFAULT));
+	}
  	
- 	menu.AddItem("Back", "Go Back");
+ 	CFC_AddItemToInfoMenu(client, menu, "Back", "Main Menu");
  	
  	menu.ExitButton = false;
  	menu.Display(client, MENU_TIME_FOREVER);
  	b_ReadingLore[client] = isLore;
+	i_DetailedDescPage[client] = detailedDescPage;
  	
  	DeleteCfg(Character);
  }
+
+void CFC_AddItemToInfoMenu(int client, Menu menu, const char[] info, const char[] display, int style=(0))
+{
+	menu.AddItem(info, display, style);
+	i_NumItemsInInfoMenu[client]++;
+}
  
  public CFC_InfoMenu(Menu CFC_Menu, MenuAction action, int client, int param)
 {	
@@ -912,7 +952,7 @@ public Action CFC_OpenMenu(int client, int args)
 	
 	if (action == MenuAction_Select)
 	{
-		if (param != 2)
+		if (param < i_NumItemsInInfoMenu[client] - 1)
 		{
 			ConfigMap Character = new ConfigMap(s_CharacterConfigInMenu[client]);
 			
@@ -923,6 +963,8 @@ public Action CFC_OpenMenu(int client, int args)
 				return;
 			}
 			
+			//This should eventually get replaced with a switch statement. Lazy.
+			//The first button is ALWAYS the one to confirm to spawn as this character.
 			if (param == 0)
 			{
 				char name[255];
@@ -937,9 +979,21 @@ public Action CFC_OpenMenu(int client, int args)
 				CF_DeletePreviewModel(client);
 				#endif
 			}
-			else if (param == 1)
+			else if (param == 1)	//While at the beginning of the info menu, this button will enter the lore page. If you are reading lore or the detailed description, this button returns you to the overview.
 			{
-				CFC_BuildInfoMenu(client, s_CharacterConfigInMenu[client], !b_ReadingLore[client], true);
+				CFC_BuildInfoMenu(client, s_CharacterConfigInMenu[client], (!b_ReadingLore[client] && i_DetailedDescPage[client] < 0), true, -1);
+			}
+			else if (param == 2)	//While at the beginning of the info menu, this button will enter the detailed description. If already reading the detailed description, it goes back by one page.
+			{
+				i_DetailedDescPage[client]--;
+				if (i_DetailedDescPage[client] < 0)
+					i_DetailedDescPage[client] = 0;
+
+				CFC_BuildInfoMenu(client, s_CharacterConfigInMenu[client], (!b_ReadingLore[client] && i_DetailedDescPage[client] < 0), true, i_DetailedDescPage[client]);
+			}
+			else if (param == 3)	//This is only used for navigating the detailed description, it is the "next page" button.
+			{
+				CFC_BuildInfoMenu(client, s_CharacterConfigInMenu[client], (!b_ReadingLore[client] && i_DetailedDescPage[client] < 0), true, i_DetailedDescPage[client] + 1);
 			}
 			
 			DeleteCfg(Character);
