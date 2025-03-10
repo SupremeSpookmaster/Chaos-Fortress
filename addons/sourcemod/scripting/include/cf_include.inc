@@ -145,7 +145,7 @@ stock bool CF_LOSTrace(int entity, int contentsmask, int target)
 	if (IsValidClient(entity) || entity == target || IsABuilding(entity))
 		return false;
 
-	return Brush_Is_Solid(entity) && !CF_IsValidTarget(entity, view_as<TFTeam>(GetTeam(target)));
+	return IsPayloadCart(entity) || (Brush_Is_Solid(entity) && !CF_IsValidTarget(entity, view_as<TFTeam>(GetTeam(target))));
 }
 
 stock int GetTeam(int entity)

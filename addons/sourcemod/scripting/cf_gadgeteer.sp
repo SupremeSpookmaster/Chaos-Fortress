@@ -3193,7 +3193,7 @@ public void Annihilation_BusterThink(int buster)
 
 public bool Annihilation_NoTargetsInSpawn(int ent)
 {
-	return !(CF_IsEntityInSpawn(ent, TFTeam_Red) || CF_IsEntityInSpawn(ent, TFTeam_Blue));
+	return !(CF_IsEntityInSpawn(ent, TFTeam_Red) || CF_IsEntityInSpawn(ent, TFTeam_Blue) || IsPayloadCart(ent));
 }
 
 void Annihilation_GetUpwardForce(float output[3])

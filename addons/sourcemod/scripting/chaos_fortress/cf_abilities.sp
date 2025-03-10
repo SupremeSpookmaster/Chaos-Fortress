@@ -4144,7 +4144,7 @@ public Native_CF_IsValidTarget(Handle plugin, int numParams)
 	GetNativeString(3, pluginName, sizeof(pluginName));
 	Function filter = GetNativeFunction(4);
 	
-	if (!IsValidEntity(entity))
+	if (!IsValidEntity(entity) || IsPayloadCart(entity))
 		return false;
 		
 	if (team != TFTeam_Unassigned)
