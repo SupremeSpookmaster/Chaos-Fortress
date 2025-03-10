@@ -88,6 +88,7 @@
 #define SOUND_TELE_SPAWNED				")mvm/giant_common/giant_common_explodes_02.wav"
 #define SOUND_TELE_DESTROYED			")weapons/teleporter_explode.wav"
 #define SOUND_TELE_SD_WARNING			")weapons/medi_shield_burn_05.wav"
+#define SOUND_SUPPORT_GIVE_AMMO			")items/gift_pickup.wav"
 
 #define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
 #define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
@@ -227,6 +228,7 @@ public void OnMapStart()
 	PrecacheSound(SOUND_TELE_SPAWNED);
 	PrecacheSound(SOUND_TELE_DESTROYED);
 	PrecacheSound(SOUND_TELE_SD_WARNING);
+	PrecacheSound(SOUND_SUPPORT_GIVE_AMMO);
 
 	Laser_Model = PrecacheModel("materials/sprites/laserbeam.vmt");
 	Lightning_Model = PrecacheModel("materials/sprites/lgtning.vmt");
@@ -286,6 +288,7 @@ float Toss_MinVel[2049] = { 0.0, ... };
 float Toss_MarkTime[MAXPLAYERS + 1] = { 0.0, ... };
 float f_NextWrangleBeam[2049] = { 0.0, ... };
 float Toss_FacingAng[2049][3];
+float f_NextAmmo[2049][MAXPLAYERS + 1];
 
 bool Toss_IsToolbox[2049] = { false, ... };
 bool Toss_WasHittingSomething[2049] = { false, ... };
@@ -324,6 +327,8 @@ enum struct SupportDroneStats
 	float healBucket_Others;
 	float healBucket_Self;
 	float superchargeEndTime;
+	float f_AmmoInterval;
+	float f_AmmoAmt;
 
 	int lastBuildHealth;
 	int superchargeType;
@@ -356,6 +361,8 @@ enum struct SupportDroneStats
 		this.superchargeBuildSpeedHitscan = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_build_hitscan");
 		this.superchargeMovementSpeedHitscan = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_movement_hitscan");
 		this.superchargeHealRateHitscan = CF_GetArgF(client, GADGETEER, abilityName, "supercharge_heal_hitscan");
+		this.f_AmmoInterval = CF_GetArgF(client, GADGETEER, abilityName, "ammo_interval");
+		this.f_AmmoAmt = CF_GetArgF(client, GADGETEER, abilityName, "ammo_amount");
 		
 		this.exists = true;
 	}
@@ -380,6 +387,8 @@ enum struct SupportDroneStats
 		this.superchargeBuildSpeedHitscan = other.superchargeBuildSpeedHitscan;
 		this.superchargeMovementSpeedHitscan = other.superchargeMovementSpeedHitscan;
 		this.superchargeHealRateHitscan = other.superchargeHealRateHitscan;
+		this.f_AmmoInterval = other.f_AmmoInterval;
+		this.f_AmmoAmt = other.f_AmmoAmt;
 
 		this.exists = true;
 	}
@@ -2321,6 +2330,8 @@ public void Toss_SpawnSupportOnDelay(DataPack pack)
 
 		int drone = PNPC(MODEL_SUPPORT_DRONE, view_as<TFTeam>(team), 1, RoundFloat(stats.maxHealth), team - 2, 0.75, stats.speed, Support_Logic, GADGETEER, 0.1, pos, facingAng, _, _, SupportName).Index;
 		Toss_SupportStats[drone] = stats;
+		for (int i = 0; i <= MaxClients; i++)
+			f_NextAmmo[drone][i] = 0.0;
 
 		Toss_SupportStats[drone].superchargeType = superchargeType;
 		switch(superchargeType)
@@ -2443,6 +2454,9 @@ public void Support_Logic(int drone)
 				PNPC_WorldSpaceCenter(i, targPos);
 				if (GetVectorDistance(selfPos, targPos) <= Toss_SupportStats[drone].healRadius && Toss_HasLineOfSight(drone, i))
 				{
+					if (GetGameTime() >= f_NextAmmo[drone][i])
+						Support_GiveAmmo(i, drone);
+
 					CF_HealPlayer_WithAttributes(i, owner, (target == i ? targHeals : otherHeals), 1.0);
 					if (!b_HealingClient[drone][i])
 					{
@@ -2661,6 +2675,40 @@ public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inf
 	}
 
 	return Plugin_Continue;
+}
+
+public void Support_GiveAmmo(int target, int drone)
+{
+	bool AtLeastOne = false;
+	for (int i = 0; i < 2; i++)
+	{
+		int weapon = GetPlayerWeaponSlot(target, i);
+		if (!IsValidEntity(weapon))
+			continue;
+
+		//Attribute 421: no ammo from dispensers while active
+		if (GetAttributeValue(weapon, 421, 0.0) != 0.0 && weapon == TF2_GetActiveWeapon(target))
+			continue;
+
+		int ammoType = GetEntProp(weapon, Prop_Send, "m_iPrimaryAmmoType", 1);
+		int currentAmmo = GetAmmo(target, weapon);
+		int maxAmmo = TF2Util_GetPlayerMaxAmmo(target, ammoType);
+		if (currentAmmo < maxAmmo)
+		{
+			currentAmmo += RoundFloat(float(maxAmmo) * Toss_SupportStats[drone].f_AmmoAmt);
+			if (currentAmmo > maxAmmo)
+				currentAmmo = maxAmmo;
+
+			SetAmmo(target, weapon, currentAmmo);
+			AtLeastOne = true;
+		}
+	}
+
+	if (AtLeastOne)
+	{
+		EmitSoundToClient(target, SOUND_SUPPORT_GIVE_AMMO);
+		f_NextAmmo[drone][target] = GetGameTime() + Toss_SupportStats[drone].f_AmmoInterval;
+	}
 }
 
 int i_SupportDroneDamagedParticle[2049] = { -1, ... };
