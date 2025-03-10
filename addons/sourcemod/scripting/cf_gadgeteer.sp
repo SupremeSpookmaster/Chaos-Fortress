@@ -2069,6 +2069,9 @@ public void OnEntityDestroyed(int entity)
 	}
 }
 
+bool busting = false;
+bool teleMegaFrag = false;
+
 //Used purely to set kill icons for Drones and Toolbox Toss.
 public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], char console[255], int &custom, int deadRinger, int &critType, int &damagebits)
 {
@@ -2098,6 +2101,19 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 		Format(weapon, sizeof(weapon), "building_carried_destroyed");
 		Format(console, sizeof(console), "Toolbox Toss");
 		custom = TF_CUSTOM_CARRIED_BUILDING;
+		return Plugin_Changed;
+	}
+	else if (busting)
+	{
+		Format(weapon, sizeof(weapon), "pumpkindeath");
+		Format(console, sizeof(console), "Annihilation Buster");
+		custom = TF_CUSTOM_CARRIED_BUILDING;
+		return Plugin_Changed;
+	}
+	else if (teleMegaFrag)
+	{
+		Format(weapon, sizeof(weapon), "purgatory");
+		Format(console, sizeof(console), "Teleporter Self-Destruct Sequence");
 		return Plugin_Changed;
 	}
 		
@@ -3003,7 +3019,9 @@ public void Annihilation_TeleThink(int tele)
 			SpawnParticle(pos, PARTICLE_ANNIHILATION_TELE_BOOM, 2.0);
 			pos[2] += 40.0;
 
+			teleMegaFrag = true;
 			CF_GenericAOEDamage(client, client, client, TeleStats[tele].f_SDDMG, DMG_BLAST|DMG_CLUB|DMG_ALWAYSGIB, TeleStats[tele].f_SDRadius, pos, TeleStats[tele].f_SDFalloffStart, TeleStats[tele].f_BusterFalloffMax, _, false);
+			teleMegaFrag = false;
 			SpawnShaker(pos, 14, 400, 4, 4, 4);
 
 			float force[3];
@@ -3116,7 +3134,9 @@ public void Annihilation_BusterThink(int buster)
 			EmitSoundToAll(SOUND_BUSTER_EXPLODE, buster, _, 110, _, _, GetRandomInt(80, 120));
 
 			pos[2] += 40.0;
+			busting = true;
 			CF_GenericAOEDamage(client, client, client, TeleStats[buster].f_BusterDMG, DMG_BLAST|DMG_CLUB|DMG_ALWAYSGIB, TeleStats[buster].f_BusterRadius, pos, TeleStats[buster].f_BusterFalloffStart, TeleStats[buster].f_BusterFalloffMax, true, false);
+			busting = false;
 			SpawnShaker(pos, 12, 200, 4, 4, 4);
 
 			float force[3];
