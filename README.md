@@ -46,8 +46,7 @@ This game mode is currently incompatible with 64-bit servers. I am in the proces
     - *This file doubles as a character CFG template. Feel free to use it to speed up the development of your characters!*
   - Look at **[cf_mercenary.sp](https://github.com/SupremeSpookmaster/Chaos-Fortress/blob/main/addons/sourcemod/scripting/cf_mercenary.sp)** to see an example of a basic ***Chaos Fortress*** character plugin.
   - Look at **[cf_plugin_template.sp](https://github.com/SupremeSpookmaster/Chaos-Fortress/blob/main/addons/sourcemod/scripting/cf_plugin_template.sp)** for a ***Chaos Fortress*** character plugin template to speed up the development of your characters!
-  - Character plugins do not require a special file extension or directory. Just drop the compiled SMX in your server's plugins folder and it will work.
-    - *For the sake of organization, you are recommended to put your character plugins in a sub-folder, such as plugins/chaos_fortress. Again, this is just a recommendation, and is not mandatory.*
+  - Character plugins MUST be placed inside of the `cf_subplugins` sub-folder, and MUST use the `.cf2` file extension.
   - Please note that despite the similarities in their development process, FF2 plugins and configs will ***not*** work for ***Chaos Fortress*** characters.
   - **I *HIGHLY* recommend you refer to the [_Developer Forwards and Natives_ wiki page](https://github.com/SupremeSpookmaster/Chaos-Fortress/wiki/Developer-Forwards-and-Natives) and follow its guidance if you intend to write character plugins.**
     - *Ignoring this wiki page will not break ***Chaos Fortress***, but it will harm your server's organization and may result in awkward issues stemming from plugin execution order. **Ignore at your own peril!***
