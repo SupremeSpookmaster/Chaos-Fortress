@@ -112,6 +112,7 @@ public OnMapStart()
 	//GameRules_SetProp("m_iRoundState", RoundState_BetweenRounds);
 	CF_MapStart();
 	CFW_MapChange();
+	CFS_MapChange();
 	PrecacheSound(SND_ADMINCOMMAND);
 	PrecacheSound(SND_RESPAWN);
 }
@@ -120,7 +121,7 @@ public OnMapEnd()
 {
 	CFA_MapEnd();
 	CFC_MapEnd();
-	CFS_MapEnd();
+	CFS_MapChange();
 	CFB_MapEnd();
 	CFW_MapChange();
 	CFCore_MapEnd();

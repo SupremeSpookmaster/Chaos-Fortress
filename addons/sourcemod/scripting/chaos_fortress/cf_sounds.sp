@@ -16,7 +16,7 @@ GlobalForward g_SoundHook;
 float f_LastSoundHook[MAXPLAYERS + 1] = { 0.0, ... };
 float f_Silenced[MAXPLAYERS + 1] = { 0.0, ... };
 
-public void CFS_MapEnd()
+public void CFS_MapChange()
 {
 	for (int i = 0; i <= MaxClients; i++)
 	{
@@ -40,7 +40,7 @@ public void CFS_MakeNatives()
 
 public KeyValType GetRand(char Config[255], char Sound[255], char Output[255])
 {
-	if (!Config[0])	//This check should not be necessary, but line 37 throws errors if it's not here.
+	if (!Config[0])	//This check should not be necessary, but the plugin throws errors if it's not here.
 		return KeyValType_Null;
 
 	ConfigMap cfgMap = new ConfigMap(Config);
@@ -132,7 +132,7 @@ public KeyValType GetRand(char Config[255], char Sound[255], char Output[255])
 
 bool PlayRand(int source, char Config[255], char Sound[255])
 {
-	if (!CF_IsPlayerCharacter(source))
+	if (!IsValidMulti(source))
 		return false;
 
 	char ourConf[255];
