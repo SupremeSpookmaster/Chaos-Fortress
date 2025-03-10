@@ -4713,7 +4713,7 @@ public any Native_CF_TraceShot(Handle plugin, int numParams)
 	hitPos = endPos;
 	bool doLagComp = GetNativeCell(6);
 
-	if (!IsValidClient(target))
+	if (!IsValidEntity(target) || target < 0 || target > 2048)
 		return 0;
 
 	if (IsValidClient(client) && doLagComp)
