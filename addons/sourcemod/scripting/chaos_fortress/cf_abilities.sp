@@ -4667,12 +4667,14 @@ public any Native_CF_DoBulletTrace(Handle plugin, int numParams)
 		{
 			int vic = GetArrayCell(returnVal, i);
 			TR_TraceRayFilter(startPos, endPos, MASK_SHOT, RayType_EndPoint, CF_OnlyHitTarget, vic);
-			if (TR_GetHitBoxIndex() == 0)
+			if (TR_GetFraction() >= 1.0/*TR_GetHitBoxIndex() == 0 && TR_GetHitGroup() != HITGROUP_GENERIC && TR_GetHitGroup() != HITGROUP_HEAD*/)
 			{
-				bool hs;
-				CF_TraceShot(client, vic, startPos, endPos, hs, false);
-				if (!hs)
+				//bool hs;
+				//CF_TraceShot(client, vic, startPos, endPos, hs, false);
+				//if (!hs)
+				//{
 					RemoveFromArray(returnVal, i);
+				//}
 			}
 		}
 

@@ -11,6 +11,7 @@
 #define SUPPORTDRONE	"gadgeteer_support_drone"
 #define COMMAND			"gadgeteer_command_support_drone"
 #define ANNIHILATION	"gadgeteer_annihilation"
+#define SCRAP			"gadgeteer_scrap_blaster"
 
 #define MODEL_TOSS		"models/weapons/w_models/w_toolbox.mdl"
 #define MODEL_HOOK		"models/props_mining/cranehook001.mdl"
@@ -117,8 +118,8 @@
 #define PARTICLE_SUPPORT_BOX_TRAIL_RED 	"healshot_trail_red"
 #define PARTICLE_SUPPORT_BOX_TRAIL_BLUE	"healshot_trail_blue"
 #define PARTICLE_SUPPORT_DAMAGED		"dispenserdamage_3"
-#define PARTICLE_DRONE_TRACER_RED		"bullet_tracer_raygun_red_crit"
-#define PARTICLE_DRONE_TRACER_BLUE		"bullet_tracer_raygun_blue_crit"
+#define PARTICLE_SCRAP_TRACER_RED		"bullet_scattergun_tracer01_red"
+#define PARTICLE_SCRAP_TRACER_BLUE		"bullet_scattergun_tracer01_blue"
 #define PARTICLE_SUPPORT_COMMANDED		"ping_circle"
 #define PARTICLE_ANNIHILATION_TELE_RED_1	"raygun_projectile_red_crit"
 #define PARTICLE_ANNIHILATION_TELE_RED_2	"teleporter_red_charged_level3"
@@ -861,6 +862,9 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 
 	if (StrContains(abilityName, ANNIHILATION) != -1)
 		Annihilation_Activate(client, abilityName);
+
+	if (StrContains(abilityName, SCRAP) != -1)
+		Scrap_Activate(client, abilityName);
 }
 
 //Prevents a point_worldtext entity from being seen by anyone other than its owner.
@@ -1933,6 +1937,7 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 	b_ToolboxVM[client] = false;
 }
 
+bool noSupportDroneMessage[MAXPLAYERS + 1] = { false, ... };
 //Destroys all of the client's Drones and deletes their collection.
 public void Toss_DeleteSentries(int client)
 {
@@ -1951,8 +1956,10 @@ public void Toss_DeleteSentries(int client)
 	int support = EntRefToEntIndex(Toss_SupportDrone[client]);
 	if (PNPC_IsNPC(support))
 	{
-		view_as<PNPC>(support).i_Health = 1;
-		SDKHooks_TakeDamage(support, 0, 0, 999999.0, _, _, _, _, false);
+		noSupportDroneMessage[client] = true;
+		view_as<PNPC>(support).Gib();
+		noSupportDroneMessage[client] = false;
+		//SDKHooks_TakeDamage(support, 0, 0, 999999.0, _, _, _, _, false);
 	}
 }
 bool Annihilation_IsTele[2049] = { false, ... };
@@ -2306,8 +2313,10 @@ public void Toss_SpawnSupportOnDelay(DataPack pack)
 		int oldDrone = EntRefToEntIndex(Toss_SupportDrone[owner]);
 		if (IsValidEntity(oldDrone))
 		{
-			view_as<PNPC>(oldDrone).i_Health = 1;
-			SDKHooks_TakeDamage(oldDrone, 0, 0, 99999.0, _, _, _, _, false);
+			noSupportDroneMessage[owner] = true;
+			view_as<PNPC>(oldDrone).Gib();
+			noSupportDroneMessage[owner] = false;
+			//SDKHooks_TakeDamage(oldDrone, 0, 0, 99999.0, _, _, _, _, false);
 		}
 
 		int drone = PNPC(MODEL_SUPPORT_DRONE, view_as<TFTeam>(team), 1, RoundFloat(stats.maxHealth), team - 2, 0.75, stats.speed, Support_Logic, GADGETEER, 0.1, pos, facingAng, _, _, SupportName).Index;
@@ -2353,7 +2362,7 @@ public void Support_Logic(int drone)
 	
 	float selfPos[3];
 	PNPC_WorldSpaceCenter(drone, selfPos);
-	if (TF2Util_IsPointInRespawnRoom(selfPos))
+	if (CF_IsEntityInSpawn(drone, (support.i_Team == TFTeam_Red ? TFTeam_Blue : TFTeam_Red)))
 	{
 		support.i_Health = 1;
 		SDKHooks_TakeDamage(drone, 0, 0, 99999.0, _, _, _, _, false);
@@ -2536,8 +2545,17 @@ public void Support_Command(int client, char abilityName[255])
 	{
 		EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
 		EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
-		PrintCenterText(client, "Your Support Drone is now targeting you!");
-		Toss_SupportStats[supportDrone].targetOverride = GetClientUserId(client);
+
+		if (Toss_SupportStats[supportDrone].targetOverride != GetClientUserId(client))
+		{
+			PrintCenterText(client, "Your Support Drone is now following you!");
+			Toss_SupportStats[supportDrone].targetOverride = GetClientUserId(client);
+		}
+		else
+		{
+			PrintCenterText(client, "Your Support Drone is now using auto-targeting!");
+			Toss_SupportStats[supportDrone].targetOverride = -1;
+		}
 	}
 	else
 	{
@@ -2546,17 +2564,29 @@ public void Support_Command(int client, char abilityName[255])
 		GetPointInDirection(startPos, ang, 99999.0, endPos);
 		CF_HasLineOfSight(startPos, endPos, _, endPos);
 
-		Command_User = client;
-		ArrayList targets = CF_DoBulletTrace(client, startPos, endPos, 0, TF2_GetClientTeam(client), GADGETEER, Command_OnlyPlayers);
+		float mins[3];
+		mins[0] = -5.0;
+		mins[1] = mins[0];
+		mins[2] = mins[0];
+				
+		float maxs[3];
+		maxs[0] = -mins[0];
+		maxs[1] = -mins[1];
+		maxs[2] = -mins[2];
 
-		if (GetArraySize(targets) < 1)
+		CF_StartLagCompensation(client);
+		Command_User = client;
+		TR_TraceHullFilter(startPos, endPos, mins, maxs, MASK_SHOT, Command_OnlyPlayers);
+		CF_EndLagCompensation(client);
+
+		int target = TR_GetEntityIndex();
+		if (!IsValidMulti(target))
 		{
 			PrintCenterText(client, "Did not find a valid target!");
 			EmitSoundToClient(client, NOPE);
 		}
 		else
 		{
-			int target = GetArrayCell(targets, 0);
 			Toss_SupportStats[supportDrone].targetOverride = GetClientUserId(target);
 
 			float pos[3];
@@ -2566,16 +2596,14 @@ public void Support_Command(int client, char abilityName[255])
 			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
 			char charName[255];
 			CF_GetCharacterName(target, charName, sizeof(charName));
-			PrintCenterText(client, "Your Support Drone is now targeting %s (%N)", charName, target);
+			PrintCenterText(client, "Your Support Drone is now following %s (%N)", charName, target);
 		}
-
-		delete targets;
 	}
 }
 
-public bool Command_OnlyPlayers(int target)
+public bool Command_OnlyPlayers(entity, contentsMask)
 {
-	return target != Command_User && IsValidMulti(target); 
+	return entity != Command_User && IsValidClient(entity) && CF_IsValidTarget(entity, TF2_GetClientTeam(Command_User)); 
 }
 
 void Gadgeteer_OnBuildingConstructed(Event event, const char[] name, bool dontBroadcast)
@@ -2726,8 +2754,19 @@ public void PNPC_OnPNPCDestroyed(int entity)
 		Support_RemovePanicParticle(entity);
 
 		int owner = GetClientOfUserId(Toss_SupportStats[entity].owner);
-		if (IsValidMulti(owner))
-			CF_PlayRandomSound(owner, "", "sound_support_drone_destroyed");
+		if (IsValidClient(owner))
+		{
+			if (noSupportDroneMessage[owner])
+				noSupportDroneMessage[owner] = false;
+			else
+			{
+				if (IsPlayerAlive(owner))
+					CF_PlayRandomSound(owner, "", "sound_support_drone_destroyed");
+
+				PrintCenterText(owner, "Your Support Drone was destroyed!");
+			}
+		}
+
 	}
 	else if (Annihilation_IsTele[entity])
 	{
@@ -3151,4 +3190,118 @@ public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability
 	}
 
 	return Plugin_Continue;
+}
+
+public void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, int &b, int &a)
+{
+	int supportDrone = EntRefToEntIndex(Toss_SupportDrone[client]);
+	if (!IsValidEntity(supportDrone))
+		return;
+
+	PNPC npc = view_as<PNPC>(supportDrone);
+	float hp = float(npc.i_Health) / float(npc.i_MaxHealth);
+	if (hp > 1.0)
+		hp = 1.0;
+
+	int pcnt = RoundToFloor(100.0 * hp);
+	Format(HUDText, sizeof(HUDText), "SUPPORT DRONE HP: %i[PERCENT]\n%s", pcnt, HUDText);
+}
+
+bool Scrap_HSFalloff;
+
+int Scrap_HSEffect;
+int Scrap_User;
+
+float Scrap_HealCost;
+float Scrap_HealAmt;
+
+public void Scrap_Activate(int client, char abilityName[255])
+{
+	float damage = CF_GetArgF(client, GADGETEER, abilityName, "damage");
+	int numBullets = CF_GetArgI(client, GADGETEER, abilityName, "bullets");
+	float hsMult = CF_GetArgF(client, GADGETEER, abilityName, "hs_mult");
+	Scrap_HSEffect = CF_GetArgI(client, GADGETEER, abilityName, "hs_fx");
+	Scrap_HSFalloff = CF_GetArgI(client, GADGETEER, abilityName, "hs_falloff") > 0;
+	float falloffStart = CF_GetArgF(client, GADGETEER, abilityName, "falloff_start");
+	float falloffEnd = CF_GetArgF(client, GADGETEER, abilityName, "falloff_end");
+	float falloffMax = CF_GetArgF(client, GADGETEER, abilityName, "falloff_max");
+	int pierce = CF_GetArgI(client, GADGETEER, abilityName, "pierce");
+	float spread = CF_GetArgF(client, GADGETEER, abilityName, "spread");
+	Scrap_HealCost = CF_GetArgF(client, GADGETEER, abilityName, "heal_cost");
+	Scrap_HealAmt = CF_GetArgF(client, GADGETEER, abilityName, "heal_amt");
+
+	float ang[3];
+	GetClientEyeAngles(client, ang);
+
+	Scrap_User = client;
+	for (int i = 0; i < numBullets; i++)
+		CF_FireGenericBullet(client, ang, damage, hsMult, spread, GADGETEER, Scrap_Hit, falloffStart, falloffEnd, falloffMax, pierce, TFTeam_Unassigned, GADGETEER, Scrap_CheckTarget, (TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_SCRAP_TRACER_RED : PARTICLE_SCRAP_TRACER_BLUE));
+}
+
+public void Scrap_Hit(int attacker, int victim, float &baseDamage, bool &allowFalloff, bool &isHeadshot, int &hsEffect, bool &crit, float hitPos[3])
+{
+	if (isHeadshot)
+	{
+		allowFalloff = Scrap_HSFalloff;
+	}
+
+	hsEffect = Scrap_HSEffect;
+
+	//Because of our filter, if we hit an ally, that means we hit a building. Therefore: heal the building.
+	if (CF_IsValidTarget(victim, TF2_GetClientTeam(attacker)))
+	{
+		baseDamage = 0.0;
+		hsEffect = 0;
+		allowFalloff = true;
+
+		float healPerScrap = Scrap_HealAmt;
+		float healCost = Scrap_HealCost;
+		float totalHealing = 60.0;
+		
+		if (healPerScrap > 0.0 && healCost > 0.0)
+		{
+			float resources = CF_GetSpecialResource(attacker);
+			if (resources < healCost)
+				return;
+				
+			if (healCost > resources)
+				healCost = resources;
+				
+			float current = float(view_as<PNPC>(victim).i_Health);
+			float maxHP = float(view_as<PNPC>(victim).i_MaxHealth);
+			
+			totalHealing = healPerScrap * healCost;
+			float afterHeals = current + totalHealing;
+			if (afterHeals > maxHP)
+			{
+				totalHealing -= (afterHeals - maxHP);
+			}
+			
+			view_as<PNPC>(victim).i_Health += RoundToFloor(totalHealing);
+			float finalCost = totalHealing / healPerScrap;
+			
+			CF_GiveSpecialResource(attacker, -finalCost);
+		}
+		else
+			return;
+			
+		SpawnParticle(hitPos, TF2_GetClientTeam(attacker) == TFTeam_Red ? PARTICLE_TOSS_HEAL_RED : PARTICLE_TOSS_HEAL_BLUE, 3.0);
+		EmitSoundToClient(attacker, SOUND_TOSS_HEAL);
+			
+		char amountHealed[16];
+		Format(amountHealed, sizeof(amountHealed), "+%i", RoundToCeil(totalHealing));
+		int text = WorldText_Create(hitPos, NULL_VECTOR, amountHealed, 15.0, _, _, _, 120, 255, 120, 255);
+		if (IsValidEntity(text))
+		{
+			Text_Owner[text] = GetClientUserId(attacker);
+			SDKHook(text, SDKHook_SetTransmit, Text_Transmit);
+				
+			WorldText_MimicHitNumbers(text);
+		}
+	}
+}
+
+public bool Scrap_CheckTarget(int target)
+{
+	return (CF_IsValidTarget(target, grabEnemyTeam(Scrap_User)) || IsABuilding(target));
 }

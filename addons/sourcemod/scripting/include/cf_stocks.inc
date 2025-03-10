@@ -3394,7 +3394,11 @@ stock bool IsABuilding(int entity)
 	char classname[255];
 	GetEntityClassname(entity, classname, sizeof(classname));
 
+	#if defined _pnpc_included_
+	return view_as<PNPC>(entity).b_IsABuilding || StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_dispenser") || StrEqual(classname, "obj_teleporter");
+	#else
 	return StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_dispenser") || StrEqual(classname, "obj_teleporter");
+	#endif
 }
 
 stock void DHook_CreateDetour(GameData gamedata, const char[] name, DHookCallback preCallback = INVALID_FUNCTION, DHookCallback postCallback = INVALID_FUNCTION)
