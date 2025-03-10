@@ -338,6 +338,16 @@ public void CFA_OnEntityDestroyed(int entity)
 	g_ProjectileLogic[entity] = INVALID_FUNCTION;
 }
 
+#if defined _pnpc_included_
+public bool PNPC_OnPNPCProjectileExplode(int rocket, int owner, int launcher)
+{
+	if (!StrEqual(s_ProjectileLogicPlugin[rocket], "") && g_ProjectileLogic[rocket] != INVALID_FUNCTION)
+		return false;
+
+	return true;
+}
+#endif
+
 void CFA_UpdateMadeCharacter(int client)
 {
 	f_CancelTemporarySpeedMod[client] = GetGameTime() + 0.5;
