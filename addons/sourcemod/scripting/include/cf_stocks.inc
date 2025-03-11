@@ -1479,7 +1479,7 @@ stock void StringToLower(char input[255])
 
 stock int GetBuildingHealth(int entity)
 {
-	if (!IsABuilding(entity))
+	if (!IsABuilding(entity, false))
 		return 0;
 
 	char classname[255];
@@ -3386,7 +3386,7 @@ public bool TraceEntityEnumerator_EnumerateTriggers(int entity, int client)
 	return true;
 }
 
-stock bool IsABuilding(int entity)
+stock bool IsABuilding(int entity, bool includeNPCs = true)
 {
 	if (!IsValidEntity(entity))
 		return false;
@@ -3395,7 +3395,7 @@ stock bool IsABuilding(int entity)
 	GetEntityClassname(entity, classname, sizeof(classname));
 
 	#if defined _pnpc_included_
-	return view_as<PNPC>(entity).b_IsABuilding || StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_dispenser") || StrEqual(classname, "obj_teleporter");
+	return (includeNPCs && view_as<PNPC>(entity).b_IsABuilding) || StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_dispenser") || StrEqual(classname, "obj_teleporter");
 	#else
 	return StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_dispenser") || StrEqual(classname, "obj_teleporter");
 	#endif

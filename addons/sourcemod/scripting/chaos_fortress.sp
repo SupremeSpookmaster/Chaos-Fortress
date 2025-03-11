@@ -77,6 +77,11 @@ public Plugin myinfo =
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
+	MarkNativeAsOptional("PNPC.b_IsABuilding.get");
+	MarkNativeAsOptional("PNPC.Index.get");
+	MarkNativeAsOptional("PNPC.i_Health.get");
+	MarkNativeAsOptional("PNPC.i_Health.set");
+	MarkNativeAsOptional("PNPC_IsNPC");
 	CF_MakeNatives();
 	return APLRes_Success;
 }
