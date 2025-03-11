@@ -3444,3 +3444,37 @@ stock float AddToBucket(float &currentValue, float amtToAdd, float overflowPoint
 
 	return 0.0;
 }
+
+stock float LerpCurve(float start, float target, float minAmt, float maxAmt)
+{
+	if (start > target)
+	{
+		float mult = target / start;
+
+		float rate = mult * maxAmt;
+		if (rate < minAmt)
+			rate = minAmt;
+		else if (rate > maxAmt)
+			rate = maxAmt;
+
+		start -= rate;
+		if (start < target)
+			start = target;
+	}
+	else if (start < target)
+	{
+		float mult = target / start;
+
+		float rate = mult * maxAmt;
+		if (rate < minAmt)
+			rate = minAmt;
+		else if (rate > maxAmt)
+			rate = maxAmt;
+
+		start += rate;
+		if (start > target)
+			start = target;
+	}
+
+	return start;
+}

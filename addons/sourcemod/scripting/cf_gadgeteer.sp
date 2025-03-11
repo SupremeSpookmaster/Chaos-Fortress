@@ -12,6 +12,8 @@
 #define COMMAND			"gadgeteer_command_support_drone"
 #define ANNIHILATION	"gadgeteer_annihilation"
 #define SCRAP			"gadgeteer_scrap_blaster"
+#define BUDDY			"gadgeteer_little_buddy"
+#define COMMANDBUDDY	"gadgeteer_command_little_buddy"
 
 #define MODEL_TOSS		"models/weapons/w_models/w_toolbox.mdl"
 #define MODEL_HOOK		"models/props_mining/cranehook001.mdl"
@@ -43,6 +45,8 @@
 #define MODEL_TELE_GIB_2		"models/buildables/gibs/teleporter_gib2.mdl"
 #define MODEL_TELE_GIB_3		"models/buildables/gibs/teleporter_gib3.mdl"
 #define MODEL_TELE_GIB_4		"models/buildables/gibs/teleporter_gib4.mdl"
+#define MODEL_BUDDY				"models/bots/engineer/bot_engineer.mdl"
+#define MODEL_BUDDY_PISTOL		"models/weapons/c_models/c_pistol/c_pistol.mdl"
 
 #define SOUND_TOSS_BUILD_1	"weapons/neon_sign_hit_01.wav"
 #define SOUND_TOSS_BUILD_2	"weapons/neon_sign_hit_02.wav"
@@ -183,6 +187,8 @@ public void OnMapStart()
 	PrecacheModel(MODEL_TELE_GIB_2);
 	PrecacheModel(MODEL_TELE_GIB_3);
 	PrecacheModel(MODEL_TELE_GIB_4);
+	PrecacheModel(MODEL_BUDDY);
+	PrecacheModel(MODEL_BUDDY_PISTOL);
 
 	PrecacheSound(SOUND_TOSS_BUILD_1);
 	PrecacheSound(SOUND_TOSS_BUILD_2);
@@ -2640,20 +2646,14 @@ void Gadgeteer_OnBuildingConstructed(Event event, const char[] name, bool dontBr
 {
 	int entity = event.GetInt("index");
 	int owner = GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
-	if(owner != -1 && CF_HasAbility(owner, GADGETEER, SUPPORTDRONE))
+	TFObjectType type = TF2_GetObjectType(entity);
+	if (owner == -1)
+		return;
+
+	if(type == TFObject_Dispenser && CF_HasAbility(owner, GADGETEER, SUPPORTDRONE))
 	{
 		if (CF_GetArgI(owner, GADGETEER, SUPPORTDRONE, "has_toolbox", 0) > 0)
 			return;
-
-		if (TF2_GetObjectType(entity) == TFObject_Sentry)
-		{
-			if (CF_GetSpecialResource(owner) < 100.0)
-				PrintCenterText(owner, "Not enough metal for a sentry!");
-			else
-				CF_GiveSpecialResource(owner, -100.0);
-
-			return;
-		}
 
 		float cost = CF_GetArgF(owner, GADGETEER, SUPPORTDRONE, "cost", 400.0);
 		if (CF_GetSpecialResource(owner) < cost)
@@ -2670,6 +2670,23 @@ void Gadgeteer_OnBuildingConstructed(Event event, const char[] name, bool dontBr
 		Toss_SpawnSupportDrone(entity, false, 0);
 		CF_GiveSpecialResource(owner, -cost);
 		CF_PlayRandomSound(owner, "", "sound_support_drone_built");
+	}
+	else if (type == TFObject_Sentry && CF_HasAbility(owner, GADGETEER, BUDDY))
+	{
+		float cost = CF_GetArgF(owner, GADGETEER, BUDDY, "cost", 150.0);
+		if (CF_GetSpecialResource(owner) < cost)
+		{
+			EmitSoundToClient(owner, NOPE);
+			PrintCenterText(owner, "Little Buddy costs %i Metal!", RoundFloat(cost));
+			RemoveEntity(entity);
+			CF_SilenceCharacter(owner, 0.2);
+			return;
+		}
+
+		Buddy_ReplaceSentry(entity, owner, BUDDY);
+
+		CF_GiveSpecialResource(owner, -cost);
+		CF_PlayRandomSound(owner, "", "sound_little_buddy_built");
 	}
 }
 
@@ -3372,4 +3389,167 @@ public void Scrap_Hit(int attacker, int victim, float &baseDamage, bool &allowFa
 public bool Scrap_CheckTarget(int target)
 {
 	return (CF_IsValidTarget(target, grabEnemyTeam(Scrap_User)) || IsABuilding(target));
+}
+
+public void Buddy_ReplaceSentry(int sentry, int owner, char abilityName[255])
+{
+	float pos[3], ang[3];
+	GetEntPropVector(sentry, Prop_Send, "m_vecOrigin", pos);
+	GetEntPropVector(sentry, Prop_Send, "m_angRotation", ang);
+
+	int chosen = GetRandomInt(0, sizeof(Toss_BuildSFX) - 1);
+	EmitSoundToAll(Toss_BuildSFX[chosen], sentry, _, _, _, _, GetRandomInt(90, 110), -1);
+	EmitSoundToAll(Toss_BuildSFX[chosen], sentry, _, _, _, _, GetRandomInt(90, 110), -1);
+	EmitSoundToAll(SOUND_TOSS_BUILD_EXTRA, sentry, _, _, _, _, GetRandomInt(90, 110), -1);
+	SpawnParticle(pos, PARTICLE_TOSS_BUILD_1, 2.0);
+	SpawnParticle(pos, PARTICLE_TOSS_BUILD_2, 2.0);
+
+	RemoveEntity(sentry);
+
+	DataPack pack = new DataPack();
+	WritePackCell(pack, GetClientUserId(owner));
+	WritePackFloatArray(pack, pos, sizeof(pos));
+	WritePackFloatArray(pack, ang, sizeof(ang));
+	WritePackString(pack, abilityName);
+	RequestFrame(Buddy_Spawn, pack);
+}
+
+enum struct LittleBuddy
+{
+	int owner;
+	int target;
+	int targetOverride;
+
+	float f_NextTargetTime;
+	float f_MaxSpeed;
+
+	bool b_SentryMode;
+
+	PNPC me;
+
+	void FindTarget(float pos[3])
+	{
+		if (GetGameTime() < this.f_NextTargetTime)
+			return;
+
+		int targ = this.GetTargetOverride();
+		if (!this.IsValidTarget(targ))
+			targ = CF_GetClosestTarget(pos, _, _, _, TF2_GetClientTeam(this.GetOwner()));
+
+		if (this.IsValidTarget(targ))
+			this.SetTarget(targ);
+		else
+			this.ClearTarget();
+
+		this.f_NextTargetTime = GetGameTime() + 0.2;
+	}
+
+	bool IsValidTarget(int targ)
+	{
+		return IsValidMulti(targ, _, _, true, TF2_GetClientTeam(this.GetOwner()));
+	}
+
+	void SetTarget(int targ)
+	{
+		this.target = GetClientUserId(targ);
+		this.me.i_PathTarget = targ;
+		this.me.StartPathing();
+	}
+
+	void ClearTarget()
+	{
+		this.target = -1;
+		this.me.i_PathTarget = -1;
+		this.me.StopPathing();
+	}
+
+	int GetTarget() { return GetClientOfUserId(this.target); }
+	int GetOwner() { return GetClientOfUserId(this.owner); }
+	int GetTargetOverride() { return GetClientOfUserId(this.targetOverride); }
+}
+
+LittleBuddy buddies[2049];
+
+public void Buddy_Spawn(DataPack pack)
+{
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	float pos[3], ang[3];
+	ReadPackFloatArray(pack, pos, sizeof(pos));
+	ReadPackFloatArray(pack, ang, sizeof(ang));
+	char abilityName[255];
+	ReadPackString(pack, abilityName, 255);
+	delete pack;
+
+	if (!IsValidClient(client))
+		return;
+
+	TFTeam team = TF2_GetClientTeam(client);
+
+	int hp = CF_GetArgI(client, GADGETEER, abilityName, "health", 150);
+	float speed = CF_GetArgF(client, GADGETEER, abilityName, "speed", 400.0);
+
+	char buddyName[255];
+	Format(buddyName, sizeof(buddyName), "Little Buddy (%N)", client);
+
+	PNPC buddy = PNPC(MODEL_BUDDY, team, hp, hp, _, 0.66, speed, Buddy_Think, GADGETEER, 0.0, pos, ang, _, _, buddyName);
+	if (!IsValidEntity(buddy.Index))
+		return;
+
+	buddy.SetSequence("run_SECONDARY");
+	buddy.SetPlaybackRate(1.0);
+	buddy.SetBleedParticle("buildingdamage_sparks2");
+	buddy.AttachModel(MODEL_BUDDY_PISTOL, "weapon_bone", _, 0, 0.66, _, true);
+
+	//TODO: Change gibs
+	buddy.AddGib(MODEL_TELE_GIB_1, "arm_attach_r");
+	buddy.AddGib(MODEL_TELE_GIB_2, "centre_attach");
+	buddy.AddGib(MODEL_TELE_GIB_3, "arm_attach_l");
+	buddy.AddGib(MODEL_TELE_GIB_4, "centre_attach2");
+
+	buddy.f_HealthBarHeight = 60.0;
+	buddy.b_IsABuilding = true;
+
+	buddies[buddy.Index].f_NextTargetTime = 0.0;
+	buddies[buddy.Index].owner = GetClientUserId(client);
+	buddies[buddy.Index].me = buddy;
+	buddies[buddy.Index].f_MaxSpeed = speed;
+	buddies[buddy.Index].b_SentryMode = false;
+}
+
+public void Buddy_Think(int buddy)
+{
+	PNPC npc = view_as<PNPC>(buddy);
+
+	float pos[3];
+	npc.GetAbsOrigin(pos);
+
+	if (!buddies[buddy].b_SentryMode)
+	{
+		buddies[buddy].FindTarget(pos);
+
+		int targ = buddies[buddy].GetTarget();
+		if (targ)
+		{
+			float theirPos[3];
+			GetClientAbsOrigin(targ, theirPos);
+
+			if (GetVectorDistance(pos, theirPos) <= 250.0)
+			{
+				float vel[3];
+				GetEntPropVector(targ, Prop_Data, "m_vecAbsVelocity", vel);
+
+				float speed = GetVectorLength(vel);
+				if (speed > buddies[buddy].f_MaxSpeed)
+					speed = buddies[buddy].f_MaxSpeed;
+
+				if (speed < 150.0)
+					speed = 0.0;
+
+				npc.f_Speed = LerpCurve(npc.f_Speed, speed, 10.0, 10.0);
+			}
+			else
+				npc.f_Speed = buddies[buddy].f_MaxSpeed;
+		}
+	}
 }
