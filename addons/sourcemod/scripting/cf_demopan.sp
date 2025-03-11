@@ -207,6 +207,7 @@ public int Passives_SpawnProp(int client)
 		DispatchKeyValue(prop, "spawnflags", "1");
 		SetVariantString("!activator");
 		AcceptEntityInput(prop, "SetParent", phys);
+		SetEntProp(phys, Prop_Send, "m_nSolidType", 0);
 	
 		b_IsResourceProp[phys] = true;
 	
