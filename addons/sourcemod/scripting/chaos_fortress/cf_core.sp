@@ -35,10 +35,6 @@ public ConfigMap GameRules;
 
 ConVar g_WeaponDropLifespan;
 
-Handle g_ChatMessages;
-Handle g_ChatIntervals;
-Handle g_ChatTimes;
-
 #define GAME_DESCRIPTION	"Chaos Fortress: Open Beta"
 
 public void CF_SetRespawnTime(int client)
@@ -187,30 +183,6 @@ static bool IsSubpluginLoaded(const char[] name)
 	return false;
 }
 
-public Action Timer_ChatMessages(Handle messages)
-{
-	if (g_ChatMessages == null)
-		return Plugin_Continue;
-	
-	if (GetArraySize(g_ChatMessages) < 1)
-		return Plugin_Continue;
-	
-	for (int i = 0; i < GetArraySize(g_ChatIntervals); i++)
-	{
-		if (GetGameTime() >= GetArrayCell(g_ChatTimes, i))
-		{
-			float interval = GetArrayCell(g_ChatIntervals, i);
-			SetArrayCell(g_ChatTimes, i, GetGameTime() + interval);
-			
-			char message[255];
-			GetArrayString(g_ChatMessages, i, message, sizeof(message));
-			CPrintToChatAll(message);
-		}
-	}
-	
-	return Plugin_Continue;
-}
-
 /*public void OnClientPutInServer(int client)
 {
 	//SDKHook(client, SDKHook_WeaponSwitch, CFC_WeaponEquipped);
@@ -270,20 +242,7 @@ public void CF_MapStart()
 	for (int i = 0; i < (sizeof(g_ArrowImpactSounds_Player));   i++) { PrecacheSound(g_ArrowImpactSounds_Player[i]);   }
 
 	CreateTimer(0.1, CFA_HUDTimer, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
-
-	g_ChatMessages = CreateArray(255);
-	g_ChatIntervals = CreateArray(255);
-	g_ChatTimes = CreateArray(255);
-	
-	CreateTimer(1.0, Timer_ChatMessages, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 	CF_ReloadSubplugins();
-}
-
-public void CFCore_MapEnd()
-{
-	delete g_ChatMessages;
-	delete g_ChatIntervals;
-	delete g_ChatTimes;
 }
 
 /**
@@ -367,17 +326,9 @@ public void CF_SetGameRules(int admin)
 		#endif
 	}
 	
-	delete g_ChatMessages;
-	delete g_ChatIntervals;
-	delete g_ChatTimes;
-	
 	subsection = GameRules.GetSection("game_rules.chat_messages");
 	if (subsection != null)
 	{
-		g_ChatMessages = CreateArray(255);
-		g_ChatIntervals = CreateArray(255);
-		g_ChatTimes = CreateArray(255);
-		
 		ConfigMap messageSection = subsection.GetSection("message_1");
 		int currentMessage = 1;
 		while (messageSection != null)
@@ -403,9 +354,9 @@ public void CF_SetGameRules(int admin)
 			
 			if (permissible)
 			{
-				PushArrayString(g_ChatMessages, messageText);
-				PushArrayCell(g_ChatIntervals, interval);
-				PushArrayCell(g_ChatTimes, GetGameTime() + interval);
+				DataPack pack = new DataPack();
+				WritePackString(pack, messageText);
+				CreateTimer(interval, CF_PrintMessage, pack, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 			}
 			
 			currentMessage++;
@@ -414,6 +365,8 @@ public void CF_SetGameRules(int admin)
 			messageSection = subsection.GetSection(name);
 		}
 	}
+	else
+		PrintToServer("Failed to find chat messages!");
 	
 	DeleteCfg(GameRules);
 	
@@ -422,6 +375,17 @@ public void CF_SetGameRules(int admin)
 	PrintToServer("CHAOS FORTRESS GAME_RULES DEBUG MESSAGES ABOVE");
 	PrintToServer("//////////////////////////////////////////////");
 	#endif
+}
+
+public Action CF_PrintMessage(Handle timer, DataPack pack)
+{
+	ResetPack(pack);
+
+	char message[255];
+	ReadPackString(pack, message, 255);
+	CPrintToChatAll(message);
+
+	return Plugin_Continue;
 }
 
 /**
