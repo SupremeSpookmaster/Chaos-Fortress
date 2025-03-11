@@ -145,6 +145,31 @@
 
 #define MODEL_TARGETING		"models/fake_particles/plane.mdl"
 
+static char g_LittleBuddyDeathSounds[][] = {
+	")vo/mvm/norm/engineer_mvm_paincriticaldeath01.mp3",
+	")vo/mvm/norm/engineer_mvm_paincriticaldeath02.mp3",
+	")vo/mvm/norm/engineer_mvm_paincriticaldeath03.mp3",
+	")vo/mvm/norm/engineer_mvm_paincriticaldeath04.mp3",
+	")vo/mvm/norm/engineer_mvm_paincriticaldeath05.mp3",
+	")vo/mvm/norm/engineer_mvm_paincriticaldeath06.mp3"
+};
+
+static char g_LittleBuddyPainSounds[][] = {
+	")vo/mvm/norm/engineer_mvm_painsharp01.mp3",
+	")vo/mvm/norm/engineer_mvm_painsharp02.mp3",
+	")vo/mvm/norm/engineer_mvm_painsharp03.mp3",
+	")vo/mvm/norm/engineer_mvm_painsharp04.mp3",
+	")vo/mvm/norm/engineer_mvm_painsharp05.mp3",
+	")vo/mvm/norm/engineer_mvm_painsharp06.mp3",
+	")vo/mvm/norm/engineer_mvm_painsharp07.mp3",
+	")vo/mvm/norm/engineer_mvm_painsharp08.mp3"
+};
+
+static char g_MetallicImpactSounds[][] = { 
+	")weapons/crowbar/crowbar_impact1.wav",
+	")weapons/crowbar/crowbar_impact2.wav"
+};
+
 int Laser_Model = -1;
 int Lightning_Model = -1;
 int Glow_Model = -1;
@@ -235,6 +260,10 @@ public void OnMapStart()
 	PrecacheSound(SOUND_TELE_DESTROYED);
 	PrecacheSound(SOUND_TELE_SD_WARNING);
 	PrecacheSound(SOUND_SUPPORT_GIVE_AMMO);
+	
+	for (int i = 0; i < (sizeof(g_LittleBuddyDeathSounds));   i++) { PrecacheSound(g_LittleBuddyDeathSounds[i]);   }
+	for (int i = 0; i < (sizeof(g_LittleBuddyPainSounds));   i++) { PrecacheSound(g_LittleBuddyPainSounds[i]);   }
+	for (int i = 0; i < (sizeof(g_MetallicImpactSounds));   i++) { PrecacheSound(g_MetallicImpactSounds[i]);   }
 
 	Laser_Model = PrecacheModel("materials/sprites/laserbeam.vmt");
 	Lightning_Model = PrecacheModel("materials/sprites/lgtning.vmt");
@@ -284,6 +313,7 @@ int Text_Owner[2049] = { -1, ... };
 int Toss_ToolboxParticle[2049] = { -1, ... };
 int Toss_Marked[MAXPLAYERS + 1] = { -1, ... };
 int Toss_SupportDrone[MAXPLAYERS + 1] = { -1, ... };
+int i_Buddy[MAXPLAYERS + 1] = { -1, ... };
 
 float Toss_DMG[2049] = { 0.0, ... };
 float Toss_KB[2049] = { 0.0, ... };
@@ -346,6 +376,7 @@ enum struct SupportDroneStats
 	bool isBuilding;
 	bool exists;
 	bool isPanicked;
+	bool b_StayStill;
 
 	void CreateFromArgs(int client, char abilityName[255])
 	{
@@ -874,6 +905,9 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 
 	if (StrContains(abilityName, COMMAND) != -1)
 		Support_Command(client, abilityName);
+
+	if (StrContains(abilityName, COMMANDBUDDY) != -1)
+		Buddy_Command(client, abilityName);
 
 	if (StrContains(abilityName, ANNIHILATION) != -1)
 		Annihilation_Activate(client, abilityName);
@@ -1974,10 +2008,18 @@ public void Toss_DeleteSentries(int client)
 		noSupportDroneMessage[client] = true;
 		view_as<PNPC>(support).Gib();
 		noSupportDroneMessage[client] = false;
-		//SDKHooks_TakeDamage(support, 0, 0, 999999.0, _, _, _, _, false);
+	}
+
+	support = EntRefToEntIndex(i_Buddy[client]);
+	if (PNPC_IsNPC(support))
+	{
+		noSupportDroneMessage[client] = true;
+		view_as<PNPC>(support).Gib();
+		noSupportDroneMessage[client] = false;
 	}
 }
 bool Annihilation_IsTele[2049] = { false, ... };
+bool b_IsBuddy[2049] = { false, ... };
 enum struct AA_Tele
 {
 	int owner;
@@ -2023,6 +2065,63 @@ enum struct AA_Tele
 
 AA_Tele TeleStats[2049];
 
+enum struct LittleBuddy
+{
+	int owner;
+	int target;
+	int targetOverride;
+
+	float f_NextTargetTime;
+	float f_MaxSpeed;
+	float f_NextPainSound;
+
+	bool b_SentryMode;
+
+	PNPC me;
+
+	void FindTarget(float pos[3])
+	{
+		if (GetGameTime() < this.f_NextTargetTime)
+			return;
+
+		int targ = this.GetTargetOverride();
+		if (!this.IsValidTarget(targ))
+			targ = CF_GetClosestTarget(pos, _, _, _, TF2_GetClientTeam(this.GetOwner()));
+
+		if (this.IsValidTarget(targ))
+			this.SetTarget(targ);
+		else
+			this.ClearTarget();
+
+		this.f_NextTargetTime = GetGameTime() + 0.2;
+	}
+
+	bool IsValidTarget(int targ)
+	{
+		return IsValidMulti(targ, _, _, true, TF2_GetClientTeam(this.GetOwner()));
+	}
+
+	void SetTarget(int targ)
+	{
+		this.target = GetClientUserId(targ);
+		this.me.i_PathTarget = targ;
+		this.me.StartPathing();
+	}
+
+	void ClearTarget()
+	{
+		this.target = -1;
+		this.me.i_PathTarget = -1;
+		this.me.StopPathing();
+	}
+
+	int GetTarget() { return GetClientOfUserId(this.target); }
+	int GetOwner() { return GetClientOfUserId(this.owner); }
+	int GetTargetOverride() { return GetClientOfUserId(this.targetOverride); }
+}
+
+LittleBuddy buddies[2049];
+
 //Resets global variables associated with given entities when they are destroyed.
 //Also triggers Drone destruction effects if the entity is a Drone.
 public void OnEntityDestroyed(int entity)
@@ -2065,6 +2164,7 @@ public void OnEntityDestroyed(int entity)
 		Toss_IsToolbox[entity] = false;
 		Toss_IsSupportDrone[entity] = false;
 		Annihilation_IsTele[entity] = false;
+		b_IsBuddy[entity] = false;
 		TeleStats[entity].owner = -1;
 		f_NextTargetTime[entity] = 0.0;
 
@@ -2385,6 +2485,7 @@ public void Toss_SpawnSupportOnDelay(DataPack pack)
 		Toss_SupportStats[drone].owner = GetClientUserId(owner);
 		Toss_SupportDrone[owner] = EntIndexToEntRef(drone);
 		Toss_IsSupportDrone[drone] = true;
+		Toss_SupportStats[drone].b_StayStill = false;
 		EmitSoundToAll(SOUND_SUPPORT_BUILD_BEGIN, drone);
 	}
 }
@@ -2437,32 +2538,40 @@ public void Support_Logic(int drone)
 		int owner = GetClientOfUserId(Toss_SupportStats[drone].owner);
 		int target = Toss_SupportStats[drone].GetTarget();
 
-		if (IsValidEntity(target))
-			support.i_PathTarget = target;
-
 		float targPos[3];
 		PNPC_WorldSpaceCenter(drone, selfPos);
 		PNPC_WorldSpaceCenter(target, targPos);
 
-		//Slow down to match the target's speed if we are within range of them, that way we don't run into them.
-		float dist = GetVectorDistance(selfPos, targPos);
-		float speed = Toss_SupportStats[drone].GetMaxSpeed();
-		if (dist <= Toss_SupportStats[drone].healRadius)
+		if (!Toss_SupportStats[drone].b_StayStill)
 		{
-			float vel[3];
-			GetEntPropVector(target, Prop_Data, "m_vecAbsVelocity", vel);
-			float targSpeed = GetVectorLength(vel);
+			if (IsValidEntity(target))
+				support.i_PathTarget = target;
 
-			if (targSpeed > speed)
-				targSpeed = speed;
+			//Slow down to match the target's speed if we are within range of them, that way we don't run into them.
+			float dist = GetVectorDistance(selfPos, targPos);
+			float speed = Toss_SupportStats[drone].GetMaxSpeed();
+			if (dist <= Toss_SupportStats[drone].healRadius)
+			{
+				float vel[3];
+				GetEntPropVector(target, Prop_Data, "m_vecAbsVelocity", vel);
+				float targSpeed = GetVectorLength(vel);
 
-			support.f_Speed = targSpeed;
+				if (targSpeed > speed)
+					targSpeed = speed;
+
+				support.f_Speed = targSpeed;
+			}
+			else if (support.f_Speed < speed)
+			{
+				support.f_Speed += speed * 0.33;
+				if (support.f_Speed > speed)
+					support.f_Speed = speed;
+			}
 		}
-		else if (support.f_Speed < speed)
+		else
 		{
-			support.f_Speed += speed * 0.33;
-			if (support.f_Speed > speed)
-				support.f_Speed = speed;
+			support.StopPathing();
+			support.f_Speed = 0.0;
 		}
 		
 		int targHeals = RoundFloat(AddToBucket(Toss_SupportStats[drone].healBucket_Target, Toss_SupportStats[drone].GetHealRate(0) * 0.1, 1.0));
@@ -2582,6 +2691,7 @@ public void Support_Command(int client, char abilityName[255])
 		EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
 		EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
 
+		Toss_SupportStats[supportDrone].b_StayStill = false;
 		if (Toss_SupportStats[supportDrone].targetOverride != GetClientUserId(client))
 		{
 			PrintCenterText(client, "Your Support Drone is now following you!");
@@ -2612,11 +2722,32 @@ public void Support_Command(int client, char abilityName[255])
 
 		CF_StartLagCompensation(client);
 		Command_User = client;
-		TR_TraceHullFilter(startPos, endPos, mins, maxs, MASK_SHOT, Command_OnlyPlayers);
+		TR_TraceHullFilter(startPos, endPos, mins, maxs, MASK_SHOT, Command_OnlyPlayers, supportDrone);
 		CF_EndLagCompensation(client);
 
 		int target = TR_GetEntityIndex();
-		if (!IsValidMulti(target))
+		bool wasStill = Toss_SupportStats[supportDrone].b_StayStill;
+		Toss_SupportStats[supportDrone].b_StayStill = target == supportDrone && !wasStill;
+		if (Toss_SupportStats[supportDrone].b_StayStill)
+		{
+			PrintCenterText(client, "Your Support Drone is now in Dispenser Mode!");
+			float pos[3];
+			view_as<PNPC>(supportDrone).GetAbsOrigin(pos);
+			view_as<PNPC>(supportDrone).StopPathing();
+			view_as<PNPC>(supportDrone).i_PathTarget = -1;
+			Toss_SupportStats[supportDrone].targetOverride = -1;
+			SpawnParticle(pos, PARTICLE_SUPPORT_COMMANDED, 2.0);
+			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+		}
+		else if (wasStill)
+		{
+			PrintCenterText(client, "Your Support Drone is now using auto-targeting!");
+			Toss_SupportStats[supportDrone].targetOverride = -1;
+			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+		}
+		else if (!IsValidMulti(target))
 		{
 			PrintCenterText(client, "Did not find a valid target!");
 			EmitSoundToClient(client, NOPE);
@@ -2637,9 +2768,9 @@ public void Support_Command(int client, char abilityName[255])
 	}
 }
 
-public bool Command_OnlyPlayers(entity, contentsMask)
+public bool Command_OnlyPlayers(entity, contentsMask, int drone)
 {
-	return entity != Command_User && IsValidClient(entity) && CF_IsValidTarget(entity, TF2_GetClientTeam(Command_User)); 
+	return entity != Command_User && (entity == drone || (IsValidClient(entity) && CF_IsValidTarget(entity, TF2_GetClientTeam(Command_User)))); 
 }
 
 void Gadgeteer_OnBuildingConstructed(Event event, const char[] name, bool dontBroadcast)
@@ -2692,10 +2823,20 @@ void Gadgeteer_OnBuildingConstructed(Event event, const char[] name, bool dontBr
 
 public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inflictor, int attacker, int &damagetype, int &damagecustom)
 {
-	if (Toss_IsSupportDrone[npc.Index])
+	Action ReturnValue = Plugin_Continue;
+
+	if (Toss_IsSupportDrone[npc.Index] || Annihilation_IsTele[npc.Index] || b_IsBuddy[npc.Index])
 	{
 		damagetype |= DMG_ALWAYSGIB;
+		float force[3];
+		Annihilation_GetUpwardForce(force, 600.0);
+		npc.PunchForce(force, true);
+		ReturnValue = Plugin_Changed;
+		EmitSoundToAll(g_MetallicImpactSounds[GetRandomInt(0, sizeof(g_MetallicImpactSounds) - 1)], npc.Index, _, _, _, _, GetRandomInt(80, 110));
+	}
 
+	if (Toss_IsSupportDrone[npc.Index])
+	{
 		if (!Toss_SupportStats[npc.Index].isBuilding)
 			RequestFrame(Support_CheckPanic, npc);
 
@@ -2704,10 +2845,16 @@ public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inf
 		EmitSoundToAll(Drone_DamageSFX[chosen], npc.Index, _, _, _, _, pitch, -1);
 		EmitSoundToAll(Drone_DamageSFX[chosen], npc.Index, _, _, _, _, pitch, -1);
 
-		return Plugin_Changed;
+		ReturnValue = Plugin_Changed;
 	}
 
-	return Plugin_Continue;
+	if (b_IsBuddy[npc.Index] && GetGameTime() >= buddies[npc.Index].f_NextPainSound)
+	{
+		EmitSoundToAll(g_LittleBuddyDeathSounds[GetRandomInt(0, sizeof(g_LittleBuddyDeathSounds) - 1)], npc.Index, _, _, _, _, GetRandomInt(110, 120));
+		buddies[npc.Index].f_NextPainSound = GetGameTime() + 0.2;
+	}
+
+	return ReturnValue;
 }
 
 public void Support_GiveAmmo(int target, int drone)
@@ -2847,7 +2994,6 @@ public void PNPC_OnPNPCDestroyed(int entity)
 				PrintCenterText(owner, "Your Support Drone was destroyed!");
 			}
 		}
-
 	}
 	else if (Annihilation_IsTele[entity])
 	{
@@ -2855,6 +3001,28 @@ public void PNPC_OnPNPCDestroyed(int entity)
 		PNPC_WorldSpaceCenter(entity, pos);
 		SpawnParticle(pos, PARTICLE_TOSS_DESTROYED);
 		EmitSoundToAll(SOUND_TELE_DESTROYED, entity, _, 120, _, _, 80);
+	}
+	else if (b_IsBuddy[entity])
+	{
+		float pos[3];
+		PNPC_WorldSpaceCenter(entity, pos);
+		SpawnParticle(pos, PARTICLE_TOSS_DESTROYED);
+		EmitSoundToAll(SOUND_SUPPORT_DESTROYED, entity, _, 120);
+		EmitSoundToAll(g_LittleBuddyDeathSounds[GetRandomInt(0, sizeof(g_LittleBuddyDeathSounds) - 1)], entity, _, 120, _, _, GetRandomInt(110, 120));
+
+		int owner = GetClientOfUserId(buddies[entity].owner);
+		if (IsValidClient(owner))
+		{
+			if (noSupportDroneMessage[owner])
+				noSupportDroneMessage[owner] = false;
+			else
+			{
+				if (IsPlayerAlive(owner))
+					CF_PlayRandomSound(owner, "", "sound_little_buddy_destroyed");
+
+				PrintCenterText(owner, "Your Little Buddy was destroyed!");
+			}
+		}
 	}
 }
 
@@ -3213,12 +3381,12 @@ public bool Annihilation_NoTargetsInSpawn(int ent)
 	return !(CF_IsEntityInSpawn(ent, TFTeam_Red) || CF_IsEntityInSpawn(ent, TFTeam_Blue) || IsPayloadCart(ent));
 }
 
-void Annihilation_GetUpwardForce(float output[3])
+void Annihilation_GetUpwardForce(float output[3], float force = 1200.0)
 {
 	float ang[3];
 	ang[0] = GetRandomFloat(-80.0, -90.0);
 	ang[1] = GetRandomFloat(0.0, 360.0);
-	GetVelocityInDirection(ang, 1200.0, output);
+	GetVelocityInDirection(ang, force, output);
 }
 
 int Annihilation_GetOwner(int entity) { return GetClientOfUserId(TeleStats[entity].owner); }
@@ -3414,62 +3582,6 @@ public void Buddy_ReplaceSentry(int sentry, int owner, char abilityName[255])
 	RequestFrame(Buddy_Spawn, pack);
 }
 
-enum struct LittleBuddy
-{
-	int owner;
-	int target;
-	int targetOverride;
-
-	float f_NextTargetTime;
-	float f_MaxSpeed;
-
-	bool b_SentryMode;
-
-	PNPC me;
-
-	void FindTarget(float pos[3])
-	{
-		if (GetGameTime() < this.f_NextTargetTime)
-			return;
-
-		int targ = this.GetTargetOverride();
-		if (!this.IsValidTarget(targ))
-			targ = CF_GetClosestTarget(pos, _, _, _, TF2_GetClientTeam(this.GetOwner()));
-
-		if (this.IsValidTarget(targ))
-			this.SetTarget(targ);
-		else
-			this.ClearTarget();
-
-		this.f_NextTargetTime = GetGameTime() + 0.2;
-	}
-
-	bool IsValidTarget(int targ)
-	{
-		return IsValidMulti(targ, _, _, true, TF2_GetClientTeam(this.GetOwner()));
-	}
-
-	void SetTarget(int targ)
-	{
-		this.target = GetClientUserId(targ);
-		this.me.i_PathTarget = targ;
-		this.me.StartPathing();
-	}
-
-	void ClearTarget()
-	{
-		this.target = -1;
-		this.me.i_PathTarget = -1;
-		this.me.StopPathing();
-	}
-
-	int GetTarget() { return GetClientOfUserId(this.target); }
-	int GetOwner() { return GetClientOfUserId(this.owner); }
-	int GetTargetOverride() { return GetClientOfUserId(this.targetOverride); }
-}
-
-LittleBuddy buddies[2049];
-
 public void Buddy_Spawn(DataPack pack)
 {
 	ResetPack(pack);
@@ -3515,11 +3627,31 @@ public void Buddy_Spawn(DataPack pack)
 	buddies[buddy.Index].me = buddy;
 	buddies[buddy.Index].f_MaxSpeed = speed;
 	buddies[buddy.Index].b_SentryMode = false;
+
+	int oldDrone = EntRefToEntIndex(i_Buddy[client]);
+	if (IsValidEntity(oldDrone))
+	{
+		noSupportDroneMessage[client] = true;
+		view_as<PNPC>(oldDrone).Gib();
+		noSupportDroneMessage[client] = false;
+	}
+
+	i_Buddy[client] = EntIndexToEntRef(buddy.Index);
+	b_IsBuddy[buddy.Index] = true;
 }
 
 public void Buddy_Think(int buddy)
 {
 	PNPC npc = view_as<PNPC>(buddy);
+
+	if (CF_IsEntityInSpawn(buddy, (npc.i_Team == TFTeam_Red ? TFTeam_Blue : TFTeam_Red)))
+	{
+		float force[3];
+		Annihilation_GetUpwardForce(force, 600.0);
+		npc.PunchForce(force, true);
+		npc.Gib();
+		return;
+	}
 
 	float pos[3];
 	npc.GetAbsOrigin(pos);
@@ -3547,9 +3679,113 @@ public void Buddy_Think(int buddy)
 					speed = 0.0;
 
 				npc.f_Speed = LerpCurve(npc.f_Speed, speed, 10.0, 10.0);
+				if (npc.f_Speed <= 0.0)
+					npc.f_YawRate = 0.0;
+				else
+					npc.f_YawRate = 300.0;
 			}
 			else
 				npc.f_Speed = buddies[buddy].f_MaxSpeed;
+		}
+	}
+	else
+	{
+		npc.StopPathing();
+		npc.f_Speed = 0.0;
+	}
+}
+
+public void Buddy_Command(int client, char abilityName[255])
+{
+	int buddy = EntRefToEntIndex(i_Buddy[client]);
+	if (!IsValidEntity(buddy))
+	{
+		PrintCenterText(client, "You don't have an active Little Buddy!");
+		EmitSoundToClient(client, NOPE);
+		return;
+	}
+
+	float ang[3];
+	GetClientEyeAngles(client, ang);
+
+	if (ang[0] <= -60.0)
+	{
+		buddies[buddy].b_SentryMode = false;
+
+		EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+		EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+
+		if (buddies[buddy].targetOverride != GetClientUserId(client))
+		{
+			PrintCenterText(client, "Your Little Buddy is now protecting you!");
+			buddies[buddy].targetOverride = GetClientUserId(client);
+		}
+		else
+		{
+			PrintCenterText(client, "Your Little Buddy is now using auto-targeting!");
+			buddies[buddy].targetOverride = -1;
+		}
+	}
+	else
+	{
+		float startPos[3], endPos[3];
+		GetClientEyePosition(client, startPos);
+		GetPointInDirection(startPos, ang, 99999.0, endPos);
+		CF_HasLineOfSight(startPos, endPos, _, endPos);
+
+		float mins[3];
+		mins[0] = -5.0;
+		mins[1] = mins[0];
+		mins[2] = mins[0];
+				
+		float maxs[3];
+		maxs[0] = -mins[0];
+		maxs[1] = -mins[1];
+		maxs[2] = -mins[2];
+
+		CF_StartLagCompensation(client);
+		Command_User = client;
+		TR_TraceHullFilter(startPos, endPos, mins, maxs, MASK_SHOT, Command_OnlyPlayers, buddy);
+		CF_EndLagCompensation(client);
+
+		int target = TR_GetEntityIndex();
+		bool wasSentry = buddies[buddy].b_SentryMode;
+		buddies[buddy].b_SentryMode = target == buddy && !wasSentry;
+		if (buddies[buddy].b_SentryMode)
+		{
+			PrintCenterText(client, "Little Buddy is now in Sentry Mode!");
+			float pos[3];
+			view_as<PNPC>(buddy).GetAbsOrigin(pos);
+			view_as<PNPC>(buddy).StopPathing();
+			buddies[buddy].ClearTarget();
+			SpawnParticle(pos, PARTICLE_SUPPORT_COMMANDED, 2.0);
+			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+		}
+		else if (wasSentry)
+		{
+			PrintCenterText(client, "Your Little Buddy is now using auto-targeting!");
+			buddies[buddy].targetOverride = -1;
+			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+		}
+		else if (!IsValidMulti(target))
+		{
+			PrintCenterText(client, "Did not find a valid target!");
+			EmitSoundToClient(client, NOPE);
+		}
+		else
+		{
+			buddies[buddy].targetOverride = GetClientUserId(target);
+
+			float pos[3];
+			GetClientAbsOrigin(target, pos);
+			SpawnParticle(pos, PARTICLE_SUPPORT_COMMANDED, 2.0);
+			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+			char charName[255];
+			CF_GetCharacterName(target, charName, sizeof(charName));
+			PrintCenterText(client, "Your Little Buddy is now protecting %s (%N)", charName, target);
 		}
 	}
 }
