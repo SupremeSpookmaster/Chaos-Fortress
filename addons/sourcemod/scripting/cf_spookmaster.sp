@@ -261,7 +261,7 @@ void Absorb_SetStats(int client, float NumTimes = 0.0)
 		
 	TF2Attrib_SetByDefIndex(weapon, 396, Absorb_Swing[client]);
 	TF2Attrib_SetByDefIndex(weapon, 2, Absorb_Melee[client]);
-	CF_SetCharacterScale(client, NumTimes > 0.0 ? 1.0 + (0.03 * NumTimes) : CF_GetCharacterScale(client) + 0.03, CF_StuckMethod_DelayResize);
+	CF_SetCharacterScale(client, NumTimes > 0.0 ? 1.0 + (0.05 * NumTimes) : CF_GetCharacterScale(client) + 0.05, CF_StuckMethod_DelayResize);
 	
 	Absorb_DestroyEyeParticles(client);
 	
