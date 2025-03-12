@@ -3834,13 +3834,13 @@ public void Buddy_Spawn(DataPack pack)
 			EmitSoundToAll(SOUND_BUDDY_BOOTUP_LOOP, buddy.Index);
 	}
 
-	/*int oldDrone = EntRefToEntIndex(i_Buddy[client]);
+	int oldDrone = EntRefToEntIndex(i_Buddy[client]);
 	if (IsValidEntity(oldDrone))
 	{
 		noSupportDroneMessage[client] = true;
 		view_as<PNPC>(oldDrone).Gib();
 		noSupportDroneMessage[client] = false;
-	}*/
+	}
 
 	i_Buddy[client] = EntIndexToEntRef(buddy.Index);
 	b_IsBuddy[buddy.Index] = true;
