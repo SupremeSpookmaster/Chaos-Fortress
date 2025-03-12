@@ -266,6 +266,8 @@ static Action BeaconFailSafe(Handle timer, int ref)
 	i_beacon_owner[beacon] = INVALID_ENT_REFERENCE;
 
 	float Initiate_In = CF_GetArgF(client, THIS_PLUGIN_NAME, ORBITAL_DEATH_RAY, "WindUp"); //3.0;
+	if(Initiate_In<= 0.5)
+		Initiate_In = 0.5;
 
 	float pos[3]; GetAbsOrigin_main(beacon, pos);
 	float Sky_Loc[3];
@@ -1178,6 +1180,8 @@ static void Beacon_CheckForCollision(int ref)
 	if (TR_DidHit())
 	{
 		float Initiate_In = CF_GetArgF(client, THIS_PLUGIN_NAME, ORBITAL_DEATH_RAY, "WindUp"); //3.0;
+		if(Initiate_In<= 0.5)
+			Initiate_In = 0.5;
 
 		float Sky_Loc[3];
 		Sky_Loc = GetDeathRayAnchorLocation(client, pos);
