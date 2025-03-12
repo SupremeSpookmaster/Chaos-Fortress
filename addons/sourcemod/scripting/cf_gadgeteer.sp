@@ -93,6 +93,9 @@
 #define SOUND_TELE_DESTROYED			")weapons/teleporter_explode.wav"
 #define SOUND_TELE_SD_WARNING			")weapons/medi_shield_burn_05.wav"
 #define SOUND_SUPPORT_GIVE_AMMO			")items/gift_pickup.wav"
+#define SOUND_BUDDY_BOOTUP_LOOP			")chaos_fortress/gadgeteer/little_buddy_bootup_loop.wav"
+#define SOUND_BUDDY_ACTIVATE			")mvm/mvm_deploy_small.wav"
+#define SOUND_BUDDY_FIRE				")weapons/pistol_shoot.wav"
 
 #define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
 #define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
@@ -142,6 +145,12 @@
 #define PARTICLE_BUSTER_EXPLODE				"rd_robot_explosion"
 #define PARTICLE_BUSTER_GLOW_RED			"player_recent_teleport_red"
 #define PARTICLE_BUSTER_GLOW_BLUE			"player_recent_teleport_blue"
+#define PARTICLE_BUDDY_BOOTUP_RED			"mvm_emergencylight_glow_red"
+#define PARTICLE_BUDDY_BOOTUP_BLUE			"mvm_emergencylight_glow"
+#define PARTICLE_BUDDY_ACTIVATED_RED		"utaunt_poweraura_red_start"
+#define PARTICLE_BUDDY_ACTIVATED_BLUE		"utaunt_poweraura_blue_start"
+#define PARTICLE_BUDDY_TRACER				"bullet_pistol_tracer01_blue"
+#define PARTICLE_BUDDY_MUZZLE				"muzzle_pistol_flare"
 
 #define MODEL_TARGETING		"models/fake_particles/plane.mdl"
 
@@ -165,9 +174,36 @@ static char g_LittleBuddyPainSounds[][] = {
 	")vo/mvm/norm/engineer_mvm_painsharp08.mp3"
 };
 
+static char g_LittleBuddyCommandedSounds[][] = {
+	")vo/mvm/norm/engineer_mvm_yes01.mp3",
+	")vo/mvm/norm/engineer_mvm_yes02.mp3",
+	")vo/mvm/norm/engineer_mvm_yes03.mp3"
+};
+
+static char g_LittleBuddyActivatedSounds[][] = {
+	")vo/mvm/norm/engineer_mvm_sentrypacking02.mp3",
+	")vo/mvm/norm/engineer_mvm_battlecry05.mp3"
+};
+
+static char g_LittleBuddyThreatSounds[][] = {
+	")vo/mvm/norm/engineer_mvm_dominationspy07.mp3",
+	")vo/mvm/norm/engineer_mvm_meleedare03.mp3",
+	")vo/mvm/norm/engineer_mvm_meleedare02.mp3",
+	")vo/mvm/norm/engineer_mvm_meleedare01.mp3"
+};
+
 static char g_MetallicImpactSounds[][] = { 
 	")weapons/crowbar/crowbar_impact1.wav",
 	")weapons/crowbar/crowbar_impact2.wav"
+};
+
+static char g_LittleBuddyGibs[][] = { 
+	"models/player/gibs/gibs_bolt.mdl",
+	"models/player/gibs/gibs_gear1.mdl",
+	"models/player/gibs/gibs_gear2.mdl",
+	"models/player/gibs/gibs_gear3.mdl",
+	"models/player/gibs/gibs_gear4.mdl",
+	"models/player/gibs/gibs_gear5.mdl",
 };
 
 int Laser_Model = -1;
@@ -260,10 +296,19 @@ public void OnMapStart()
 	PrecacheSound(SOUND_TELE_DESTROYED);
 	PrecacheSound(SOUND_TELE_SD_WARNING);
 	PrecacheSound(SOUND_SUPPORT_GIVE_AMMO);
+	PrecacheSound(SOUND_BUDDY_ACTIVATE);
+	PrecacheSound(SOUND_BUDDY_BOOTUP_LOOP);
+	PrecacheSound(SOUND_BUDDY_FIRE);
 	
 	for (int i = 0; i < (sizeof(g_LittleBuddyDeathSounds));   i++) { PrecacheSound(g_LittleBuddyDeathSounds[i]);   }
 	for (int i = 0; i < (sizeof(g_LittleBuddyPainSounds));   i++) { PrecacheSound(g_LittleBuddyPainSounds[i]);   }
+	for (int i = 0; i < (sizeof(g_LittleBuddyCommandedSounds));   i++) { PrecacheSound(g_LittleBuddyCommandedSounds[i]);   }
+	for (int i = 0; i < (sizeof(g_LittleBuddyActivatedSounds));   i++) { PrecacheSound(g_LittleBuddyActivatedSounds[i]);   }
+	for (int i = 0; i < (sizeof(g_LittleBuddyThreatSounds));   i++) { PrecacheSound(g_LittleBuddyThreatSounds[i]);   }
+
 	for (int i = 0; i < (sizeof(g_MetallicImpactSounds));   i++) { PrecacheSound(g_MetallicImpactSounds[i]);   }
+
+	for (int i = 0; i < (sizeof(g_LittleBuddyGibs));   i++) { PrecacheModel(g_LittleBuddyGibs[i]);   }
 
 	Laser_Model = PrecacheModel("materials/sprites/laserbeam.vmt");
 	Lightning_Model = PrecacheModel("materials/sprites/lgtning.vmt");
@@ -2065,17 +2110,33 @@ enum struct AA_Tele
 
 AA_Tele TeleStats[2049];
 
+int currentBuddy;
+
 enum struct LittleBuddy
 {
 	int owner;
 	int target;
 	int targetOverride;
+	int enemyTarget;
+	int i_Pistol;
 
 	float f_NextTargetTime;
 	float f_MaxSpeed;
 	float f_NextPainSound;
+	float f_BootupEndTime;
+	float f_Damage;
+	float f_Rate;
+	float f_Range;
+	float f_IdleDamage;
+	float f_IdleRate;
+	float f_IdleRange;
+	float f_NextShot;
+	float f_NextEnemyTime;
+	float f_NextScanSound;
 
 	bool b_SentryMode;
+	bool b_BootupSequence;
+	bool b_HasEnemyTarget;
 
 	PNPC me;
 
@@ -2096,8 +2157,26 @@ enum struct LittleBuddy
 		this.f_NextTargetTime = GetGameTime() + 0.2;
 	}
 
-	bool IsValidTarget(int targ)
+	bool IsValidTarget(int targ, bool enemy = false)
 	{
+		if (enemy)
+		{
+			currentBuddy = this.me.Index;
+			bool result = CF_IsValidTarget(targ, grabEnemyTeam(this.GetOwner()), GADGETEER, Buddy_CheckLOS);
+
+			if (result)
+			{
+				float pos[3], theirPos[3];
+				CF_WorldSpaceCenter(this.me.Index, pos);
+				CF_WorldSpaceCenter(targ, theirPos);
+
+				if (GetVectorDistance(pos, theirPos) > (this.b_SentryMode ? this.f_IdleRange : this.f_Range))
+					result = false;
+			}
+
+			return result;
+		}
+
 		return IsValidMulti(targ, _, _, true, TF2_GetClientTeam(this.GetOwner()));
 	}
 
@@ -2115,9 +2194,100 @@ enum struct LittleBuddy
 		this.me.StopPathing();
 	}
 
+	bool FindEnemy(float pos[3])
+	{
+		if (GetGameTime() < this.f_NextEnemyTime)
+			return this.enemyTarget > 0 && this.IsValidTarget(this.GetEnemyTarget(), true);
+
+		currentBuddy = this.me.Index;
+		int targ = this.GetEnemyTarget();
+		if (!this.IsValidTarget(targ, true))
+			targ = CF_GetClosestTarget(pos, true, _, (this.b_SentryMode ? this.f_IdleRange : this.f_Range), grabEnemyTeam(this.GetOwner()), GADGETEER, Buddy_CheckLOS);
+
+		bool success = this.IsValidTarget(targ, true);
+		if (!success)
+			this.ClearEnemyTarget();
+		else
+			this.SetEnemyTarget(targ);
+
+		this.f_NextEnemyTime = GetGameTime() + 0.2;
+		return success;
+	}
+
+	void SetEnemyTarget(int targ)
+	{
+		if (targ != this.GetEnemyTarget() || !this.b_HasEnemyTarget)
+		{
+			EmitSoundToAll(SOUND_TOSS_TARGETWARNING, this.me.Index, _, 110);
+			EmitSoundToAll(g_LittleBuddyThreatSounds[GetRandomInt(0, sizeof(g_LittleBuddyThreatSounds) - 1)], this.me.Index, _, 110, _, _, 110);
+
+			if (IsValidClient(targ))
+			{
+				EmitSoundToClient(targ, SOUND_TOSS_TARGETWARNING);
+				EmitSoundToClient(targ, g_LittleBuddyThreatSounds[GetRandomInt(0, sizeof(g_LittleBuddyThreatSounds) - 1)]);
+			}
+
+			StopSound(this.me.Index, SNDCHAN_AUTO, SOUND_DRONE_SCANNING);
+
+			this.b_HasEnemyTarget = true;
+		}
+
+		this.enemyTarget = EntRefToEntIndex(targ);
+	}
+
+	void ClearEnemyTarget()
+	{
+		if (this.b_HasEnemyTarget)
+		{
+			this.PlayScanSound();
+			this.b_HasEnemyTarget = false;
+		}
+
+		this.enemyTarget = -1;
+	}
+
+	void PlayScanSound()
+	{
+		EmitSoundToAll(SOUND_DRONE_SCANNING, this.me.Index);
+		this.f_NextScanSound = GetGameTime() + scan_sound_time;
+	}
+
+	void Shoot()
+	{
+		int target = this.GetEnemyTarget();
+		int pistol = this.GetPistol();
+		int client = this.GetOwner();
+
+		float startPos[3], endPos[3], ang[3];
+		GetEntityAttachment(pistol, LookupEntityAttachment(pistol, "muzzle"), startPos, ang);
+		CF_WorldSpaceCenter(target, endPos);
+		SubtractVectors(endPos, startPos, endPos);
+		NormalizeVector(endPos, endPos);
+		ScaleVector(endPos, 9999.0);
+
+		ArrayList victims = CF_DoBulletTrace(client, startPos, endPos, _, grabEnemyTeam(client), _, _, endPos);
+		for (int i = 0; i < GetArraySize(victims); i++)
+		{
+			int vic = GetArrayCell(victims, i);
+			
+			//TODO pistol kill icon
+			SDKHooks_TakeDamage(vic, this.me.Index, client, (this.b_SentryMode ? this.f_IdleDamage : this.f_Damage), DMG_BULLET|DMG_PREVENT_PHYSICS_FORCE);
+		}
+		delete victims;
+
+		SpawnParticle_ControlPoints(startPos, endPos, PARTICLE_BUDDY_TRACER, 0.2);
+		SpawnParticle(startPos, PARTICLE_BUDDY_MUZZLE, 0.5);
+		EmitSoundToAll(SOUND_BUDDY_FIRE, this.me.Index);
+		this.me.AddGesture("ACT_MP_ATTACK_STAND_SECONDARY");
+
+		this.f_NextShot = GetGameTime() + (this.b_SentryMode ? this.f_IdleRate : this.f_Rate);
+	}
+
 	int GetTarget() { return GetClientOfUserId(this.target); }
 	int GetOwner() { return GetClientOfUserId(this.owner); }
 	int GetTargetOverride() { return GetClientOfUserId(this.targetOverride); }
+	int GetEnemyTarget() { return EntRefToEntIndex(this.enemyTarget); }
+	int GetPistol() { return EntRefToEntIndex(this.i_Pistol); }
 }
 
 LittleBuddy buddies[2049];
@@ -2131,6 +2301,10 @@ public void OnEntityDestroyed(int entity)
 		StopSound(entity, SNDCHAN_AUTO, SOUND_TELE_LOOP);
 		StopSound(entity, SNDCHAN_AUTO, SOUND_BUSTER_LOOP);
 		StopSound(entity, SNDCHAN_AUTO, SOUND_BUSTER_WINDUP);
+		StopSound(entity, SNDCHAN_AUTO, SOUND_DRONE_SCANNING);
+
+		for (int i = 0; i < 4; i++)
+			StopSound(entity, SNDCHAN_AUTO, SOUND_BUDDY_BOOTUP_LOOP);
 
 		if (Toss_Owner[entity] != -1)
 		{
@@ -2850,7 +3024,7 @@ public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inf
 
 	if (b_IsBuddy[npc.Index] && GetGameTime() >= buddies[npc.Index].f_NextPainSound)
 	{
-		EmitSoundToAll(g_LittleBuddyDeathSounds[GetRandomInt(0, sizeof(g_LittleBuddyDeathSounds) - 1)], npc.Index, _, _, _, _, GetRandomInt(110, 120));
+		EmitSoundToAll(g_LittleBuddyPainSounds[GetRandomInt(0, sizeof(g_LittleBuddyPainSounds) - 1)], npc.Index, _, _, _, _, GetRandomInt(110, 120));
 		buddies[npc.Index].f_NextPainSound = GetGameTime() + 0.2;
 	}
 
@@ -3448,16 +3622,32 @@ public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability
 public void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, int &b, int &a)
 {
 	int supportDrone = EntRefToEntIndex(Toss_SupportDrone[client]);
-	if (!IsValidEntity(supportDrone))
-		return;
+	if (IsValidEntity(supportDrone))
+	{
+		PNPC npc = view_as<PNPC>(supportDrone);
+		float hp = float(npc.i_Health) / float(npc.i_MaxHealth);
+		if (hp > 1.0)
+			hp = 1.0;
 
-	PNPC npc = view_as<PNPC>(supportDrone);
-	float hp = float(npc.i_Health) / float(npc.i_MaxHealth);
-	if (hp > 1.0)
-		hp = 1.0;
+		int pcnt = RoundToFloor(100.0 * hp);
+		Format(HUDText, sizeof(HUDText), "SUPPORT DRONE: %i[PERCENT]\n%s", pcnt, HUDText);
+	}
 
-	int pcnt = RoundToFloor(100.0 * hp);
-	Format(HUDText, sizeof(HUDText), "SUPPORT DRONE HP: %i[PERCENT]\n%s", pcnt, HUDText);
+	int buddy = EntRefToEntIndex(i_Buddy[client]);
+	if (IsValidEntity(buddy))
+	{
+		PNPC npc = view_as<PNPC>(buddy);
+		float hp = float(npc.i_Health) / float(npc.i_MaxHealth);
+		if (hp > 1.0)
+			hp = 1.0;
+
+		int pcnt = RoundToFloor(100.0 * hp);
+
+		if (IsValidEntity(supportDrone))
+			Format(HUDText, sizeof(HUDText), "LITTLE BUDDY: %i[PERCENT] | %s", pcnt, HUDText);
+		else
+			Format(HUDText, sizeof(HUDText), "LITTLE BUDDY: %i[PERCENT]\n%s", pcnt, HUDText);
+	}
 }
 
 bool Scrap_HSFalloff;
@@ -3600,6 +3790,7 @@ public void Buddy_Spawn(DataPack pack)
 
 	int hp = CF_GetArgI(client, GADGETEER, abilityName, "health", 150);
 	float speed = CF_GetArgF(client, GADGETEER, abilityName, "speed", 400.0);
+	float bootTime = CF_GetArgF(client, GADGETEER, abilityName, "bootup_time", 4.0);
 
 	char buddyName[255];
 	Format(buddyName, sizeof(buddyName), "Little Buddy (%N)", client);
@@ -3608,33 +3799,48 @@ public void Buddy_Spawn(DataPack pack)
 	if (!IsValidEntity(buddy.Index))
 		return;
 
-	buddy.SetSequence("run_SECONDARY");
+	buddy.SetSequence((bootTime > 0.0 ? "PRIMARY_stun_middle" : "run_SECONDARY"));
 	buddy.SetPlaybackRate(1.0);
 	buddy.SetBleedParticle("buildingdamage_sparks2");
-	buddy.AttachModel(MODEL_BUDDY_PISTOL, "weapon_bone", _, 0, 0.66, _, true);
+	
+	buddies[buddy.Index].i_Pistol = EntIndexToEntRef(buddy.AttachModel(MODEL_BUDDY_PISTOL, "weapon_bone", _, 0, 0.66, _, true));
 
-	//TODO: Change gibs
-	buddy.AddGib(MODEL_TELE_GIB_1, "arm_attach_r");
-	buddy.AddGib(MODEL_TELE_GIB_2, "centre_attach");
-	buddy.AddGib(MODEL_TELE_GIB_3, "arm_attach_l");
-	buddy.AddGib(MODEL_TELE_GIB_4, "centre_attach2");
+	for (int i = 0; i < sizeof(g_LittleBuddyGibs); i++)
+		buddy.AddGib(g_LittleBuddyGibs[i]);
 
 	buddy.f_HealthBarHeight = 60.0;
 	buddy.b_IsABuilding = true;
+	buddy.SetFlinchSequence("ACT_MP_GESTURE_FLINCH_CHEST");
 
 	buddies[buddy.Index].f_NextTargetTime = 0.0;
 	buddies[buddy.Index].owner = GetClientUserId(client);
 	buddies[buddy.Index].me = buddy;
 	buddies[buddy.Index].f_MaxSpeed = speed;
 	buddies[buddy.Index].b_SentryMode = false;
+	buddies[buddy.Index].b_BootupSequence = bootTime > 0.0;
+	buddies[buddy.Index].f_BootupEndTime = GetGameTime() + bootTime;
+	buddies[buddy.Index].f_Damage = CF_GetArgF(client, GADGETEER, abilityName, "damage", 10.0);
+	buddies[buddy.Index].f_Rate = CF_GetArgF(client, GADGETEER, abilityName, "rate", 0.25);
+	buddies[buddy.Index].f_Range = CF_GetArgF(client, GADGETEER, abilityName, "range", 400.0);
+	buddies[buddy.Index].f_IdleDamage = CF_GetArgF(client, GADGETEER, abilityName, "damage_idle", 10.0);
+	buddies[buddy.Index].f_IdleRate = CF_GetArgF(client, GADGETEER, abilityName, "rate_idle", 0.125);
+	buddies[buddy.Index].f_IdleRange = CF_GetArgF(client, GADGETEER, abilityName, "range_idle", 600.0);
 
-	int oldDrone = EntRefToEntIndex(i_Buddy[client]);
+	if (buddies[buddy.Index].b_BootupSequence)
+	{
+		AttachParticleToEntity(buddy.Index, team == TFTeam_Red ? PARTICLE_BUDDY_BOOTUP_RED : PARTICLE_BUDDY_BOOTUP_BLUE, "head", bootTime);
+
+		for (int i = 0; i < 4; i++)
+			EmitSoundToAll(SOUND_BUDDY_BOOTUP_LOOP, buddy.Index);
+	}
+
+	/*int oldDrone = EntRefToEntIndex(i_Buddy[client]);
 	if (IsValidEntity(oldDrone))
 	{
 		noSupportDroneMessage[client] = true;
 		view_as<PNPC>(oldDrone).Gib();
 		noSupportDroneMessage[client] = false;
-	}
+	}*/
 
 	i_Buddy[client] = EntIndexToEntRef(buddy.Index);
 	b_IsBuddy[buddy.Index] = true;
@@ -3655,6 +3861,29 @@ public void Buddy_Think(int buddy)
 
 	float pos[3];
 	npc.GetAbsOrigin(pos);
+	float gt = GetGameTime();
+
+	if (buddies[buddy].b_BootupSequence)
+	{
+		if (gt >= buddies[buddy].f_BootupEndTime)
+		{
+			buddies[buddy].b_BootupSequence = false;
+			npc.SetSequence("run_SECONDARY");
+			npc.AddGesture("ACT_MP_STUN_END");
+			EmitSoundToAll(g_LittleBuddyActivatedSounds[GetRandomInt(0, sizeof(g_LittleBuddyActivatedSounds) - 1)], buddy, _, _, _, _, GetRandomInt(110, 120));
+			EmitSoundToAll(g_LittleBuddyActivatedSounds[GetRandomInt(0, sizeof(g_LittleBuddyActivatedSounds) - 1)], buddy, _, _, _, _, GetRandomInt(110, 120));
+
+			EmitSoundToAll(SOUND_BUDDY_ACTIVATE, buddy);
+			buddies[buddy].PlayScanSound();
+
+			for (int i = 0; i < 4; i++)
+				StopSound(buddy, SNDCHAN_AUTO, SOUND_BUDDY_BOOTUP_LOOP);
+
+			SpawnParticle(pos, npc.i_Team == TFTeam_Red ? PARTICLE_BUDDY_ACTIVATED_RED : PARTICLE_BUDDY_ACTIVATED_BLUE, 0.5);
+		}
+
+		return;
+	}
 
 	if (!buddies[buddy].b_SentryMode)
 	{
@@ -3693,6 +3922,21 @@ public void Buddy_Think(int buddy)
 		npc.StopPathing();
 		npc.f_Speed = 0.0;
 	}
+
+	if (buddies[buddy].FindEnemy(pos))
+	{
+		float enemyPos[3];
+		int target = buddies[buddy].GetEnemyTarget();
+		CF_WorldSpaceCenter(target, enemyPos);
+
+		if (gt >= buddies[buddy].f_NextShot)
+		{
+			buddies[buddy].Shoot();
+		}
+	}
+
+	if (gt >= buddies[buddy].f_NextScanSound && !buddies[buddy].b_HasEnemyTarget)
+		buddies[buddy].PlayScanSound();
 }
 
 public void Buddy_Command(int client, char abilityName[255])
@@ -3714,6 +3958,7 @@ public void Buddy_Command(int client, char abilityName[255])
 
 		EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
 		EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+		EmitSoundToAll(g_LittleBuddyCommandedSounds[GetRandomInt(0, sizeof(g_LittleBuddyCommandedSounds) - 1)], buddy, _, _, _, _, GetRandomInt(110, 120));
 
 		if (buddies[buddy].targetOverride != GetClientUserId(client))
 		{
@@ -3761,6 +4006,7 @@ public void Buddy_Command(int client, char abilityName[255])
 			SpawnParticle(pos, PARTICLE_SUPPORT_COMMANDED, 2.0);
 			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
 			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+			EmitSoundToAll(g_LittleBuddyCommandedSounds[GetRandomInt(0, sizeof(g_LittleBuddyCommandedSounds) - 1)], buddy, _, _, _, _, GetRandomInt(110, 120));
 		}
 		else if (wasSentry)
 		{
@@ -3768,6 +4014,7 @@ public void Buddy_Command(int client, char abilityName[255])
 			buddies[buddy].targetOverride = -1;
 			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
 			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+			EmitSoundToAll(g_LittleBuddyCommandedSounds[GetRandomInt(0, sizeof(g_LittleBuddyCommandedSounds) - 1)], buddy, _, _, _, _, GetRandomInt(110, 120));
 		}
 		else if (!IsValidMulti(target))
 		{
@@ -3783,9 +4030,21 @@ public void Buddy_Command(int client, char abilityName[255])
 			SpawnParticle(pos, PARTICLE_SUPPORT_COMMANDED, 2.0);
 			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
 			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+			EmitSoundToAll(g_LittleBuddyCommandedSounds[GetRandomInt(0, sizeof(g_LittleBuddyCommandedSounds) - 1)], buddy, _, _, _, _, GetRandomInt(110, 120));
 			char charName[255];
 			CF_GetCharacterName(target, charName, sizeof(charName));
 			PrintCenterText(client, "Your Little Buddy is now protecting %s (%N)", charName, target);
 		}
 	}
+}
+
+public bool Buddy_CheckLOS(int ent)
+{
+	if (IsPlayerInvis(ent))
+		return false;
+
+	float pos1[3], pos2[3];
+	CF_WorldSpaceCenter(currentBuddy, pos1);
+	CF_WorldSpaceCenter(ent, pos2);
+	return CF_HasLineOfSight(pos1, pos2, _, _, currentBuddy);
 }

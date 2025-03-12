@@ -21,6 +21,7 @@ bool b_InSpawn[2049][4];
 float f_SpawnGrace = 3.0;
 float f_RespawnTimeRed = 9.0;
 float f_RespawnTimeBlue = 9.0;
+float f_GlobalKnockbackValue = 0.66;
 bool b_PreserveUlt = false;
 
 public float GetSpawnGrace() { return f_SpawnGrace; }
@@ -84,6 +85,19 @@ public void CF_OnPluginStart()
 	g_WeaponDropLifespan.IntValue = 0;
 	
 	SteamWorks_SetGameDescription(GAME_DESCRIPTION);
+
+	//TODO
+	/*GameData gd = new GameData("chaos_fortress");
+
+    DynamicDetour dtApplyPushFromDamage = DynamicDetour.FromConf(gd, "CTFPlayer::ApplyPushFromDamage()");
+
+    if(!dtApplyPushFromDamage)
+        SetFailState("Failed to setup detour for CTFPlayer::ApplyPushFromDamage()");
+
+    dtApplyPushFromDamage.Enable(Hook_Pre, OnApplyPushFromDamagePre);
+    dtApplyPushFromDamage.Enable(Hook_Post, OnApplyPushFromDamagePost);
+
+    delete gd;*/
 }
 
 public void CF_ReloadSubplugins()
@@ -275,6 +289,7 @@ public void CF_SetGameRules(int admin)
 		f_SpawnGrace = GetFloatFromConfigMap(subsection, "spawn_grace", 3.0);
 		f_RespawnTimeRed = GetFloatFromConfigMap(subsection, "respawn_red", 9.0);
 		f_RespawnTimeBlue = GetFloatFromConfigMap(subsection, "respawn_blue", 9.0);
+		f_GlobalKnockbackValue = GetFloatFromConfigMap(subsection, "knockback_modifier", 0.0);
 		
 		float KillValue = GetFloatFromConfigMap(subsection, "value_kills", 1.0);
 		float DeathValue = GetFloatFromConfigMap(subsection, "value_deaths", 1.0);
@@ -711,3 +726,48 @@ public void ArrowTouchNonCombatEntity(int entity, int other)
 		}
 	}
 }
+
+//Thank you Suza/Zabaniya!
+//TODO
+/*public MRESReturn OnApplyPushFromDamagePre(int iClient, DHookParam hParams)
+{
+    if(!IsValidClient(iClient))
+        return MRES_Ignored;
+
+	Address aTakeDamageInfo = hParams.Get(1);
+    int weapon = LoadEntityHandleFromAddress(AddressOffset(aTakeDamageInfo, m_Weapon * 0x04));
+	if (IsValidEntity(weapon))
+	{
+		if (GetEntPropEnt(weapon, Prop_Send, "m_hOwnerEntity") == iClient)
+			return MRES_Ignored;
+	}
+
+    float fCurrentKnockback = TF2Attrib_GetFloatValueFromName(iClient, "damage force increase hidden");
+
+    float fNewKnockback = fCurrentKnockback * f_GlobalKnockbackValue;
+
+    TF2Attrib_AddCustomPlayerAttribute(iClient, "damage force increase hidden", fNewKnockback);
+
+    return MRES_Ignored;
+}
+
+public MRESReturn OnApplyPushFromDamagePost(int iClient, DHookParam hParams)
+{
+    if(!IsValidClient(iClient))
+        return MRES_Ignored;
+
+	Address aTakeDamageInfo = hParams.Get(1);
+    int weapon = LoadEntityHandleFromAddress(AddressOffset(aTakeDamageInfo, m_Weapon * 0x04));
+	if (IsValidEntity(weapon))
+	{
+		if (GetEntPropEnt(weapon, Prop_Send, "m_hOwnerEntity") == iClient)
+			return MRES_Ignored;
+	}
+
+    // Retrieving the original knockback ( the one before we changed theirs ) by doing math.
+    float fOldKnockback = TF2Attrib_GetFloatValueFromName(iClient, "damage force increase hidden") / f_GlobalKnockbackValue;
+    TF2Attrib_RemoveCustomPlayerAttribute(iClient, "damage force increase hidden");
+    TF2Attrib_AddCustomPlayerAttribute(iClient, "damage force increase hidden", fOldKnockback);
+
+    return MRES_Ignored;
+}*/

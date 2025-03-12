@@ -2199,7 +2199,7 @@ public Native_CF_SetCharacterModel(Handle plugin, int numParams)
 	if (CF_IsPlayerCharacter(client) && CheckFile(NewModel))
 	{
 		g_Characters[client].Model = NewModel;
-		PrecacheModel(NewModel);
+		//PrecacheModel(NewModel);
 		
 		SetVariantString(NewModel);
 		AcceptEntityInput(client, "SetCustomModelWithClassAnimations");

@@ -43,6 +43,31 @@ float OFF_THE_MAP[3] = {1182792704.0, 1182792704.0, -964690944.0};
 
 float PhysProp_CurrentSpeed[2049] = { 0.0, ... };
 
+enum eTakeDamageInfo {
+    // Vectors.
+    m_DamageForce,
+    m_DamagePosition = 12,
+    m_ReportedPosition = 24,
+
+    m_Inflictor = 36,
+    m_Attacker,
+    m_Weapon,
+    m_Damage,
+    m_MaxDamage,
+    m_BaseDamage,
+    m_BitsDamageType,
+    m_DamageCustom,
+    m_DamageStats,
+    m_AmmoType,
+    m_DamagedOtherPlayers,
+    m_PlayerPenetrationCount,
+    m_DamageBonus,
+    m_DamageBonusProvider,
+    m_ForceFriendlyFire,
+    m_DamageForForce,
+    m_CritType
+};
+
 enum ViewmodelSequence
 {
 	VMS_Melee_Swing_1 = 8,
@@ -3443,6 +3468,27 @@ stock float AddToBucket(float &currentValue, float amtToAdd, float overflowPoint
 	}
 
 	return 0.0;
+}
+
+stock Address AddressOffset(Address pAddr, int iOffset)
+{
+    return pAddr + view_as<Address>(iOffset);
+}
+
+stock int LoadEntityHandleFromAddress(Address addr) { return EntRefToEntIndex(LoadFromAddress(addr, NumberType_Int32) | (1 << 31)); }
+
+stock float TF2Attrib_GetFloatValueFromName(int iClient, char[] sAttributeName)
+{
+    Address pAttribute = TF2Attrib_GetByName(iClient, sAttributeName);
+
+    // If the client doesn't have the attribute they'll return Address_Null, an invalid address.
+    // If we don't check for it, it'll spam errors since it's checking reserved memory ( 0x8 ).
+    if(!pAttribute)
+        return 1.0;
+
+    float fValue = TF2Attrib_GetValue(pAttribute);
+
+    return fValue;
 }
 
 stock float LerpCurve(float start, float target, float minAmt, float maxAmt)
