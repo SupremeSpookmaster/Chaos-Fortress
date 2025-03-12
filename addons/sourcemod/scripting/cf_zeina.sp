@@ -1,6 +1,5 @@
 /*
-	Sensal based on the Zombie Riot version
-	Code and it's porting by Batfoxkid and Artvin
+	Zeina, original character in the irln world, expidonsan.
 */
 
 #include <sourcemod>
@@ -11,7 +10,6 @@
 #include <tf2utils>
 #include <tf2items>
 #include <tf2attributes>
-#include <cf_stocks>
 
 #define LASERBEAM	"sprites/laserbeam.vmt"
 
@@ -66,6 +64,9 @@ float SvAccelerate_Client[MAXPLAYERS+1] = {10.0, ...};
 ConVar CvarAirAcclerate; //sv_airaccelerate
 ConVar CvarAcclerate; //sv_accelerate
 bool AllyOnlyPickUpOne[MAXPLAYERS +1];
+float ZeinaFlightDuration[MAXENTITIES];
+float ZeinaFlightDurationExtend[MAXENTITIES];
+bool FlightModeWas[MAXENTITIES];
 
 int LaserToConnectPickup[MAXPLAYERS +1] = {-1, ...};
 
@@ -822,6 +823,7 @@ float ZeinaBeaconApplying[MAXENTITIES] = {-1.0, ...};
 int ZeinaBeacon_CurrentProtectingIndex[MAXENTITIES];
 float ZeinaBeaconResGive[MAXENTITIES] = {0.0, ...};
 float ZeinaBeaconResGiveToOwner[MAXENTITIES] = {0.0, ...};
+float ZeinaBeaconHadAlly[MAXENTITIES] = {0.0, ...};
 
 void ZeinaBeaconActivate(int client, char abilityName[255])
 {
@@ -879,6 +881,7 @@ public Action ZeinaBeaconThink(Handle timer, DataPack pack)
 	ArrayList victims = view_as<ArrayList>(CF_GenericAOEDamage(Beacon, Beacon, Beacon, 0.0, 0, Radius, EntLoc, Radius, 1.0, _, false));
 	SetEntProp(Beacon, Prop_Send, "m_iTeamNum", SaveTeam);
 	int length = victims.Length;
+	int Owner = GetEntPropEnt(Beacon, Prop_Send, "m_hOwnerEntity");
 	if(length)
 	{
 
@@ -889,6 +892,8 @@ public Action ZeinaBeaconThink(Handle timer, DataPack pack)
 			{
 				ZeinaBeaconApplying[victim] = GetGameTime() + 0.25;
 				ZeinaBeacon_CurrentProtectingIndex[victim] = EntIndexToEntRef(Beacon);
+				if(Owner != victim)
+					ZeinaBeaconHadAlly[victim] = GetGameTime() + 0.25;
 			}
 		}
 	}
@@ -1021,6 +1026,9 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 			EmitSoundToAll("weapons/rescue_ranger_charge_02.wav", victim, SNDCHAN_AUTO, 60, _, 0.15, GetRandomInt(95,105));
 	}						
 	int BeaconHealth = GetEntProp(BeaconProtect, Prop_Data, "m_iHealth");
+	if(ZeinaBeaconHadAlly[BeaconProtect] < GetGameTime())
+		BeaconHealth /= 3;
+
 	int BeaconMaxHealth = GetEntProp(BeaconProtect, Prop_Data, "m_iMaxHealth");
 
 	if((RoundToCeil(damage * (((DamageResistance * -1.0) + 1.0))) >= BeaconHealth))
@@ -1035,6 +1043,8 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 		BeaconHealth -= RoundToCeil(damage * (((DamageResistance * -1.0) + 1.0)));
 		damage = 0.0;
 		damage += float(dmg_through_armour);
+		if(ZeinaBeaconHadAlly[BeaconProtect] < GetGameTime())
+			BeaconHealth *= 3;
 	}
 
 	SetEntProp(BeaconProtect, Prop_Data, "m_iHealth", BeaconHealth);
@@ -1261,7 +1271,6 @@ stock void spawnRing_Vectors(float center[3], float range, float modif_X, float 
 	}
 }
 
-float ZeinaFlightDuration[MAXENTITIES];
 
 bool ZeinaWingsActivate(int client, char abilityName[255])
 {
@@ -1289,9 +1298,10 @@ bool ZeinaWingsActivate(int client, char abilityName[255])
 	{
 		SetEntProp(entity, Prop_Send, "m_nModelIndex", PrecacheModel(model));
 	}
-	CF_ChangeAbilityTitle(client, CF_AbilityType_Reload, "Leash Ally");
+	CF_ChangeAbilityTitle(client, CF_AbilityType_Reload, "Leash Ally (hold ->)");
 	CF_ApplyAbilityCooldown(client, 0.0, CF_AbilityType_Reload, true, false);
 	ShieldEntRef[client] = EntIndexToEntRef(entity);
+	FlightModeWas[client] = true;
 
 	float pos2[3];
 	GetEntPropVector(client, Prop_Data, "m_vecAbsOrigin", pos2);
@@ -1309,6 +1319,7 @@ bool ZeinaWingsActivate(int client, char abilityName[255])
 	CF_PlayRandomSound(client, "", "sound_fly_activate_sound");
 
 	ZeinaFlightDuration[client] = GetGameTime() + CF_GetArgF(client, PluginName, abilityName, "flight_duration");
+	ZeinaFlightDurationExtend[client] = CF_GetArgF(client, PluginName, abilityName, "flight_duration_extend");
 	SDKUnhook(client, SDKHook_PreThink, ZeinaFlightThink);
 	SDKHook(client, SDKHook_PreThink, ZeinaFlightThink);
 	SetEntityMoveType(client, MOVETYPE_FLY);
@@ -1439,11 +1450,19 @@ public Action ZeinaFlightThink(int client)
 		trace = TR_TraceHullFilterEx(playerPos, playerPosend, hullMin, hullMax, MASK_SOLID, Zeina_TouchGround, client);	// 1073741824 is CONTENTS_LADDER?
 		if (TR_DidHit(trace))
 		{
+			//when on ground, gimp movementspeed!!!
 			SetEntityMoveType(client, MOVETYPE_WALK);
+			if(FlightModeWas[client])
+				TF2Attrib_SetByDefIndex(EntRefToEntIndex(ShieldEntRef[client]), 107, 1.0);
+
+			FlightModeWas[client] = false;
 		}
 		else
 		{
 			SetEntityMoveType(client, MOVETYPE_FLY);
+			if(!FlightModeWas[client])
+				TF2Attrib_SetByDefIndex(EntRefToEntIndex(ShieldEntRef[client]), 107, 1.5);
+			FlightModeWas[client] = true;
 		}
 		delete trace;
 	}
@@ -1556,9 +1575,12 @@ void ZeinaTryPickupAlly(int client)
 			int Laser_4_i = ConnectWithBeamClient(client, target, r, g, b, 2.25, 2.25, 5.0, LASERBEAM);
 
 			CF_DoAbility(client, "cf_sensal", "sensal_ability_barrier_portal");
+			ZeinaFlightDuration[client] += ZeinaFlightDurationExtend[client];
+			//extend!
 			LaserToConnectPickup[client] = EntIndexToEntRef(Laser_4_i);
 			SetEntProp(client, Prop_Data, "m_iHammerID", CurrentlyPickingUpAlly[client] + 1000);
 			CF_DoAbility(client, "cf_sensal", "sensal_ability_ally");
+			CF_ChangeAbilityTitle(client, CF_AbilityType_Reload, "Let Go of Ally");
 			AllyOnlyPickUpOne[client] = false;
 			//We found our target to fly with!
 			RequestFrame(SetCDBackReload, EntIndexToEntRef(client));
