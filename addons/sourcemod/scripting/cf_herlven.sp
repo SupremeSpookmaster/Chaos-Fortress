@@ -317,8 +317,16 @@ static Action OffSetDeathRay_Spawn(Handle Timer, DataPack pack)
 	int client = EntRefToEntIndex(ReadPackCell(pack));
 	int Ball = EntRefToEntIndex(ReadPackCell(pack));
 
-	if(!IsValidClient(client) || CF_GetRoundState() != 1)
+	if(!IsValidClient(client))
 	{
+		if(IsValidEntity(Ball))
+			RemoveEntity(Ball);
+
+		return Plugin_Stop;
+	}
+	if(CF_GetRoundState() != 1)
+	{
+		b_DeathRay_Active[client] = false;
 		if(IsValidEntity(Ball))
 			RemoveEntity(Ball);
 
