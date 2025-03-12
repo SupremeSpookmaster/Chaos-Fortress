@@ -128,6 +128,7 @@ stock void ResetToZero2(any[][] array, int length1, int length2)
 
 static int Generic_Laser_BEAM_HitDetected[MAXENTITIES];
 static int i_beacon_owner[MAXENTITIES];
+static float fl_jumppad_falldamge_invlun[MAXTF2PLAYERS];
 
 static const char DeathRayPassiveSounds[][] =
 {
@@ -171,6 +172,7 @@ public void OnMapStart()
 	PrecacheScriptSound(JUMPPAD_IMPACT1);
 	PrecacheScriptSound(JUMPPAD_IMPACT2);
 	Zero(Generic_Laser_BEAM_HitDetected);
+	Zero(fl_jumppad_falldamge_invlun);
 
 	PrecacheSound(DEATHRAY_TOUCHDOWN_SOUND, true);
 	PrecacheSound(DEATHRAY_THROW_SOUND, true);
@@ -281,76 +283,27 @@ static Action BeaconFailSafe(Handle timer, int ref)
 
 	return Plugin_Handled;
 }
-//get a sky location depending on players.
+//get a sky location
 static float[] GetDeathRayAnchorLocation(int client, float Origin[3])
 {
-	/*
-	int OnMyTeam = 0;
-	TFTeam team = TF2_GetClientTeam(client);
-	int[] MyTeamArray = new int[MaxClients];
-
-	//get the anchor location of clients on our team.
-	for(int i=1 ; i <= MaxClients ; i++)
-	{
-		
-		if(!IsValidClient(i))
-			continue;
-
-		if(!IsPlayerAlive(i))
-			continue;
-
-		if(team != TF2_GetClientTeam(i))
-			continue;
-
-		MyTeamArray[OnMyTeam] = i;
-		OnMyTeam++;
-	}
-
-	//if we don't have a lot of  teammates, also include enemy location.
-	if(OnMyTeam < 2)
-	{
-
-		for(int i=1 ; i <= MaxClients ; i++)
-		{
-			if(!IsValidClient(i))
-				continue;
-
-			if(!IsPlayerAlive(i))
-				continue;
-
-			MyTeamArray[OnMyTeam] = i;
-			OnMyTeam++;
-		}
-	}
-
-	float Anchor_Loc[3];
-	for(int i=0 ; i < OnMyTeam ; i++)
-	{
-		float Loc[3];
-		GetClientAbsOrigin(MyTeamArray[i], Loc);
-		AddVectors(Anchor_Loc, Loc, Anchor_Loc);
-	}
-	if(OnMyTeam <= 0)
-	{
-		//what
-		GetClientAbsOrigin(client, Anchor_Loc);
-
-		Anchor_Loc[0]+=GetRandomFloat(-250.0, 250.0);
-		Anchor_Loc[1]+=GetRandomFloat(-250.0, 250.0);
-		Anchor_Loc[2]+=GetRandomFloat(3000.0, 3500.0);
-		return Anchor_Loc;
-	}
-	Anchor_Loc[0] /=OnMyTeam;
-	Anchor_Loc[1] /=OnMyTeam;
-	Anchor_Loc[2] /=OnMyTeam;
-
-	Anchor_Loc[2]+=GetRandomFloat(3000.0, 3500.0);*/
-
 	Generic_Laser_Trace Laser;
 	Laser.client = client;
 	float Angles[3];
 	Angles = {-90.0, 0.0, 0.0};
 	Laser.DoForwardTrace_Custom(Angles, Origin);
+
+	for(int i=0 ; i < 5 ; i++)
+	{
+		float Dist = GetVectorDistance(Laser.End_Point, Laser.Start_Point);
+		//absurdly small distance, try again
+		if(Dist < 100.0)
+		{
+			Origin[2] = Laser.End_Point[2] + 50.0;	//try again
+			Laser.DoForwardTrace_Custom(Angles, Origin, 2500.0);	//with a range limit just incase.
+		}
+		else	//we have found a valid position, abort.
+			break;
+	}
 
 	Laser.End_Point[2]-=25.0;
 
@@ -475,7 +428,11 @@ static void OribtalDeathRay_Tick(int client)
 		i_DeathRayUser = client;
 		fl_DeathRayStart = Effect_Anchor_Loc;
 		//do the los check from the anchor, but distance from the lasers loc
+#if defined _pnpc_included_
+		int Target = CF_GetClosestTarget(Location, true, Travel_Dist, 0.0, grabEnemyTeam(client), THIS_PLUGIN_NAME, Can_I_SeeTarget_Deathray);
+#else
 		int Target = CF_GetClosestTarget(Location, false, Travel_Dist, 0.0, grabEnemyTeam(client), THIS_PLUGIN_NAME, Can_I_SeeTarget_Deathray);
+#endif
 		Location[2]-=25.0;
 
 		if(CF_IsValidTarget(Target, grabEnemyTeam(client)))
@@ -483,11 +440,31 @@ static void OribtalDeathRay_Tick(int client)
 			float Enemy_Loc[3];
 			GetAbsOrigin_main(Target, Enemy_Loc);
 			Travel_Dist = GetVectorDistance(Enemy_Loc, Location);
-			float Speed = struct_DeathRayData[client].Speed;
+			float Speed = 250.0;
+#if defined _pnpc_included_
+			if(Target <= MaxClients)
+			{
+				Speed = CF_GetCharacterSpeed(Target);
+			}
+			else if(!view_as<PNPC>(Target).b_IsABuilding && PNPC_IsNPC(Target))
+			{
+				Speed = view_as<PNPC>(Target).f_Speed;
+			}
+#else
+			Speed = CF_GetCharacterSpeed(Target);
+#endif
+			if(Speed <= 0.0)
+				Speed = 250.0;
+
+			Speed /=10.0;	//need to reduce speed by 10 since this happens 10 times a second.
+			
+			Speed *= struct_DeathRayData[client].Speed;
 			if(Travel_Dist < Speed)
 			{
 				Speed*= (Travel_Dist/Speed);
 			}
+
+			//CPrintToChatAll("speed: %f",Speed);
 
 			Move_Vector_Towards_Target(Location, Enemy_Loc, struct_DeathRayData[client].Location, Speed);
 		}
@@ -733,7 +710,6 @@ public void OnEntityDestroyed(int entity)
 		structPadData[entity].Particle = INVALID_ENT_REFERENCE;
 	}
 }
-
 // Taken from Engi Pads but changed.
 static void JumpPad_Touch(int entity, int other)
 {
@@ -743,10 +719,12 @@ static void JumpPad_Touch(int entity, int other)
 		return;
 	}
 
+	//is not a client, abort.
 	if(!IsValidClient(other))
 		return;
 	
-	if(GetEntProp(entity, Prop_Send, "m_bCarried") || GetEntPropFloat(entity, Prop_Send, "m_flPercentageConstructed")<1.0)
+	//are we being sapped, got hit by cowmangler m2, are carried, or being built? if so, don't do anything
+	if(GetEntProp(entity, Prop_Send, "m_bHasSapper") || GetEntProp(entity, Prop_Send, "m_bPlasmaDisable") || GetEntProp(entity, Prop_Send, "m_bCarried") || GetEntPropFloat(entity, Prop_Send, "m_flPercentageConstructed")<1.0)
 		return;
 
 	float GameTime = GetGameTime();
@@ -779,10 +757,10 @@ static void JumpPad_Touch(int entity, int other)
 static void Teleport_JumpPad(DataPack pack)
 {
 	pack.Reset();
-	int client = EntRefToEntIndex(pack.ReadCell());
-	int pad = EntRefToEntIndex(pack.ReadCell());
-	float Power = pack.ReadFloat();
-	float CoolDown = pack.ReadFloat();
+	int client = EntRefToEntIndex(pack.ReadCell());	//who is being pushed into the sky
+	int pad = EntRefToEntIndex(pack.ReadCell());	//the pad itself
+	float Power = pack.ReadFloat();					//how much velocity up.
+	float CoolDown = pack.ReadFloat();				//how long does the pad dissable itself
 
 	// respect any existing velocity, but completely override Z
 	float playerVelocity[3];
@@ -793,6 +771,7 @@ static void Teleport_JumpPad(DataPack pack)
 
 	structPadData[pad].Recharge = GetGameTime() + CoolDown;
 
+	fl_jumppad_falldamge_invlun[client] = GetGameTime() + (2.0 * Power/650.0);	//make it scale on power, 650.0 with 2.0 seconds is perfectly aligned.
 	TF2_AddCondition(client, TFCond_TeleportedGlow, CoolDown);
 
 	EmitGameSoundToAll(JUMPPAD_IMPACT1, pad);
@@ -837,7 +816,8 @@ static Action Timer_HandlePadEffects(Handle timer, int Ref)
 	{
 		float GameTime = GetGameTime();
 
-		if(structPadData[entity].Recharge > GameTime || GetEntPropFloat(entity, Prop_Send, "m_flPercentageConstructed") < 1.0 || GetEntProp(entity, Prop_Send, "m_bCarried"))
+		//are we recharging, being sapped, got hit by cowmangler m2, are carried, or being built? if so, destroy the particle.
+		if(structPadData[entity].Recharge > GameTime || GetEntProp(entity, Prop_Send, "m_bHasSapper") || GetEntProp(entity, Prop_Send, "m_bPlasmaDisable") || GetEntProp(entity, Prop_Send, "m_bCarried") || GetEntPropFloat(entity, Prop_Send, "m_flPercentageConstructed")<1.0)
 		{
 			int particle = EntRefToEntIndex(structPadData[entity].Particle);
 
@@ -886,6 +866,22 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 		b_DeathRay_Active[client] = false;
 		SDKUnhook(client, SDKHook_PreThink, OribtalDeathRay_Tick);
 	}
+}
+//responsible for jumppad falldamage nullification
+public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
+{
+	//is not a client, abort
+	if(victim > MaxClients)
+		return Plugin_Continue;
+
+	//is the fall damage timer up, and is the damage type fall damage?
+	if((damagetype & DMG_FALL) && fl_jumppad_falldamge_invlun[victim] > GetGameTime())
+	{
+		damage = 0.0;	//remove fall damage
+		fl_jumppad_falldamge_invlun[victim] = 0.0;	//and also kill the timer so they can't take multiple falldamage immunities
+		return Plugin_Changed;
+	}
+	return Plugin_Continue;
 }
 public Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int weapon)
 {
