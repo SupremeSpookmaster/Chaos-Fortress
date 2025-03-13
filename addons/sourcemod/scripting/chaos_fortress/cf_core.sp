@@ -392,6 +392,27 @@ public void CF_SetGameRules(int admin)
 	#endif
 }
 
+public int CF_GetCharacterLimit(char conf[255])
+{
+	GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
+
+	char myConf[255];
+	myConf = conf;
+	ReplaceString(myConf, sizeof(myConf), "configs/chaos_fortress/", "");
+	ReplaceString(myConf, sizeof(myConf), ".cfg", "");
+
+	char path[255];
+	Format(path, sizeof(path), "game_rules.character_limits.%s", myConf);
+	
+	int limit = GetIntFromConfigMap(GameRules, path, 0);
+	if (limit == 0)
+		limit = GetIntFromConfigMap(GameRules, "game_rules.character_limits.all", 0);
+
+	DeleteCfg(GameRules);
+
+	return limit;
+}
+
 public Action CF_PrintMessage(Handle timer, DataPack pack)
 {
 	ResetPack(pack);

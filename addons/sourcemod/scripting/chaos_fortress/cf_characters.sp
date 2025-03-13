@@ -427,6 +427,23 @@ public void CFC_OnEntityDestroyed(int entity)
 	}
  }
  
+public int CF_GetNumPlayers(char conf[255], int client)
+{
+	int num = 0;
+	for (int i = 0; i <= MaxClients; i++)
+	{
+		if (i == client)
+			continue;
+			
+		char myConf[255];
+		CF_GetPlayerConfig(i, myConf, 255);
+		if (StrEqual(conf, myConf))
+			num++;
+	}
+
+	return num;
+}
+
  public void CF_LoadSpecificCharacter(char path[255], bool JustDownload)
  {
 	if (!path[0])
@@ -892,7 +909,15 @@ int i_NumItemsInInfoMenu[MAXPLAYERS + 1] = { 0, ... };
 	i_NumItemsInInfoMenu[client] = 0;
  	
  	Format(name, sizeof(name), "Spawn As %s", name);
- 	CFC_AddItemToInfoMenu(client, menu, "Select", name);
+	int limit = CF_GetCharacterLimit(config);
+	bool blocked = CF_GetNumPlayers(config, client) >= limit && limit > 0;
+	if (blocked)
+	{
+		Format(name, sizeof(name), "%s (MAX: %i)", name, limit);
+ 		CFC_AddItemToInfoMenu(client, menu, "Select", name, ITEMDRAW_DISABLED);
+	}
+	else
+		CFC_AddItemToInfoMenu(client, menu, "Select", name);
  	
  	if (!isLore && detailedDescPage < 0)
  	{
