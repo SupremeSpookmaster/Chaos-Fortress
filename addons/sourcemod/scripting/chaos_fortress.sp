@@ -8,26 +8,6 @@
 //#define USE_PREVIEWS
 //#define TESTING
 
-//
-//	- IMMEDIATE PLANS:
-//		- Gadgeteer To-Do List:
-//			- M3 ability - Support Drone:
-//				- Support Drones will always heal their intended target for a minimum of 5 seconds. If a different player becomes the "weakest nearby ally", they are ignored until the minimum heal duration has passed.
-//				- If there are no valid allies within their detection radius, they will default to attempting to heal their owner. If their owner is not alive, they will find the closest ally.
-//			- R ability - Command Support Drone:
-//				- Cannot be used if the user does not have an active Support Drone.
-//				- Costs nothing, has no cooldown.
-//				- Finds the ally closest to the user's cursor, within 100 HU. If this ally is valid, the Support Drone will immediately drop what it is doing and prioritize that ally.
-//			- ULTIMATE - AUTOMATION ANNIHILATION:
-//				- Not sure which one to do.
-//		- ALL:
-//			- Expand the "OnTakeDamageAlive" natives to include NPCs.
-//			- Add parameters for weapons which allow custom weapon models. These will need to cooperate with generic_abilities and CF_ForceViewmodelAnimation. This removes a dependency and allows easier customization.
-//			- Fix the weird super-long delay with ForceViewmodelAnimation on SB's Soul Discard. This is most likely an issue with SB's viewmodel anims themselves.
-//			- Convert SpawnParticle and AttachParticleToEntity to work via temp ents EVENTUALLY, then recompile all plugins. This will reduce edict usage by a ton. Doesn't need to be done immediately as edict crashes are not a huge concern as of the Fake Particle System fix.
-//		- The Gambler:
-//			- Begin work.
-//
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Rewrite the wiki.
 //		- May end up just scrapping the wiki. It adds way too much upkeep for next to no benefit.
@@ -45,7 +25,6 @@
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
 //	- Certain hats, when equipped via the wearable system, do not visually appear on bots (but they do work *sometimes*). Count Heavnich's "Noble Amassment of Hats" is an example of such a hat. 
 //	- CF_Teleport can get you stuck in enemy spawn doors. I'm not going to bother fixing this, if you're enough of a scumbag to try to teleport into the enemy's spawn you deserve to get stuck and die.
-//	- CF_ForceViewmodelAnimation causes the user to T-Pose if they go through the resupply event mid-sequence. This does not actually do anything, as switching their weapon immediately fixes it. Still looks pretty bad.
 //
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This feature may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
