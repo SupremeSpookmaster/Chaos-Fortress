@@ -432,9 +432,9 @@ public int CF_GetNumPlayers(char conf[255], int client)
 	int num = 0;
 	for (int i = 0; i <= MaxClients; i++)
 	{
-		if (i == client)
+		if (i == client || IsValidMulti(i, false, _, true, grabEnemyTeam(client)))
 			continue;
-			
+
 		char myConf[255];
 		CF_GetPlayerConfig(i, myConf, 255);
 		if (StrEqual(conf, myConf))
