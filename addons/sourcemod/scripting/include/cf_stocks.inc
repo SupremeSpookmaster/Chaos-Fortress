@@ -1520,6 +1520,23 @@ stock int GetBuildingHealth(int entity)
 	return 0;
 }
 
+stock int GetEntityHealth(int entity)
+{
+	if (!IsValidEntity(entity))
+		return 0;
+
+	if (IsABuilding(entity, false))
+		return GetBuildingHealth(entity);
+	#if defined _pnpc_included_
+	if (PNPC_IsNPC(entity))
+		return view_as<PNPC>(entity).i_Health;
+	#endif
+	if (IsValidClient(entity))
+		return GetEntProp(entity, Prop_Send, "m_iHealth");
+
+	return 0;
+}
+
 stock void GetAttribStringFromWeapon(int weapon, char output[255])
 {
 	if (!IsValidEntity(weapon))

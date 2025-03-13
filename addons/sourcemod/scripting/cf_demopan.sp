@@ -12,6 +12,8 @@
 int lgtModel;
 int glowModel;
 
+float f_WasCharging[MAXPLAYERS + 1] = { 0.0, ... };
+
 #define PARTICLE_REFINED_RED			"mvm_cash_embers_red"
 #define PARTICLE_REFINED_BLUE			"mvm_cash_embers"
 #define PARTICLE_REFINED_TRAIL_RED		"flaregun_trail_red"
@@ -1255,5 +1257,35 @@ public Action CF_OnShouldCollide(int ent1, int ent2, bool &result)
 		}
 	}
 	
+	return Plugin_Continue;
+}
+
+public void TF2_OnConditionRemoved(int client, TFCond condition)
+{
+	if (condition == TFCond_Charging)
+		f_WasCharging[client] = GetGameTime() + 0.3;
+}
+
+public Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int weapon)
+{
+	if (!IsValidEntity(weapon) || !IsValidMulti(attacker))
+		return Plugin_Continue;
+
+	if (GetEntityHealth(victim) > 0)
+		return Plugin_Continue;
+
+	float currentCharge = GetEntPropFloat(attacker, Prop_Send, "m_flChargeMeter");
+	if (GetGameTime() <= f_WasCharging[attacker] || TF2_IsPlayerInCondition(attacker, TFCond_Charging))
+	{
+		currentCharge += TF2CustAttr_GetFloat(weapon, "kills while charging restore charge", 0.0);
+		f_WasCharging[attacker] = 0.0;
+	}
+
+	currentCharge += TF2CustAttr_GetFloat(weapon, "melee kills restore charge", 0.0);
+
+	if (currentCharge > 100.0)
+		currentCharge = 100.0;
+	SetEntPropFloat(attacker, Prop_Send, "m_flChargeMeter", currentCharge);
+
 	return Plugin_Continue;
 }
