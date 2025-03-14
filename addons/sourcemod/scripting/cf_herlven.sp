@@ -593,8 +593,6 @@ static void SuperShotgun_Activate(int client, char abilityName[255])
 	//must allways have 1 section! also allows for an edge case to still trace the target.
 	if(Sections<Original_Section)
 		Sections++;
-	//edge case: you can shoot through walls LOL
-	//fix this ^
 	
 	Laser.Custom_Hull[0]=10.0;
 	Laser.CleanEnumerator();
@@ -643,6 +641,10 @@ static void SuperShotgun_Activate(int client, char abilityName[255])
 	while(!Victims.Empty)
 	{
 		int victim = Victims.Pop();
+
+		if(victim != Check_Line_Of_Sight(client, victim))
+			continue;
+
 		
 		bool behind = IsBehindAndFacingTarget(client, victim);
 
@@ -1586,6 +1588,7 @@ stock bool Generic_Laser_BEAM_TraceWallAndEnemies(int entity, int contentsMask, 
 {
 	if(CF_IsValidTarget(entity, grabEnemyTeam(client)))
 		return true;
+		
 
 	return !entity;
 }
