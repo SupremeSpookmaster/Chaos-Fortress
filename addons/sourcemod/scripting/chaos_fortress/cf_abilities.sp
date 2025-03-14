@@ -680,12 +680,15 @@ public void CFA_PlayerKilled(int attacker, int victim)
 		CF_PlayRandomSound(attacker, "", "sound_kill");
 	}
 	
+	bool played = false;
 	if (attacker == victim)
-		CF_PlayRandomSound(attacker, "", "sound_suicide");
-	
-	bool played = CF_PlayRandomSound(victim, "", "sound_killed");
+		played = CF_PlayRandomSound(attacker, "", "sound_suicide");
+
+	if (!played)
+		played = CF_PlayRandomSound(victim, "", "sound_killed");
+
 	if (played)
-		CF_SilenceCharacter(victim, 2.0);
+		CF_SilenceCharacter(victim, 0.2);
 }
 
 public bool CFA_InitializeUltimate(int client, ConfigMap map)

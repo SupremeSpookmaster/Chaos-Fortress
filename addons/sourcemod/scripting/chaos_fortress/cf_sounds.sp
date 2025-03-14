@@ -182,6 +182,9 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 		Format(path, sizeof(path), "character.sounds.%s.%s", Sound, tempSnd);
 			
 		ConfigMap cfgMap = new ConfigMap(ourConf);
+		if (cfgMap == null)
+			return false;
+
 		ConfigMap section = cfgMap.GetSection(path);
 		//ConfigMap echoSection = section.GetSection("echo");
 			
@@ -385,7 +388,10 @@ public bool PlaySpecificReplacement(int client, char sound[PLATFORM_MAX_PATH])
 		
 	ConfigMap map2 = map.GetSection("character.sounds");
 	if (map2 == null)
+	{
+		DeleteCfg(map)
 		return false;
+	}
 
 	StringMapSnapshot snap = map2.Snapshot();
 	
@@ -428,7 +434,7 @@ public Action NormalSoundHook(int clients[64],int &numClients,char strSound[PLAT
 
 	if (result != Plugin_Stop && result != Plugin_Handled)
 	{
-		if (CF_IsPlayerCharacter(entity) && StrContains(strSound, "vo/") != -1)
+		if (StrContains(strSound, "vo/") != -1)
 		{
 			float gameTime = GetGameTime();
 			if (gameTime >= f_LastSoundHook[entity] && gameTime >= f_Silenced[entity])
