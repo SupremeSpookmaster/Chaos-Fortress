@@ -322,8 +322,8 @@ public void CFC_OnEntityDestroyed(int entity)
  */
  public void CF_LoadCharacters(int admin)
  {
-	//if (Characters != null)
- 	//	DeleteCfg(Characters);
+	if (Characters != null && Characters != INVALID_HANDLE)
+ 		DeleteCfg(Characters);
  		
  	Characters = new ConfigMap("data/chaos_fortress/characters.cfg");
  	
@@ -355,6 +355,9 @@ public void CFC_OnEntityDestroyed(int entity)
  	{
  		CF_BuildCharactersMenu();
  	}
+
+	DeleteCfg(Characters);
+	Characters = null;
  }
  
  public bool CF_CheckPack(char[] path, bool JustDownload)
@@ -381,12 +384,12 @@ public void CFC_OnEntityDestroyed(int entity)
 	   		CF_LoadCharacterPack(value, JustDownload);
  		}
  		
- 		DeleteCfg(subsection);
+ 		//DeleteCfg(subsection);
  		
  		return true;
  	}
 	
-	DeleteCfg(subsection);
+	//DeleteCfg(subsection);
  	return false;
  }
  
