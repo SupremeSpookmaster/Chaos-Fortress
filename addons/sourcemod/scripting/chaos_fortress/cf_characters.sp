@@ -1260,6 +1260,7 @@ public void CFC_MapEnd()
 
 	for (int i = 0; i <= MaxClients; i++)
 	{
+		CF_UnmakeCharacter(i, false, _, false);
 		delete CF_CharacterParticles[i];
 	}
 
@@ -1321,6 +1322,7 @@ public void CF_DestroyAllBuildings(int client)
 	if (ConfigsAreDifferent)
 		CF_DestroyAllBuildings(client);
 
+	CF_UnmakeCharacter(client, false, _, false);
 	bool IsNewCharacter = ConfigsAreDifferent || b_IsDead[client] || b_FirstSpawn[client] || ForceNewCharStatus;
 	if (IsNewCharacter)
 		CF_UnmakeCharacter(client, true, ConfigsAreDifferent ? CF_CRR_SWITCHED_CHARACTER : CF_CRR_RESPAWNED);
@@ -1967,14 +1969,17 @@ public void CF_DestroyAllBuildings(int client)
  * @param isCharacterChange			Is this just a character change? If true: reduce ultimate charge instead of completely removing it.
  * @param reason			The reason the player's character is being unmade.
  */
- void CF_UnmakeCharacter(int client, bool isCharacterChange, CF_CharacterRemovalReason reason = CF_CRR_GENERIC)
+ void CF_UnmakeCharacter(int client, bool isCharacterChange, CF_CharacterRemovalReason reason = CF_CRR_GENERIC, bool CallForward = true)
  {
- 	Call_StartForward(g_OnCharacterRemoved);
- 	
- 	Call_PushCell(client);
- 	Call_PushCell(reason);
- 	
- 	Call_Finish();
+	if (CallForward)
+	{
+		Call_StartForward(g_OnCharacterRemoved);
+		
+		Call_PushCell(client);
+		Call_PushCell(reason);
+		
+		Call_Finish();
+	}
  	
  	CF_UnblockAbilitySlot(client, CF_AbilityType_Ult);
  	CF_UnblockAbilitySlot(client, CF_AbilityType_M2);
