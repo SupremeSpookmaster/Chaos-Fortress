@@ -91,7 +91,6 @@ stock void ResetToZero2(any[][] array, int length1, int length2)
 	}
 }
 
-
 #include <cf_include>
 #include <sdkhooks>
 #include <tf2_stocks>
@@ -117,14 +116,6 @@ stock void ResetToZero2(any[][] array, int length1, int length2)
 #define DEATHRAY_THROW_SOUND		"misc/hologram_start.wav"
 #define DEATHRAY_PASSIVE_SOUND		"ambient/energy/weld1.wav"
 #define DEATHRAY_END_SOUND			"misc/hologram_stop.wav"
-
-//EmitSoundToAll(KENSHOSI_GRAVITY_DRIVE_LOOP_SOUND, client, SNDCHAN_STATIC, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL);
-//EmitSoundToAll(KENSHOSI_SWORD_DISSAPEAR_SOUND, 0, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, 0.25, SNDPITCH_NORMAL, -1, loc);
-
-
-//
-
-//
 
 static int Generic_Laser_BEAM_HitDetected[MAXENTITIES];
 static int i_beacon_owner[MAXENTITIES];
@@ -499,7 +490,7 @@ static void OribtalDeathRay_Tick(int client)
 		Laser.Radius =  Radius;
 		Laser.Start_Point = Effect_Anchor_Loc;
 		Laser.End_Point = Effect_EndLoc;
-		Laser.Deal_Damage();
+		Laser.Deal_Damage_Basic();
 
 		/*float Land_Pos[3]; Land_Pos = Effect_EndLoc;
 		Land_Pos[0]+=GetRandomFloat(-150.0, 150.0);
@@ -527,7 +518,6 @@ public bool Can_I_SeeTarget_Deathray(int enemy)
 	return (enemy == Check_Line_Of_Sight(i_DeathRayUser, enemy, fl_DeathRayStart) && !IsPlayerInvis(enemy));
 }
 
-static float fl_previus_attribute_value[MAXTF2PLAYERS];
 static void SuperShotgun_Activate(int client, char abilityName[255])
 {
 	float Dmg_Bonus_Max = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Damage Bonus Max");
@@ -540,21 +530,12 @@ static void SuperShotgun_Activate(int client, char abilityName[255])
 
 	float Ratio = CF_GetSpecialResource(client) / CF_GetMaxSpecialResource(client);
 
-	float Damage_Attribute = Dmg_Bonus_Min + (Dmg_Bonus_Max - Dmg_Bonus_Min) * Ratio;
 	float PushForce = -1.0 * (KB_Min + (KB_Max - KB_Min) * Ratio);
 
-	//CPrintToChatAll("Damage_Attribute: %f", Damage_Attribute);
+	SetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack", GetGameTime()+0.75);
 
-	SetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack", 0.0);	//make it so we can fire instantly.
-
-	TF2Attrib_SetByDefIndex(weapon, 1, Damage_Attribute);
-
-	fl_previus_attribute_value[client] = GetAttributeValue(weapon, 298, 1.0);
-	TF2Attrib_SetByDefIndex(weapon, 298, 0.0);
-	CF_SetSpecialResource(client, 1.0);
-
-	static float anglesB[3];
-	static float velocity[3];
+	float anglesB[3];
+	float velocity[3];
 	GetClientEyeAngles(client, anglesB);
 	GetAngleVectors(anglesB, velocity, NULL_VECTOR, NULL_VECTOR);
 	float knockback = PushForce;
@@ -587,33 +568,106 @@ static void SuperShotgun_Activate(int client, char abilityName[255])
 
 	EmitSoundToClient(client, WidowCritSound[GetURandomInt() % sizeof(WidowCritSound)], _, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, 1.0, GetRandomInt(80, 125));
 
-	Force_Weapon_Fire(EntIndexToEntRef(client));
-	//RequestFrame(Force_Weapon_Fire, EntIndexToEntRef(client));	
-	//it being a frame later breaks lag comp since its a forced fire. However, it being used the same frame Mouse 2 is fired doesn't break lag comp?
-	//Dunno, but it sure as hell feels better to use with high ping.
-}
-static void Force_Weapon_Fire(int ref)
-{
-	int client = EntRefToEntIndex(ref);
-	if(!IsValidClient(client))
-		return;
+	float Distance = 	 	CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Distance Max"); //400.0;
+	float FallOffStart = 	CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "FallOffStart");	//150.0;
+	float FallOffMax = 		CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "FallOffMax");//0.9;
+	int Original_Section =  CF_GetArgI(client, THIS_PLUGIN_NAME, abilityName, "Sections");	//4
+	int Sections = Original_Section;
+
+	float HeightMax = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Height Max");//75.0;
+	float HeightMin = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Height Min");//10.0;
+
+	float WidthMax = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Width Max");//125.0;
+	float WidthMin = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Width Min");//25.0;
+
+	bool Penetrate = view_as<bool>(CF_GetArgI(client, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Allow Penetration"));
+
+	Generic_Laser_Trace Laser;
+	Laser.client = client;
+	Laser.DoForwardTrace_Basic(Distance, Penetrate ? INVALID_FUNCTION : Generic_Laser_BEAM_TraceWallAndEnemies);
+	float CheckDistance = GetVectorDistance(Laser.Start_Point, Laser.End_Point);
+	if(CheckDistance < Distance-10.0)
+	{
+		Sections = RoundToFloor(Original_Section*(CheckDistance/Distance));
+	}
+	//must allways have 1 section! also allows for an edge case to still trace the target.
+	if(Sections<Original_Section)
+		Sections++;
+	//edge case: you can shoot through walls LOL
+	//fix this ^
+	
+	Laser.Custom_Hull[0]=10.0;
+	Laser.CleanEnumerator();
+
+	float Angles[3];
+	GetClientEyeAngles(client, Angles);
+	float Previous_End[3]; Previous_End = Laser.End_Point;
+	for(int i=1 ; i <= Sections ; i++)
+	{
+		float Section_Ratio = (float(i)/float(Original_Section));
+		float Dist_Adjust = Distance*Section_Ratio;
+		Get_Fake_Forward_Vec(Dist_Adjust, Angles, Laser.End_Point, Laser.Start_Point);
+		Laser.Custom_Hull[1]= WidthMin + (WidthMax - WidthMin) * (1.0-Section_Ratio);
+		Laser.Custom_Hull[2]= HeightMin + (HeightMax - HeightMin) * (1.0-Section_Ratio);
+
+		Laser.EnumerateGetEntities();
+	}
+
+	float Damage_Attribute = Dmg_Bonus_Min + (Dmg_Bonus_Max - Dmg_Bonus_Min) * Ratio;
+	float Damage = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Base Damage");
+	float Damage_Behind = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Base Damage Behind");
+
+	float PenFalloff = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Penetration Per Hit FallOff");
+
+	float MetalGainBackRatio = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Metal Gain Back Ratio");
+
+	float TargetsHit = 1.0;
+
+	float MaxMetal = CF_GetMaxSpecialResource(client);
+	float Add_Metal = 0.0;
+
+	float Weapon_Loc[3];
+	GetEntityAttachment(client, LookupEntityAttachment(client, "effect_hand_r"), Weapon_Loc, NULL_VECTOR);
+
+	for(int i=0 ; i < GetRandomInt(3,6) ; i ++)
+	{
+		float Offset_LOC[3]; Offset_LOC = Previous_End;
+		Offset_LOC[0] += GetRandomFloat(-50.0, 50.0)*(CheckDistance/Distance);
+		Offset_LOC[1] += GetRandomFloat(-50.0, 50.0)*(CheckDistance/Distance);
+		Offset_LOC[2] += GetRandomFloat(-10.0, 10.0)*(CheckDistance/Distance);
+		TE_SetupBeamPoints(Laser.Start_Point, Offset_LOC, BEAM_Laser, BEAM_Glow, 0, 0, 0.5, 5.0, 5.0, 0, 1.0, GetColor(client), 3);				
+		TE_SendToAll();
+	}
+	
+	Queue Victims = Laser.GetEnumeratedEntityPop();
+	while(!Victims.Empty)
+	{
+		int victim = Victims.Pop();
 		
-	SetForceButtonState(client, true, IN_ATTACK);
-	RequestFrames(Revert_Dmg_Bonus, 5, ref);	//need to offset it more, otherwise the shot becomes unreliable
-}
-static void Revert_Dmg_Bonus(int ref)
-{
-	int client = EntRefToEntIndex(ref);
-	if(!IsValidClient(client))
-		return;
+		bool behind = IsBehindAndFacingTarget(client, victim);
 
-	int weapon = GetPlayerWeaponSlot(client, 0);
-	if(!IsValidEntity(weapon))
-		return;
+		float VicLoc[3]; GetAbsOrigin_main(victim, VicLoc);
 
-	TF2Attrib_SetByDefIndex(weapon, 1, 1.0);
-	TF2Attrib_SetByDefIndex(weapon, 298, fl_previus_attribute_value[client]);
-	SetForceButtonState(client, false, IN_ATTACK);
+		float DistRatio = CalculateFallOff(Laser.Start_Point, VicLoc, FallOffStart, FallOffMax, Distance);
+
+		float FinalDamage = DistRatio * (behind ? Damage_Behind : Damage) * Damage_Attribute * TargetsHit;
+
+		Add_Metal +=FinalDamage*MetalGainBackRatio;
+
+		SDKHooks_TakeDamage(victim, client, client, FinalDamage, DMG_BULLET | DMG_ALWAYSGIB, -1, NULL_VECTOR, VicLoc);
+
+		if(!Penetrate)
+		{
+			break;
+		}
+		TargetsHit *=PenFalloff;
+	}
+
+	if(Add_Metal > MaxMetal)
+		Add_Metal = MaxMetal;
+	CF_SetSpecialResource(client, Add_Metal);
+
+	delete Victims;
 }
 
 enum struct PadData
@@ -1300,7 +1354,7 @@ stock void GetAbsOrigin_main(int client, float v[3])
 {
 	GetEntPropVector(client, Prop_Data, "m_vecAbsOrigin", v);
 }
-void RequestFrames(RequestFrameCallback func, int frames, any data=0)
+stock void RequestFrames(RequestFrameCallback func, int frames, any data=0)
 {
 	DataPack pack = new DataPack();
 	pack.WriteFunction(func);
@@ -1346,6 +1400,8 @@ enum struct Generic_Laser_Trace
 
 	bool trace_hit;
 	bool trace_hit_enemy;
+
+	float Custom_Hull[3];
 
 	void DoForwardTrace_Basic(float Dist=-1.0, TraceEntityFilter Func_Trace = INVALID_FUNCTION)
 	{
@@ -1408,31 +1464,51 @@ enum struct Generic_Laser_Trace
 		}
 	}
 
-	void Deal_Damage(Function Attack_Function = INVALID_FUNCTION)
+	void CleanEnumerator()
 	{
-
+		i_traced_ents_amt = 0;
 		Zero(Generic_Laser_BEAM_HitDetected);
+	}
+
+	void EnumerateGetEntities(TraceEntityFilter Hull_TraceFunc = INVALID_FUNCTION)
+	{
+		if(Hull_TraceFunc==INVALID_FUNCTION)
+			Hull_TraceFunc = Generic_Laser_BEAM_TraceUsers;
 
 		float hullMin[3], hullMax[3];
-		hullMin[0] = -this.Radius;
-		hullMin[1] = hullMin[0];
-		hullMin[2] = hullMin[0];
-		hullMax[0] = -hullMin[0];
-		hullMax[1] = -hullMin[1];
-		hullMax[2] = -hullMin[2];
+		this.SetHull(hullMin, hullMax);
 
-		i_traced_ents_amt = 0;
 		if(this.client !=-1)
 			CF_StartLagCompensation(this.client);
-		Handle trace = TR_TraceHullFilterEx(this.Start_Point, this.End_Point, hullMin, hullMax, 1073741824, Generic_Laser_BEAM_TraceUsers, this.client);	// 1073741824 is CONTENTS_LADDER?
+		Handle trace = TR_TraceHullFilterEx(this.Start_Point, this.End_Point, hullMin, hullMax, 1073741824, Hull_TraceFunc, this.client);	// 1073741824 is CONTENTS_LADDER?
 		delete trace;
 		if(this.client !=-1)
 			CF_EndLagCompensation(this.client);
-		
-				
+	}
+	Queue GetEnumeratedEntityPop()
+	{
+		Queue Victims = new Queue();
+
 		for (int loop = 0; loop < i_traced_ents_amt; loop++)
-		{//so we don't have to loop through max ents worth of ents when we only have 1 valid
+		{
+			//so we don't have to loop through max ents worth of ents when we only have 1 valid
 			int victim = Generic_Laser_BEAM_HitDetected[loop];
+			if(victim)
+				Victims.Push(victim);
+		}
+
+		return Victims;
+	}
+
+	void Deal_Damage_Basic(Function Attack_Function = INVALID_FUNCTION)
+	{
+		this.CleanEnumerator();
+		this.EnumerateGetEntities();
+		Queue Victims = this.GetEnumeratedEntityPop();
+				
+		while(!Victims.Empty)
+		{
+			int victim = Victims.Pop();
 			if (victim)
 			{
 				this.trace_hit_enemy=true;
@@ -1463,13 +1539,43 @@ enum struct Generic_Laser_Trace
 						Call_PushCell(this.damagetype);
 						Call_PushFloat(this.Damage);
 						Call_Finish();
-
-						
 					}
 				}
 			}
 		}
+		delete Victims;
 	}
+	void SetHull(float hullMin[3], float hullMax[3])
+	{
+		if(this.Custom_Hull[0] != 0.0 || this.Custom_Hull[1] != 0.0 || this.Custom_Hull[2] != 0.0)
+		{
+			hullMin[0] = -this.Custom_Hull[0];
+			hullMin[1] = -this.Custom_Hull[1];
+			hullMin[2] = -this.Custom_Hull[2];
+		}
+		else
+		{
+			hullMin[0] = -this.Radius;
+			hullMin[1] = hullMin[0];
+			hullMin[2] = hullMin[0];
+		}
+		hullMax[0] = -hullMin[0];
+		hullMax[1] = -hullMin[1];
+		hullMax[2] = -hullMin[2];
+	}
+}
+stock float CalculateFallOff(float StartLoc[3], float EndLoc[3], float falloffstart, float falloffmax, float maxDist)
+{
+	float dist = GetVectorDistance(StartLoc, EndLoc);
+	//FF2Dbg("Input damage: %f", Damage);
+	if (dist > falloffstart)
+	{
+		float diff = dist - falloffstart;
+		float rad = maxDist - falloffstart;
+		
+		return (1.0 - ((diff/rad) * falloffmax));
+	}
+	return 1.0;
 }
 
 stock bool Generic_Laser_BEAM_TraceWallsOnly(int entity, int contentsMask, int client)
@@ -1492,6 +1598,10 @@ bool Generic_Laser_BEAM_TraceUsers(int entity, int contentsMask, int client)
 		{
 			for(int i=0 ; i < MAXENTITIES ; i++)
 			{
+				//don't retrace the same entity!
+				if(Generic_Laser_BEAM_HitDetected[i] == entity)
+					break;
+					
 				if(!Generic_Laser_BEAM_HitDetected[i])
 				{
 					i_traced_ents_amt++;	//so we don't have to loop through max ents worth of ents when we only have 1 valid
