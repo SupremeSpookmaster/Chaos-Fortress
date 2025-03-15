@@ -40,6 +40,7 @@
 #define MODEL_SUPPORT_BOX_GIB_4	"models/props_junk/wood_crate001a_chunk07.mdl"
 #define MODEL_SUPPORT_BOX_GIB_5	"models/props_junk/wood_crate001a_chunk01.mdl"
 #define MODEL_ANNIHILATION_TELEPORTER		"models/buildables/teleporter_light.mdl"
+#define MODEL_ANNIHILATION_BUILDING			"models/buildables/teleporter.mdl"
 #define MODEL_ANNIHILATION_BUSTER			"models/chaos_fortress/gadgeteer/annihilation_buster.mdl"
 #define MODEL_TELE_GIB_1		"models/buildables/gibs/teleporter_gib1.mdl"
 #define MODEL_TELE_GIB_2		"models/buildables/gibs/teleporter_gib2.mdl"
@@ -96,6 +97,10 @@
 #define SOUND_BUDDY_BOOTUP_LOOP			")chaos_fortress/gadgeteer/little_buddy_bootup_loop.wav"
 #define SOUND_BUDDY_ACTIVATE			")mvm/mvm_deploy_small.wav"
 #define SOUND_BUDDY_FIRE				")weapons/pistol_shoot.wav"
+#define SOUND_ANNIHILATION_BUILD_LOOP	")mvm/sentrybuster/mvm_sentrybuster_loop.wav"
+#define SOUND_ANNIHILATION_BUILD_LOOP_2	")player/quickfix_invulnerable_on.wav"
+#define SOUND_ANNIHILATION_BUILD_END	")player/invuln_off_vaccinator.wav"
+#define SOUND_TELE_BUILDING				")mvm/mvm_tank_deploy.wav"
 
 #define PARTICLE_TOSS_BUILD_1		"bot_impact_heavy"
 #define PARTICLE_TOSS_BUILD_2		"duck_pickup_ring"
@@ -244,6 +249,7 @@ public void OnMapStart()
 	PrecacheModel(MODEL_SUPPORT_BOX_GIB_5);
 	PrecacheModel(MODEL_ANNIHILATION_BUSTER);
 	PrecacheModel(MODEL_ANNIHILATION_TELEPORTER);
+	PrecacheModel(MODEL_ANNIHILATION_BUILDING);
 	PrecacheModel(MODEL_TELE_GIB_1);
 	PrecacheModel(MODEL_TELE_GIB_2);
 	PrecacheModel(MODEL_TELE_GIB_3);
@@ -299,6 +305,10 @@ public void OnMapStart()
 	PrecacheSound(SOUND_BUDDY_ACTIVATE);
 	PrecacheSound(SOUND_BUDDY_BOOTUP_LOOP);
 	PrecacheSound(SOUND_BUDDY_FIRE);
+	PrecacheSound(SOUND_ANNIHILATION_BUILD_LOOP);
+	PrecacheSound(SOUND_ANNIHILATION_BUILD_LOOP_2);
+	PrecacheSound(SOUND_ANNIHILATION_BUILD_END);
+	PrecacheSound(SOUND_TELE_BUILDING);
 	
 	for (int i = 0; i < (sizeof(g_LittleBuddyDeathSounds));   i++) { PrecacheSound(g_LittleBuddyDeathSounds[i]);   }
 	for (int i = 0; i < (sizeof(g_LittleBuddyPainSounds));   i++) { PrecacheSound(g_LittleBuddyPainSounds[i]);   }
@@ -2022,6 +2032,12 @@ public void CF_OnCharacterCreated(int client)
 //Make sure we destroy all of the client's Drones if they disconnect, change their character, or the round state changes.
 public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
+	Annihilation_DeleteTimer(client);
+	if (reason == CF_CRR_DEATH)
+	{
+		Annihilation_GiveRefund(client);
+	}
+
 	if (reason == CF_CRR_SWITCHED_CHARACTER || reason == CF_CRR_DISCONNECT || reason == CF_CRR_ROUNDSTATE_CHANGED)
 	{
 		Toss_DeleteSentries(client);
@@ -2075,6 +2091,7 @@ enum struct AA_Tele
 	float f_SDStartTime;
 	float f_SDBlastTime;
 	float f_NextBlastWarning;
+	float f_BuildEndTime;
 	
 	float f_SDDuration;
 	float f_SDRadius;
@@ -2095,6 +2112,7 @@ enum struct AA_Tele
 	float f_BusterAutoDet;
 
 	bool b_AboutToBlowUp;
+	bool b_Built;
 
 	void GetBusterStats(AA_Tele other)
 	{
@@ -2947,6 +2965,12 @@ public bool Command_OnlyPlayers(entity, contentsMask, int drone)
 	return entity != Command_User && (entity == drone || (IsValidClient(entity) && CF_IsValidTarget(entity, TF2_GetClientTeam(Command_User)))); 
 }
 
+char s_AnnihilationAbility[MAXPLAYERS + 1][255];
+float f_AnnihilationBuildWindow[MAXPLAYERS + 1] = { 0.0, ... };
+float f_AnnihilationRefundAmt[MAXPLAYERS + 1] = { 0.0, ... };
+
+Handle g_AnnihilationEndTimer[MAXPLAYERS + 1] = { INVALID_HANDLE, ... };
+
 void Gadgeteer_OnBuildingConstructed(Event event, const char[] name, bool dontBroadcast)
 {
 	int entity = event.GetInt("index");
@@ -2954,6 +2978,15 @@ void Gadgeteer_OnBuildingConstructed(Event event, const char[] name, bool dontBr
 	TFObjectType type = TF2_GetObjectType(entity);
 	if (owner == -1)
 		return;
+
+	if (GetGameTime() <= f_AnnihilationBuildWindow[owner])
+	{
+		Annihilation_Build(owner, s_AnnihilationAbility[owner], entity);
+		CF_PlayRandomSound(owner, "", "sound_annihilation_teleporter_built");
+		CF_SilenceCharacter(owner, 0.2);
+		Annihilation_DeleteTimer(owner);
+		return;
+	}
 
 	if(type == TFObject_Dispenser && CF_HasAbility(owner, GADGETEER, SUPPORTDRONE))
 	{
@@ -2975,6 +3008,7 @@ void Gadgeteer_OnBuildingConstructed(Event event, const char[] name, bool dontBr
 		Toss_SpawnSupportDrone(entity, false, 0);
 		CF_GiveSpecialResource(owner, -cost);
 		CF_PlayRandomSound(owner, "", "sound_support_drone_built");
+		CF_SilenceCharacter(owner, 0.2);
 	}
 	else if (type == TFObject_Sentry && CF_HasAbility(owner, GADGETEER, BUDDY))
 	{
@@ -2992,6 +3026,7 @@ void Gadgeteer_OnBuildingConstructed(Event event, const char[] name, bool dontBr
 
 		CF_GiveSpecialResource(owner, -cost);
 		CF_PlayRandomSound(owner, "", "sound_little_buddy_built");
+		CF_SilenceCharacter(owner, 0.2);
 	}
 }
 
@@ -3258,74 +3293,125 @@ public void PNPC_OnTouch(PNPC npc, int entity, char[] classname)
 
 public void Annihilation_Activate(int client, char abilityName[255])
 {
-	float pos[3];
-	if (Annihilation_GetSpawnPos(client, abilityName, pos))
+	ForceEquipWeaponSlot(client, 3);
+	float duration = CF_GetArgF(client, GADGETEER, abilityName, "build_window");
+	f_AnnihilationBuildWindow[client] = GetGameTime() + duration;
+	TF2_AddCondition(client, TFCond_FocusBuff, duration);
+	TF2_AddCondition(client, TFCond_MegaHeal, duration);
+	PrintCenterText(client, "BUILD SOMETHING, QUICK!");
+	strcopy(s_AnnihilationAbility[client], 255, abilityName);
+	DataPack pack = new DataPack();
+	g_AnnihilationEndTimer[client] = CreateDataTimer(duration, Annihilation_MissedChance, pack);
+	WritePackCell(pack, GetClientUserId(client));
+	WritePackCell(pack, client);
+	f_AnnihilationRefundAmt[client] = CF_GetArgF(client, GADGETEER, abilityName, "refund_amt");
+	EmitSoundToAll(SOUND_ANNIHILATION_BUILD_LOOP, client, _, _, _, _, 60);
+	EmitSoundToAll(SOUND_ANNIHILATION_BUILD_LOOP_2, client, _, _, _, _, 90);
+}
+
+public Action Annihilation_MissedChance(Handle timer, DataPack pack)
+{
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	int slot = ReadPackCell(pack);
+	delete g_AnnihilationEndTimer[slot] = null;
+
+	if (IsValidMulti(client))
 	{
-		Annihilation_DestroyTeleporter(client);
-
-		char teleName[255];
-		Format(teleName, sizeof(teleName), "Annihilation Teleporter (%N)", client);
-		int team = view_as<int>(TF2_GetClientTeam(client));
-
-		float maxHP = CF_GetArgF(client, GADGETEER, abilityName, "tele_hp", 3000.0);
-		int tele = PNPC(MODEL_ANNIHILATION_TELEPORTER, view_as<TFTeam>(team), RoundFloat(maxHP), RoundFloat(maxHP), team - 2, 1.33, 0.0, Annihilation_TeleThink, GADGETEER, 0.0, pos, NULL_VECTOR, _, _, teleName).Index;
-		
-		view_as<PNPC>(tele).f_Gravity = 9999.0;
-		view_as<PNPC>(tele).SetSequence("running");
-		view_as<PNPC>(tele).SetPlaybackRate(1.0);
-		view_as<PNPC>(tele).SetBleedParticle("buildingdamage_sparks2");
-		view_as<PNPC>(tele).AddGib(MODEL_TELE_GIB_1, "arm_attach_r");
-		view_as<PNPC>(tele).AddGib(MODEL_TELE_GIB_2, "centre_attach");
-		view_as<PNPC>(tele).AddGib(MODEL_TELE_GIB_3, "arm_attach_l");
-		view_as<PNPC>(tele).AddGib(MODEL_TELE_GIB_4, "centre_attach2");
-		view_as<PNPC>(tele).f_HealthBarHeight = 60.0;
-		view_as<PNPC>(tele).b_IsABuilding = true;
-
-		float mins[3], maxs[3];
-		mins[0] = -26.71;
-		mins[1] = -26.71;
-		mins[2] = -0.25;
-		maxs[0] = 39.206;
-		maxs[1] = 26.71;
-		maxs[2] = 15.271;
-
-		view_as<PNPC>(tele).SetBoundingBox(mins, maxs);
-
-		TeleStats[tele].owner = GetClientUserId(client);
-		TeleStats[tele].f_NextTeleBeam = 0.0;
-		TeleStats[tele].f_NextBusterWave = 0.0;
-		TeleStats[tele].f_NextBlastWarning = 0.0;
-		TeleStats[tele].f_SDStartTime = GetGameTime() + CF_GetArgF(client, GADGETEER, abilityName, "tele_duration", 2.0);
-		TeleStats[tele].f_SDDuration = CF_GetArgF(client, GADGETEER, abilityName, "tele_sdtime", 4.0);
-		TeleStats[tele].f_SDBlastTime = TeleStats[tele].f_SDStartTime + TeleStats[tele].f_SDDuration;
-		TeleStats[tele].f_SDRadius = CF_GetArgF(client, GADGETEER, abilityName, "tele_radius", 4.0);
-		TeleStats[tele].f_SDDMG = CF_GetArgF(client, GADGETEER, abilityName, "tele_dmg", 800.0);
-		TeleStats[tele].f_SDFalloffStart = CF_GetArgF(client, GADGETEER, abilityName, "tele_falloff_start", 300.0);
-		TeleStats[tele].f_SDFalloffMax = CF_GetArgF(client, GADGETEER, abilityName, "tele_falloff_max", 0.5);
-
-		TeleStats[tele].f_BusterHP = CF_GetArgF(client, GADGETEER, abilityName, "buster_hp", 150.0);
-		TeleStats[tele].f_BusterSpeed = CF_GetArgF(client, GADGETEER, abilityName, "buster_speed", 380.0);
-		TeleStats[tele].f_BusterDistance = CF_GetArgF(client, GADGETEER, abilityName, "buster_distance", 100.0);
-		TeleStats[tele].f_BusterRadius = CF_GetArgF(client, GADGETEER, abilityName, "buster_radius", 200.0);
-		TeleStats[tele].f_BusterSDDuration = CF_GetArgF(client, GADGETEER, abilityName, "buster_sdtime", 2.0);
-		TeleStats[tele].f_BusterDMG = CF_GetArgF(client, GADGETEER, abilityName, "buster_dmg", 200.0);
-		TeleStats[tele].f_BusterFalloffStart = CF_GetArgF(client, GADGETEER, abilityName, "buster_falloff_start", 80.0);
-		TeleStats[tele].f_BusterFalloffMax = CF_GetArgF(client, GADGETEER, abilityName, "buster_falloff_max", 0.5);
-		TeleStats[tele].f_BusterAutoDet = CF_GetArgF(client, GADGETEER, abilityName, "buster_auto_det", 6.0);
-
-		TeleStats[tele].f_WaveInterval = CF_GetArgF(client, GADGETEER, abilityName, "waves_interval", 2.0);
-		TeleStats[tele].i_WaveCount = CF_GetArgI(client, GADGETEER, abilityName, "waves_count", 3);
-
-		Annihilation_IsTele[tele] = true;
-
-		AttachParticleToEntity(tele, (team == 2 ? PARTICLE_ANNIHILATION_TELE_RED_1 : PARTICLE_ANNIHILATION_TELE_BLU_1), "arm_attach_L", 0.0);
-		AttachParticleToEntity(tele, (team == 2 ? PARTICLE_ANNIHILATION_TELE_RED_1 : PARTICLE_ANNIHILATION_TELE_BLU_1), "arm_attach_R", 0.0);
-		AttachParticleToEntity(tele, (team == 2 ? PARTICLE_ANNIHILATION_TELE_RED_2 : PARTICLE_ANNIHILATION_TELE_BLU_2), "centre_attach2", 0.0, _, _, 3.33);
-
-		EmitSoundToAll(SOUND_TELE_LOOP, tele, _, 110, _, _, 80);
-		EmitSoundToAll(SOUND_TELE_SPAWNED, tele, _, 120, _, _, 90);
-		SpawnParticle(pos, (team == 2 ? PARTICLE_TELE_SPAWNED_RED : PARTICLE_TELE_SPAWNED_BLUE), 2.0);
+		CF_PlayRandomSound(client, "", "sound_annihilation_out_of_time");
+		Annihilation_GiveRefund(client);
+		StopSound(client, SNDCHAN_AUTO, SOUND_ANNIHILATION_BUILD_LOOP);
+		StopSound(client, SNDCHAN_AUTO, SOUND_ANNIHILATION_BUILD_LOOP_2);
+		EmitSoundToAll(SOUND_ANNIHILATION_BUILD_END, client);
 	}
+
+	return Plugin_Continue;
+}
+
+public void Annihilation_DeleteTimer(int client)
+{
+	if (g_AnnihilationEndTimer[client] != null && g_AnnihilationEndTimer[client] != INVALID_HANDLE)
+		delete g_AnnihilationEndTimer[client];
+	StopSound(client, SNDCHAN_AUTO, SOUND_ANNIHILATION_BUILD_LOOP);
+	StopSound(client, SNDCHAN_AUTO, SOUND_ANNIHILATION_BUILD_LOOP_2);
+	EmitSoundToAll(SOUND_ANNIHILATION_BUILD_END, client);
+}
+
+public void Annihilation_GiveRefund(int client)
+{
+	CF_GiveUltCharge(client, f_AnnihilationRefundAmt[client], _, true);
+	PrintCenterText(client, "Ult charge partially refunded.");
+}
+
+public void Annihilation_Build(int client, char abilityName[255], int building)
+{
+	float pos[3], ang[3];
+	GetEntPropVector(building, Prop_Data, "m_vecAbsOrigin", pos);
+	GetEntPropVector(building, Prop_Data, "m_angRotation", ang);
+	RemoveEntity(building);
+	f_AnnihilationBuildWindow[client] = 0.0;
+	TF2_RemoveCondition(client, TFCond_FocusBuff);
+	TF2_RemoveCondition(client, TFCond_MegaHeal);
+	EmitSoundToAll(SOUND_ANNIHILATION_BUILD_END, client);
+
+	Annihilation_DestroyTeleporter(client);
+
+	char teleName[255];
+	Format(teleName, sizeof(teleName), "Annihilation Teleporter (%N)", client);
+	int team = view_as<int>(TF2_GetClientTeam(client));
+
+	float maxHP = CF_GetArgF(client, GADGETEER, abilityName, "tele_hp", 3000.0);
+	float buildTime = CF_GetArgF(client, GADGETEER, abilityName, "build_duration", 4.0);
+	int tele = PNPC(MODEL_ANNIHILATION_BUILDING, view_as<TFTeam>(team), RoundFloat(maxHP), RoundFloat(maxHP), team - 2, 1.33, 0.0, Annihilation_TeleThink, GADGETEER, 0.0, pos, ang, _, _, teleName).Index;
+	view_as<PNPC>(tele).SetSequence("build");
+	view_as<PNPC>(tele).SetPlaybackRate(10.0 / buildTime);
+	view_as<PNPC>(tele).f_Gravity = 9999.0;
+	view_as<PNPC>(tele).SetBleedParticle("buildingdamage_sparks2");
+	view_as<PNPC>(tele).AddGib(MODEL_TELE_GIB_1, "arm_attach_r");
+	view_as<PNPC>(tele).AddGib(MODEL_TELE_GIB_2, "centre_attach");
+	view_as<PNPC>(tele).AddGib(MODEL_TELE_GIB_3, "arm_attach_l");
+	view_as<PNPC>(tele).AddGib(MODEL_TELE_GIB_4, "centre_attach2");
+	view_as<PNPC>(tele).f_HealthBarHeight = 60.0;
+	view_as<PNPC>(tele).b_IsABuilding = true;
+	float mins[3], maxs[3];
+	mins[0] = -26.71;
+	mins[1] = -26.71;
+	mins[2] = -0.25;
+	maxs[0] = 39.206;
+	maxs[1] = 26.71;
+	maxs[2] = 15.271;
+
+	view_as<PNPC>(tele).SetBoundingBox(mins, maxs);
+
+	TeleStats[tele].f_BuildEndTime = GetGameTime() + buildTime;
+	TeleStats[tele].b_Built = false;
+	TeleStats[tele].owner = GetClientUserId(client);
+	TeleStats[tele].f_NextTeleBeam = 0.0;
+	TeleStats[tele].f_NextBusterWave = 0.0;
+	TeleStats[tele].f_NextBlastWarning = 0.0;
+	TeleStats[tele].f_SDStartTime = GetGameTime() + CF_GetArgF(client, GADGETEER, abilityName, "tele_duration", 2.0) + buildTime;
+	TeleStats[tele].f_SDDuration = CF_GetArgF(client, GADGETEER, abilityName, "tele_sdtime", 4.0);
+	TeleStats[tele].f_SDBlastTime = TeleStats[tele].f_SDStartTime + TeleStats[tele].f_SDDuration;
+	TeleStats[tele].f_SDRadius = CF_GetArgF(client, GADGETEER, abilityName, "tele_radius", 4.0);
+	TeleStats[tele].f_SDDMG = CF_GetArgF(client, GADGETEER, abilityName, "tele_dmg", 800.0);
+	TeleStats[tele].f_SDFalloffStart = CF_GetArgF(client, GADGETEER, abilityName, "tele_falloff_start", 300.0);
+	TeleStats[tele].f_SDFalloffMax = CF_GetArgF(client, GADGETEER, abilityName, "tele_falloff_max", 0.5);
+
+	TeleStats[tele].f_BusterHP = CF_GetArgF(client, GADGETEER, abilityName, "buster_hp", 150.0);
+	TeleStats[tele].f_BusterSpeed = CF_GetArgF(client, GADGETEER, abilityName, "buster_speed", 380.0);
+	TeleStats[tele].f_BusterDistance = CF_GetArgF(client, GADGETEER, abilityName, "buster_distance", 100.0);
+	TeleStats[tele].f_BusterRadius = CF_GetArgF(client, GADGETEER, abilityName, "buster_radius", 200.0);
+	TeleStats[tele].f_BusterSDDuration = CF_GetArgF(client, GADGETEER, abilityName, "buster_sdtime", 2.0);
+	TeleStats[tele].f_BusterDMG = CF_GetArgF(client, GADGETEER, abilityName, "buster_dmg", 200.0);
+	TeleStats[tele].f_BusterFalloffStart = CF_GetArgF(client, GADGETEER, abilityName, "buster_falloff_start", 80.0);
+	TeleStats[tele].f_BusterFalloffMax = CF_GetArgF(client, GADGETEER, abilityName, "buster_falloff_max", 0.5);
+	TeleStats[tele].f_BusterAutoDet = CF_GetArgF(client, GADGETEER, abilityName, "buster_auto_det", 6.0);
+
+	TeleStats[tele].f_WaveInterval = CF_GetArgF(client, GADGETEER, abilityName, "waves_interval", 2.0);
+	TeleStats[tele].i_WaveCount = CF_GetArgI(client, GADGETEER, abilityName, "waves_count", 3);
+
+	Annihilation_IsTele[tele] = true;
+	EmitSoundToAll(SOUND_TELE_BUILDING, tele, _, 120);
 }
 
 public void Annihilation_TeleThink(int tele)
@@ -3352,6 +3438,32 @@ public void Annihilation_TeleThink(int tele)
 	}
 
 	float gt = GetGameTime();
+	if (!TeleStats[tele].b_Built)
+	{
+		if (gt >= TeleStats[tele].f_BuildEndTime)
+		{
+			npc.SetModel(MODEL_ANNIHILATION_TELEPORTER);
+			npc.SetSequence("running");
+			npc.SetPlaybackRate(1.0);
+
+			AttachParticleToEntity(tele, (view_as<int>(team) == 2 ? PARTICLE_ANNIHILATION_TELE_RED_1 : PARTICLE_ANNIHILATION_TELE_BLU_1), "arm_attach_L", 0.0);
+			AttachParticleToEntity(tele, (view_as<int>(team) == 2 ? PARTICLE_ANNIHILATION_TELE_RED_1 : PARTICLE_ANNIHILATION_TELE_BLU_1), "arm_attach_R", 0.0);
+			AttachParticleToEntity(tele, (view_as<int>(team) == 2 ? PARTICLE_ANNIHILATION_TELE_RED_2 : PARTICLE_ANNIHILATION_TELE_BLU_2), "centre_attach2", 0.0, _, _, 3.33);
+
+			EmitSoundToAll(SOUND_TELE_LOOP, tele, _, 110, _, _, 80);
+			EmitSoundToAll(SOUND_TELE_SPAWNED, tele, _, 120, _, _, 90);
+			StopSound(tele, SNDCHAN_AUTO, SOUND_TELE_BUILDING);
+
+			float pos[3];
+			npc.GetAbsOrigin(pos);
+			SpawnParticle(pos, (view_as<int>(team) == 2 ? PARTICLE_TELE_SPAWNED_RED : PARTICLE_TELE_SPAWNED_BLUE), 2.0);
+
+			TeleStats[tele].b_Built = true;
+		}
+		else
+			return;
+	}
+
 	if (gt >= TeleStats[tele].f_NextTeleBeam)
 	{
 		float beamPos1[3], beamPos2[3];
@@ -3567,26 +3679,6 @@ void Annihilation_GetUpwardForce(float output[3], float force = 1200.0)
 
 int Annihilation_GetOwner(int entity) { return GetClientOfUserId(TeleStats[entity].owner); }
 
-bool Annihilation_GetSpawnPos(int client, char abilityName[255], float endPos[3] = NULL_VECTOR)
-{
-	float ang[3], startPos[3];
-	GetClientEyePosition(client, startPos);
-	GetClientEyeAngles(client, ang);
-	GetPointInDirection(startPos, ang, CF_GetArgF(client, GADGETEER, abilityName, "tele_spawndist", 200.0), endPos);
-
-	//Make sure we actually have line-of-sight to the spawn position:
-	CF_HasLineOfSight(startPos, endPos, _, endPos, client);
-
-	//Put the spawn position on the ground:
-	startPos = endPos;
-	endPos[2] -= 9999.0;
-	if (!CF_HasLineOfSight(startPos, endPos, _, endPos, client))
-		endPos[2] += 30.0;
-
-	//TODO: Eventually implement logic to check if the point is in a spawn room
-	return true;
-}
-
 public bool Annihilation_HasTeleporter(int client, int &entity)
 {
 	for (int i = 0; i <= 2048; i++)
@@ -3608,17 +3700,6 @@ public void Annihilation_DestroyTeleporter(int client)
 	{
 		view_as<PNPC>(tele).Gib();
 	}
-}
-
-public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result)
-{
-	if (StrEqual(plugin, GADGETEER) && StrContains(ability, ANNIHILATION) != -1)
-	{
-		result = Annihilation_GetSpawnPos(client, ability);
-		return Plugin_Changed;
-	}
-
-	return Plugin_Continue;
 }
 
 public void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, int &b, int &a)

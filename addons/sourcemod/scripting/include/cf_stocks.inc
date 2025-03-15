@@ -1337,6 +1337,18 @@ stock int CreateWearable(int client, int itemindex, char classname[255] = "tf_we
 
 bool SpookPack_Casting[MAXPLAYERS+1] = {false, ...};
 
+stock void ForceEquipWeaponSlot(int client, int slot)
+{
+	int weapon = GetPlayerWeaponSlot(client, slot);
+	if (!IsValidEntity(weapon))
+		return;
+
+	char classname[255];
+	GetEntityClassname(weapon, classname, sizeof(classname));
+	Format(classname, sizeof(classname), "use %s", classname);
+	FakeClientCommand(client, classname);
+}
+
 stock void SpookPack_CastEffect(int client)
 {
 	if (!IsValidMulti(client, true, true, false))
