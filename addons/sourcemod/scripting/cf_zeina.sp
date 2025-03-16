@@ -190,8 +190,10 @@ public void CF_OnCharacterCreated(int client)
 		{
 			SDKUnhook(client, SDKHook_PreThinkPost, ZeinalOnPreThinkPost);
 			SDKHook(client, SDKHook_PreThinkPost, ZeinalOnPreThinkPost);
+
 			SDKUnhook(client, SDKHook_PostThink, ZeinalOnPostThink);
 			SDKHook(client, SDKHook_PostThink, ZeinalOnPostThink);
+			
 			SDKUnhook(client, SDKHook_PostThinkPost, ZeinalOnPostThinkPost);
 			SDKHook(client, SDKHook_PostThinkPost, ZeinalOnPostThinkPost);
 		}
