@@ -266,9 +266,7 @@ public void CF_MapStart()
  */
 public void CF_SetGameRules(int admin)
 {
-	if (GameRules != null && GameRules != INVALID_HANDLE)
-		DeleteCfg(GameRules);
-
+	//DeleteCfg(GameRules);
 	GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 	
 	if (GameRules == null)
@@ -386,7 +384,6 @@ public void CF_SetGameRules(int admin)
 		PrintToServer("Failed to find chat messages!");
 	
 	DeleteCfg(GameRules);
-	GameRules = null;
 	
 	#if defined DEBUG_GAMERULES
 	PrintToServer("//////////////////////////////////////////////");
