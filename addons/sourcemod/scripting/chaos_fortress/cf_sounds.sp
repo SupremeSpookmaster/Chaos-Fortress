@@ -432,7 +432,7 @@ public Action NormalSoundHook(int clients[64],int &numClients,char strSound[PLAT
 	Action result;
 	Call_Finish(result);
 
-	if (result != Plugin_Stop && result != Plugin_Handled)
+	if (result != Plugin_Stop && result != Plugin_Handled && IsValidClient(entity))
 	{
 		if (StrContains(strSound, "vo/") != -1)
 		{
