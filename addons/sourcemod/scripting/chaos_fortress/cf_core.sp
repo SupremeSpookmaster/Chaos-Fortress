@@ -87,7 +87,7 @@ public void CF_OnPluginStart()
 	SteamWorks_SetGameDescription(GAME_DESCRIPTION);
 
 	//TODO
-	/*GameData gd = new GameData("chaos_fortress");
+	GameData gd = new GameData("chaos_fortress");
 
     DynamicDetour dtApplyPushFromDamage = DynamicDetour.FromConf(gd, "CTFPlayer::ApplyPushFromDamage()");
 
@@ -97,7 +97,7 @@ public void CF_OnPluginStart()
     dtApplyPushFromDamage.Enable(Hook_Pre, OnApplyPushFromDamagePre);
     dtApplyPushFromDamage.Enable(Hook_Post, OnApplyPushFromDamagePost);
 
-    delete gd;*/
+    delete gd;
 }
 
 public void CF_ReloadSubplugins()
@@ -748,20 +748,46 @@ public void ArrowTouchNonCombatEntity(int entity, int other)
 	}
 }
 
+enum eTakeDamageInfo {
+    // Vectors.
+    m_DamageForce,
+    m_DamagePosition = 12,
+    m_ReportedPosition = 24,
+
+    m_Inflictor = 36,
+    m_Attacker,
+    m_Weapon,
+    m_Damage,
+    m_MaxDamage,
+    m_BaseDamage,
+    m_BitsDamageType,
+    m_DamageCustom,
+    m_DamageStats,
+    m_AmmoType,
+    m_DamagedOtherPlayers,
+    m_PlayerPenetrationCount,
+    m_DamageBonus,
+    m_DamageBonusProvider,
+    m_ForceFriendlyFire,
+    m_DamageForForce,
+    m_CritType
+};
+
+bool b_IgnoreKnockbackModifier[MAXPLAYERS + 1] = { false, ... };
+
+void CF_IgnoreNextKB(int client) { b_IgnoreKnockbackModifier[client] = true; }
+
 //Thank you Suza/Zabaniya!
-//TODO
-/*public MRESReturn OnApplyPushFromDamagePre(int iClient, DHookParam hParams)
+//TODO: Turn the weight stat into a multiplier instead of a flat value, apply it here.
+//Also make sure to update the custom knockback to account for this.
+//Also also, make a forward and call it in here to allow for knockback modification.
+public MRESReturn OnApplyPushFromDamagePre(int iClient, DHookParam hParams)
 {
     if(!IsValidClient(iClient))
         return MRES_Ignored;
 
-	Address aTakeDamageInfo = hParams.Get(1);
-    int weapon = LoadEntityHandleFromAddress(AddressOffset(aTakeDamageInfo, m_Weapon * 0x04));
-	if (IsValidEntity(weapon))
-	{
-		if (GetEntPropEnt(weapon, Prop_Send, "m_hOwnerEntity") == iClient)
-			return MRES_Ignored;
-	}
+	if (b_IgnoreKnockbackModifier[iClient])
+		return MRES_Ignored;
 
     float fCurrentKnockback = TF2Attrib_GetFloatValueFromName(iClient, "damage force increase hidden");
 
@@ -777,12 +803,10 @@ public MRESReturn OnApplyPushFromDamagePost(int iClient, DHookParam hParams)
     if(!IsValidClient(iClient))
         return MRES_Ignored;
 
-	Address aTakeDamageInfo = hParams.Get(1);
-    int weapon = LoadEntityHandleFromAddress(AddressOffset(aTakeDamageInfo, m_Weapon * 0x04));
-	if (IsValidEntity(weapon))
+	if (b_IgnoreKnockbackModifier[iClient])
 	{
-		if (GetEntPropEnt(weapon, Prop_Send, "m_hOwnerEntity") == iClient)
-			return MRES_Ignored;
+		b_IgnoreKnockbackModifier[iClient] = false;
+		return MRES_Ignored;
 	}
 
     // Retrieving the original knockback ( the one before we changed theirs ) by doing math.
@@ -791,4 +815,4 @@ public MRESReturn OnApplyPushFromDamagePost(int iClient, DHookParam hParams)
     TF2Attrib_AddCustomPlayerAttribute(iClient, "damage force increase hidden", fOldKnockback);
 
     return MRES_Ignored;
-}*/
+}

@@ -158,6 +158,9 @@ public void CFDMG_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor
 		CF_GiveSpecialResource(victim, dmgForResource, CF_ResourceType_DamageTaken);
 		CF_GiveUltCharge(victim, dmgForResource, CF_ResourceType_DamageTaken);
 	}
+
+	if (victim == attacker)
+		CF_IgnoreNextKB(victim);
 }
 
 public Action CFDMG_OnTakeDamageAlive(victim, &attacker, &inflictor, &Float:damage, &damagetype, &weapon,

@@ -43,31 +43,6 @@ float OFF_THE_MAP[3] = {1182792704.0, 1182792704.0, -964690944.0};
 
 float PhysProp_CurrentSpeed[2049] = { 0.0, ... };
 
-enum eTakeDamageInfo {
-    // Vectors.
-    m_DamageForce,
-    m_DamagePosition = 12,
-    m_ReportedPosition = 24,
-
-    m_Inflictor = 36,
-    m_Attacker,
-    m_Weapon,
-    m_Damage,
-    m_MaxDamage,
-    m_BaseDamage,
-    m_BitsDamageType,
-    m_DamageCustom,
-    m_DamageStats,
-    m_AmmoType,
-    m_DamagedOtherPlayers,
-    m_PlayerPenetrationCount,
-    m_DamageBonus,
-    m_DamageBonusProvider,
-    m_ForceFriendlyFire,
-    m_DamageForForce,
-    m_CritType
-};
-
 enum ViewmodelSequence
 {
 	VMS_Melee_Swing_1 = 8,
