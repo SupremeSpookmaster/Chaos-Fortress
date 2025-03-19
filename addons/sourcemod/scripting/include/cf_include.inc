@@ -684,8 +684,9 @@ forward void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, in
  * @param client		The client to apply push force to.
  * @param multiplier	The amount to multiply push force, after CF's global knockback modifier and the weight stat of the client's character have been applied.
  * 						Can be modified.
+ * @param selfKB		If true: this push force was applied by self-inflicted damage.
  */
-forward void CF_OnPushForceApplied(int client, float &multiplier);
+forward void CF_OnPushForceApplied(int client, float &multiplier, bool selfKB);
 
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
