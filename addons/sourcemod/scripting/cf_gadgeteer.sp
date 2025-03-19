@@ -3604,7 +3604,7 @@ public void Annihilation_TeleThink(int tele)
 				TeleStats[buster].f_AutoDetTime = GetGameTime() + TeleStats[buster].f_BusterAutoDet;
 
 				randAng[0] = GetRandomFloat(-70.0, -85.0);
-				GetVelocityInDirection(randAng, 400.0, vel);
+				GetVelocityInDirection(randAng, 250.0, vel);
 				view_as<PNPC>(buster).SetVelocity(vel);
 			}
 		}
