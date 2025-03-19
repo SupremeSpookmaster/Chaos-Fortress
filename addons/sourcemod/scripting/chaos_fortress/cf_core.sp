@@ -792,7 +792,13 @@ public MRESReturn OnApplyPushFromDamagePre(int iClient, DHookParam hParams)
 
     float fCurrentKnockback = TF2Attrib_GetFloatValueFromName(iClient, "damage force increase hidden");
 
-	float modifier = f_GlobalKnockbackValue * (1.0 - CF_GetCharacterWeight(iClient));
+	float weightMod = 1.0 - CF_GetCharacterWeight(iClient);
+	
+	float modifier;
+	if (weightMod <= 0.0)
+		modifier = 0.0;
+	else
+		modifier = f_GlobalKnockbackValue * weightMod;
 
 	Call_StartForward(g_OnPushForce);
 	Call_PushCell(iClient);
