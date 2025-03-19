@@ -1930,7 +1930,7 @@ public void CF_DestroyAllBuildings(int client)
  		
  	if (!IgnoreWeight)
  	{
- 		force -= CF_GetCharacterWeight(client);
+ 		force *= 1.0 - (CF_GetCharacterWeight(client));
  		if (force <= 0.0)
  			return;
  	}

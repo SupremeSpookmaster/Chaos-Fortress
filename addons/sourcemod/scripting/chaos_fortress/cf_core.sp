@@ -31,6 +31,7 @@ GlobalForward g_OnPlayerKilled;
 GlobalForward g_OnRoundStateChanged;
 GlobalForward g_OnPlayerKilled_Pre;
 GlobalForward g_PhysTouch;
+GlobalForward g_OnPushForce;
 
 public ConfigMap GameRules;
 
@@ -80,7 +81,8 @@ public void CF_OnPluginStart()
 	g_OnPlayerKilled_Pre = new GlobalForward("CF_OnPlayerKilled_Pre", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_String, Param_String, Param_CellByRef, Param_Cell, Param_CellByRef, Param_CellByRef);
 	g_OnRoundStateChanged = new GlobalForward("CF_OnRoundStateChanged", ET_Ignore, Param_Cell);
 	g_PhysTouch = new GlobalForward("CF_OnPhysPropHitByProjectile", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_String, Param_Cell, Param_Float, Param_Array);
-	
+	g_OnPushForce = new GlobalForward("CF_OnPushForceApplied", ET_Ignore, Param_Cell, Param_FloatByRef);
+
 	g_WeaponDropLifespan = FindConVar("tf_dropped_weapon_lifetime");
 	g_WeaponDropLifespan.IntValue = 0;
 	
@@ -774,13 +776,12 @@ enum eTakeDamageInfo {
 };
 
 bool b_IgnoreKnockbackModifier[MAXPLAYERS + 1] = { false, ... };
+float f_KnockbackModifier[MAXPLAYERS + 1] = { 0.0, ... };
 
 void CF_IgnoreNextKB(int client) { b_IgnoreKnockbackModifier[client] = true; }
 
 //Thank you Suza/Zabaniya!
-//TODO: Turn the weight stat into a multiplier instead of a flat value, apply it here.
-//Also make sure to update the custom knockback to account for this.
-//Also also, make a forward and call it in here to allow for knockback modification.
+//Some mild edits made by me for added customization.
 public MRESReturn OnApplyPushFromDamagePre(int iClient, DHookParam hParams)
 {
     if(!IsValidClient(iClient))
@@ -791,9 +792,17 @@ public MRESReturn OnApplyPushFromDamagePre(int iClient, DHookParam hParams)
 
     float fCurrentKnockback = TF2Attrib_GetFloatValueFromName(iClient, "damage force increase hidden");
 
-    float fNewKnockback = fCurrentKnockback * f_GlobalKnockbackValue;
+	float modifier = f_GlobalKnockbackValue * (1.0 - CF_GetCharacterWeight(iClient));
+
+	Call_StartForward(g_OnPushForce);
+	Call_PushCell(iClient);
+	Call_PushFloatRef(modifier);
+	Call_Finish();
+
+    float fNewKnockback = fCurrentKnockback * modifier;
 
     TF2Attrib_AddCustomPlayerAttribute(iClient, "damage force increase hidden", fNewKnockback);
+	f_KnockbackModifier[iClient] = modifier;
 
     return MRES_Ignored;
 }
@@ -809,8 +818,12 @@ public MRESReturn OnApplyPushFromDamagePost(int iClient, DHookParam hParams)
 		return MRES_Ignored;
 	}
 
-    // Retrieving the original knockback ( the one before we changed theirs ) by doing math.
-    float fOldKnockback = TF2Attrib_GetFloatValueFromName(iClient, "damage force increase hidden") / f_GlobalKnockbackValue;
+	float fOldKnockback;
+	if (f_KnockbackModifier[iClient] == 0.0)
+		fOldKnockback = TF2Attrib_GetFloatValueFromName(iClient, "damage force increase hidden");
+	else
+   		fOldKnockback = TF2Attrib_GetFloatValueFromName(iClient, "damage force increase hidden") / f_KnockbackModifier[iClient];
+
     TF2Attrib_RemoveCustomPlayerAttribute(iClient, "damage force increase hidden");
     TF2Attrib_AddCustomPlayerAttribute(iClient, "damage force increase hidden", fOldKnockback);
 

@@ -677,6 +677,16 @@ forward void CF_OnForcedVMAnimEnd(int client, char sequence[255]);
  */
 forward void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, int &b, int &a);
 
+/**
+ * Called when TF2 applies push force to a player from a weapon.
+ * DOES NOT get called by SDKHooks_TakeDamage if the weapon parameter is not set to a weapon.
+ * 
+ * @param client		The client to apply push force to.
+ * @param multiplier	The amount to multiply push force, after CF's global knockback modifier and the weight stat of the client's character have been applied.
+ * 						Can be modified.
+ */
+forward void CF_OnPushForceApplied(int client, float &multiplier);
+
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
 ///////////////////////////////////////
