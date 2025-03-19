@@ -3553,37 +3553,62 @@ public void Annihilation_TeleThink(int tele)
 		SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_TELE_WAVE_1_RED : PARTICLE_TELE_WAVE_1_BLUE, 1.0);
 		SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_TELE_WAVE_2_RED : PARTICLE_TELE_WAVE_2_BLUE, 1.0);
 
-		for (int i = 0; i < TeleStats[tele].i_WaveCount; i++)
+		int closest = CF_GetClosestTarget(pos, true, _, 90.0, grabEnemyTeam(client));
+		if (IsValidMulti(closest, _, _, true, grabEnemyTeam(client)))
 		{
-			float randAng[3];
-			randAng[1] = GetRandomFloat(0.0, 360.0);
-			pos[2] += 20.0;
+			SpawnParticle(pos, PARTICLE_BUSTER_EXPLODE, 2.0);
+			EmitSoundToAll(SOUND_BUSTER_EXPLODE, tele, _, 110, _, _, GetRandomInt(80, 120));
 
-			char busterName[255];
-			Format(busterName, sizeof(busterName), "Annihilation Buster (%N)", client);
-			int teamNum = view_as<int>(TF2_GetClientTeam(client));
+			pos[2] += 40.0;
+			busting = true;
+			Handle vic = CF_GenericAOEDamage(client, client, client, TeleStats[tele].f_BusterDMG * 2.0, DMG_BLAST|DMG_CLUB|DMG_ALWAYSGIB, TeleStats[tele].f_BusterRadius, pos, TeleStats[tele].f_BusterFalloffStart, TeleStats[tele].f_BusterFalloffMax, true, false);
+			delete vic;
+			busting = false;
+			SpawnShaker(pos, 12, 200, 4, 4, 4);
 
-			int buster = PNPC(MODEL_ANNIHILATION_BUSTER, team, RoundFloat(TeleStats[tele].f_BusterHP), RoundFloat(TeleStats[tele].f_BusterHP), teamNum - 2, 0.66, TeleStats[tele].f_BusterSpeed, Annihilation_BusterThink, GADGETEER, 0.0, pos, randAng, _, _, busterName).Index;
-			
-			view_as<PNPC>(buster).SetSequence("Run_MELEE");
-			view_as<PNPC>(buster).SetPlaybackRate(1.0);
-			view_as<PNPC>(buster).SetBleedParticle("buildingdamage_sparks2");
+			pos[2] += 30.0;
+			int text = WorldText_Create(pos, NULL_VECTOR, "Telefragged!", 22.5, _, _, _, 120, 255, 120, 255, true);
+			if (IsValidEntity(text))	
+				WorldText_MimicHitNumbers(text);
+		}
+		else
+		{
+			for (int i = 0; i < TeleStats[tele].i_WaveCount; i++)
+			{
+				float randAng[3], vel[3];
+				randAng[1] = GetRandomFloat(0.0, 360.0);
+				pos[2] += 20.0;
 
-			//TODO: Change gibs
-			view_as<PNPC>(buster).AddGib(MODEL_TELE_GIB_1, "arm_attach_r");
-			view_as<PNPC>(buster).AddGib(MODEL_TELE_GIB_2, "centre_attach");
-			view_as<PNPC>(buster).AddGib(MODEL_TELE_GIB_3, "arm_attach_l");
-			view_as<PNPC>(buster).AddGib(MODEL_TELE_GIB_4, "centre_attach2");
-			view_as<PNPC>(buster).f_HealthBarHeight = 60.0;
-			view_as<PNPC>(buster).b_IsABuilding = true;
+				char busterName[255];
+				Format(busterName, sizeof(busterName), "Annihilation Buster (%N)", client);
+				int teamNum = view_as<int>(TF2_GetClientTeam(client));
 
-			EmitSoundToAll(SOUND_BUSTER_LOOP, buster, _, _, _, _, 110);
-			AttachParticleToEntity(buster, team == TFTeam_Red ? PARTICLE_BUSTER_GLOW_RED : PARTICLE_BUSTER_GLOW_BLUE, "root", 4.0);
+				int buster = PNPC(MODEL_ANNIHILATION_BUSTER, team, RoundFloat(TeleStats[tele].f_BusterHP), RoundFloat(TeleStats[tele].f_BusterHP), teamNum - 2, 0.66, TeleStats[tele].f_BusterSpeed, Annihilation_BusterThink, GADGETEER, 0.0, pos, randAng, _, _, busterName).Index;
+				
+				view_as<PNPC>(buster).SetSequence("Run_MELEE");
+				view_as<PNPC>(buster).SetPlaybackRate(1.0);
+				view_as<PNPC>(buster).SetBleedParticle("buildingdamage_sparks2");
 
-			TeleStats[buster].GetBusterStats(TeleStats[tele]);
-			TeleStats[buster].owner = GetClientUserId(client);
-			TeleStats[buster].b_AboutToBlowUp = false;
-			TeleStats[buster].f_AutoDetTime = GetGameTime() + TeleStats[buster].f_BusterAutoDet;
+				//TODO: Change gibs
+				view_as<PNPC>(buster).AddGib(MODEL_TELE_GIB_1, "arm_attach_r");
+				view_as<PNPC>(buster).AddGib(MODEL_TELE_GIB_2, "centre_attach");
+				view_as<PNPC>(buster).AddGib(MODEL_TELE_GIB_3, "arm_attach_l");
+				view_as<PNPC>(buster).AddGib(MODEL_TELE_GIB_4, "centre_attach2");
+				view_as<PNPC>(buster).f_HealthBarHeight = 60.0;
+				view_as<PNPC>(buster).b_IsABuilding = true;
+
+				EmitSoundToAll(SOUND_BUSTER_LOOP, buster, _, _, _, _, 110);
+				AttachParticleToEntity(buster, team == TFTeam_Red ? PARTICLE_BUSTER_GLOW_RED : PARTICLE_BUSTER_GLOW_BLUE, "root", 4.0);
+
+				TeleStats[buster].GetBusterStats(TeleStats[tele]);
+				TeleStats[buster].owner = GetClientUserId(client);
+				TeleStats[buster].b_AboutToBlowUp = false;
+				TeleStats[buster].f_AutoDetTime = GetGameTime() + TeleStats[buster].f_BusterAutoDet;
+
+				randAng[0] = GetRandomFloat(-70.0, -85.0);
+				GetVelocityInDirection(randAng, 400.0, vel);
+				view_as<PNPC>(buster).SetVelocity(vel);
+			}
 		}
 			
 		EmitSoundToAll(SOUND_TELE_WAVE, tele, _, 120, _, _, GetRandomInt(80, 100));
