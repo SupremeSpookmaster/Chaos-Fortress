@@ -197,6 +197,7 @@ float Absorb_Speed[MAXPLAYERS + 1] = { 0.0, ... };
 float Absorb_Heal[MAXPLAYERS + 1] = { 0.0, ... };
 float Absorb_Swing[MAXPLAYERS + 1] = { 0.0, ... };
 float Absorb_Melee[MAXPLAYERS + 1] = { 0.0, ... };
+float Absorb_Weight[MAXPLAYERS + 1] = { 0.0, ... };
 int Absorb_Left[MAXPLAYERS + 1] = { -1, ... };
 int Absorb_Right[MAXPLAYERS + 1] = { -1, ... };
 
@@ -226,6 +227,8 @@ public void Absorb_Activate(int client, char abilityName[255])
 	float currentDmg = GetAttributeValue(weapon, 2, 1.0);
 	Absorb_Melee[client] = bonusDmg + currentDmg;
 	
+	Absorb_Weight[client] = CF_GetArgF(client, SPOOKMASTER, abilityName, "weight_bonus", 0.1);
+
 	Absorb_SetStats(client);
 	Absorb_Uses[client]++;
 }
@@ -262,6 +265,7 @@ void Absorb_SetStats(int client, float NumTimes = 0.0)
 	TF2Attrib_SetByDefIndex(weapon, 396, Absorb_Swing[client]);
 	TF2Attrib_SetByDefIndex(weapon, 2, Absorb_Melee[client]);
 	CF_SetCharacterScale(client, NumTimes > 0.0 ? 1.0 + (0.05 * NumTimes) : CF_GetCharacterScale(client) + 0.05, CF_StuckMethod_DelayResize);
+	CF_SetCharacterWeight(client, CF_GetCharacterWeight(client) + (NumTimes + Absorb_Weight[client]));
 	
 	Absorb_DestroyEyeParticles(client);
 	
