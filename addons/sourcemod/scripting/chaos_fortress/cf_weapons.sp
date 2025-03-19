@@ -7,6 +7,7 @@ char s_WeaponFireSound[2049][255];
 
 bool b_WeaponIsVisible[2049] = { false, ... };
 bool b_EquippingWeapon[MAXPLAYERS + 1] = { false, ... };
+float f_NextPDAWarning[MAXPLAYERS + 1] = { 0.0, ... };
 
 GlobalForward g_CalcAttackRate;
 
@@ -25,6 +26,7 @@ public void CFW_MapChange()
 	for (int i = 0; i <= MaxClients; i++)
 	{
 		b_EquippingWeapon[i] = false;
+		f_NextPDAWarning[i] = 0.0;
 	}
 }
 
@@ -238,13 +240,20 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 	if (autoEquip)
 		EquipPlayerWeapon(client, entity);
 
-	/*if(StrEqual(name, "tf_weapon_builder"))
+	if(StrEqual(name, "tf_weapon_builder"))
 	{
-		SetEntProp(entity, Prop_Send, "m_aBuildableObjectTypes", true, _, 0);
+		if (GetGameTime() >= f_NextPDAWarning[client])
+		{
+			CPrintToChat(client, "{indigo}[Chaos Fortress] {yellow}NOTICE{default} - Engineer PDAs are currently {red}bugged{default}. You must touch a resupply locker before you can build.");
+			f_NextPDAWarning[client] = GetGameTime() + 0.1;
+			EmitSoundToClient(client, "buttons/button9.wav");
+		}
+
+		/*SetEntProp(entity, Prop_Send, "m_aBuildableObjectTypes", true, _, 0);
 		SetEntProp(entity, Prop_Send, "m_aBuildableObjectTypes", true, _, 1);
 		SetEntProp(entity, Prop_Send, "m_aBuildableObjectTypes", true, _, 2);
-		SetEntProp(entity, Prop_Send, "m_aBuildableObjectTypes", false, _, 3);
-	}*/
+		SetEntProp(entity, Prop_Send, "m_aBuildableObjectTypes", false, _, 3);*/
+	}
 
 	SetEntProp(entity, Prop_Send, "m_iAccountID", GetSteamAccountID(client, false));
 

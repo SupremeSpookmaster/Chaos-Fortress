@@ -90,6 +90,7 @@ public void OnPluginStart()
 
 #define SND_ADMINCOMMAND		"ui/cyoa_ping_in_progress.wav"
 #define SND_RESPAWN				"mvm/mvm_revive.wav"
+#define SND_HINT				"buttons/button9.wav"
 
 public OnMapStart()
 {
@@ -99,6 +100,7 @@ public OnMapStart()
 	CFS_MapChange();
 	PrecacheSound(SND_ADMINCOMMAND);
 	PrecacheSound(SND_RESPAWN);
+	PrecacheSound(SND_HINT);
 }
 
 public OnMapEnd()
