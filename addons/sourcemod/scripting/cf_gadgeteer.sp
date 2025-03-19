@@ -2033,15 +2033,16 @@ public void CF_OnCharacterCreated(int client)
 {
 	
 }
-
+Handle g_AnnihilationEndTimer[MAXPLAYERS + 1] = { INVALID_HANDLE, ... };
 //Make sure we destroy all of the client's Drones if they disconnect, change their character, or the round state changes.
 public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
-	Annihilation_DeleteTimer(client);
-	if (reason == CF_CRR_DEATH)
+	if (reason == CF_CRR_DEATH && g_AnnihilationEndTimer[client] != null && g_AnnihilationEndTimer[client] != INVALID_HANDLE)
 	{
 		Annihilation_GiveRefund(client);
 	}
+
+	Annihilation_DeleteTimer(client);
 
 	if (reason == CF_CRR_SWITCHED_CHARACTER || reason == CF_CRR_DISCONNECT || reason == CF_CRR_ROUNDSTATE_CHANGED)
 	{
@@ -2284,22 +2285,12 @@ enum struct LittleBuddy
 		float startPos[3], endPos[3], ang[3];
 		GetEntityAttachment(pistol, LookupEntityAttachment(pistol, "muzzle"), startPos, ang);
 		CF_WorldSpaceCenter(target, endPos);
-		SubtractVectors(endPos, startPos, endPos);
-		NormalizeVector(endPos, endPos);
-		ScaleVector(endPos, 9999.0);
 
-		ArrayList victims = CF_DoBulletTrace(client, startPos, endPos, _, grabEnemyTeam(client), _, _, endPos);
-		for (int i = 0; i < GetArraySize(victims); i++)
-		{
-			int vic = GetArrayCell(victims, i);
-			
-			littleBuddyKill = true;
-			littleBuddySentryMode = this.b_SentryMode;
-			SDKHooks_TakeDamage(vic, this.me.Index, client, (this.b_SentryMode ? this.f_IdleDamage : this.f_Damage), DMG_BULLET|DMG_PREVENT_PHYSICS_FORCE);
-			littleBuddyKill = false;
-			littleBuddySentryMode = false;
-		}
-		delete victims;
+		littleBuddyKill = true;
+		littleBuddySentryMode = this.b_SentryMode;
+		SDKHooks_TakeDamage(target, this.me.Index, client, (this.b_SentryMode ? this.f_IdleDamage : this.f_Damage), DMG_BULLET|DMG_PREVENT_PHYSICS_FORCE);
+		littleBuddyKill = false;
+		littleBuddySentryMode = false;
 
 		SpawnParticle_ControlPoints(startPos, endPos, PARTICLE_BUDDY_TRACER, 0.2);
 		SpawnParticle(startPos, PARTICLE_BUDDY_MUZZLE, 0.5);
@@ -2475,6 +2466,7 @@ public Action CF_OnPhysPropHitByProjectile(int prop, int entity, TFTeam propTeam
 		float finalCost = totalHealing / healPerScrap;
 		
 		CF_GiveSpecialResource(entityOwner, -finalCost);
+		CF_GiveUltCharge(entityOwner, totalHealing, CF_ResourceType_Healing);
 	}
 	else
 		return Plugin_Continue;
@@ -2973,9 +2965,12 @@ public void Support_Command(int client, char abilityName[255])
 			SpawnParticle(pos, PARTICLE_SUPPORT_COMMANDED, 2.0);
 			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
 			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+			EmitSoundToClient(target, SOUND_SUPPORT_COMMANDED);
+			EmitSoundToClient(target, SOUND_SUPPORT_COMMANDED);
 			char charName[255];
 			CF_GetCharacterName(target, charName, sizeof(charName));
 			PrintCenterText(client, "Your Support Drone is now following %s (%N)", charName, target);
+			PrintCenterText(target, "%N's Support Drone is now following you!", client);
 		}
 	}
 }
@@ -2988,8 +2983,6 @@ public bool Command_OnlyPlayers(entity, contentsMask, int drone)
 char s_AnnihilationAbility[MAXPLAYERS + 1][255];
 float f_AnnihilationBuildWindow[MAXPLAYERS + 1] = { 0.0, ... };
 float f_AnnihilationRefundAmt[MAXPLAYERS + 1] = { 0.0, ... };
-
-Handle g_AnnihilationEndTimer[MAXPLAYERS + 1] = { INVALID_HANDLE, ... };
 
 void Gadgeteer_OnBuildingConstructed(Event event, const char[] name, bool dontBroadcast)
 {
@@ -3290,6 +3283,7 @@ public void PNPC_OnTouch(PNPC npc, int entity, char[] classname)
 		
 		float finalCost = totalHealing / healPerScrap;
 		CF_GiveSpecialResource(entityOwner, -finalCost);
+		CF_GiveUltCharge(entityOwner, totalHealing, CF_ResourceType_Healing);
 	}
 	else
 		return;
@@ -3849,6 +3843,10 @@ public void Scrap_Hit(int attacker, int victim, float &baseDamage, bool &allowFa
 			float finalCost = totalHealing / healPerScrap;
 			
 			CF_GiveSpecialResource(attacker, -finalCost);
+
+			int owner = GetEntPropEnt(victim, Prop_Send, "m_hOwnerEntity");
+			if (owner != attacker)
+				CF_GiveUltCharge(attacker, totalHealing, CF_ResourceType_Healing);
 		}
 		else
 			return;
@@ -3920,7 +3918,7 @@ public void Buddy_Spawn(DataPack pack)
 	char buddyName[255];
 	Format(buddyName, sizeof(buddyName), "Little Buddy (%N)", client);
 
-	PNPC buddy = PNPC(MODEL_BUDDY, team, hp, hp, _, 0.66, speed, Buddy_Think, GADGETEER, 0.0, pos, ang, _, _, buddyName);
+	PNPC buddy = PNPC(MODEL_BUDDY, team, hp, hp, _, 0.66, speed, Buddy_Think, GADGETEER, 0.1, pos, ang, _, _, buddyName);
 	if (!IsValidEntity(buddy.Index))
 		return;
 
@@ -4155,10 +4153,13 @@ public void Buddy_Command(int client, char abilityName[255])
 			SpawnParticle(pos, PARTICLE_SUPPORT_COMMANDED, 2.0);
 			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
 			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
+			EmitSoundToClient(target, SOUND_SUPPORT_COMMANDED);
+			EmitSoundToClient(target, SOUND_SUPPORT_COMMANDED);
 			EmitSoundToAll(g_LittleBuddyCommandedSounds[GetRandomInt(0, sizeof(g_LittleBuddyCommandedSounds) - 1)], buddy, _, _, _, _, GetRandomInt(110, 120));
 			char charName[255];
 			CF_GetCharacterName(target, charName, sizeof(charName));
 			PrintCenterText(client, "Your Little Buddy is now protecting %s (%N)", charName, target);
+			PrintCenterText(target, "%N's Little Buddy is now protecting you!", client);
 		}
 	}
 }

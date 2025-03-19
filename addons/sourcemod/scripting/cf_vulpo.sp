@@ -518,8 +518,8 @@ Action Timer_AmpThink(Handle timer, int ref)
 			}
 		}
 
-		if(owner != -1)
-			CF_GiveUltCharge(owner, ultCharge, CF_ResourceType_Generic);
+		//if(owner != -1)
+		//	CF_GiveUltCharge(owner, ultCharge, CF_ResourceType_Generic);
 
 		if(metal > 400)
 			metal = 400;
