@@ -624,8 +624,8 @@ static void SuperShotgun_Activate(int client, char abilityName[255])
 	float MaxMetal = CF_GetMaxSpecialResource(client);
 	float Add_Metal = 0.0;
 
-	float Weapon_Loc[3];
-	GetEntityAttachment(client, LookupEntityAttachment(client, "effect_hand_r"), Weapon_Loc, NULL_VECTOR);
+	//float Weapon_Loc[3];
+	//GetEntityAttachment(client, LookupEntityAttachment(client, "effect_hand_r"), Weapon_Loc, NULL_VECTOR);
 
 	for(int i=0 ; i < GetRandomInt(3,6) ; i ++)
 	{
@@ -645,7 +645,6 @@ static void SuperShotgun_Activate(int client, char abilityName[255])
 		if(victim != Check_Line_Of_Sight(client, victim))
 			continue;
 
-		
 		bool behind = IsBehindAndFacingTarget(client, victim);
 
 		float VicLoc[3]; GetAbsOrigin_main(victim, VicLoc);
@@ -656,7 +655,10 @@ static void SuperShotgun_Activate(int client, char abilityName[255])
 
 		Add_Metal +=FinalDamage*MetalGainBackRatio;
 
-		SDKHooks_TakeDamage(victim, client, client, FinalDamage, DMG_BULLET | DMG_ALWAYSGIB, -1, NULL_VECTOR, VicLoc);
+		SDKHooks_TakeDamage(victim, weapon, client, FinalDamage, (DMG_BULLET | DMG_ALWAYSGIB), -1, NULL_VECTOR, VicLoc);
+
+		if(victim <=MaxClients)
+			EmitSoundToClient(victim, WidowCritSound[GetURandomInt() % sizeof(WidowCritSound)], _, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, 1.0, GetRandomInt(80, 125));
 
 		if(!Penetrate)
 		{
