@@ -429,59 +429,64 @@ public Action NormalSoundHook(int clients[64],int &numClients,char strSound[PLAT
 	Call_PushCellRef(pitch);
 	Call_PushCellRef(flags);
 	
-	Action result;
+	Action result = Plugin_Continue;
 	Call_Finish(result);
 
-	if (result != Plugin_Stop && result != Plugin_Handled && IsValidClient(entity))
+	if (IsValidClient(entity))
 	{
-		if (StrContains(strSound, "vo/") != -1)
+		if (result != Plugin_Stop && result != Plugin_Handled)
 		{
-			float gameTime = GetGameTime();
-			if (gameTime >= f_LastSoundHook[entity] && gameTime >= f_Silenced[entity])
+			if (StrContains(strSound, "vo/") != -1)
 			{
-				if (IsCasting(entity) && StrContains(strSound, "sf13_spell_") != -1)
-					return Plugin_Handled;
-					
-				char SoundA[255], SoundB[255];
-				Format(SoundB, sizeof(SoundB), "%s", strSound);
-				StringToLower(SoundB);
-				Format(SoundA, sizeof(SoundA), "sound_replace_%s", SoundB);
-				ReplaceString(SoundA, sizeof(SoundA), ".mp3", "");
-				ReplaceString(SoundA, sizeof(SoundA), ".wav", "");
-					
-				bool played = false;
-					
-				if (PlayRand(entity, "", SoundA))
+				float gameTime = GetGameTime();
+				if (gameTime >= f_LastSoundHook[entity] && gameTime >= f_Silenced[entity])
 				{
-					played = true;
+					if (IsCasting(entity) && StrContains(strSound, "sf13_spell_") != -1)
+						return Plugin_Handled;
+						
+					char SoundA[255], SoundB[255];
+					Format(SoundB, sizeof(SoundB), "%s", strSound);
+					StringToLower(SoundB);
+					Format(SoundA, sizeof(SoundA), "sound_replace_%s", SoundB);
+					ReplaceString(SoundA, sizeof(SoundA), ".mp3", "");
+					ReplaceString(SoundA, sizeof(SoundA), ".wav", "");
+						
+					bool played = false;
+						
+					if (PlayRand(entity, "", SoundA))
+					{
+						played = true;
+					}
+					else
+					{
+						played = PlaySpecificReplacement(entity, strSound);
+					}
+						
+					if (!played)
+					{
+						played = PlayRand(entity, "", "sound_replace_all");
+					}
+					
+					f_LastSoundHook[entity] = GetGameTime() + 0.01;
+						
+					if (played)
+					{
+						return Plugin_Handled;
+					}
 				}
 				else
 				{
-					played = PlaySpecificReplacement(entity, strSound);
-				}
-					
-				if (!played)
-				{
-					played = PlayRand(entity, "", "sound_replace_all");
-				}
-				
-				f_LastSoundHook[entity] = GetGameTime() + 0.01;
-					
-				if (played)
-				{
 					return Plugin_Handled;
 				}
 			}
-			else
-			{
-				return Plugin_Handled;
-			}
+			
+			return result;
 		}
 		
-		return result;
+		return Plugin_Handled;
 	}
-	
-	return Plugin_Handled;
+
+	return Plugin_Continue;
 }
 
 public any Native_CF_GetRandomSound(Handle plugin, int numParams)

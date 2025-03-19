@@ -386,6 +386,11 @@ bool Toss_WasHittingSomething[2049] = { false, ... };
 bool Toss_IsSupportDrone[2049] = { false, ... };
 bool b_HealingClient[2049][MAXPLAYERS + 1];
 
+bool busting = false;
+bool teleMegaFrag = false;
+bool littleBuddyKill = false;
+bool littleBuddySentryMode = false;
+
 Queue Toss_Sentries[MAXPLAYERS + 1] = { null, ... };
 
 CustomSentry Toss_SentryStats[2049];
@@ -2288,8 +2293,11 @@ enum struct LittleBuddy
 		{
 			int vic = GetArrayCell(victims, i);
 			
-			//TODO pistol kill icon
+			littleBuddyKill = true;
+			littleBuddySentryMode = this.b_SentryMode;
 			SDKHooks_TakeDamage(vic, this.me.Index, client, (this.b_SentryMode ? this.f_IdleDamage : this.f_Damage), DMG_BULLET|DMG_PREVENT_PHYSICS_FORCE);
+			littleBuddyKill = false;
+			littleBuddySentryMode = false;
 		}
 		delete victims;
 
@@ -2367,9 +2375,6 @@ public void OnEntityDestroyed(int entity)
 	}
 }
 
-bool busting = false;
-bool teleMegaFrag = false;
-
 //Used purely to set kill icons for Drones and Toolbox Toss.
 public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], char console[255], int &custom, int deadRinger, int &critType, int &damagebits)
 {
@@ -2412,6 +2417,21 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 	{
 		Format(weapon, sizeof(weapon), "purgatory");
 		Format(console, sizeof(console), "Teleporter Self-Destruct Sequence");
+		critType = 2;
+		return Plugin_Changed;
+	}
+	else if (littleBuddyKill)
+	{
+		if (littleBuddySentryMode)
+		{
+			Format(weapon, sizeof(weapon), "obj_minisentry");
+			Format(console, sizeof(console), "Little Buddy (Sentry Mode)");
+		}
+		else
+		{
+			Format(weapon, sizeof(weapon), "pistol");
+			Format(console, sizeof(console), "Little Buddy");
+		}
 		return Plugin_Changed;
 	}
 		
@@ -3535,7 +3555,7 @@ public void Annihilation_TeleThink(int tele)
 
 		for (int i = 0; i < TeleStats[tele].i_WaveCount; i++)
 		{
-			float randAng[3], vel[3];
+			float randAng[3];
 			randAng[1] = GetRandomFloat(0.0, 360.0);
 			pos[2] += 20.0;
 
@@ -3556,10 +3576,6 @@ public void Annihilation_TeleThink(int tele)
 			view_as<PNPC>(buster).AddGib(MODEL_TELE_GIB_4, "centre_attach2");
 			view_as<PNPC>(buster).f_HealthBarHeight = 60.0;
 			view_as<PNPC>(buster).b_IsABuilding = true;
-			
-			//randAng[0] = -45.0;
-			//GetVelocityInDirection(randAng, 450.0, vel);
-			//view_as<PNPC>(buster).SetVelocity(vel);
 
 			EmitSoundToAll(SOUND_BUSTER_LOOP, buster, _, _, _, _, 110);
 			AttachParticleToEntity(buster, team == TFTeam_Red ? PARTICLE_BUSTER_GLOW_RED : PARTICLE_BUSTER_GLOW_BLUE, "root", 4.0);
