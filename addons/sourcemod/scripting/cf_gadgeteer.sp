@@ -2674,6 +2674,7 @@ public void Toss_SpawnSupportOnDelay(DataPack pack)
 			}
 		}
 		
+		view_as<PNPC>(drone).b_GibsForced = true;
 		view_as<PNPC>(drone).SetSequence("spawn");
 		view_as<PNPC>(drone).SetPlaybackRate(Toss_SupportStats[drone].CalculateBuildAnimSpeed());
 		view_as<PNPC>(drone).SetBleedParticle("buildingdamage_sparks2");
@@ -3049,7 +3050,7 @@ public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inf
 
 	if (Toss_IsSupportDrone[npc.Index] || Annihilation_IsTele[npc.Index] || b_IsBuddy[npc.Index])
 	{
-		damagetype |= DMG_ALWAYSGIB;
+		//damagetype |= DMG_ALWAYSGIB;
 		float force[3];
 		Annihilation_GetUpwardForce(force, 600.0);
 		npc.PunchForce(force, true);
@@ -3388,6 +3389,7 @@ public void Annihilation_Build(int client, char abilityName[255], int building)
 	view_as<PNPC>(tele).AddGib(MODEL_TELE_GIB_4, "centre_attach2");
 	view_as<PNPC>(tele).f_HealthBarHeight = 60.0;
 	view_as<PNPC>(tele).b_IsABuilding = true;
+	view_as<PNPC>(tele).b_GibsForced = true;
 	float mins[3], maxs[3];
 	mins[0] = -26.71;
 	mins[1] = -26.71;
@@ -3580,6 +3582,7 @@ public void Annihilation_TeleThink(int tele)
 
 				int buster = PNPC(MODEL_ANNIHILATION_BUSTER, team, RoundFloat(TeleStats[tele].f_BusterHP), RoundFloat(TeleStats[tele].f_BusterHP), teamNum - 2, 0.66, TeleStats[tele].f_BusterSpeed, Annihilation_BusterThink, GADGETEER, 0.0, pos, randAng, _, _, busterName).Index;
 				
+				view_as<PNPC>(buster).b_GibsForced = true;
 				view_as<PNPC>(buster).SetSequence("Run_MELEE");
 				view_as<PNPC>(buster).SetPlaybackRate(1.0);
 				view_as<PNPC>(buster).SetBleedParticle("buildingdamage_sparks2");
@@ -3922,6 +3925,7 @@ public void Buddy_Spawn(DataPack pack)
 	if (!IsValidEntity(buddy.Index))
 		return;
 
+	buddy.b_GibsForced = true;
 	buddy.SetSequence((bootTime > 0.0 ? "PRIMARY_stun_middle" : "run_SECONDARY"));
 	buddy.SetPlaybackRate(1.0);
 	buddy.SetBleedParticle("buildingdamage_sparks2");
