@@ -1934,9 +1934,9 @@ public Native_CF_GiveUltCharge(Handle plugin, int numParams)
 	
 	Action result;
 	Call_Finish(result);
-	
+
 	if (result != Plugin_Handled && result != Plugin_Stop)
-		CF_SetUltCharge(client, f_UltCharge[client] + amt);
+		CF_SetUltCharge(client, f_UltCharge[client] + amt, IgnoreCD);
 }
 
 public Native_CF_SetUltCharge(Handle plugin, int numParams)
@@ -1974,21 +1974,11 @@ public Native_CF_SetUltCharge(Handle plugin, int numParams)
 		
 		float oldCharge = f_UltCharge[client];
 		f_UltCharge[client] = amt;
-		
+
 		if (oldCharge < f_UltChargeRequired[client] && f_UltCharge[client] >= f_UltChargeRequired[client])
 		{
 			CF_PlayRandomSound(client, "", "sound_ultimate_ready");
 		}
-		
-		/*if (oldCharge != amt)
-		{
-			CF_ActivateAbilitySlot(client, 10);
-			
-			if (amt > oldCharge)
-				CF_ActivateAbilitySlot(client, 8);
-			else
-				CF_ActivateAbilitySlot(client, 9);
-		}*/
 	}
 }
 

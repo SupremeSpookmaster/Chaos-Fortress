@@ -3359,6 +3359,7 @@ public void Annihilation_DeleteTimer(int client)
 
 public void Annihilation_GiveRefund(int client)
 {
+	CF_ApplyAbilityCooldown(client, 0.0, CF_AbilityType_Ult, true);
 	CF_GiveUltCharge(client, f_AnnihilationRefundAmt[client], _, true);
 	PrintCenterText(client, "Ult charge partially refunded.");
 }
@@ -3754,7 +3755,7 @@ public void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, int
 			hp = 1.0;
 
 		int pcnt = RoundToFloor(100.0 * hp);
-		Format(HUDText, sizeof(HUDText), "SUPPORT DRONE: %i[PERCENT]\n%s", pcnt, HUDText);
+		Format(HUDText, sizeof(HUDText), "Support Drone: %i[PERCENT] HP\n%s", pcnt, HUDText);
 	}
 
 	int buddy = EntRefToEntIndex(i_Buddy[client]);
@@ -3768,9 +3769,9 @@ public void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, int
 		int pcnt = RoundToFloor(100.0 * hp);
 
 		if (IsValidEntity(supportDrone))
-			Format(HUDText, sizeof(HUDText), "LITTLE BUDDY: %i[PERCENT] | %s", pcnt, HUDText);
+			Format(HUDText, sizeof(HUDText), "Little Buddy: %i[PERCENT] HP | %s", pcnt, HUDText);
 		else
-			Format(HUDText, sizeof(HUDText), "LITTLE BUDDY: %i[PERCENT]\n%s", pcnt, HUDText);
+			Format(HUDText, sizeof(HUDText), "Little Buddy: %i[PERCENT] HP\n%s", pcnt, HUDText);
 	}
 }
 
