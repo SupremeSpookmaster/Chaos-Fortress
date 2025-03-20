@@ -3850,9 +3850,17 @@ public void Scrap_Hit(int attacker, int victim, float &baseDamage, bool &allowFa
 			
 			CF_GiveSpecialResource(attacker, -finalCost);
 
-			int owner = GetEntPropEnt(victim, Prop_Send, "m_hOwnerEntity");
-			if (owner != attacker)
-				CF_GiveUltCharge(attacker, totalHealing, CF_ResourceType_Healing);
+			if (!Toss_IsSupportDrone[victim] || !Toss_SupportStats[victim].isBuilding)
+			{
+				int owner = GetEntPropEnt(victim, Prop_Send, "m_hOwnerEntity");
+				if (owner != attacker && Toss_IsSupportDrone[victim])
+					owner = GetClientOfUserId(Toss_SupportStats[victim].owner);
+				if (owner != attacker && b_IsBuddy[victim])
+					owner = buddies[victim].GetOwner();
+
+				if (owner != attacker)
+					CF_GiveUltCharge(attacker, totalHealing, CF_ResourceType_Healing);
+			}
 		}
 		else
 			return;
