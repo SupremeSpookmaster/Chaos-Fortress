@@ -3140,7 +3140,7 @@ void Support_RemovePanicParticle(int ent)
 
 public void Support_CheckPanic(PNPC npc)
 {
-	if (Toss_SupportStats[npc.Index].isPanicked)
+	if (!IsValidEntity(npc.Index) || Toss_SupportStats[npc.Index].isPanicked)
 		return;
 
 	int halfHP = RoundFloat(npc.i_MaxHealth * 0.5);
@@ -3255,6 +3255,9 @@ public void PNPC_OnTouch(PNPC npc, int entity, char[] classname)
 		return;
 
 	int launcher = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
+	if (!IsValidEntity(launcher))
+		return;
+
 	int entityOwner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
 
 	float healPerScrap = TF2CustAttr_GetFloat(launcher, "toolbox drone heal per scrap", 0.0);
