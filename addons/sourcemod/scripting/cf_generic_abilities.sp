@@ -957,6 +957,7 @@ public Action TF2_CalcIsAttackCritical(int client, int weapon, char[]weaponname,
 			CreateTimer(f_ForceFireDelay[client], Weapon_GiveBackAll, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
 		else if (IsValidEntity(weapon) && b_WeaponRevertWhenFired[weapon])
 		{
+			Weapon_EndTime[weapon] = 0.0;
 			DataPack pack = new DataPack();
 			CreateDataTimer(f_ForceFireDelay[client], Weapon_GiveBackSpecific, pack, TIMER_FLAG_NO_MAPCHANGE);
 			WritePackCell(pack, GetClientUserId(client));
