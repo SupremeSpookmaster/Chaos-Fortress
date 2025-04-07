@@ -138,6 +138,7 @@ public Action PlayerKilled_Pre(Event hEvent, const char[] sEvName, bool bDontBro
 	int inflictor = hEvent.GetInt("inflictor_entindex");
 	int custom = hEvent.GetInt("customkill");
 	int critType = hEvent.GetInt("crit_type");
+	int weaponID = hEvent.GetInt("weaponid");
 	int bits = hEvent.GetInt("damagebits");
 	int attacker = GetClientOfUserId(hEvent.GetInt("attacker"));
 	char weapon[255], console[255];
@@ -154,6 +155,7 @@ public Action PlayerKilled_Pre(Event hEvent, const char[] sEvName, bool bDontBro
 	
 	if (IsValidClient(victim))
 	{
+		CF_GetWeaponKillIcon(weaponID, weapon, sizeof(weapon));
 		result = CF_PlayerKilled_Pre(victim, inflictor, attacker, weapon, console, custom, ringer, critType, bits);
 		
 		hEvent.SetInt("userid", (IsValidClient(victim) ? GetClientUserId(victim) : 0));

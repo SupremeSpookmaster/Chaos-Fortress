@@ -1617,8 +1617,9 @@ public void CF_DestroyAllBuildings(int client)
 	ConfigMap subsection = weapons.GetSection(secName);
 	while (subsection != null)
 	{
-		char classname[255], attributes[255], override[255];
+		char classname[255], attributes[255], override[255], icon[255];
 		subsection.Get("classname", classname, sizeof(classname));
+		subsection.Get("kill_icon", icon, sizeof(icon));
 			
 		int index = GetIntFromConfigMap(subsection, "index", 1);
 		int level = GetIntFromConfigMap(subsection, "level", 77);
@@ -1664,6 +1665,7 @@ public void CF_DestroyAllBuildings(int client)
 			}
 
 			EquipPlayerWeapon(client, weapon);
+			CF_SetWeaponKillIcon(weapon, icon);
 		}
 		
 		i++;

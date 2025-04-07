@@ -42,6 +42,7 @@ enum struct OldWeapon
 	char firePlugin[255]; 
 	char fireSound[255];
 	char fireSlot[255];
+	char killIcon[255];
 	
 	bool visible;
 	
@@ -85,6 +86,7 @@ enum struct OldWeapon
 		CF_GetWeaponAbility(weapon, this.fireAbility, 255, this.firePlugin, 255);
 		CF_GetWeaponSound(weapon, this.fireSound, 255);
 		CF_GetWeaponAbilitySlot(weapon, this.fireSlot, 255);
+		CF_GetWeaponKillIcon(weapon, this.killIcon, 255);
 		this.visible = CF_GetWeaponVisibility(weapon);
 		
 		this.slot = weaponSlot;
@@ -124,6 +126,7 @@ enum struct OldWeapon
 				}
 				
 				EquipPlayerWeapon(client, ReturnValue);
+				CF_SetWeaponKillIcon(ReturnValue, this.killIcon);
 			}
 		
 			this.Delete();
@@ -849,7 +852,7 @@ public void Weapon_StoreOldWeapon(int client, int weaponSlot, float duration)
 
 public void Weapon_Activate(int client, char abilityName[255])
 {
-	char classname[255], atts[255], fireAbility[255], firePlugin[255], fireSound[255], fireSlot[255], deploySound[255];
+	char classname[255], atts[255], fireAbility[255], firePlugin[255], fireSound[255], fireSlot[255], deploySound[255], icon[255];
 	
 	CF_GetArgS(client, GENERIC, abilityName, "classname", classname, sizeof(classname));
 	CF_GetArgS(client, GENERIC, abilityName, "fire_ability", fireAbility, sizeof(fireAbility));
@@ -858,6 +861,7 @@ public void Weapon_Activate(int client, char abilityName[255])
 	CF_GetArgS(client, GENERIC, abilityName, "fire_slot", fireSlot, sizeof(fireSlot));
 	CF_GetArgS(client, GENERIC, abilityName, "attributes", atts, sizeof(atts));
 	CF_GetArgS(client, GENERIC, abilityName, "sound_deployed", deploySound, sizeof(deploySound));
+	CF_GetArgS(client, GENERIC, abilityName, "kill_icon", icon, sizeof(icon));
 	
 	int index = CF_GetArgI(client, GENERIC, abilityName, "index");
 	int level = CF_GetArgI(client, GENERIC, abilityName, "level");
@@ -892,6 +896,8 @@ public void Weapon_Activate(int client, char abilityName[255])
 	int weapon = CF_SpawnWeapon(client, classname, index, level, quality, weaponSlot, reserve, clip, atts, fireSlot, visible, unequip, -1, false, fireAbility, firePlugin, fireSound, false);
 	if (IsValidEntity(weapon))
 	{
+		CF_SetWeaponKillIcon(weapon, icon);
+		
 		if (deploySound[0])
 			CF_PlayRandomSound(client, "", deploySound);
 			

@@ -1577,6 +1577,23 @@ native bool CF_MakeClientCharacter(int client, char character[255], char message
 native CF_ToggleHUD(int client, bool toggle);
 
 /**
+ * Sets the kill icon to be used by the weapon.
+ * 
+ * @param weapon	The weapon to set the kill icon of.
+ * @param icon		The kill icon to set. Pass an empty string to remove the custom icon.
+ */
+native CF_SetWeaponKillIcon(int weapon, char[] icon);
+
+/**
+ * Retrieves the weapon's kill icon.
+ * 
+ * @param weapon		The weapon to get the kill icon of.
+ * @param output		Output buffer in which to store the weapon's kill icon. Does not get changed if the weapon does not have a custom kill icon.
+ * @param length		Output buffer length.
+ */
+native CF_GetWeaponKillIcon(int weapon, char[] output, int length = 255);
+
+/**
  * Changes the display name of a given ability slot for the specified client.
  *
  * @param client			The client to change the ability name for.

@@ -8,6 +8,7 @@ char s_WeaponFireSound[2049][255];
 bool b_WeaponIsVisible[2049] = { false, ... };
 bool b_EquippingWeapon[MAXPLAYERS + 1] = { false, ... };
 float f_NextPDAWarning[MAXPLAYERS + 1] = { 0.0, ... };
+char s_WeaponKillIcon[2049][255];
 
 GlobalForward g_CalcAttackRate;
 
@@ -19,6 +20,7 @@ public void CFW_OnEntityDestroyed(int entity)
 	s_WeaponFirePlugin[entity] = "";
 	s_WeaponFireSound[entity] = "";
 	b_WeaponIsVisible[entity] = false;
+	strcopy(s_WeaponKillIcon[entity], 255, "");
 }
 
 public void CFW_MapChange()
@@ -128,6 +130,8 @@ public void CFW_MakeNatives()
 	CreateNative("CF_GetWeaponAbilitySlot", Native_CF_GetWeaponAbilitySlot);
 	CreateNative("CF_GetWeaponSound", Native_CF_GetWeaponSound);
 	CreateNative("CF_GetWeaponVisibility", Native_CF_GetWeaponVisibility);
+	CreateNative("CF_SetWeaponKillIcon", Native_CF_SetWeaponKillIcon);
+	CreateNative("CF_GetWeaponKillIcon", Native_CF_GetWeaponKillIcon);
 }
 
 public Native_CF_SpawnWeapon(Handle plugin, int numParams)
@@ -351,6 +355,30 @@ public Action TF2Items_OnGiveNamedItem(client, String:classname[], iItemDefiniti
     {    case 735, 736, 810, 831, 933, 1080, 1102, 25, 26, 28, 737, 27, 30, 212, 59, 60, 297, 947: return Plugin_Handled;    }
 
     return Plugin_Continue;
+}
+
+public void Native_CF_GetWeaponKillIcon(Handle plugin, int numParams)
+{
+	int weapon = GetNativeCell(1);
+	if (!IsValidEntity(weapon))
+		return;
+
+	if (StrEqual(s_WeaponKillIcon[weapon], ""))
+		return;
+	
+	SetNativeString(2, s_WeaponKillIcon[weapon], GetNativeCell(3));
+}
+
+public Native_CF_SetWeaponKillIcon(Handle plugin, int numParams)
+{
+	int weapon = GetNativeCell(1);
+	char icon[255];
+	GetNativeString(2, icon, sizeof(icon));
+
+	if (!IsValidEntity(weapon))
+		return;
+
+	strcopy(s_WeaponKillIcon[weapon], 255, icon);
 }
 
 public Native_CF_GetWeaponAbility(Handle plugin, int numParams)
