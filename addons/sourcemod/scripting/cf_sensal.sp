@@ -214,6 +214,8 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 	}
 
 	SDKUnhook(client, SDKHook_WeaponSwitchPost, WeaponSwitch);
+	delete MassLaser_HitList[client];
+	MassLaser_HitList[client] = null;
 }
 
 public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
@@ -550,18 +552,8 @@ MRESReturn OnScytheCollide(int entity, int owner, int team)
 	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
 
 	KillFeedType = Kill_Sycthe;
-	ArrayList victims = view_as<ArrayList>(CF_GenericAOEDamage(owner, entity, entity, damage, DMG_BULLET|DMG_PREVENT_PHYSICS_FORCE, 50.0, pos, 400.0, 1.0, _, false));
+	CF_GenericAOEDamage(owner, entity, entity, damage, DMG_BULLET|DMG_PREVENT_PHYSICS_FORCE, 50.0, pos, 400.0, 1.0, _, false, _, _, _, PluginName, Scythe_OnHit);
 	KillFeedType = -1;
-	
-	int length = victims.Length;
-	for(int i; i < length; i++)
-	{
-		int victim = victims.Get(i);
-		if(victim <= MaxClients)
-			ApplyVulnStack(victim, owner, 1.065, 5.0);
-	}
-
-	delete victims;
 
 	// CF does not feature a way to play a sound from config in another location
 	EmitSoundToAll(SyctheHitSound[GetURandomInt() % sizeof(SyctheHitSound)], entity, SNDCHAN_AUTO, 95);
@@ -570,6 +562,12 @@ MRESReturn OnScytheCollide(int entity, int owner, int team)
 
 	RemoveEntity(entity);
 	return MRES_Supercede;
+}
+
+public void Scythe_OnHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
+{
+	if(victim <= MaxClients)
+		ApplyVulnStack(victim, attacker, 1.065, 5.0);
 }
 
 void ApplyVulnStack(int victim, int attacker, float multi, float duration)
@@ -838,6 +836,14 @@ public Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor,
 float MassLaser_CloseDamage[MAXPLAYERS + 1] = { 0.0, ... };
 float MassLaser_FarDamage[MAXPLAYERS + 1] = { 0.0, ... };
 
+ArrayList MassLaser_HitList[MAXPLAYERS + 1] = { null, ... };
+
+public void MassLaser_OnHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
+{
+	if (IsValidTarget(attacker, victim))
+		PushArrayCell(MassLaser_HitList[attacker], EntIndexToEntRef(victim));
+}
+
 void DoMassLaser(int client, char abilityName[255])
 {
 	float range = CF_GetArgF(client, PluginName, abilityName, "radius");
@@ -849,35 +855,14 @@ void DoMassLaser(int client, char abilityName[255])
 	float pos[3];
 	GetClientEyePosition(client, pos);
 
-	ArrayList victims = view_as<ArrayList>(CF_GenericAOEDamage(client, client, client, 0.0, 0, range, pos, range, 1.0, _, false));
-	
-	int length = victims.Length;
-	for(int i; i < length; i++)
-	{
-		// CF_GenericAOEDamage doesn't filter out props
-		int victim = victims.Get(i);
-		if(!IsValidTarget(client, victim))
-		{
-			victims.Erase(i);
-			length--;
-		}
-	}
-
-	while(length > targets)
-	{
-		victims.Erase(0);
-		length--;
-	}
-
-	for(int i; i < length; i++)
-	{
-		victims.Set(i, EntIndexToEntRef(victims.Get(i)));
-	}
+	MassLaser_HitList[client] = CreateArray(16);
+	CF_GenericAOEDamage(client, client, client, 0.0, 0, range, pos, range, 1.0, _, false, _, _, _, PluginName, MassLaser_OnHit);
 	
 	DataPack pack;
 	CreateDataTimer(delay, MassLaserTimer, pack);
 	pack.WriteCell(GetClientUserId(client));
-	pack.WriteCell(victims);
+	pack.WriteCell(MassLaser_HitList[client]);
+	pack.WriteCell(client);
 
 	CF_AttachParticle(client, GetClientTeam(client) == 2 ? "flaregun_trail_red" : "flaregun_trail_blue", "effect_hand_r", _, 1.0);
 
@@ -927,6 +912,7 @@ Action MassLaserTimer(Handle timer, DataPack pack)
 	pack.Reset();
 	int userid = pack.ReadCell();
 	int attacker = GetClientOfUserId(userid);
+	int slot = pack.ReadCell();
 	ArrayList victims = pack.ReadCell();
 
 	if(attacker && IsPlayerAlive(attacker))
@@ -965,6 +951,7 @@ Action MassLaserTimer(Handle timer, DataPack pack)
 	}
 
 	delete victims;
+	MassLaser_HitList[slot] = null;
 	return Plugin_Continue;
 }
 
@@ -1133,6 +1120,19 @@ Action PortalGateStartTimer(Handle timer, DataPack pack)
 	return Plugin_Continue;
 }
 
+bool scan_FoundOne = false;
+float PortalGatePos[3];
+char PortalGateAbName[255];
+
+public void PortalGateScan_OnHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
+{
+	if(IsValidTarget(attacker, victim))
+	{
+		found = true;
+		FireScythe(attacker, PortalGateAbName, victim, PortalGatePos);
+	}
+}
+
 Action PortalGateLoopTimer(Handle timer, DataPack pack)
 {
 	pack.Reset();
@@ -1156,25 +1156,14 @@ Action PortalGateLoopTimer(Handle timer, DataPack pack)
 
 					float range = CF_GetArgF(client, PluginName, abilityName, "radius");
 
-					ArrayList victims = view_as<ArrayList>(CF_GenericAOEDamage(client, client, client, 0.0, 0, range, pos, range, 1.0, _, false));
+					scan_FoundOne = false;
+					PortalGateAbName = abilityName;
+					PortalGatePos = pos;
+					CF_GenericAOEDamage(client, client, client, 0.0, 0, range, pos, range, 1.0, _, false, _, _, _, PluginName, PortalGateScan_OnHit);
 					
-					int length = victims.Length;
-					if(length)
-					{
-						bool found;
+					if(scan_FoundOne)
+						EmitSoundToAll("misc/halloween/spell_teleport.wav", entity, SNDCHAN_STATIC, 90, _, 0.8);
 
-						for(int i; i < length; i++)
-						{
-							int victim = victims.Get(i);
-							if(IsValidTarget(client, victim))
-							{
-								found = true;
-								FireScythe(client, abilityName, victim, pos);
-							}
-						}
-						if(found)
-							EmitSoundToAll("misc/halloween/spell_teleport.wav", entity, SNDCHAN_STATIC, 90, _, 0.8);
-					}
 					if(Can_I_See_Enemy_Only(entity, client))
 					{
 						int red = 50;
@@ -1207,8 +1196,6 @@ Action PortalGateLoopTimer(Handle timer, DataPack pack)
 						
 						CF_DoAbility(client, "cf_sensal", "sensal_ability_barrier_portal");
 					}
-
-					delete victims;
 
 					return Plugin_Continue;
 				}

@@ -483,9 +483,7 @@ public MRESReturn Bomb_Explode(int bomb, int owner, int teamNum)
 	float pos[3];
 	GetEntPropVector(bomb, Prop_Send, "m_vecOrigin", pos);
 	
-	Handle victims = CF_GenericAOEDamage(owner, bomb, -1, dmg, DMG_CLUB|DMG_BLAST|DMG_ALWAYSGIB, Bomb_Radius[bomb], pos, Bomb_FalloffStart[bomb],
-										Bomb_FalloffMax[bomb]);		
-	delete victims;
+	CF_GenericAOEDamage(owner, bomb, -1, dmg, DMG_CLUB|DMG_BLAST|DMG_ALWAYSGIB, Bomb_Radius[bomb], pos, Bomb_FalloffStart[bomb], Bomb_FalloffMax[bomb]);		
 	
 	EmitSoundToAll(SOUND_BOMB_EXPLODE, bomb, SNDCHAN_STATIC, _, _, _, GetRandomInt(90, 110));
 	SpawnParticle(pos, PARTICLE_REFINED_EXPLODE, 3.0);
@@ -1066,6 +1064,8 @@ public Action Trade_Begin(Handle begin, int id)
 	return Plugin_Continue;
 }
 
+float Trade_KBVel[3];
+
 public Action Trade_PreThink(int client)
 {
 	float gt = GetGameTime();
@@ -1089,21 +1089,11 @@ public Action Trade_PreThink(int client)
 	//int frame = GetEntProp(client, Prop_Send, "m_ubInterpolationFrame");
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
 	//SetEntProp(client, Prop_Send, "m_ubInterpolationFrame", frame);
+	Trade_KBVel = vel;
 	
 	if (gt >= f_TradeNextHit[client])
 	{
-		Handle victims = CF_GenericAOEDamage(client, client, client, f_TradeDamage[client], DMG_CLUB | DMG_BLAST | DMG_ALWAYSGIB, f_TradeRadius[client], pos, 99999.0, 0.0, false, false, false);
-		
-		for (int vic = 0; vic < GetArraySize(victims); vic++)
-		{
-			int victim = GetArrayCell(victims, vic);
-			if (IsValidMulti(victim))
-			{
-				TeleportEntity(victim, NULL_VECTOR, NULL_VECTOR, vel);
-			}
-		}
-		
-		delete victims;
+		CF_GenericAOEDamage(client, client, client, f_TradeDamage[client], DMG_CLUB | DMG_BLAST | DMG_ALWAYSGIB, f_TradeRadius[client], pos, 99999.0, 0.0, false, false, false, _, _, DEMOPAN, Trade_OnHit);
 		
 		for (int i = 0; i < GetRandomInt(3, 5); i++)
 		{
@@ -1121,6 +1111,19 @@ public Action Trade_PreThink(int client)
 	}
 		
 	return Plugin_Continue;
+}
+
+public void Trade_OnHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
+{
+	#if defined _pnpc_included_
+	if (PNPC_IsNPC(victim))
+		view_as<PNPC>(victim).SetVelocity(Trade_KBVel);
+	else
+		TeleportEntity(victim, NULL_VECTOR, NULL_VECTOR, Trade_KBVel);
+	#else
+	if (!IsABuilding(victim, false))
+		TeleportEntity(victim, NULL_VECTOR, NULL_VECTOR, Trade_KBVel);
+	#endif
 }
 
 public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)

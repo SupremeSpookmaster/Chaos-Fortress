@@ -856,6 +856,17 @@ void ZeinaBeaconActivate(int client, char abilityName[255])
 	WritePackFloat(pack2, BlockPercentageSelf);
 }
 
+public void Beacon_OnScanHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
+{
+	if(IsValidAlly(inflictor, victim))
+	{
+		ZeinaBeaconApplying[victim] = GetGameTime() + 0.25;
+		ZeinaBeacon_CurrentProtectingIndex[victim] = EntIndexToEntRef(Beacon);
+		if(attacker != victim)
+			ZeinaBeaconHadAlly[victim] = GetGameTime() + 0.25;
+	}
+}
+
 public Action ZeinaBeaconThink(Handle timer, DataPack pack)
 {
 	ResetPack(pack);
@@ -880,25 +891,10 @@ public Action ZeinaBeaconThink(Handle timer, DataPack pack)
 
 	int SaveTeam = GetEntProp(Beacon, Prop_Send, "m_iTeamNum");
 	SetEntProp(Beacon, Prop_Send, "m_iTeamNum", -5);
-	ArrayList victims = view_as<ArrayList>(CF_GenericAOEDamage(Beacon, Beacon, Beacon, 0.0, 0, Radius, EntLoc, Radius, 1.0, _, false));
-	SetEntProp(Beacon, Prop_Send, "m_iTeamNum", SaveTeam);
-	int length = victims.Length;
 	int Owner = GetEntPropEnt(Beacon, Prop_Send, "m_hOwnerEntity");
-	if(length)
-	{
+	CF_GenericAOEDamage(Owner, Beacon, Beacon, 0.0, 0, Radius, EntLoc, Radius, 1.0, _, false, _, _, _, PluginName, Beacon_OnScanHit);
+	SetEntProp(Beacon, Prop_Send, "m_iTeamNum", SaveTeam);
 
-		for(int i; i < length; i++)
-		{
-			int victim = victims.Get(i);
-			if(IsValidAlly(Beacon, victim))
-			{
-				ZeinaBeaconApplying[victim] = GetGameTime() + 0.25;
-				ZeinaBeacon_CurrentProtectingIndex[victim] = EntIndexToEntRef(Beacon);
-				if(Owner != victim)
-					ZeinaBeaconHadAlly[victim] = GetGameTime() + 0.25;
-			}
-		}
-	}
 	if(CooldownVisualAndSound < GetGameTime())
 	{
 		pack.Position--;
@@ -916,7 +912,7 @@ public Action ZeinaBeaconThink(Handle timer, DataPack pack)
 		spawnRing_Vectors(EntLocSave, 1.0, 0.0, 0.0, 2.0, "materials/sprites/laserbeam.vmt", r, g, b, 200, 1, 0.35, 5.0, 8.0, 3, Radius * 2.0);	
 		EmitSoundToAll("misc/halloween/spell_teleport.wav", Beacon, SNDCHAN_STATIC, 65, _, 0.7, 135);
 	}
-	delete victims;
+	
 	return Plugin_Continue;
 }
 public int Beacon_CreateProp(int client)

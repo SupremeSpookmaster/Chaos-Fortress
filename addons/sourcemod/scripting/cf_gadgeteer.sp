@@ -3511,8 +3511,7 @@ public void Annihilation_TeleThink(int tele)
 			pos[2] += 40.0;
 
 			teleMegaFrag = true;
-			Handle vic = CF_GenericAOEDamage(client, client, client, TeleStats[tele].f_SDDMG, DMG_BLAST|DMG_CLUB|DMG_ALWAYSGIB, TeleStats[tele].f_SDRadius, pos, TeleStats[tele].f_SDFalloffStart, TeleStats[tele].f_BusterFalloffMax, _, false);
-			delete vic;
+			CF_GenericAOEDamage(client, client, client, TeleStats[tele].f_SDDMG, DMG_BLAST|DMG_CLUB|DMG_ALWAYSGIB, TeleStats[tele].f_SDRadius, pos, TeleStats[tele].f_SDFalloffStart, TeleStats[tele].f_BusterFalloffMax, _, false);
 			teleMegaFrag = false;
 			SpawnShaker(pos, 14, 400, 4, 4, 4);
 
@@ -3561,8 +3560,7 @@ public void Annihilation_TeleThink(int tele)
 
 			pos[2] += 40.0;
 			busting = true;
-			Handle vic = CF_GenericAOEDamage(client, client, client, TeleStats[tele].f_BusterDMG * 2.0, DMG_BLAST|DMG_CLUB|DMG_ALWAYSGIB, TeleStats[tele].f_BusterRadius, pos, TeleStats[tele].f_BusterFalloffStart, TeleStats[tele].f_BusterFalloffMax, true, false);
-			delete vic;
+			CF_GenericAOEDamage(client, client, client, TeleStats[tele].f_BusterDMG * 2.0, DMG_BLAST|DMG_CLUB|DMG_ALWAYSGIB, TeleStats[tele].f_BusterRadius, pos, TeleStats[tele].f_BusterFalloffStart, TeleStats[tele].f_BusterFalloffMax, true, false);
 			busting = false;
 			SpawnShaker(pos, 12, 200, 4, 4, 4);
 
@@ -3649,8 +3647,7 @@ public void Annihilation_BusterThink(int buster)
 
 			pos[2] += 40.0;
 			busting = true;
-			Handle vic = CF_GenericAOEDamage(client, client, client, TeleStats[buster].f_BusterDMG, DMG_BLAST|DMG_CLUB|DMG_ALWAYSGIB, TeleStats[buster].f_BusterRadius, pos, TeleStats[buster].f_BusterFalloffStart, TeleStats[buster].f_BusterFalloffMax, true, false);
-			delete vic;
+			CF_GenericAOEDamage(client, client, client, TeleStats[buster].f_BusterDMG, DMG_BLAST|DMG_CLUB|DMG_ALWAYSGIB, TeleStats[buster].f_BusterRadius, pos, TeleStats[buster].f_BusterFalloffStart, TeleStats[buster].f_BusterFalloffMax, true, false);
 			busting = false;
 			SpawnShaker(pos, 12, 200, 4, 4, 4);
 

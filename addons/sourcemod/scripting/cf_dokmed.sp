@@ -351,32 +351,8 @@ public MRESReturn Bottle_Shatter(int bottle, int owner, int teamNum)
 	}
 	
 	b_Cocainum = true;
-	Handle victims = CF_GenericAOEDamage(owner, bottle, bottle, Flask_DMGInst[bottle], DMG_GENERIC, Flask_Radius[bottle], pos, 99999.0, 0.0, false, false);
+	CF_GenericAOEDamage(owner, bottle, bottle, Flask_DMGInst[bottle], DMG_GENERIC, Flask_Radius[bottle], pos, 99999.0, 0.0, false, false, _, _, _, DOKMED, Flask_OnHitEnemy);
 	b_Cocainum = false;
-	
-	for (int i = 0; i < GetArraySize(victims); i++)
-	{
-		int vic = GetArrayCell(victims, i);
-		if (IsValidMulti(vic))
-		{
-			EmitSoundToClient(vic, SOUND_FLASK_POISON);
-				
-			if (Flask_DMGDuration[bottle] > 0.0)
-			{
-				EmitSoundToClient(vic, SOUND_FLASK_POISON_LOOP);
-				DataPack pack = new DataPack();
-				WritePackCell(pack, GetClientUserId(vic));
-				WritePackCell(pack, IsValidClient(owner) ? GetClientUserId(owner) : -1);
-				WritePackFloat(pack, Flask_DMGTicks[bottle]);
-				WritePackFloat(pack, Flask_DMGInterval[bottle]);
-				WritePackFloat(pack, gt + Flask_DMGInterval[bottle]);
-				WritePackFloat(pack, gt + Flask_DMGDuration[bottle]);
-				RequestFrame(Flask_DMGOverTime, pack);
-			}
-		}
-	}
-		
-	delete victims;
 	
 	EmitSoundToAll(SOUND_FLASK_SHATTER, bottle, SNDCHAN_STATIC, _, _, _, GetRandomInt(80, 110));
 	SpawnParticle(pos, PARTICLE_FLASK_SHATTER, 2.0);
@@ -388,6 +364,27 @@ public MRESReturn Bottle_Shatter(int bottle, int owner, int teamNum)
 	RemoveEntity(bottle);
 	
 	return MRES_Supercede;
+}
+
+public void Flask_OnHitEnemy(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
+{
+	if (IsValidMulti(victim))
+	{
+		EmitSoundToClient(victim, SOUND_FLASK_POISON);
+				
+		if (Flask_DMGDuration[bottle] > 0.0)
+		{
+			EmitSoundToClient(vic, SOUND_FLASK_POISON_LOOP);
+			DataPack pack = new DataPack();
+			WritePackCell(pack, GetClientUserId(victim));
+			WritePackCell(pack, IsValidClient(attacker) ? GetClientUserId(attacker) : -1);
+			WritePackFloat(pack, Flask_DMGTicks[inflictor]);
+			WritePackFloat(pack, Flask_DMGInterval[inflictor]);
+			WritePackFloat(pack, gt + Flask_DMGInterval[inflictor]);
+			WritePackFloat(pack, gt + Flask_DMGDuration[inflictor]);
+			RequestFrame(Flask_DMGOverTime, pack);
+		}
+	}
 }
 
 public void Flask_DMGOverTime(DataPack pack)
@@ -565,9 +562,8 @@ public void Surgery_Teleport(int client)
 	Overlay_Flash(client, GetRandomInt(1, 1000) != 777 ? "lights/white005" : "models/player/medic/medic_head_red", 0.1);
 		
 	b_Telefrag = true;
-	Handle victims = CF_GenericAOEDamage(client, client, client, Surgery_DMG[client], DMG_GENERIC | DMG_CLUB | DMG_ALWAYSGIB, Surgery_DMGRadius[client], Surgery_Destination[client], Surgery_DMGFalloffStart[client], Surgery_DMGFalloffMax[client], _, false);
+	CF_GenericAOEDamage(client, client, client, Surgery_DMG[client], DMG_GENERIC | DMG_CLUB | DMG_ALWAYSGIB, Surgery_DMGRadius[client], Surgery_Destination[client], Surgery_DMGFalloffStart[client], Surgery_DMGFalloffMax[client], _, false);
 	b_Telefrag = false;
-	delete victims;
 	
 	for (int i = 1; i <= MaxClients; i++)
 	{

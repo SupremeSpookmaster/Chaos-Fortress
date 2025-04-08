@@ -412,6 +412,21 @@ public Action Discard_StartDecay(Handle decay, int ref)
 	return Plugin_Continue;
 }
 
+public void Discard_OnHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
+{
+	if (victim == attacker)
+		return;
+	#if defined _pnpc_included_
+	if (PNPC_IsNPC(victim))
+		view_as<PNPC>(victim).Ignite(Discard_BurnTime, Discard_BurnTime[inflictor], _, 5.0, true, attacker);
+	else
+		TF2_IgnitePlayer(victim, Discard_BurnTime[inflictor]);
+	#else
+	if (!IsABuilding(victim, false))
+		TF2_IgnitePlayer(victim, Discard_BurnTime[inflictor]);
+	#endif
+}
+
 public MRESReturn Discard_ExplodePre(int skull, int owner, int teamNum)
 {
 	TFTeam team = view_as<TFTeam>(teamNum);
@@ -428,17 +443,8 @@ public MRESReturn Discard_ExplodePre(int skull, int owner, int teamNum)
 	float pos[3];
 	GetEntPropVector(skull, Prop_Send, "m_vecOrigin", pos);
 	
-	Handle victims = CF_GenericAOEDamage(owner, skull, -1, dmg, DMG_CLUB|DMG_BLAST|DMG_ALWAYSGIB, Discard_Radius[skull], pos, Discard_FalloffStart[skull],
-										Discard_FalloffMax[skull]);
-				
-	for (int i = 0; i < GetArraySize(victims); i++)
-	{
-		int vic = GetArrayCell(victims, i);
-		if (IsValidMulti(vic) && vic != owner)
-			TF2_IgnitePlayer(vic, IsValidClient(owner) ? owner : 0, Discard_BurnTime[skull]);
-	}
-	
-	delete victims;
+	CF_GenericAOEDamage(owner, skull, -1, dmg, DMG_CLUB|DMG_BLAST|DMG_ALWAYSGIB, Discard_Radius[skull], pos, Discard_FalloffStart[skull],
+										Discard_FalloffMax[skull], _, _, _, _, _, SPOOKMASTER, Discard_OnHit);
 	
 	EmitSoundToAll(SOUND_DISCARD_EXPLODE, skull, SNDCHAN_STATIC, _, _, _, GetRandomInt(90, 110));
 	SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_DISCARD_EXPLODE_RED : PARTICLE_DISCARD_EXPLODE_BLUE, 3.0);
@@ -525,19 +531,16 @@ public void Calcium_ShockPlayer(int attacker, int victim, float radius, int prev
 	SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_CALCIUM_SPARKS_RED : PARTICLE_CALCIUM_SPARKS_BLUE, 3.0);
 	Calcium_HitByPlayer[attacker][victim] = true;
 	
-	Handle victims = CF_GenericAOEDamage(attacker, attacker, attacker, 0.0, DMG_GENERIC, radius, pos, 0.0, 0.0, false, false, true);
-	
-	for (int i = 0; i < GetArraySize(victims); i++)
-	{
-		int vic = GetArrayCell(victims, i);
-		if (IsValidClient(vic))
-		{
-			if (!Calcium_HitByPlayer[attacker][vic])
-				Calcium_ShockPlayer(attacker, vic, Calcium_ChainRadius[attacker], victim);
-		}
-	}
-	
-	delete victims;
+	CF_GenericAOEDamage(attacker, attacker, attacker, 0.0, DMG_GENERIC, radius, pos, 0.0, 0.0, false, false, true, _, _, SPOOKMASTER, Calcium_OnShockHit);
+}
+
+public void Calcium_OnShockHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
+{
+	if (!IsValidClient(victim))
+		return;
+
+	if (!Calcium_HitByPlayer[attacker][vic])
+		Calcium_ShockPlayer(attacker, vic, Calcium_ChainRadius[attacker], victim);
 }
 
 public void Calcium_ClearHitStatus(int client)

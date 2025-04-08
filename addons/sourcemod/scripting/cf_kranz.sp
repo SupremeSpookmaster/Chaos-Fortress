@@ -213,8 +213,7 @@ public void Obliterator_Hit(int attacker, int victim, float &baseDamage, bool &a
 		SpawnParticle(hitPos, (Obliterator_Team == TFTeam_Red ? PARTICLE_OBLITERATOR_EXPLODE_RED : PARTICLE_OBLITERATOR_EXPLODE_BLUE), 2.0);
 
 		int weapon = TF2_GetActiveWeapon(attacker);
-		Handle vic = CF_GenericAOEDamage(attacker, attacker, (IsValidEntity(weapon) ? weapon : attacker), Obliterator_Damage, DMG_BLAST|DMG_ALWAYSGIB, Obliterator_Radius, hitPos, Obliterator_FalloffStart, Obliterator_FalloffMax, _, false);
-		delete vic;
+		CF_GenericAOEDamage(attacker, attacker, (IsValidEntity(weapon) ? weapon : attacker), Obliterator_Damage, DMG_BLAST|DMG_ALWAYSGIB, Obliterator_Radius, hitPos, Obliterator_FalloffStart, Obliterator_FalloffMax, _, false);
 	}
 }
 

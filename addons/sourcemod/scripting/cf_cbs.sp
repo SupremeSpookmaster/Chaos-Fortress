@@ -379,9 +379,8 @@ public Action Explosive_OnTouch(int entity, int other)
 	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
 	
 	b_BlastBolt = true;
-	Handle victims = CF_GenericAOEDamage(owner, entity, entity, f_ExplosiveDMG[entity], DMG_BLAST | DMG_CLUB | DMG_ALWAYSGIB, f_ExplosiveRadius[entity], pos, f_ExplosiveFalloffStart[entity], f_ExplosiveFalloffMax[entity]);
+	CF_GenericAOEDamage(owner, entity, entity, f_ExplosiveDMG[entity], DMG_BLAST | DMG_CLUB | DMG_ALWAYSGIB, f_ExplosiveRadius[entity], pos, f_ExplosiveFalloffStart[entity], f_ExplosiveFalloffMax[entity]);
 	b_BlastBolt = false;
-	delete victims;
 	
 	SpawnSpriteExplosion(pos, 1);
 	RemoveEntity(entity);

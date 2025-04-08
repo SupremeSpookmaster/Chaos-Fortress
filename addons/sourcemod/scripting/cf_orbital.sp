@@ -740,9 +740,8 @@ public Action Strike_DealDamage(Handle smackthoserats, DataPack pack)
 		return Plugin_Continue;
 
 	b_OrbitalStrike = true;
-	Handle victims = CF_GenericAOEDamage(client, client, client, damage, DMG_CLUB|DMG_BLAST|DMG_ALWAYSGIB, radius, groundZero, falloffStart, falloffMax, true, false);
+	CF_GenericAOEDamage(client, client, client, damage, DMG_CLUB|DMG_BLAST|DMG_ALWAYSGIB, radius, groundZero, falloffStart, falloffMax, true, false);
 	b_OrbitalStrike = false;
-	delete victims;
 
 	int r = 255;
 	int b = 0;
