@@ -152,6 +152,7 @@ float f_ScaleEndTime[MAXPLAYERS + 1] = { 0.0, ... };
 float f_OldScale[MAXPLAYERS + 1] = { 0.0, ... };
 
 bool b_WearablesHidden[MAXPLAYERS + 1] = { false, ... };
+bool b_BlockTaunt[MAXPLAYERS + 1] = { false, ... };
 
 Handle g_ModelTimer[MAXPLAYERS + 1] = { null, ... };
 Handle g_SpeedTimer[MAXPLAYERS + 1] = { null, ... };
@@ -938,6 +939,7 @@ public void Weapon_Activate(int client, char abilityName[255])
 		{	
 			Weapon_EndTime[weapon] = GetGameTime() + duration;
 			
+			b_BlockTaunt[client] = true;
 			SDKUnhook(client, SDKHook_PreThink, Weapon_PreThink);
 			SDKHook(client, SDKHook_PreThink, Weapon_PreThink);
 		}
@@ -1065,6 +1067,7 @@ public Action Weapon_PreThink(int client)
 		}
 	}
 	
+	b_BlockTaunt[client] = AtLeastOne;
 	if (!AtLeastOne)
 		SDKUnhook(client, SDKHook_PreThink, Weapon_PreThink);
 		
@@ -1266,6 +1269,7 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 	Generic_DeleteTimers(client);
 	
 	b_WearablesHidden[client] = false;
+	b_BlockTaunt[client] = false;
 	
 	i_NumConds[client] = 0;
 	
@@ -1368,4 +1372,12 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 	}
 
 	return Plugin_Continue;
+}
+
+public void TF2_OnConditionAdded(int client, TFCond cond)
+{
+	if (cond == TFCond_Taunting && b_BlockTaunt[client])
+	{
+		TF2_RemoveCondition(client, cond);
+	}
 }
