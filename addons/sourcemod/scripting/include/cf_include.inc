@@ -1524,11 +1524,16 @@ native float CF_GetShieldWallMaxHealth(int shield);
  * @param includeUser			If set to true, this can damage the user if they are within the radius.
  * @param ignoreInvuln			If set to true, invulnerable players are added to the array returned by this native as long as they would have still been hit by it otherwise.
  * @param pluginName			Name of the plugin which owns the logic function.
- * @param logic					Optional function which you can use to filter out specific entities that are within the blast radius. This function must take one int as a parameter (the entity being checked), and return a bool (true to allow the entity to be hit, false otherwise).
- *
- * @return	An array containing the entity indices of all entities hit by this damage, useful for applying additional effects to victims. This gets returned even if it is empty, you will need to manually close the handle when you are done with it.
+ * @param logic					Optional function which you can use to filter out specific entities that are within the blast radius.
+ * 								This function must take the following parameters by reference (not including victim): victim (int), attacker (int), inflictor (int), weapon (int), damage (float).
+ * 								It must also return a bool (true to allow the victim to be hit, false otherwise).
+ * 								EXAMPLE: bool MyFilter(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
+ * @param hitPlugin				Name of the plugin which owns the on-hit function.
+ * @param hitLogic				Optional function to call when an enemy is hit by this AOE.
+ * 								This function must take all of the same parameters as the filter function, in the same order, and does not need to return a value.
+ * 								EXAMPLE: void OnHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
  */
-native Handle CF_GenericAOEDamage(int attacker, int inflictor, int weapon, float dmg, int damageType, float radius, float groundZero[3], float falloffStart, float falloffMax, bool skipDefaultFilter = false, bool includeUser = true, bool ignoreInvuln = false, char pluginName[255] = "", Function logic = INVALID_FUNCTION);
+native void CF_GenericAOEDamage(int attacker, int inflictor, int weapon, float dmg, int damageType, float radius, float groundZero[3], float falloffStart, float falloffMax, bool skipDefaultFilter = false, bool includeUser = true, bool ignoreInvuln = false, char pluginName[255] = "", Function logic = INVALID_FUNCTION, char hitPlugin[255] = "", Function hitLogic = INVALID_FUNCTION);
 
 /**
  * Applies a temporary change to the client's movement speed.

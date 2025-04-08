@@ -3192,12 +3192,10 @@ ArrayList AOE_Hits = null;
 
 public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 {
-	Handle ReturnValue = CreateArray(16);
-	
 	int attacker = GetNativeCell(1);
 	
 	if (!IsValidEntity(attacker))
-		return ReturnValue;
+		return;
 		
 	int inflictor = GetNativeCell(2);
 	int weapon = GetNativeCell(3);
@@ -3211,17 +3209,18 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 	bool skipDefault = GetNativeCell(10);
 	bool includeUser = GetNativeCell(11);
 	bool ignoreInvuln = GetNativeCell(12);
-	char pluginName[255];
+	char pluginName[255], hitPlugin[255];
 	GetNativeString(13, pluginName, sizeof(pluginName));
 	Function logic = GetNativeFunction(14);
+	GetNativeString(15, hitPlugin, sizeof(hitPlugin));
+	Function hitLogic = GetNativeFunction(16);
 
 	delete AOE_Hits;
 	AOE_Hits = CreateArray(255);
 	
-	//TODO: Modify generic explosion native to use filter functions and on-hit functions, then un-comment this.
-	//#if defined _pnpc_included_
-	//PNPC_Explosion(groundZero, radius, dmg, falloffStart, radius, falloffMax, inflictor, weapon, attacker, damagetype, skipDefault, ignoreInvuln, includeUser);
-	//#else
+	#if defined _pnpc_included_
+	PNPC_Explosion(groundZero, radius, dmg, falloffStart, radius, falloffMax, inflictor, weapon, attacker, damagetype, skipDefault, ignoreInvuln, includeUser, logic, pluginName, hitLogic, hitPlugin);
+	#else
 	TR_EnumerateEntitiesSphere(groundZero, radius, PARTITION_NON_STATIC_EDICTS, GenericAOE_Trace, attacker);
 	
 	for (int i = 0; i < GetArraySize(AOE_Hits); i++)
@@ -3258,44 +3257,56 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 				delete trace;
 			}
 			
+			float realDMG = dmg;
+			if (dist > falloffStart)
+			{
+				realDMG *= 1.0 - (((dist - falloffStart) / (radius - falloffStart)) * falloffMax);
+			}
+						
+			//If the weapon is valid and the victim is a building or prop_physics, deal damage multiplied by building damage attributes:
+			if (IsValidEntity(weapon))
+			{
+				char classname[255];
+				GetEntityClassname(victim, classname, sizeof(classname));
+
+				if (GetEntSendPropOffs(weapon, "m_AttributeList") > 0 && (StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_dispenser")
+				|| StrEqual(classname, "obj_teleporter") || StrContains(classname, "prop_physics") != -1))
+				{
+					realDMG *= GetAttributeValue(weapon, 137, 1.0) * GetAttributeValue(weapon, 775, 1.0);
+				}
+			}
+
 			if (logic != INVALID_FUNCTION && !StrEqual(pluginName, ""))
 			{
 				Call_StartFunction(GetPluginHandle(pluginName), logic);
 				Call_PushCell(victim);
+				Call_PushCellRef(attacker);
+				Call_PushCellRef(inflictor);
+				Call_PushCellRef(weapon);
+				Call_PushFloatRef(realDMG);
 				Call_Finish(passed);
 			}
 					
 			if (passed)
 			{
-				float realDMG = dmg;
-				if (dist > falloffStart)
+				if (hitLogic != INVALID_FUNCTION && !StrEqual(hitPlugin, ""))
 				{
-					realDMG *= 1.0 - (((dist - falloffStart) / (radius - falloffStart)) * falloffMax);
+					Call_StartFunction(GetPluginHandle(hitPlugin), hitLogic);
+					Call_PushCell(victim);
+					Call_PushCellRef(attacker);
+					Call_PushCellRef(inflictor);
+					Call_PushCellRef(weapon);
+					Call_PushFloatRef(realDMG);
+					Call_Finish();
 				}
-						
-				//If the weapon is valid and the victim is a building or prop_physics, deal damage multiplied by building damage attributes:
-				if (IsValidEntity(weapon))
-				{
-					char classname[255];
-					GetEntityClassname(victim, classname, sizeof(classname));
 
-					if (GetEntSendPropOffs(weapon, "m_AttributeList") > 0 && (StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_dispenser")
-					|| StrEqual(classname, "obj_teleporter") || StrContains(classname, "prop_physics") != -1))
-					{
-						realDMG *= GetAttributeValue(weapon, 137, 1.0) * GetAttributeValue(weapon, 775, 1.0);
-					}
-				}
-				
 				SDKHooks_TakeDamage(victim, inflictor, attacker, realDMG, damageType, weapon, _, groundZero, false);
-				PushArrayCell(ReturnValue, victim);
 			}
 		}
 	}
 	
 	delete AOE_Hits;
-	
-	return ReturnValue;
-	//#endif
+	#endif
 }
 
 public bool GenericAOE_Trace(int entity, int attacker)
