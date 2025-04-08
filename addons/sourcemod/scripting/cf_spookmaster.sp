@@ -414,6 +414,9 @@ public Action Discard_StartDecay(Handle decay, int ref)
 
 public void Discard_OnHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
 {
+	if (IsABuilding(victim))
+		return;
+
 	if (victim == attacker)
 		return;
 	#if defined _pnpc_included_
@@ -464,7 +467,7 @@ float Calcium_SkeleDamage[MAXPLAYERS + 1] = { 0.0, ... };
 
 int Calcium_SkeleHealth[MAXPLAYERS + 1] = { 0, ... };
 
-bool Calcium_HitByPlayer[MAXPLAYERS + 1][MAXPLAYERS + 1];
+bool Calcium_HitByPlayer[2049][2049];
 bool Calcium_SpawnMinions[MAXPLAYERS + 1] = { false, ... };
 
 public void Calcium_Activate(int client, char abilityName[255])
@@ -483,14 +486,14 @@ public void Calcium_Activate(int client, char abilityName[255])
 
 public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
-	if (!IsValidClient(attacker) || !IsValidClient(victim))
+	if (!IsValidClient(attacker))
 		return Plugin_Continue;
 		
 	Action ReturnValue = Plugin_Continue;
 		
 	if (GetGameTime() <= Calcium_EndTime[attacker] && weapon == GetPlayerWeaponSlot(attacker, 2))
 	{
-		Calcium_ShockPlayer(attacker, victim, Calcium_Radius[attacker], attacker);
+		Calcium_ShockTarget(attacker, victim, Calcium_Radius[attacker], attacker);
 		Calcium_ClearHitStatus(attacker);
 	}
 	
@@ -509,43 +512,53 @@ public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor
 	return ReturnValue;
 }
 
-public void Calcium_ShockPlayer(int attacker, int victim, float radius, int previousVictim)
+int shocker = -1;
+public void Calcium_ShockTarget(int attacker, int victim, float radius, int previousVictim)
 {
+	if (!IsValidEntity(victim))
+		return;
+		
+	shocker = attacker;
 	TFTeam team = TF2_GetClientTeam(attacker);
 	
 	float pos[3];
-	GetClientAbsOrigin(victim, pos);
-	pos[2] += 40.0;
+	CF_WorldSpaceCenter(victim, pos);
 	
-	if (IsValidClient(previousVictim))
+	if (IsValidEntity(previousVictim))
 	{
 		float prevPos[3];
-		GetClientAbsOrigin(previousVictim, prevPos);
-		prevPos[2] += 40.0;
-		
+		CF_WorldSpaceCenter(previousVictim, prevPos);
+			
 		SpawnParticle_ControlPoints(prevPos, pos, team == TFTeam_Red ? PARTICLE_CALCIUM_CHAIN_RED : PARTICLE_CALCIUM_CHAIN_BLUE, 0.5);
 	}
 	
 	SDKHooks_TakeDamage(victim, attacker, attacker, Calcium_Damage[attacker], DMG_CLUB | DMG_BLAST | DMG_ALWAYSGIB);
-	TF2_IgnitePlayer(victim, attacker, Calcium_Ignite[attacker]);
+
+	if (!IsABuilding(victim))
+	{
+		#if defined _pnpc_included_
+		if (IsValidClient(victim))
+			TF2_IgnitePlayer(victim, attacker, Calcium_Ignite[attacker]);
+		else
+			view_as<PNPC>(victim).Ignite(Calcium_Ignite[attacker], Calcium_Ignite[attacker], _, 5.0, true, attacker);
+		#else
+		TF2_IgnitePlayer(victim, attacker, Calcium_Ignite[attacker]);
+		#endif
+	}
+
 	SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_CALCIUM_SPARKS_RED : PARTICLE_CALCIUM_SPARKS_BLUE, 3.0);
 	Calcium_HitByPlayer[attacker][victim] = true;
-	
-	CF_GenericAOEDamage(attacker, attacker, attacker, 0.0, DMG_GENERIC, radius, pos, 0.0, 0.0, false, false, true, _, _, SPOOKMASTER, Calcium_OnShockHit);
+
+	int closest = CF_GetClosestTarget(pos, true, _, radius, grabEnemyTeam(attacker), SPOOKMASTER, Calcium_ExcludeAlreadyHit);
+	if (closest)
+		Calcium_ShockTarget(attacker, closest, radius, victim);
 }
 
-public void Calcium_OnShockHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
-{
-	if (!IsValidClient(victim))
-		return;
-
-	if (!Calcium_HitByPlayer[attacker][victim])
-		Calcium_ShockPlayer(attacker, victim, Calcium_ChainRadius[attacker], victim);
-}
+public bool Calcium_ExcludeAlreadyHit(int victim) { return !Calcium_HitByPlayer[shocker][victim]; }
 
 public void Calcium_ClearHitStatus(int client)
 {
-	for (int i = 1; i <= MaxClients; i++)
+	for (int i = 1; i <= 2048; i++)
 	{
 		Calcium_HitByPlayer[client][i] = false;
 	}
