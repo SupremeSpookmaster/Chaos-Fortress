@@ -1638,12 +1638,13 @@ public void CF_DestroyAllBuildings(int client)
 		}
 		bool unequip = GetBoolFromConfigMap(subsection, "unequip", true);
 			
-		char fireAbility[255], firePlugin[255], fireSound[255];
+		char fireAbility[255], firePlugin[255], fireSound[255], fireSlot[255];
 		subsection.Get("fire_ability", fireAbility, 255);
 		subsection.Get("fire_plugin", firePlugin, 255);
-		subsection.Get("fire_sound", fireSound, 255);	
+		subsection.Get("fire_sound", fireSound, 255);
+		subsection.Get("fire_slot", fireSlot, 255);
 			
-		int weapon = CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, override, visible, unequip, ForceClass, true, fireAbility, firePlugin, fireSound, false);
+		int weapon = CF_SpawnWeapon(client, classname, index, level, quality, slot, reserve, clip, attributes, fireSlot, visible, unequip, ForceClass, true, fireAbility, firePlugin, fireSound, false);
 		if (IsValidEntity(weapon))
 		{
 			ConfigMap custAtts = subsection.GetSection("custom_attributes");
