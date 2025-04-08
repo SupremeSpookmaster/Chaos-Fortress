@@ -484,6 +484,9 @@ public void Calcium_Activate(int client, char abilityName[255])
 	Calcium_ClearHitStatus(client);
 }
 
+int shocker = -1;
+float Calcium_PreviousPos[3];
+
 public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
 	if (!IsValidClient(attacker))
@@ -493,6 +496,7 @@ public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor
 		
 	if (GetGameTime() <= Calcium_EndTime[attacker] && weapon == GetPlayerWeaponSlot(attacker, 2))
 	{
+		CF_WorldSpaceCenter(attacker, Calcium_PreviousPos);
 		Calcium_ShockTarget(attacker, victim, Calcium_Radius[attacker], attacker);
 		Calcium_ClearHitStatus(attacker);
 	}
@@ -512,7 +516,6 @@ public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor
 	return ReturnValue;
 }
 
-int shocker = -1;
 public void Calcium_ShockTarget(int attacker, int victim, float radius, int previousVictim)
 {
 	if (!IsValidEntity(victim))
@@ -526,10 +529,9 @@ public void Calcium_ShockTarget(int attacker, int victim, float radius, int prev
 	
 	if (IsValidEntity(previousVictim))
 	{
-		float prevPos[3];
-		CF_WorldSpaceCenter(previousVictim, prevPos);
+		CF_WorldSpaceCenter(previousVictim, Calcium_PreviousPos);
 			
-		SpawnParticle_ControlPoints(prevPos, pos, team == TFTeam_Red ? PARTICLE_CALCIUM_CHAIN_RED : PARTICLE_CALCIUM_CHAIN_BLUE, 0.5);
+		SpawnParticle_ControlPoints(Calcium_PreviousPos, pos, team == TFTeam_Red ? PARTICLE_CALCIUM_CHAIN_RED : PARTICLE_CALCIUM_CHAIN_BLUE, 0.5);
 	}
 	
 	SDKHooks_TakeDamage(victim, attacker, attacker, Calcium_Damage[attacker], DMG_CLUB | DMG_BLAST | DMG_ALWAYSGIB);
@@ -549,12 +551,22 @@ public void Calcium_ShockTarget(int attacker, int victim, float radius, int prev
 	SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_CALCIUM_SPARKS_RED : PARTICLE_CALCIUM_SPARKS_BLUE, 3.0);
 	Calcium_HitByPlayer[attacker][victim] = true;
 
+	Calcium_PreviousPos = pos;
 	int closest = CF_GetClosestTarget(pos, true, _, radius, grabEnemyTeam(attacker), SPOOKMASTER, Calcium_ExcludeAlreadyHit);
 	if (closest)
 		Calcium_ShockTarget(attacker, closest, radius, victim);
 }
 
-public bool Calcium_ExcludeAlreadyHit(int victim) { return !Calcium_HitByPlayer[shocker][victim]; }
+public bool Calcium_ExcludeAlreadyHit(int victim)
+{
+	float pos[3];
+	CF_WorldSpaceCenter(victim, pos);
+
+	if (!CF_HasLineOfSight(Calcium_PreviousPos, pos, _, _, victim))
+		return false;
+
+	return !Calcium_HitByPlayer[shocker][victim]; 
+}
 
 public void Calcium_ClearHitStatus(int client)
 {
