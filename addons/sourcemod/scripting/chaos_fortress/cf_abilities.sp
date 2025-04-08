@@ -3190,7 +3190,7 @@ public bool CF_AOETrace(entity, contentsmask)
 
 ArrayList AOE_Hits = null;
 
-public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
+public Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 {
 	int attacker = GetNativeCell(1);
 	
@@ -3219,7 +3219,7 @@ public any Native_CF_GenericAOEDamage(Handle plugin, int numParams)
 	AOE_Hits = CreateArray(255);
 	
 	#if defined _pnpc_included_
-	PNPC_Explosion(groundZero, radius, dmg, falloffStart, radius, falloffMax, inflictor, weapon, attacker, damagetype, skipDefault, ignoreInvuln, includeUser, logic, pluginName, hitLogic, hitPlugin);
+	PNPC_Explosion(groundZero, radius, dmg, falloffStart, radius, falloffMax, inflictor, weapon, attacker, damageType, skipDefault, ignoreInvuln, includeUser, logic, pluginName, hitLogic, hitPlugin);
 	#else
 	TR_EnumerateEntitiesSphere(groundZero, radius, PARTITION_NON_STATIC_EDICTS, GenericAOE_Trace, attacker);
 	

@@ -418,12 +418,12 @@ public void Discard_OnHit(int victim, int &attacker, int &inflictor, int &weapon
 		return;
 	#if defined _pnpc_included_
 	if (PNPC_IsNPC(victim))
-		view_as<PNPC>(victim).Ignite(Discard_BurnTime, Discard_BurnTime[inflictor], _, 5.0, true, attacker);
+		view_as<PNPC>(victim).Ignite(Discard_BurnTime[inflictor], Discard_BurnTime[inflictor], _, 5.0, true, attacker);
 	else
-		TF2_IgnitePlayer(victim, Discard_BurnTime[inflictor]);
+		TF2_IgnitePlayer(victim, attacker, Discard_BurnTime[inflictor]);
 	#else
 	if (!IsABuilding(victim, false))
-		TF2_IgnitePlayer(victim, Discard_BurnTime[inflictor]);
+		TF2_IgnitePlayer(victim, attacker, Discard_BurnTime[inflictor]);
 	#endif
 }
 
@@ -539,8 +539,8 @@ public void Calcium_OnShockHit(int victim, int &attacker, int &inflictor, int &w
 	if (!IsValidClient(victim))
 		return;
 
-	if (!Calcium_HitByPlayer[attacker][vic])
-		Calcium_ShockPlayer(attacker, vic, Calcium_ChainRadius[attacker], victim);
+	if (!Calcium_HitByPlayer[attacker][victim])
+		Calcium_ShockPlayer(attacker, victim, Calcium_ChainRadius[attacker], victim);
 }
 
 public void Calcium_ClearHitStatus(int client)

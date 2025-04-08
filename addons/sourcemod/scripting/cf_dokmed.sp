@@ -303,6 +303,8 @@ public void Bottle_Spin(int ref)
 bool b_Cocainum;
 bool b_Telefrag;
 
+public bool Bottle_NoBuildings(int ent) { return !IsABuilding(ent); }
+
 public MRESReturn Bottle_Shatter(int bottle, int owner, int teamNum)
 {
 	float gt = GetGameTime();
@@ -312,25 +314,50 @@ public MRESReturn Bottle_Shatter(int bottle, int owner, int teamNum)
 	float pos[3], clientPos[3];
 	GetEntPropVector(bottle, Prop_Send, "m_vecOrigin", pos);
 	
+	#if defined _pnpc_included_
+	for (int i = 1; i <= 2048; i++)
+	#else
 	for (int i = 1; i <= MaxClients; i++)
+	#endif
 	{
+		#if defined _pnpc_included_
+		if (CF_IsValidTarget(i, team, DOKMED, Bottle_NoBuildings))
+		#else
 		if (IsValidMulti(i, true, true, true, team))
+		#endif
 		{
-			GetClientAbsOrigin(i, clientPos);
+			GetEntPropVector(i, Prop_Send, "m_vecOrigin", clientPos);
 			
 			if (GetVectorDistance(pos, clientPos) <= Flask_Radius[bottle])
 			{
-				CF_AttachParticle(i, team == TFTeam_Red ? PARTICLE_HEALING_BURST_RED : PARTICLE_HEALING_BURST_BLUE, "root", _, 2.0);
+				#if defined _pnpc_included_
+				if (IsValidClient(i)) 
+				{
+					CF_AttachParticle(i, team == TFTeam_Red ? PARTICLE_HEALING_BURST_RED : PARTICLE_HEALING_BURST_BLUE, "root", _, 2.0);
+					EmitSoundToClient(i, SOUND_FLASK_HEAL);
 				
+					CF_ApplyTemporarySpeedChange(i, Flask_SpeedMode[bottle], Flask_SpeedAmt[bottle], Flask_SpeedDuration[bottle], Flask_SpeedMaxMode[bottle], Flask_SpeedMax[bottle], true);
+					
+					CF_HealPlayer_WithAttributes(i, owner, RoundFloat(Flask_HealInst[bottle]), Flask_HealOverheal[bottle]);
+				}
+				else
+				{
+					AttachParticleToEntity(i, team == TFTeam_Red ? PARTICLE_HEALING_BURST_RED : PARTICLE_HEALING_BURST_BLUE, "root", 2.0);
+					PNPC_HealEntity(i, RoundFloat(Flask_HealInst[bottle]), Flask_HealOverheal[bottle], owner);
+				}
+				#else
+				CF_AttachParticle(i, team == TFTeam_Red ? PARTICLE_HEALING_BURST_RED : PARTICLE_HEALING_BURST_BLUE, "root", _, 2.0);
 				EmitSoundToClient(i, SOUND_FLASK_HEAL);
 				
 				CF_ApplyTemporarySpeedChange(i, Flask_SpeedMode[bottle], Flask_SpeedAmt[bottle], Flask_SpeedDuration[bottle], Flask_SpeedMaxMode[bottle], Flask_SpeedMax[bottle], true);
-				
+					
 				CF_HealPlayer_WithAttributes(i, owner, RoundFloat(Flask_HealInst[bottle]), Flask_HealOverheal[bottle]);
+				#endif
+				
 				if (Flask_HealDuration[bottle] > 0.0)
 				{
 					DataPack pack = new DataPack();
-					WritePackCell(pack, GetClientUserId(i));
+					WritePackCell(pack, EntIndexToEntRef(i));
 					WritePackCell(pack, IsValidClient(owner) ? GetClientUserId(owner) : -1);
 					WritePackCell(pack, RoundFloat(Flask_HealTicks[bottle]));
 					WritePackFloat(pack, Flask_HealTicksOverheal[bottle]);
@@ -369,21 +396,22 @@ public MRESReturn Bottle_Shatter(int bottle, int owner, int teamNum)
 public void Flask_OnHitEnemy(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
 {
 	if (IsValidMulti(victim))
-	{
 		EmitSoundToClient(victim, SOUND_FLASK_POISON);
 				
-		if (Flask_DMGDuration[bottle] > 0.0)
-		{
-			EmitSoundToClient(vic, SOUND_FLASK_POISON_LOOP);
-			DataPack pack = new DataPack();
-			WritePackCell(pack, GetClientUserId(victim));
-			WritePackCell(pack, IsValidClient(attacker) ? GetClientUserId(attacker) : -1);
-			WritePackFloat(pack, Flask_DMGTicks[inflictor]);
-			WritePackFloat(pack, Flask_DMGInterval[inflictor]);
-			WritePackFloat(pack, gt + Flask_DMGInterval[inflictor]);
-			WritePackFloat(pack, gt + Flask_DMGDuration[inflictor]);
-			RequestFrame(Flask_DMGOverTime, pack);
-		}
+	if (Flask_DMGDuration[inflictor] > 0.0)
+	{
+		float gt = GetGameTime();
+		if (IsValidMulti(victim))
+			EmitSoundToClient(victim, SOUND_FLASK_POISON_LOOP);
+
+		DataPack pack = new DataPack();
+		WritePackCell(pack, EntIndexToEntRef(victim));
+		WritePackCell(pack, IsValidClient(attacker) ? GetClientUserId(attacker) : -1);
+		WritePackFloat(pack, Flask_DMGTicks[inflictor]);
+		WritePackFloat(pack, Flask_DMGInterval[inflictor]);
+		WritePackFloat(pack, gt + Flask_DMGInterval[inflictor]);
+		WritePackFloat(pack, gt + Flask_DMGDuration[inflictor]);
+		RequestFrame(Flask_DMGOverTime, pack);
 	}
 }
 
@@ -391,7 +419,7 @@ public void Flask_DMGOverTime(DataPack pack)
 {
 	ResetPack(pack);
 	
-	int client = GetClientOfUserId(ReadPackCell(pack));
+	int victim = EntRefToEntIndex(ReadPackCell(pack));
 	int attacker = ReadPackCell(pack);
 	
 	if (attacker != -1)
@@ -406,12 +434,14 @@ public void Flask_DMGOverTime(DataPack pack)
 	
 	float gt = GetGameTime();
 	
-	if (!IsValidClient(client))
+	if (!IsValidEntity(victim))
 		return;
 		
-	if (!IsPlayerAlive(client) || gt > endTime)
+	if ((IsValidClient(victim) && !IsPlayerAlive(victim)) || gt > endTime)
 	{
-		StopSound(client, SNDCHAN_AUTO, SOUND_FLASK_POISON_LOOP);
+		if (IsValidClient(victim))
+			StopSound(victim, SNDCHAN_AUTO, SOUND_FLASK_POISON_LOOP);
+			
 		return;
 	}
 		
@@ -419,20 +449,33 @@ public void Flask_DMGOverTime(DataPack pack)
 	{
 		b_Cocainum = true;
 		if (IsValidClient(attacker))
-			SDKHooks_TakeDamage(client, attacker, attacker, dmg, DMG_GENERIC);
+			SDKHooks_TakeDamage(victim, attacker, attacker, dmg, DMG_GENERIC);
 		else
-			SDKHooks_TakeDamage(client, 0, 0, dmg, DMG_GENERIC);
+			SDKHooks_TakeDamage(victim, 0, 0, dmg, DMG_GENERIC);
 		b_Cocainum = false;
 
-		float scale = CF_GetCharacterScale(client);
-		TFTeam team = TF2_GetClientTeam(client);
-		CF_AttachParticle(client, team == TFTeam_Red ? PARTICLE_POISON_RED : PARTICLE_POISON_BLUE, "root", _, 2.0, _, _, scale * 80.0);
+		if (IsValidClient(victim))
+		{
+			float scale = CF_GetCharacterScale(victim);
+			TFTeam team = TF2_GetClientTeam(victim);
+			CF_AttachParticle(victim, team == TFTeam_Red ? PARTICLE_POISON_RED : PARTICLE_POISON_BLUE, "root", _, 2.0, _, _, scale * 80.0);
+		}
+		else
+		{
+			float pos[3];
+			CF_WorldSpaceCenter(victim, pos);
+			for (int i = 0; i < 3; i++)
+				pos[i] += GetRandomFloat(-10.0, 10.0)
+
+			TFTeam team = view_as<TFTeam>(GetEntProp(victim, Prop_Send, "m_iTeamNum"));
+			SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_POISON_RED : PARTICLE_POISON_BLUE, 2.0);
+		}
 		
 		nextHit = gt + interval;
 	}
 	
 	DataPack pack2 = new DataPack();
-	WritePackCell(pack2, GetClientUserId(client));
+	WritePackCell(pack2, EntIndexToEntRef(victim));
 	WritePackCell(pack2, IsValidClient(attacker) ? GetClientUserId(attacker) : -1);
 	WritePackFloat(pack2, dmg);
 	WritePackFloat(pack2, interval);
@@ -445,7 +488,7 @@ public void Flask_HealOverTime(DataPack pack)
 {
 	ResetPack(pack);
 	
-	int client = GetClientOfUserId(ReadPackCell(pack));
+	int target = EntRefToEntIndex(ReadPackCell(pack));
 	int healer = ReadPackCell(pack);
 	
 	if (healer != -1)
@@ -461,17 +504,30 @@ public void Flask_HealOverTime(DataPack pack)
 	
 	float gt = GetGameTime();
 	
-	if (!IsValidMulti(client) || gt > endTime)
+	#if defined _pnpc_included_
+	if (!IsValidEntity(target) || (IsValidClient(target) && !IsPlayerAlive(target)) || gt > endTime)
 		return;
+	#else
+	if (!IsValidMulti(target) || gt > endTime)
+		return;
+	#endif
 		
 	if (gt >= nextHeal)
 	{
-		CF_HealPlayer_WithAttributes(client, healer, amt, overheal);
+		#if defined _pnpc_included_
+		if (IsValidClient(target))
+			CF_HealPlayer_WithAttributes(target, healer, amt, overheal);
+		else
+			PNPC_HealEntity(target, amt, overheal, healer);
+		#else
+		CF_HealPlayer_WithAttributes(target, healer, amt, overheal);
+		#endif
+
 		nextHeal = gt + interval;
 	}
 	
 	DataPack pack2 = new DataPack();
-	WritePackCell(pack2, GetClientUserId(client));
+	WritePackCell(pack2, EntIndexToEntRef(target));
 	WritePackCell(pack2, IsValidClient(healer) ? GetClientUserId(healer) : -1);
 	WritePackCell(pack2, amt);
 	WritePackFloat(pack2, overheal);
@@ -565,17 +621,42 @@ public void Surgery_Teleport(int client)
 	CF_GenericAOEDamage(client, client, client, Surgery_DMG[client], DMG_GENERIC | DMG_CLUB | DMG_ALWAYSGIB, Surgery_DMGRadius[client], Surgery_Destination[client], Surgery_DMGFalloffStart[client], Surgery_DMGFalloffMax[client], _, false);
 	b_Telefrag = false;
 	
+	#if defined _pnpc_included_
+	for (int i = 1; i <= 2048; i++)
+	#else
 	for (int i = 1; i <= MaxClients; i++)
+	#endif
 	{
-		if (IsValidMulti(i, true, true, true, team) && i != client)
+		if (i == client)
+			continue;
+
+		#if defined _pnpc_included_
+		if (CF_IsValidTarget(i, team, DOKMED, Bottle_NoBuildings))
+		#else
+		if (IsValidMulti(i, true, true, true, team))
+		#endif
 		{
 			float pos[3];
-			GetClientAbsOrigin(i, pos);
+			GetEntPropVector(i, Prop_Send, "m_vecOrigin", pos);
 			if (GetVectorDistance(pos, Surgery_Destination[client]) <= Surgery_HealingRadius[client])
 			{
+				#if defined _pnpc_included_
+				if (IsValidClient(i))
+				{
+					CF_HealPlayer_WithAttributes(i, client, RoundFloat(Surgery_HealingAmt[client]), Surgery_HealingOverheal[client]);
+					CF_AttachParticle(i, team == TFTeam_Red ? PARTICLE_HEALING_BURST_RED : PARTICLE_HEALING_BURST_BLUE, "root", _, 2.0);
+					EmitSoundToClient(i, SOUND_FLASK_HEAL);
+				}
+				else
+				{
+					PNPC_HealEntity(i, RoundFloat(Surgery_HealingAmt[client]), Surgery_HealingOverheal[client], client);
+					SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_HEALING_BURST_RED : PARTICLE_HEALING_BURST_BLUE, 2.0);
+				}
+				#else
 				CF_HealPlayer_WithAttributes(i, client, RoundFloat(Surgery_HealingAmt[client]), Surgery_HealingOverheal[client]);
 				CF_AttachParticle(i, team == TFTeam_Red ? PARTICLE_HEALING_BURST_RED : PARTICLE_HEALING_BURST_BLUE, "root", _, 2.0);
 				EmitSoundToClient(i, SOUND_FLASK_HEAL);
+				#endif
 			}
 		}
 	}

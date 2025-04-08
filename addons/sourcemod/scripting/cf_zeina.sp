@@ -861,7 +861,7 @@ public void Beacon_OnScanHit(int victim, int &attacker, int &inflictor, int &wea
 	if(IsValidAlly(inflictor, victim))
 	{
 		ZeinaBeaconApplying[victim] = GetGameTime() + 0.25;
-		ZeinaBeacon_CurrentProtectingIndex[victim] = EntIndexToEntRef(Beacon);
+		ZeinaBeacon_CurrentProtectingIndex[victim] = EntIndexToEntRef(inflictor);
 		if(attacker != victim)
 			ZeinaBeaconHadAlly[victim] = GetGameTime() + 0.25;
 	}

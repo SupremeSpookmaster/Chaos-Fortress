@@ -199,6 +199,8 @@ Action UpdateHealthTimer(Handle timer, int userid)
 	return Plugin_Continue;
 }
 
+ArrayList MassLaser_HitList[MAXPLAYERS + 1] = { null, ... };
+
 public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
 	TempomaryShield[client] = 0;
@@ -835,19 +837,31 @@ public Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor,
 
 float MassLaser_CloseDamage[MAXPLAYERS + 1] = { 0.0, ... };
 float MassLaser_FarDamage[MAXPLAYERS + 1] = { 0.0, ... };
-
-ArrayList MassLaser_HitList[MAXPLAYERS + 1] = { null, ... };
+int ML_MaxTargs = 0;
+int ML_NumTargs = 0;
 
 public void MassLaser_OnHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
 {
 	if (IsValidTarget(attacker, victim))
+	{
 		PushArrayCell(MassLaser_HitList[attacker], EntIndexToEntRef(victim));
+		ML_NumTargs++;
+	}
+}
+
+public bool MassLaser_CanHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
+{
+	if (ML_NumTargs >= ML_MaxTargs || !IsValidTarget(attacker, victim))
+		return false;
+
+	return true;
 }
 
 void DoMassLaser(int client, char abilityName[255])
 {
 	float range = CF_GetArgF(client, PluginName, abilityName, "radius");
-	int targets = CF_GetArgI(client, PluginName, abilityName, "targets");
+	ML_NumTargs = 0;
+	ML_MaxTargs = CF_GetArgI(client, PluginName, abilityName, "targets");
 	float delay = CF_GetArgF(client, PluginName, abilityName, "delay");
 	MassLaser_CloseDamage[client] = CF_GetArgF(client, PluginName, abilityName, "damage_close");
 	MassLaser_FarDamage[client] = CF_GetArgF(client, PluginName, abilityName, "damage_far");
@@ -856,7 +870,7 @@ void DoMassLaser(int client, char abilityName[255])
 	GetClientEyePosition(client, pos);
 
 	MassLaser_HitList[client] = CreateArray(16);
-	CF_GenericAOEDamage(client, client, client, 0.0, 0, range, pos, range, 1.0, _, false, _, _, _, PluginName, MassLaser_OnHit);
+	CF_GenericAOEDamage(client, client, client, 0.0, 0, range, pos, range, 1.0, _, false, _, PluginName, MassLaser_CanHit, PluginName, MassLaser_OnHit);
 	
 	DataPack pack;
 	CreateDataTimer(delay, MassLaserTimer, pack);
@@ -912,8 +926,8 @@ Action MassLaserTimer(Handle timer, DataPack pack)
 	pack.Reset();
 	int userid = pack.ReadCell();
 	int attacker = GetClientOfUserId(userid);
-	int slot = pack.ReadCell();
 	ArrayList victims = pack.ReadCell();
+	int slot = pack.ReadCell();
 
 	if(attacker && IsPlayerAlive(attacker))
 	{
@@ -1128,7 +1142,7 @@ public void PortalGateScan_OnHit(int victim, int &attacker, int &inflictor, int 
 {
 	if(IsValidTarget(attacker, victim))
 	{
-		found = true;
+		scan_FoundOne = true;
 		FireScythe(attacker, PortalGateAbName, victim, PortalGatePos);
 	}
 }
