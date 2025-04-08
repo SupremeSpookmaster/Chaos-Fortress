@@ -1591,7 +1591,7 @@ native CF_SetWeaponKillIcon(int weapon, char[] icon);
  * @param output		Output buffer in which to store the weapon's kill icon. Does not get changed if the weapon does not have a custom kill icon.
  * @param length		Output buffer length.
  */
-native CF_GetWeaponKillIcon(int weapon, char[] output, int length = 255);
+native CF_GetWeaponKillIcon(int weapon, const char[] output, int length = 255);
 
 /**
  * Changes the display name of a given ability slot for the specified client.

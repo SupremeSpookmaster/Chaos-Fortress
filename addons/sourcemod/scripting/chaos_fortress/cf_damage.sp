@@ -163,6 +163,8 @@ public void CFDMG_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor
 		CF_IgnoreNextKB(victim);
 }
 
+int i_LastWeaponDamagedBy[MAXPLAYERS + 1] = { -1, ... };
+
 public Action CFDMG_OnTakeDamageAlive(victim, &attacker, &inflictor, &Float:damage, &damagetype, &weapon,
 	Float:damageForce[3], Float:damagePosition[3], damagecustom)
 {	
@@ -192,7 +194,17 @@ public Action CFDMG_OnTakeDamageAlive(victim, &attacker, &inflictor, &Float:dama
 		}
 	}
 
+	if (IsValidEntity(weapon))
+		i_LastWeaponDamagedBy[victim] = EntIndexToEntRef(weapon);
+	else
+		i_LastWeaponDamagedBy[victim] = -1;
+
 	return ReturnValue;
+}
+
+public void CFDMG_GetIconFromLastDamage(int victim, const char output[255])
+{
+	CF_GetWeaponKillIcon(EntRefToEntIndex(i_LastWeaponDamagedBy[victim]), output, 255);
 }
 
 public Action CFDMG_CallDamageForward(GlobalForward forwardToCall, victim, &attacker, &inflictor, &Float:damage, &damagetype, &weapon,
