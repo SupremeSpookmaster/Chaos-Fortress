@@ -1694,15 +1694,6 @@ bool HomingProjectile_ValidTargetCheck(int projectile, int Target)
 	return true;
 }
 
-stock void GetRayAngles(float startPoint[3], float endPoint[3], float angle[3])
-{
-	static float tmpVec[3];
-	tmpVec[0] = endPoint[0] - startPoint[0];
-	tmpVec[1] = endPoint[1] - startPoint[1];
-	tmpVec[2] = endPoint[2] - startPoint[2];
-	GetVectorAngles(tmpVec, angle);
-}
-
 stock float getLinearVelocity(float vecVelocity[3])
 {
 	return SquareRoot((vecVelocity[0] * vecVelocity[0]) + (vecVelocity[1] * vecVelocity[1]) + (vecVelocity[2] * vecVelocity[2]));
@@ -1715,11 +1706,6 @@ stock void GetVectorAnglesTwoPoints(const float startPos[3], const float endPos[
 	tmpVec[1] = endPos[1] - startPos[1];
 	tmpVec[2] = endPos[2] - startPos[2];
 	GetVectorAngles(tmpVec, angles);
-}
-
-stock float fabs(float value)
-{
-	return value < 0 ? -value : value;
 }
 
 stock float fixAngle(float angle)

@@ -3231,6 +3231,44 @@ stock bool Entity_Can_Be_Shot(int entity)
 	|| (StrContains(classname, "obj_dispenser") != -1) || (StrContains(classname, "obj_teleporter") != -1) || (StrContains(classname, "npc") != -1);
 }
 
+stock float CF_GetLinearVelocity(float vecVelocity[3])
+{
+	return SquareRoot((vecVelocity[0] * vecVelocity[0]) + (vecVelocity[1] * vecVelocity[1]) + (vecVelocity[2] * vecVelocity[2]));
+}
+
+stock void CF_GetVectorAnglesTwoPoints(const float startPos[3], const float endPos[3], float angles[3])
+{
+	static float tmpVec[3];
+	tmpVec[0] = endPos[0] - startPos[0];
+	tmpVec[1] = endPos[1] - startPos[1];
+	tmpVec[2] = endPos[2] - startPos[2];
+	GetVectorAngles(tmpVec, angles);
+}
+
+stock float fabs(float value)
+{
+	return value < 0 ? -value : value;
+}
+
+stock void GetRayAngles(float startPoint[3], float endPoint[3], float angle[3])
+{
+	static float tmpVec[3];
+	tmpVec[0] = endPoint[0] - startPoint[0];
+	tmpVec[1] = endPoint[1] - startPoint[1];
+	tmpVec[2] = endPoint[2] - startPoint[2];
+	GetVectorAngles(tmpVec, angle);
+}
+
+stock float CF_FixAngle(float angle)
+{
+	while (angle < -180.0)
+		angle = angle + 360.0;
+	while (angle > 180.0)
+		angle = angle - 360.0;
+		
+	return angle;
+}
+
 //Returns true if the entity is a solid brush. Primarily just filters out "info_" and "trigger_" entities, as well as MOST "func_" entities.
 //Returns true by default for entities that are not brushes.
 stock bool Brush_Is_Solid(int entity)
@@ -3257,7 +3295,14 @@ stock bool Brush_Is_Solid(int entity)
 		}
 	}
 
-	return ((GetEntProp(entity, Prop_Send, "m_nSolidType") != 0) && ((GetEntProp(entity, Prop_Send, "m_usSolidFlags") & 4) == 0));
+	return ((GetEntProp(entity, Prop_Send, "m_nSolidType") != 0) && ((GetEntProp(entity, Prop_Send, "m_usSolidFlags") & 4) == 0) && CollisionGroupIsSolid(entity));
+}
+
+stock bool CollisionGroupIsSolid(int entity)
+{
+	int group = GetEntProp(entity, Prop_Send, "m_CollisionGroup");
+	return (group != 1 && group != 2 && group != 3 && group != 10 && group != 12 && group != 13 && 
+	group != 14 && group != 16 && group != 17 && group != 18 && group != 25 && group != 26);
 }
 
 stock void UTIL_ImpactTrace(int client, const float start[3], int iDamageType, const char[] pCustomImpactName = "Impact")
@@ -3420,6 +3465,17 @@ public bool TraceEntityEnumerator_EnumerateTriggers(int entity, int client)
 	}
 	
 	return true;
+}
+
+stock bool IsAProjectile(int entity, bool includeNPCs = true)
+{
+	if (!IsValidEntity(entity))
+		return false;
+
+	char classname[255];
+	GetEntityClassname(entity, classname, sizeof(classname));
+
+	return StrContains(classname, "tf_projectile") != -1;
 }
 
 stock bool IsABuilding(int entity, bool includeNPCs = true)

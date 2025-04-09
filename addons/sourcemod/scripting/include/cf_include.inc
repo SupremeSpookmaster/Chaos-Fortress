@@ -142,10 +142,10 @@ stock bool CF_DefaultTrace(entity, contentsMask)
 //Generic line-of-sight trace.
 stock bool CF_LOSTrace(int entity, int contentsmask, int target)
 {
-	if (IsValidClient(entity) || entity == target || IsABuilding(entity))
+	if (IsValidClient(entity) || entity == target || IsABuilding(entity) || IsAProjectile(entity) || !Brush_Is_Solid(entity))
 		return false;
 
-	return IsPayloadCart(entity) || (Brush_Is_Solid(entity) && !CF_IsValidTarget(entity, view_as<TFTeam>(GetTeam(target))));
+	return IsPayloadCart(entity) || !CF_IsValidTarget(entity, view_as<TFTeam>(GetTeam(target)));
 }
 
 stock int GetTeam(int entity)
@@ -1915,3 +1915,27 @@ native void CF_FireGenericBullet(int client, float ang[3], float damage, float h
  * @return	True if there is a valid line of sight between the two points, false otherwise.
  */
 native bool CF_HasLineOfSight(float startPos[3], float endPos[3], int &entity = 0, float point[3] = NULL_VECTOR, int user = -1);
+
+/**
+ * Causes a projectile to begin homing in on targets.
+ * 
+ * @param projectile		The projectile.
+ * @param target			The target the projectile should home in on.
+ * @param maxHomingAngle	Maximum angle in which the projectile can home in on its target. Higher = the projectile can make sharper turns.
+ * @param homingRate		Rate at which the projectile will run its homing logic. Higher = more aggressive homing.
+ * @param findNewTargets	If true, the projectile will automatically find a new target if its current target is no longer valid.
+ * 							Otherwise, it will automatically stop homing.
+ * 							New targets are found using CF_IsValidTarget, using "team", "logic", and "plugin" as the parameters.
+ * 							See CF_IsValidTarget for descriptions of what these parameters do.
+ * @param team				See "findNewTargets".
+ * @param logic				See "findNewTargets".
+ * @param plugin			See "findNewTargets".
+ */
+native void CF_InitiateHomingProjectile(int projectile, int target, float maxHomingAngle, float homingRate, bool findNewTargets = false, TFTeam team = TFTeam_Unassigned, Function logic = INVALID_FUNCTION, char[] plugin = "");
+
+/**
+ * Causes a projectile to stop homing in on targets.
+ * 
+ * @param projectile		The projectile.
+ */
+native void CF_TerminateHomingProjectile(int projectile);

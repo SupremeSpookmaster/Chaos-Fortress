@@ -136,6 +136,7 @@ int i_ReloadMaxStocks[MAXPLAYERS + 1] = { 0, ... };
 
 char s_ProjectileLogicPlugin[2049][255];
 Function g_ProjectileLogic[2049] = { INVALID_FUNCTION, ... };
+Handle g_HomingTimer[2049] = { null, ... };
 
 //int MODEL_NONE = -1;
 
@@ -204,6 +205,8 @@ public void CFA_MakeNatives()
 	CreateNative("CF_TraceShot", Native_CF_TraceShot);
 	CreateNative("CF_FireGenericBullet", Native_CF_FireGenericBullet);
 	CreateNative("CF_HasLineOfSight", Native_CF_HasLineOfSight);
+	CreateNative("CF_InitiateHomingProjectile", Native_CF_InitiateHomingProjectile);
+	CreateNative("CF_TerminateHomingProjectile", Native_CF_TerminateHomingProjectile);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -343,6 +346,8 @@ public void CFA_OnEntityDestroyed(int entity)
 	b_ProjectileCanCollideWithAllies[entity] = false;
 	strcopy(s_ProjectileLogicPlugin[entity], 255, "");
 	g_ProjectileLogic[entity] = INVALID_FUNCTION;
+	delete g_HomingTimer[entity];
+	g_HomingTimer[entity] = null;
 }
 
 #if defined _pnpc_included_
@@ -1178,6 +1183,7 @@ public void CFA_MapEnd()
 		b_ProjectileCanCollideWithAllies[i] = false;
 		i_GenericProjectileOwner[i] = -1;
 		b_IsProjectile[i] = false;
+		g_HomingTimer[i] = null;
 	}
 }
 
@@ -5063,4 +5069,184 @@ MRESReturn SentryFired_Pre(int sentry, DHookParam hParams)
 	Call_Finish(result);
 	
 	return result ? MRES_Ignored : MRES_Supercede;
+}
+
+int i_HomingTarget[2049] = { -1, ... };
+
+float f_HomingAngle[2049] = { 0.0, ... };
+float f_HomingRate[2049] = { 0.0, ... };
+float f_HomingVelocity[2049] = { 0.0, ... };
+float f_HomingRotation[2049][3];
+
+bool b_HomingAutoTarget[2049] = { false, ... };
+
+TFTeam g_HomingTeam[2049] = { TFTeam_Unassigned, ... };
+
+Function g_HomingLogic[2049] = { INVALID_FUNCTION, ... };
+
+char s_HomingPlugin[2049][255];
+
+public Native_CF_InitiateHomingProjectile(Handle plugin, int numParams)
+{
+	int projectile = GetNativeCell(1);
+
+	if (!IsValidEntity(projectile))
+		return;
+
+	CF_TerminateHomingProjectile(projectile);
+
+	int target = GetNativeCell(2);
+	if (IsValidEntity(target))
+		target = EntIndexToEntRef(target);
+	i_HomingTarget[projectile] = target;
+
+	f_HomingAngle[projectile] = GetNativeCell(3);
+	f_HomingRate[projectile] = GetNativeCell(4);
+	b_HomingAutoTarget[projectile] = GetNativeCell(5);
+	g_HomingTeam[projectile] = GetNativeCell(6);
+	g_HomingLogic[projectile] = GetNativeFunction(7);
+	GetNativeString(8, s_HomingPlugin[projectile], 255);
+
+	GetEntPropVector(projectile, Prop_Send, "m_angRotation", f_HomingRotation[projectile]);
+
+	float vel[3];
+	GetEntPropVector(projectile, Prop_Data, "m_vecVelocity", vel);
+	f_HomingVelocity[projectile] = CF_GetLinearVelocity(vel);
+
+	DataPack pack = new DataPack();
+	g_HomingTimer[projectile] = CreateDataTimer(0.1, HP_HomeIn, pack, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+	WritePackCell(pack, EntIndexToEntRef(projectile));
+	WritePackCell(pack, projectile);
+}
+
+int homingCheck = -1;
+
+public bool HP_CheckTarget(int target)
+{
+	if (!CF_IsValidTarget(target, g_HomingTeam[homingCheck], s_HomingPlugin[homingCheck], g_HomingLogic[homingCheck]))
+		return false;
+
+	return HP_CanHome(homingCheck, target);
+}
+
+public bool HP_CanHome(int projectile, int target)
+{
+	if (!IsValidEntity(target))
+	{
+		return false;
+	}
+
+	float pos1[3], pos2[3];
+	GetEntPropVector(projectile, Prop_Send, "m_vecOrigin", pos2);
+	CF_WorldSpaceCenter(target, pos1);
+
+	if (!CF_HasLineOfSight(pos1, pos2, _, _, projectile))
+	{
+		return false;
+	}
+
+	float ang[3], angLook[3];
+	for (int i = 0; i < 3; i++)
+		angLook[i] = f_HomingRotation[projectile][i];
+
+	CF_GetVectorAnglesTwoPoints(pos2, pos1, ang);
+
+	ang[0] = CF_FixAngle(ang[0]);
+	ang[1] = CF_FixAngle(ang[1]);
+
+	if(!(fabs(angLook[0] - ang[0]) <= f_HomingAngle[projectile] ||
+	(fabs(angLook[0] - ang[0]) >= (360.0-f_HomingAngle[projectile]))))
+	{
+		return false;
+	}
+
+	if(!(fabs(angLook[1] - ang[1]) <= f_HomingAngle[projectile] ||
+	(fabs(angLook[1] - ang[1]) >= (360.0-f_HomingAngle[projectile]))))
+	{
+		return false;
+	}
+		
+	return true;
+}
+
+public Action HP_HomeIn(Handle plugin, DataPack pack)
+{
+	ResetPack(pack);
+
+	int projectile = EntRefToEntIndex(ReadPackCell(pack));
+	int slot = ReadPackCell(pack);
+
+	if (!IsValidEntity(projectile))
+	{
+		g_HomingTimer[slot] = null;
+		return Plugin_Stop;
+	}
+
+	float pos[3];
+	GetEntPropVector(projectile, Prop_Send, "m_vecOrigin", pos);
+
+	int target = EntRefToEntIndex(i_HomingTarget[projectile]);
+	if (!HP_CanHome(projectile, target))
+	{
+		if (!b_HomingAutoTarget[projectile])
+		{
+			g_HomingTimer[slot] = null;
+			return Plugin_Stop;
+		}
+
+		homingCheck = projectile;
+		target = CF_GetClosestTarget(pos, true, _, _, _, "chaos_fortress", HP_CheckTarget);
+	}
+	
+	if (IsValidEntity(target))
+	{
+		HP_TurnToTarget(projectile, target);
+		i_HomingTarget[projectile] = EntIndexToEntRef(target);
+	}
+
+	return Plugin_Continue;
+}
+
+public void HP_TurnToTarget(int projectile, int target)
+{
+	static float rocketAngle[3];
+
+	rocketAngle[0] = f_HomingRotation[projectile][0];
+	rocketAngle[1] = f_HomingRotation[projectile][1];
+	rocketAngle[2] = f_HomingRotation[projectile][2];
+
+	static float tmpAngles[3];
+	static float rocketOrigin[3];
+	GetEntPropVector(projectile, Prop_Send, "m_vecOrigin", rocketOrigin);
+
+	float pos1[3];
+	CF_WorldSpaceCenter(target, pos1);
+	GetRayAngles(rocketOrigin, pos1, tmpAngles);
+
+	rocketAngle[0] = ApproachAngle(tmpAngles[0], rocketAngle[0], f_HomingRate[projectile]);
+	rocketAngle[1] = ApproachAngle(tmpAngles[1], rocketAngle[1], f_HomingRate[projectile]);
+	
+	float vecVelocity[3];
+	GetAngleVectors(rocketAngle, vecVelocity, NULL_VECTOR, NULL_VECTOR);
+	
+	vecVelocity[0] *= f_HomingVelocity[projectile];
+	vecVelocity[1] *= f_HomingVelocity[projectile];
+	vecVelocity[2] *= f_HomingVelocity[projectile];
+
+	f_HomingRotation[projectile][0] = rocketAngle[0];
+	f_HomingRotation[projectile][1] = rocketAngle[1];
+	f_HomingRotation[projectile][2] = rocketAngle[2];
+
+	TeleportEntity(projectile, NULL_VECTOR, rocketAngle, vecVelocity);
+}
+
+public Native_CF_TerminateHomingProjectile(Handle plugin, int numParams)
+{
+	int projectile = GetNativeCell(1);
+
+	if (IsValidEntity(projectile))
+	{
+		delete g_HomingTimer[projectile];
+		g_HomingTimer[projectile] = null;
+	}
 }

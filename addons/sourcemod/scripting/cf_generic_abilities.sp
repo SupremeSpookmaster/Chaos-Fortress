@@ -1475,6 +1475,11 @@ public void SentryProjectiles_Shoot(int sentry, int owner, int target, int level
 
 		i_SPLevel[projectile] = level - 1;
 		i_SPSentry[projectile] = EntIndexToEntRef(sentry);
+
+		if (f_SPHAmt[owner][level - 1] > 0.0)
+		{
+			CF_InitiateHomingProjectile(projectile, target, f_SPHAng[owner][level - 1], f_SPHAmt[owner][level - 1]);
+		}
 	}
 }
 
