@@ -415,18 +415,16 @@ public Action Discard_StartDecay(Handle decay, int ref)
 
 public void Discard_OnHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
 {
-	if (IsABuilding(victim))
+	if (IsABuilding(victim) || victim == attacker)
 		return;
 
-	if (victim == attacker)
-		return;
 	#if defined _pnpc_included_
 	if (PNPC_IsNPC(victim))
 		view_as<PNPC>(victim).Ignite(Discard_BurnTime[inflictor], Discard_BurnTime[inflictor], _, 5.0, true, attacker);
-	else
+	else if (IsValidClient(victim))
 		TF2_IgnitePlayer(victim, attacker, Discard_BurnTime[inflictor]);
 	#else
-	if (!IsABuilding(victim, false))
+	if (IsValidClient(victim))
 		TF2_IgnitePlayer(victim, attacker, Discard_BurnTime[inflictor]);
 	#endif
 }
