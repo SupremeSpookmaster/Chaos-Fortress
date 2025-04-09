@@ -1524,6 +1524,13 @@ stock int GetEntityHealth(int entity)
 	return 0;
 }
 
+stock int TF2_GetObjectBuilder(int entity) {
+	if (!HasEntProp(entity, Prop_Send, "m_hBuilder")) {
+		ThrowError("Entity index %d is not an object", entity);
+	}
+	return GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
+}
+
 stock void GetAttribStringFromWeapon(int weapon, char output[255])
 {
 	if (!IsValidEntity(weapon))

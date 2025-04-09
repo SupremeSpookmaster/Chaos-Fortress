@@ -688,6 +688,22 @@ forward void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, in
  */
 forward void CF_OnPushForceApplied(int client, float &multiplier, bool selfKB);
 
+/**
+ * Called when a sentry fires a bullet.
+ * 
+ * @param sentry		The sentry.
+ * @param owner			The sentry's owner.
+ * @param target		The sentry's current target.
+ * @param level			The sentry's current level.
+ * @param muzzlePos_1	The origin of the sentry's first barrel muzzle.
+ * @param muzzleAng_1	The angles of the sentry's first barrel muzzle.
+ * @param muzzlePos_2	The origin of the sentry's second barrel muzzle. This is equal to NULL_VECTOR if the sentry is level 1 or a mini-sentry.
+ * @param muzzleAng_2	The angles of the sentry's second barrel muzzle. This is equal to NULL_VECTOR if the sentry is level 1 or a mini-sentry.
+ * 
+ * @return	True to allow the shot to go through, false to block it.
+ */
+forward bool CF_OnSentryFire(int sentry, int owner, int target, int level, float muzzlePos_1[3], float muzzleAng_1[3], float muzzlePos_2[3], float muzzleAng_2[3]);
+
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////
 ///////////////////////////////////////

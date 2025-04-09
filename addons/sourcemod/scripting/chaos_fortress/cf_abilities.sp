@@ -104,6 +104,7 @@ GlobalForward g_AttemptAbility;
 GlobalForward g_SimulatedSpellCast;
 GlobalForward g_ForcedVMAnimEnd;
 GlobalForward g_OnHUDDisplayed;
+GlobalForward g_SentryFiredForward;
 
 Handle SDKStartLagCompensation;
 Handle SDKFinishLagCompensation;
@@ -207,6 +208,7 @@ public void CFA_MakeNatives()
 
 Handle g_hSDKWorldSpaceCenter;
 DynamicHook g_DHookRocketExplode;
+DynamicHook g_DHookSentryFireBullet;
 Handle g_hSetLocalOrigin;
 /*Handle g_hSDKResetSequence;
 Handle g_hSDKLookupSequence;
@@ -236,6 +238,7 @@ public void CFA_MakeForwards()
 	g_SimulatedSpellCast = new GlobalForward("CF_OnSimulatedSpellUsed", ET_Ignore, Param_Cell, Param_Cell);
 	g_ForcedVMAnimEnd = new GlobalForward("CF_OnForcedVMAnimEnd", ET_Ignore, Param_Cell, Param_String);
 	g_OnHUDDisplayed = new GlobalForward("CF_OnHUDDisplayed", ET_Ignore, Param_Cell, Param_String, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);
+	g_SentryFiredForward = new GlobalForward("CF_OnSentryFire", ET_Single, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Array, Param_Array, Param_Array, Param_Array);
 	
 	GameData gd = LoadGameConfigFile("chaos_fortress");
 	
@@ -247,6 +250,10 @@ public void CFA_MakeForwards()
 	
 	//CTFBaseRocket::Explode:
 	g_DHookRocketExplode = DHook_CreateVirtual(gd, "CTFBaseRocket::Explode");
+
+	//CBaseEntity::FireBullets
+	g_DHookSentryFireBullet = DHook_CreateVirtual(gd, "CBaseEntity::FireBullets");
+	g_DHookSentryFireBullet.AddParam(HookParamType_Int);
 
 	//SetLocalOrigin
 	StartPrepSDKCall(SDKCall_Entity);
@@ -4978,4 +4985,51 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 		critType = 1;
 
 	return returnVal;
+}
+
+public void SentrySpawned(int ref)
+{
+	int ent = EntRefToEntIndex(ref);
+	if (!IsValidEntity(ent))
+		return;
+
+	g_DHookSentryFireBullet.HookEntity(Hook_Pre, ent, SentryFired_Pre);
+	//g_DHookSentryFireBullet.HookEntity(Hook_Pre, ent, SentryFired_Post);
+}
+
+MRESReturn SentryFired_Pre(int sentry, DHookParam hParams)
+{
+	if (!IsValidEntity(sentry))
+		return MRES_Ignored;
+	
+	int owner = GetEntPropEnt(sentry, Prop_Send, "m_hBuilder")
+	int target = GetEntPropEnt(sentry, Prop_Send, "m_hEnemy");
+	int level = GetEntProp(sentry, Prop_Send, "m_iUpgradeLevel");
+
+	float pos1[3], ang1[3], pos2[3], ang2[3];
+	if (level > 1)
+	{
+		GetEntityAttachment(sentry, LookupEntityAttachment(sentry, "muzzle_r"), pos1, ang1);
+		GetEntityAttachment(sentry, LookupEntityAttachment(sentry, "muzzle_l"), pos2, ang2);
+	}
+	else
+	{
+		GetEntityAttachment(sentry, LookupEntityAttachment(sentry, "muzzle"), pos1, ang1);
+	}
+
+	Call_StartForward(g_SentryFiredForward);
+
+	Call_PushCell(sentry);
+	Call_PushCell(owner);
+	Call_PushCell(target);
+	Call_PushCell(level);
+	Call_PushArray(pos1, 3);
+	Call_PushArray(ang1, 3);
+	Call_PushArray(pos2, 3);
+	Call_PushArray(ang2, 3);
+
+	bool result = true;
+	Call_Finish(result);
+	
+	return result ? MRES_Ignored : MRES_Supercede;
 }

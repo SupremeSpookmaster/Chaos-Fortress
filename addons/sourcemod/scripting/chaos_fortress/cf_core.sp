@@ -594,6 +594,9 @@ public void OnEntityCreated(int entity, const char[] classname)
 	{
 		SDKHook(entity, SDKHook_TouchPost, PhysTouch);
 	}
+
+	if (StrContains(classname, "obj_sentrygun") != -1)
+		RequestFrame(SentrySpawned, EntIndexToEntRef(entity));
 }
 
 public Action EnterSpawn(int spawn, int entity)

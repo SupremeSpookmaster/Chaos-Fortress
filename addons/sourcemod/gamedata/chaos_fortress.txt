@@ -176,6 +176,13 @@
 					}
 				}
 			}
+			"CBaseEntity::FireBullets"
+			{
+				"offset"		"CBaseEntity::FireBullets"
+				"hooktype"		"entity"
+				"return"		"void"
+				"this"			"entity"
+			}
 		}
 		"Offsets"
 		{
@@ -209,6 +216,11 @@
 				"windows"		"334"
 				"linux64"		"335"
 				"windows64"		"334"
+			}
+			"CBaseEntity::FireBullets"
+			{
+				"linux"		"118"
+				"windows"	"117"
 			}
 		}
 	}
