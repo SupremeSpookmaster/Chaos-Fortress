@@ -966,7 +966,7 @@ public void Weapon_Activate(int client, char abilityName[255])
 		{	
 			Weapon_EndTime[weapon] = GetGameTime() + duration;
 			
-			b_BlockTaunt[client] = true;
+			b_BlockTaunt[client] = CF_GetArgI(client, GENERIC, abilityName, "timed_weapon_blocks_taunt", 1) != 0;
 			SDKUnhook(client, SDKHook_PreThink, Weapon_PreThink);
 			SDKHook(client, SDKHook_PreThink, Weapon_PreThink);
 		}
@@ -1094,7 +1094,7 @@ public Action Weapon_PreThink(int client)
 		}
 	}
 	
-	b_BlockTaunt[client] = AtLeastOne;
+	b_BlockTaunt[client] = AtLeastOne && b_BlockTaunt[client];
 	if (!AtLeastOne)
 		SDKUnhook(client, SDKHook_PreThink, Weapon_PreThink);
 		

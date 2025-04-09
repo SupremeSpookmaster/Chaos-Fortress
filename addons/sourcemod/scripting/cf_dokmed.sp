@@ -306,14 +306,13 @@ bool b_Telefrag;
 
 public bool Bottle_NoBuildings(int ent) { return !IsABuilding(ent); }
 
-public MRESReturn Bottle_Shatter(int bottle, int owner, int teamNum)
+public void Bottle_Shatter(int bottle, int owner, int teamNum, int other, float pos[3])
 {
 	float gt = GetGameTime();
 	
 	TFTeam team = view_as<TFTeam>(teamNum);
 
-	float pos[3], clientPos[3];
-	GetEntPropVector(bottle, Prop_Send, "m_vecOrigin", pos);
+	float clientPos[3];
 	
 	#if defined _pnpc_included_
 	for (int i = 1; i <= 2048; i++)
@@ -390,8 +389,6 @@ public MRESReturn Bottle_Shatter(int bottle, int owner, int teamNum)
 	//SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_HEALING_AURA_RED : PARTICLE_HEALING_AURA_BLUE, 2.0);
 	
 	RemoveEntity(bottle);
-	
-	return MRES_Supercede;
 }
 
 public void Flask_OnHitEnemy(int victim, int &attacker, int &inflictor, int &weapon, float &damage)

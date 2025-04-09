@@ -476,12 +476,9 @@ public void Bomb_Spin(int ref)
 	}
 }
 
-public MRESReturn Bomb_Explode(int bomb, int owner, int teamNum)
+public void Bomb_Explode(int bomb, int owner, int teamNum, int other, float pos[3])
 {
 	float dmg = Bomb_DMG[bomb];
-	
-	float pos[3];
-	GetEntPropVector(bomb, Prop_Send, "m_vecOrigin", pos);
 	
 	CF_GenericAOEDamage(owner, bomb, -1, dmg, DMG_CLUB|DMG_BLAST|DMG_ALWAYSGIB, Bomb_Radius[bomb], pos, Bomb_FalloffStart[bomb], Bomb_FalloffMax[bomb]);		
 	
@@ -489,8 +486,6 @@ public MRESReturn Bomb_Explode(int bomb, int owner, int teamNum)
 	SpawnParticle(pos, PARTICLE_REFINED_EXPLODE, 3.0);
 	
 	RemoveEntity(bomb);
-	
-	return MRES_Supercede;
 }
 
 int i_Shield[MAXPLAYERS + 1] = { -1, ... };

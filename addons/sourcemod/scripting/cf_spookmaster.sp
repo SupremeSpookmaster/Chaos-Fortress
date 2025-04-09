@@ -429,7 +429,7 @@ public void Discard_OnHit(int victim, int &attacker, int &inflictor, int &weapon
 	#endif
 }
 
-public MRESReturn Discard_ExplodePre(int skull, int owner, int teamNum)
+public void Discard_ExplodePre(int skull, int owner, int teamNum, int other, float pos[3])
 {
 	TFTeam team = view_as<TFTeam>(teamNum);
 	
@@ -442,8 +442,6 @@ public MRESReturn Discard_ExplodePre(int skull, int owner, int teamNum)
 			
 		dmg -= TotalDecay;
 	}
-	float pos[3];
-	GetEntPropVector(skull, Prop_Send, "m_vecOrigin", pos);
 	
 	CF_GenericAOEDamage(owner, skull, -1, dmg, DMG_CLUB|DMG_BLAST|DMG_ALWAYSGIB, Discard_Radius[skull], pos, Discard_FalloffStart[skull],
 										Discard_FalloffMax[skull], _, _, _, _, _, SPOOKMASTER, Discard_OnHit);
@@ -453,8 +451,6 @@ public MRESReturn Discard_ExplodePre(int skull, int owner, int teamNum)
 	SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_DISCARD_EXPLODE2_RED : PARTICLE_DISCARD_EXPLODE2_BLUE, 3.0);
 	
 	RemoveEntity(skull);
-	
-	return MRES_Supercede;
 }
 
 float Calcium_Damage[MAXPLAYERS + 1] = { 0.0, ... };

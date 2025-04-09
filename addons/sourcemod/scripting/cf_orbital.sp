@@ -423,10 +423,9 @@ public void Taser_Activate(int client, char abilityName[255])
 		CreateTimer(lifespan, Timer_RemoveEntity, EntIndexToEntRef(projectile), TIMER_FLAG_NO_MAPCHANGE);
 }
 
-public MRESReturn DontExplode(int projectile, int owner, int teamNum)
+public void DontExplode(int projectile, int owner, int teamNum, int other, float pos[3])
 {
-	Taser_Collide(projectile, 0);
-	return MRES_Supercede;
+	Taser_Collide(projectile, other);
 }
 
 public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
@@ -437,37 +436,6 @@ public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
 		
 	RemoveEntity(particle);
 	Taser_Particle[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_TASER_RED : PARTICLE_TASER_BLUE, "", 10.0));
-}
-
-public Action CF_OnPassFilter(int ent1, int ent2, bool &result)
-{
-	bool myResult = Taser_CheckHit(ent1, ent2);
-	if (!myResult)
-	{
-		result = myResult;
-		return Plugin_Changed;
-	}
-	
-	return Plugin_Continue;
-}
-
-public bool Taser_CheckHit(int ent1, int ent2)
-{
-	bool Blocked = false;
-	
-	if (Taser_Active[ent1])
-	{
-		Taser_Collide(ent1, ent2);
-		Blocked = true;
-	}
-		
-	if (Taser_Active[ent2])
-	{
-		Taser_Collide(ent2, ent1);
-		Blocked = true;
-	}
-	
-	return !Blocked;
 }
 
 public void Taser_Collide(int taser, int ent)

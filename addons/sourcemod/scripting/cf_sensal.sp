@@ -544,14 +544,11 @@ void SetAlphaBodyGroup(int client, int entity, char abilityName[255])
 	}
 }
 
-MRESReturn OnScytheCollide(int entity, int owner, int team)
+void OnScytheCollide(int entity, int owner, int team, int other, float pos[3])
 {
 	// There is no collider given to us from CF, do a AOE instead
 
 	float damage = GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_Rocket", "m_iDeflected")+4);
-
-	float pos[3];
-	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", pos);
 
 	KillFeedType = Kill_Sycthe;
 	CF_GenericAOEDamage(owner, entity, entity, damage, DMG_BULLET|DMG_PREVENT_PHYSICS_FORCE, 50.0, pos, 400.0, 1.0, _, false, _, _, _, PluginName, Scythe_OnHit);
@@ -563,7 +560,6 @@ MRESReturn OnScytheCollide(int entity, int owner, int team)
 	TE_Particle(team == 2 ? "spell_batball_impact_red" : "spell_batball_impact_blue", pos);
 
 	RemoveEntity(entity);
-	return MRES_Supercede;
 }
 
 public void Scythe_OnHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
