@@ -3451,7 +3451,7 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 	{
 		TFTeam team = view_as<TFTeam>(GetEntProp(ent1, Prop_Send, "m_iTeamNum"));
 		int owner = GetEntPropEnt(ent1, Prop_Send, "m_hOwnerEntity");
-		if (ent2 == owner || (IsValidMulti(ent2, true, true, true, team) && !b_ProjectileCanCollideWithAllies[ent1]))
+		if (ent2 == owner || (CF_IsValidTarget(ent2, team) && !b_ProjectileCanCollideWithAllies[ent1]))
 		{
 			result = false;
 			ReturnVal = Plugin_Changed;
@@ -3462,7 +3462,7 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 	{
 		TFTeam team = view_as<TFTeam>(GetEntProp(ent2, Prop_Send, "m_iTeamNum"));
 		int owner = GetEntPropEnt(ent2, Prop_Send, "m_hOwnerEntity");
-		if (ent1 == owner || (IsValidMulti(ent1, true, true, true, team) && !b_ProjectileCanCollideWithAllies[ent2]))
+		if (ent1 == owner || (CF_IsValidTarget(ent1, team) && !b_ProjectileCanCollideWithAllies[ent2]))
 		{
 			result = false;
 			ReturnVal = Plugin_Changed;
