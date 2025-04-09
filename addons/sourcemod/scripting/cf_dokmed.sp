@@ -273,9 +273,10 @@ public void Time_PSimLogic(int ent)
 public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
 {
 	int oldParticle = EntRefToEntIndex(i_FlaskParticle[entity]);
-	if (IsValidEntity(oldParticle))
-		RemoveEntity(oldParticle);
-		
+	if (!IsValidEntity(oldParticle))
+		return;
+
+	RemoveEntity(oldParticle);	
 	SetEntityModel(entity, newTeam == TFTeam_Red ? MODEL_FLASK_RED : MODEL_FLASK_BLUE);
 	i_FlaskParticle[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_FLASK_TRAIL_RED : PARTICLE_FLASK_TRAIL_BLUE, ""));
 	SetEntityRenderColor(entity, newTeam == TFTeam_Red ? 255 : 120, 120, newTeam == TFTeam_Blue ? 255 : 120, 255);

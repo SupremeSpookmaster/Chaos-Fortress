@@ -1129,9 +1129,10 @@ public void Trade_OnHit(int victim, int &attacker, int &inflictor, int &weapon, 
 public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
 {
 	int oldParticle = EntRefToEntIndex(Bomb_Particle[entity]);
-	if (IsValidEntity(oldParticle))
-		RemoveEntity(oldParticle);
-		
+	if (!IsValidEntity(oldParticle))
+		return;
+
+	RemoveEntity(oldParticle);
 	Bomb_Particle[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_REFINED_TRAIL_RED : PARTICLE_REFINED_TRAIL_BLUE, ""));
 	SetEntityRenderColor(entity, newTeam == TFTeam_Red ? 255 : 120, 120, newTeam == TFTeam_Blue ? 255 : 120, 255);
 }

@@ -18,8 +18,6 @@
 //	- TODO: Implement notes in the #cf-notes channel.
 //
 //	- OPTIONAL TO-DO LIST (these do not need to be done for the initial release, but would be nice future additions):
-//	- Separate the "description" section of "menu_display" into "desc_brief" and "desc_detailed".
-//		- "desc_brief" will be what shows up when you first open a character's page in the !characters menu. "desc_detailed" is a secondary menu like the lore button, but with multiple pages of detailed info.
 //	- TODO: Add support for translations. This will be a huge pain in the ass, but does not need to be done until public release.
 //
 //	- MINOR BUGS (bugs which have no impact on gameplay and just sort of look bad):
@@ -29,7 +27,6 @@
 //	- MAJOR BUGS (bugs which impact gameplay or character creation in any significant way):
 //	- DEVELOPMENT: The "preserve" variable of cf_generic_wearable does not work. This feature may actually not be possible without an enormous workaround due to interference from TF2's source code, I am not sure.
 //			- Scrap this feature entirely and remove all mentions of it from the code. This will be a giant pain in the ass but does not need to be done until public release.
-//	- ALL: All projectiles are affected by every instance of CF_OnGenericProjectileTeamChanged (excluding Gadgeteer) because I forgot to add a filter. Oops.
 //
 //	- PRESUMED UNFIXABLE (major bugs which I don't believe can be fixed with my current SourceMod expertise. The best thing you can do is classify these as exploits and punish them as such):
 //	- None! (Currently)

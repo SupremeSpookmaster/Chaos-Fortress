@@ -432,9 +432,10 @@ public MRESReturn DontExplode(int projectile, int owner, int teamNum)
 public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
 {
 	int particle = EntRefToEntIndex(Taser_Particle[entity]);
-	if (IsValidEntity(particle))
-		RemoveEntity(particle);
+	if (!IsValidEntity(particle))
+		return;
 		
+	RemoveEntity(particle);
 	Taser_Particle[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_TASER_RED : PARTICLE_TASER_BLUE, "", 10.0));
 }
 

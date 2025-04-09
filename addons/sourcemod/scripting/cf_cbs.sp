@@ -341,6 +341,8 @@ public void Explosive_OnArrowFired(int entity)
 	RequestFrame(Explosive_DelayedArrowModification, EntIndexToEntRef(entity));
 }
 
+int i_BlastTrail[2049] = { -1, ... };
+
 public void Explosive_DelayedArrowModification(int ref)
 {
 	int entity = EntRefToEntIndex(ref);
@@ -364,10 +366,20 @@ public void Explosive_DelayedArrowModification(int ref)
 	f_ExplosiveFalloffStart[entity] = f_ExplosiveBaseFalloffStart[owner] * radMult;
 	f_ExplosiveFalloffMax[entity] = f_ExplosiveBaseFalloffMax[owner] * falloffMult;
 
-	AttachParticleToEntity(entity, TF2_GetClientTeam(owner) == TFTeam_Red? PARTICLE_EXPLOSIVE_RED : PARTICLE_EXPLOSIVE_BLUE, "muzzle");	
+	i_BlastTrail[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, TF2_GetClientTeam(owner) == TFTeam_Red? PARTICLE_EXPLOSIVE_RED : PARTICLE_EXPLOSIVE_BLUE, "muzzle"));	
 	SDKHook(entity, SDKHook_StartTouchPost, Explosive_OnTouch);
 	b_ExplosiveActive[owner] = false;
 	Explosive_DeleteParticle(owner);	
+}
+
+public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
+{
+	int oldParticle = EntRefToEntIndex(i_BlastTrail[entity]);
+	if (!IsValidEntity(oldParticle))
+		return;
+
+	RemoveEntity(oldParticle);
+	i_BlastTrail[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_EXPLOSIVE_RED : PARTICLE_EXPLOSIVE_BLUE, "muzzle"));
 }
 
 public Action Explosive_OnTouch(int entity, int other)

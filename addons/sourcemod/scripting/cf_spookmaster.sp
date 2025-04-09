@@ -394,9 +394,10 @@ public void CF_OnForcedVMAnimEnd(int client, char sequence[255])
 public void CF_OnGenericProjectileTeamChanged(int entity, TFTeam newTeam)
 {
 	int oldParticle = EntRefToEntIndex(Discard_Particle[entity]);
-	if (IsValidEntity(oldParticle))
-		RemoveEntity(oldParticle);
-		
+	if (!IsValidEntity(oldParticle))
+		return;
+
+	RemoveEntity(oldParticle);
 	Discard_Particle[entity] = EntIndexToEntRef(AttachParticleToEntity(entity, newTeam == TFTeam_Red ? PARTICLE_DISCARD_RED : PARTICLE_DISCARD_BLUE, "bloodpoint"));
 	SetEntData(entity, FindSendPropInfo("CTFProjectile_Rocket", "m_nSkin"), view_as<int>(newTeam) - 2, 1, true);
 	SetEntityRenderColor(entity, newTeam == TFTeam_Red ? 255 : 0, 120, newTeam == TFTeam_Blue ? 255 : 0, 255);
