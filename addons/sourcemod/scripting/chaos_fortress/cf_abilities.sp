@@ -3154,7 +3154,10 @@ public Native_CF_FireGenericRocket(Handle plugin, int numParams)
 		g_ProjectileLogic[rocket] = logic;
 		
 		if (!StrEqual(pluginName, "") && logic != INVALID_FUNCTION)
+		{
+			SDKHook(rocket, SDKHook_TouchPost, GenericProjectile_OnTouch);
 			g_DHookRocketExplode.HookEntity(Hook_Pre, rocket, GenericProjectile_Explode);
+		}
 		
 		return rocket;
 	}
@@ -3162,9 +3165,28 @@ public Native_CF_FireGenericRocket(Handle plugin, int numParams)
 	return -1;
 }
 
+public void GenericProjectile_OnTouch(int rocket, int other)
+{
+	if (!Brush_Is_Solid(other))
+		return;
+
+	Handle plugin = GetPluginHandle(s_ProjectileLogicPlugin[rocket]);
+	if (plugin != null)
+	{
+		Call_StartFunction(plugin, g_ProjectileLogic[rocket]);
+			
+		Call_PushCell(rocket);
+		Call_PushCell(GetEntPropEnt(rocket, Prop_Send, "m_hOwnerEntity"));
+		Call_PushCell(GetEntProp(rocket, Prop_Send, "m_iTeamNum"));
+		Call_PushCell(other);
+			
+		Call_Finish();
+	}
+}
+
 public MRESReturn GenericProjectile_Explode(int rocket)
 {
-	if (!StrEqual(s_ProjectileLogicPlugin[rocket], "") && g_ProjectileLogic[rocket] != INVALID_FUNCTION)
+	/*if (!StrEqual(s_ProjectileLogicPlugin[rocket], "") && g_ProjectileLogic[rocket] != INVALID_FUNCTION)
 	{
 		Handle plugin = GetPluginHandle(s_ProjectileLogicPlugin[rocket]);
 		if (plugin != null)
@@ -3181,9 +3203,10 @@ public MRESReturn GenericProjectile_Explode(int rocket)
 			
 			return ReturnValue;
 		}
-	}
+	}*/
 	
-	return MRES_Ignored;
+	//return MRES_Ignored;
+	return MRES_Supercede;
 }
 
 int entityBeingTraced = -1;
@@ -5003,7 +5026,11 @@ MRESReturn SentryFired_Pre(int sentry, DHookParam hParams)
 		return MRES_Ignored;
 	
 	int owner = GetEntPropEnt(sentry, Prop_Send, "m_hBuilder")
+
 	int target = GetEntPropEnt(sentry, Prop_Send, "m_hEnemy");
+	if (GetEntProp(sentry, Prop_Send, "m_bPlayerControlled"))
+		target = GetEntPropEnt(sentry, Prop_Send, "m_hAutoAimTarget");
+
 	int level = GetEntProp(sentry, Prop_Send, "m_iUpgradeLevel");
 
 	float pos1[3], ang1[3], pos2[3], ang2[3];

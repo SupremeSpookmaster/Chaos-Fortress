@@ -693,7 +693,7 @@ forward void CF_OnPushForceApplied(int client, float &multiplier, bool selfKB);
  * 
  * @param sentry		The sentry.
  * @param owner			The sentry's owner.
- * @param target		The sentry's current target.
+ * @param target		The sentry's current target. If the sentry is wrangled, this is the sentry's current wrangler aim-assist target.
  * @param level			The sentry's current level.
  * @param muzzlePos_1	The origin of the sentry's first barrel muzzle.
  * @param muzzleAng_1	The angles of the sentry's first barrel muzzle.

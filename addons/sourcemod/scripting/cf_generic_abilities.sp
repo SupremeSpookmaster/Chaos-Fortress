@@ -24,6 +24,7 @@
 #define RESOURCE_VFX		"generic_resource_particles"
 #define SELF_HEAL			"generic_self_heal"
 #define ATKSPEED			"generic_attackspeed"
+#define SENTRY_PROJECTILES	"generic_sentry_projectiles"
 
 float Weapon_EndTime[2049] = { 0.0, ... };
 
@@ -169,6 +170,28 @@ int i_ForceFireSlot[MAXPLAYERS + 1] = { 0, ... };
 float f_ForceFireDelay[MAXPLAYERS + 1] = { 0.0, ... };
 float ATKSpeed_EndTime[MAXPLAYERS + 1] = { 0.0, ... };
 
+bool b_SentryProjectiles[MAXPLAYERS + 1] = { false, ... };
+
+#define MODEL_SENTRY_PROJECTILE			"models/weapons/w_models/w_drg_ball.mdl"
+
+char g_SPImpactSounds[][] = {
+	"physics/surfaces/sand_impact_bullet1.wav",
+	"physics/surfaces/sand_impact_bullet2.wav",
+	"physics/surfaces/sand_impact_bullet3.wav",
+	"physics/surfaces/sand_impact_bullet4.wav"
+}
+
+#define PARTICLE_SENTRY_PROJECTILE_RED		"nailtrails_medic_red_crit"
+#define PARTICLE_SENTRY_PROJECTILE_BLUE		"nailtrails_medic_blue_crit"
+#define PARTICLE_SENTRY_PROJECTILE_IMPACT	"impact_concrete_child_puff"
+
+public void OnMapStart()
+{
+	PrecacheModel(MODEL_SENTRY_PROJECTILE);
+
+	for (int i = 0; i < sizeof(g_SPImpactSounds); i++) { PrecacheSound(g_SPImpactSounds[i]); }
+}
+
 public void CF_OnCharacterCreated(int client)
 {
 	Generic_DeleteTimers(client);
@@ -179,6 +202,10 @@ public void CF_OnCharacterCreated(int client)
 
 	if (CF_HasAbility(client, GENERIC, RESOURCE_VFX))
 		RVFX_Prepare(client);
+
+	b_SentryProjectiles[client] = CF_HasAbility(client, GENERIC, SENTRY_PROJECTILES);
+	if (b_SentryProjectiles[client])
+		SentryProjectiles_Prepare(client);
 }
 
 enum struct ResourceParticle
@@ -1380,4 +1407,117 @@ public void TF2_OnConditionAdded(int client, TFCond cond)
 	{
 		TF2_RemoveCondition(client, cond);
 	}
+}
+
+float f_SPVel[2049][3];
+float f_SPLifespan[2049][3];
+float f_SPDMG[2049][3];
+float f_SPHAmt[2049][3];
+float f_SPHAng[2049][3];
+
+int i_SPLevel[2049] = { -1, ... };
+int i_SPSentry[2049] = { -1, ... };
+
+//TODO: Expand on this to allow for customizable model, particle, and blast args
+public void SentryProjectiles_Prepare(int client)
+{
+	char argName[255];
+	for (int i = 0; i < 3; i++)
+	{
+		Format(argName, sizeof(argName), "velocity_%i", i + 1);
+		f_SPVel[client][i] = CF_GetArgF(client, GENERIC, SENTRY_PROJECTILES, argName, 900.0);
+
+		Format(argName, sizeof(argName), "lifespan_%i", i + 1);
+		f_SPLifespan[client][i] = CF_GetArgF(client, GENERIC, SENTRY_PROJECTILES, argName, 1.2);
+
+		Format(argName, sizeof(argName), "damage_%i", i + 1);
+		f_SPDMG[client][i] = CF_GetArgF(client, GENERIC, SENTRY_PROJECTILES, argName, 20.0);
+
+		Format(argName, sizeof(argName), "homing_amount_%i", i + 1);
+		f_SPHAmt[client][i] = CF_GetArgF(client, GENERIC, SENTRY_PROJECTILES, argName, 8.0);
+
+		Format(argName, sizeof(argName), "homing_angle_%i", i + 1);
+		f_SPHAng[client][i] = CF_GetArgF(client, GENERIC, SENTRY_PROJECTILES, argName, 60.0);
+	}
+}
+
+public bool CF_OnSentryFire(int sentry, int owner, int target, int level, float muzzlePos_1[3], float muzzleAng_1[3], float muzzlePos_2[3], float muzzleAng_2[3])
+{
+	if (!IsValidClient(owner))
+		return true;
+
+	if (!b_SentryProjectiles[owner])
+		return true;
+
+	SentryProjectiles_Shoot(sentry, owner, target, level, muzzlePos_1, muzzleAng_1);
+	if (level > 1)
+		SentryProjectiles_Shoot(sentry, owner, target, level, muzzlePos_2, muzzleAng_2);
+
+	return false;
+}
+
+public void SentryProjectiles_Shoot(int sentry, int owner, int target, int level, float pos[3], float ang[3])
+{
+	TFTeam team = TF2_GetClientTeam(owner);
+
+	int projectile = CF_FireGenericRocket(owner, 0.0, f_SPVel[owner][level - 1], _, false, GENERIC, SentryProjectiles_Impact);
+	if (IsValidEntity(projectile))
+	{
+		SetEntityModel(projectile, MODEL_SENTRY_PROJECTILE);
+		AttachParticleToEntity(projectile, team == TFTeam_Red ? PARTICLE_SENTRY_PROJECTILE_RED : PARTICLE_SENTRY_PROJECTILE_BLUE, "", f_SPLifespan[owner][level - 1]);
+
+		if (f_SPLifespan[owner][level - 1] > 0.0)
+			CreateTimer(f_SPLifespan[owner][level - 1], Timer_RemoveEntity, EntIndexToEntRef(projectile), TIMER_FLAG_NO_MAPCHANGE);
+
+		float vel[3];
+		GetVelocityInDirection(ang, f_SPVel[owner][level - 1], vel);
+		TeleportEntity(projectile, pos, ang, vel);
+
+		i_SPLevel[projectile] = level - 1;
+		i_SPSentry[projectile] = EntIndexToEntRef(sentry);
+	}
+}
+
+int SPKillType = -1;
+public MRESReturn SentryProjectiles_Impact(int projectile, int owner, int teamNum, int other)
+{
+	int sentry = EntRefToEntIndex(i_SPSentry[projectile]);
+
+	float pos[3];
+	GetEntPropVector(projectile, Prop_Send, "m_vecOrigin", pos);
+	
+	EmitSoundToAll(g_SPImpactSounds[GetRandomInt(0, sizeof(g_SPImpactSounds) - 1)], projectile, _, _, _, _, GetRandomInt(90, 110));
+	SpawnParticle(pos, PARTICLE_SENTRY_PROJECTILE_IMPACT, 0.2);
+
+	if (CF_IsValidTarget(other, grabEnemyTeam(owner)))
+	{
+		SPKillType = i_SPLevel[projectile];
+		SDKHooks_TakeDamage(other, IsValidEntity(sentry) ? sentry : projectile, owner, f_SPDMG[owner][i_SPLevel[projectile]], DMG_BULLET, _, _, pos);
+		SPKillType = -1;
+	}
+
+	RemoveEntity(projectile);
+	return MRES_Supercede;
+}
+
+public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], char console[255], int &custom, int deadRinger, int &critType, int &damagebits)
+{
+	if (SPKillType > -1)
+	{
+		switch(SPKillType)
+		{
+			case 0:
+				strcopy(weapon, sizeof(weapon), "obj_sentrygun");
+			case 1:
+				strcopy(weapon, sizeof(weapon), "obj_sentrygun2");
+			case 2:
+				strcopy(weapon, sizeof(weapon), "obj_sentrygun3");
+			default:
+				strcopy(weapon, sizeof(weapon), "obj_minisentry");
+		}
+
+		return Plugin_Changed;
+	}
+
+	return Plugin_Continue;
 }
