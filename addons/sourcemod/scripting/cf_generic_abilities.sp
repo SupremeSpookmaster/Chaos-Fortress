@@ -1479,12 +1479,9 @@ public void SentryProjectiles_Shoot(int sentry, int owner, int target, int level
 }
 
 int SPKillType = -1;
-public MRESReturn SentryProjectiles_Impact(int projectile, int owner, int teamNum, int other)
+public MRESReturn SentryProjectiles_Impact(int projectile, int owner, int teamNum, int other, float pos[3])
 {
 	int sentry = EntRefToEntIndex(i_SPSentry[projectile]);
-
-	float pos[3];
-	GetEntPropVector(projectile, Prop_Send, "m_vecOrigin", pos);
 	
 	EmitSoundToAll(g_SPImpactSounds[GetRandomInt(0, sizeof(g_SPImpactSounds) - 1)], projectile, _, _, _, _, GetRandomInt(90, 110));
 	SpawnParticle(pos, PARTICLE_SENTRY_PROJECTILE_IMPACT, 0.2);

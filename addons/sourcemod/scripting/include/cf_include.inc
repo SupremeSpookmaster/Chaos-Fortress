@@ -1456,7 +1456,9 @@ native CF_HealPlayer_WithAttributes(int client, int healer, int amt, float hpMul
  * @param crit					Set to true to make the rocket crit.
  * @param collideWithAllies		Set to true to allow the rocket to collide with allies.
  * @param pluginName			Name of the plugin which owns the logic function.
- * @param logic					Function to call when the rocket collides with something. Must accept 3 ints as parameters (first is the rocket, second is its owner, third is the rocket's team) and return an MRESReturn.
+ * @param logic					Function to call when the rocket collides with something. Must accept the following parameters:
+ * 								4 ints: the projectile's index, the owner's index, the projectile's team number, and the index of the entity the projectile collided with, as well as a vector for the projectile's position.
+ * 								Example: void MyCollisionCallback(int projectile, int owner, int teamNum, int other, float pos[3])
  *
  * @return	The entity index of the rocket. 
  */

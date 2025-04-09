@@ -3173,12 +3173,16 @@ public void GenericProjectile_OnTouch(int rocket, int other)
 	Handle plugin = GetPluginHandle(s_ProjectileLogicPlugin[rocket]);
 	if (plugin != null)
 	{
+		float pos[3];
+		GetEntPropVector(rocket, Prop_Send, "m_vecOrigin", pos);
+
 		Call_StartFunction(plugin, g_ProjectileLogic[rocket]);
 			
 		Call_PushCell(rocket);
 		Call_PushCell(GetEntPropEnt(rocket, Prop_Send, "m_hOwnerEntity"));
 		Call_PushCell(GetEntProp(rocket, Prop_Send, "m_iTeamNum"));
 		Call_PushCell(other);
+		Call_PushArray(pos, 3);
 			
 		Call_Finish();
 	}
