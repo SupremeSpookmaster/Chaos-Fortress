@@ -62,66 +62,150 @@ public const float f_ClassBaseSpeed[] =
 	320.0
 };
 
-//TODO: Populate this with every other value a character's config can have (done if we ignore optional bits).
-//Possible future values include:
-//		- All variables associated with the character's Ultimate Ability (optional, the plugin works as intended without this but it would be a nice QOL change).
-//		- All variables associated with the character's special resource (optional, the plugin works as intended without this but it would be a nice QOL change).
-enum struct CFCharacter
+//Abilities are split into two types:
+//	• CFAbility
+//	• CFEffect
+//
+//CFAbility is the methodmap used for "official" abilities, the ones triggered on M2, M3, Reload, and Ultimate.
+//It contains the following: slot, cooldown, next use time, display name, stockpile system info, resource costs, whether or not it is a held ability
+
+//CFEffect is the methodmap used for the abilities themselves.
+//It contains the following: "plugin_name", "ability_name", slot, and a list of the ability's args and their corresponding values.
+methodmap CFEffect __nullable__
 {
-	float Speed;
-	float MaxHP;
-	float Scale;
-	float BaseSpeed;
-	float Weight;
-	
-	char Model[255];
-	char Name[255];
-	char MapPath[255];
-	char Arms[255];
-	char Archetype[255];
-	
-	TFClassType Class;
-	
-	bool Exists;
-	bool HasCustomArms;
-	
-	Handle Abilities_Ult;
-	Handle Abilities_M2;
-	Handle Abilities_M3;
-	Handle Abilities_Reload;
-	
-	void Create(float newSpeed, float newMaxHP, TFClassType newClass, char newModel[255], char newName[255], float newScale, float newWeight, char newMapPath[255], char newArms[255], char newArchetype[255])
+	CFEffect()
 	{
-		this.Speed = newSpeed;
-		this.MaxHP = newMaxHP;
-		this.Class = newClass;
-		this.Model = newModel;
-		this.Name = newName;
-		this.Scale = newScale;
-		this.BaseSpeed = newSpeed;
-		this.Weight = newWeight;
-		this.Archetype = newArchetype;
-		
-		this.MapPath = newMapPath;
-		this.Arms = newArms;
-		this.HasCustomArms = CheckFile(this.Arms);
-		
-		delete this.Abilities_Ult;
-		delete this.Abilities_M2;
-		delete this.Abilities_M3;
-		delete this.Abilities_Reload;
-		
-		this.Exists = true;
+
 	}
-	
-	void Destroy()
+}
+
+enum struct CFAbility  __nullable__
+{
+	CFAbility()
 	{
-		this.Exists = false;
 		
-		delete this.Abilities_Ult;
-		delete this.Abilities_M2;
-		delete this.Abilities_M3;
-		delete this.Abilities_Reload;
+	}
+}
+
+CFAbility g_Abilities[MAXPLAYERS + 1][5];
+
+//TODO: Add variables used for resources and ult charge
+methodmap CFCharacter __nullable__
+{
+	CFCharacter(int client, float speed, float maxHP, TFClassType class, char model[PLATFORM_MAX_PATH], char name[], float scale, float weight, char configMapPath[PLATFORM_MAX_PATH], char archetype[])
+	{
+		this.i_Client = client;
+		this.i_Class = class;
+
+		this.f_Speed = speed;
+		this.f_MaxHP = maxHP;
+		this.f_Scale = scale;
+		this.f_Weight = weight;
+
+		this.SetModel(model);
+		this.SetName(name);
+		this.SetConfigMapPath(configMapPath);
+		this.SetArchetype(archetype);
+	}
+
+	void SetModel(char[] model)
+	{
+		//TODO: Check if model is valid, apply if it is, return if not
+		strcopy(s_CharacterModel[this.index], PLATFORM_MAX_PATH, model);
+	}
+
+	void GetModel(char[] output)
+	{
+		strcopy(output, sizeof(output), s_CharacterModel[this.index]);
+	}
+
+	void SetName(char[] name)
+	{
+		strcopy(s_CharacterName[this.index], 255, name);
+	}
+
+	void GetName(char[] output)
+	{
+		strcopy(output, sizeof(output), s_CharacterName[this.index]);
+	}
+
+	void SetConfigMapPath(char[] path)
+	{
+		strcopy(s_CharacterConfigMapPath[this.index], PLATFORM_MAX_PATH, path);
+	}
+
+	void GetConfigMapPath(char[] output)
+	{
+		strcopy(output, sizeof(output), s_CharacterConfigMapPath[this.index]);
+	}
+
+	void SetArchetype(char[] name)
+	{
+		strcopy(s_CharacterArchetype[this.index], 255, name);
+	}
+
+	void GetArchetype(char[] output)
+	{
+		strcopy(output, sizeof(output), s_CharacterArchetype[this.index]);
+	}
+
+	property int index
+	{
+		public get() { return view_as<int>(this); }
+	}
+
+	property int i_Client
+	{
+		public get() { return GetClientOfUserId(i_CharacterClass[this.index]); }
+		public set(int value) { i_CharacterClass[this.index] = GetClientUserId(value); }
+	}
+
+	property float f_Speed
+	{
+		public get() { return f_CharacterSpeed[this.index]; }
+		public set(float value) { f_CharacterSpeed[this.index] = value; }
+	}
+
+	property float f_MaxHP
+	{
+		public get() { return f_CharacterMaxHP[this.index]; }
+		public set(float value) { f_CharacterMaxHP[this.index] = value; }
+	}
+
+	property float f_Scale
+	{
+		public get() { return f_CharacterScale[this.index]; }
+		public set(float value) { f_CharacterScale[this.index] = value; }
+	}
+
+	property float f_BaseSpeed
+	{
+		public get() { return f_CharacterBaseSpeed[this.index]; }
+		public set(float value) { f_CharacterBaseSpeed[this.index] = value; }
+	}
+
+	property float f_Weight
+	{
+		public get() { return f_CharacterWeight[this.index]; }
+		public set(float value) { f_CharacterWeight[this.index] = value; }
+	}
+
+	property TFClassType i_Class
+	{
+		public get() { return i_CharacterClass[this.index]; }
+		public set(TFClassType value)
+		{ 
+			i_CharacterClass[this.index] = value;
+
+			if (IsValidMulti(this.i_Client))
+				TF2_SetPlayerClass(this.i_Client, value);
+		}
+	}
+
+	property ArrayList g_Abilities
+	{
+		public get() { g_CharacterAbilities[this.index] == null ? new ArrayList(255) : g_CharacterAbilities[this.index]; }
+		public set(ArrayList value) { g_CharacterAbilities[this.index] = value; }
 	}
 }
 
