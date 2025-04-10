@@ -181,8 +181,8 @@ char g_SPImpactSounds[][] = {
 	"physics/surfaces/sand_impact_bullet4.wav"
 }
 
-#define PARTICLE_SENTRY_PROJECTILE_RED		"nailtrails_medic_red_crit"
-#define PARTICLE_SENTRY_PROJECTILE_BLUE		"nailtrails_medic_blue_crit"
+#define PARTICLE_SENTRY_PROJECTILE_RED		"raygun_projectile_red"
+#define PARTICLE_SENTRY_PROJECTILE_BLUE		"raygun_projectile_blue"
 #define PARTICLE_SENTRY_PROJECTILE_IMPACT	"impact_concrete_child_puff"
 
 public void OnMapStart()

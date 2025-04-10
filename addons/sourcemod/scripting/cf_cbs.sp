@@ -17,7 +17,7 @@
 #define PARTICLE_VOLLEY_ACTIVE_RED	"dxhr_lightningball_parent_red"
 #define PARTICLE_VOLLEY_ACTIVE_BLUE	"dxhr_lightningball_parent_blue"
 #define PARTICLE_VOLLEY_FIRE_RED	"raygun_projectile_red"
-#define PARTICLE_VOLLEY_FIRE_BLUE	"raygun_projectile_red"
+#define PARTICLE_VOLLEY_FIRE_BLUE	"raygun_projectile_blue"
 
 #define PARTICLE_EXPLOSIVE_RED	"superrare_burning1"
 #define PARTICLE_EXPLOSIVE_BLUE	"superrare_burning2"
