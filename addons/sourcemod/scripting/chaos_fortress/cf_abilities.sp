@@ -4338,8 +4338,7 @@ public void CFA_OnEntityCreated(int entity, const char[] classname)
 	{
 		SDKHook(entity, SDKHook_SpawnPost, GetOwner);
 		b_IsProjectile[entity] = true;
-		b_ProjectileCanCollideWithAllies[entity] = StrEqual(classname, "tf_projectile_healing_bolt");
-		
+		b_ProjectileCanCollideWithAllies[entity] = StrEqual(classname, "tf_projectile_healing_bolt") || StrEqual(classname, "tf_projectile_arrow");
 	}
 	
 	if (StrContains(classname, "tf_projectile_spell") != -1)

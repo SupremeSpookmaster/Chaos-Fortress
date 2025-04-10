@@ -2309,6 +2309,8 @@ enum struct LittleBuddy
 
 LittleBuddy buddies[2049];
 
+bool b_IsBuster[2049] = { false, ... };
+
 //Resets global variables associated with given entities when they are destroyed.
 //Also triggers Drone destruction effects if the entity is a Drone.
 public void OnEntityDestroyed(int entity)
@@ -2356,6 +2358,7 @@ public void OnEntityDestroyed(int entity)
 		Toss_IsSupportDrone[entity] = false;
 		Annihilation_IsTele[entity] = false;
 		b_IsBuddy[entity] = false;
+		b_IsBuster[entity] = false;
 		TeleStats[entity].owner = -1;
 		f_NextTargetTime[entity] = 0.0;
 
@@ -3583,6 +3586,7 @@ public void Annihilation_TeleThink(int tele)
 
 				int buster = PNPC(MODEL_ANNIHILATION_BUSTER, team, RoundFloat(TeleStats[tele].f_BusterHP), RoundFloat(TeleStats[tele].f_BusterHP), teamNum - 2, 0.66, TeleStats[tele].f_BusterSpeed, Annihilation_BusterThink, GADGETEER, 0.0, pos, randAng, _, _, busterName).Index;
 				
+				b_IsBuster[buster] = true;
 				view_as<PNPC>(buster).b_GibsForced = true;
 				view_as<PNPC>(buster).SetSequence("Run_MELEE");
 				view_as<PNPC>(buster).SetPlaybackRate(1.0);
@@ -4185,4 +4189,12 @@ public bool Buddy_CheckLOS(int ent)
 	CF_WorldSpaceCenter(currentBuddy, pos1);
 	CF_WorldSpaceCenter(ent, pos2);
 	return CF_HasLineOfSight(pos1, pos2, _, _, currentBuddy);
+}
+
+public bool PNPC_OnCheckMedigunCanAttach(PNPC npc, int client, int medigun)
+{
+	if (b_IsBuddy[npc.Index] || Annihilation_IsTele[npc.Index] || Toss_IsSupportDrone[npc.Index] || b_IsBuster[npc.Index])
+		return false;
+
+	return true;
 }
