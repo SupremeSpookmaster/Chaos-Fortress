@@ -550,9 +550,14 @@ void OnScytheCollide(int entity, int owner, int team, int other, float pos[3])
 
 	float damage = GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_Rocket", "m_iDeflected")+4);
 
-	KillFeedType = Kill_Sycthe;
-	CF_GenericAOEDamage(owner, entity, entity, damage, DMG_BULLET|DMG_PREVENT_PHYSICS_FORCE, 50.0, pos, 400.0, 1.0, _, false, _, _, _, PluginName, Scythe_OnHit);
-	KillFeedType = -1;
+	if (CF_IsValidTarget(other, grabEnemyTeam(owner)))
+	{
+		KillFeedType = Kill_Sycthe;
+		SDKHooks_TakeDamage(other, entity, owner, damage, DMG_BULLET|DMG_PREVENT_PHYSICS_FORCE, _, _, pos);
+		KillFeedType = -1;
+
+		ApplyVulnStack(other, owner, 1.065, 5.0);
+	}
 
 	// CF does not feature a way to play a sound from config in another location
 	EmitSoundToAll(SyctheHitSound[GetURandomInt() % sizeof(SyctheHitSound)], entity, SNDCHAN_AUTO, 95);
@@ -560,12 +565,6 @@ void OnScytheCollide(int entity, int owner, int team, int other, float pos[3])
 	TE_Particle(team == 2 ? "spell_batball_impact_red" : "spell_batball_impact_blue", pos);
 
 	RemoveEntity(entity);
-}
-
-public void Scythe_OnHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
-{
-	if(victim <= MaxClients)
-		ApplyVulnStack(victim, attacker, 1.065, 5.0);
 }
 
 void ApplyVulnStack(int victim, int attacker, float multi, float duration)
