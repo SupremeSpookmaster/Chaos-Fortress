@@ -71,82 +71,168 @@ public const float f_ClassBaseSpeed[] =
 
 //CFEffect is the methodmap used for the abilities themselves.
 //It contains the following: "plugin_name", "ability_name", slot, and a list of the ability's args and their corresponding values.
+
+bool b_EffectExists[4096] = { false, ... };
+
+int i_EffectSlot[4096] = { -1, ... };
+int i_EffectArgs[4096] = { 0, ... };
+
+char s_EffectPluginName[4096][255];
+char s_EffectAbilityName[4096][255];
+char s_EffectArgNames[4096][255][255];
+char s_EffectArgValues[4096][255][255];
+
 methodmap CFEffect __nullable__
 {
-	CFEffect()
+	public CFEffect()
 	{
+		int slot = -1;
+		for (int i = 0; i < 4096; i++)
+		{
+			if (!b_EffectExists[i])
+			{
+				slot = i;
+				break;
+			}
+		}
 
+		if (slot != -1)
+		{
+			b_EffectExists[slot] = true;
+		}
+
+		return view_as<CFEffect>(slot);
+	}
+
+	property int index
+	{
+		public get() { return view_as<int>(this); }
+	}
+
+	property int i_AbilitySlot
+	{
+		public get() { return i_EffectSlot[this.index]; }
+		public set(int value) { i_EffectSlot[this.index] = value; }
+	}
+
+	property int i_NumArgs
+	{
+		public get() { return i_EffectArgs[this.index]; }
+	}
+
+	property bool b_Exists
+	{
+		public get() { return b_EffectExists[this.index]; }
+	}
+
+	public void Destroy() { b_EffectExists[this.index] = false; }
+
+	public void SetPluginName(char[] pluginName) { strcopy(s_EffectPluginName[this.index], 255, pluginName); }
+	public void GetPluginName(char[] output, int size) { strcopy(output, size, s_EffectPluginName[this.index]); }
+
+	public void SetAbilityName(char[] pluginName) { strcopy(s_EffectAbilityName[this.index], 255, pluginName); }
+	public void GetAbilityName(char[] output, int size) { strcopy(output, size, s_EffectAbilityName[this.index]); }
+
+	public void SetArgsAndValues(ConfigMap map)
+	{
+		this.ClearArgsAndValues();
+
+		StringMapSnapshot snap = map.Snapshot();
+
+		for (int i = 0; i < snap.Length; i++)
+		{
+			snap.GetKey(i, s_EffectArgNames[this.index][i], 255);
+
+			if (StrEqual(s_EffectArgNames[this.index][i], "plugin_name") || StrEqual(s_EffectArgNames[this.index][i], "slot") || StrEqual(s_EffectArgNames[this.index][i], "ability_name"))
+				continue;
+
+			map.Get(s_EffectArgNames[this.index][i], s_EffectArgValues[this.index][i], 255);
+			i_EffectArgs[this.index]++;
+		}
+
+		delete snap;
+	}
+
+	public void ClearArgsAndValues()
+	{
+		for (int i = 0; i < this.i_NumArgs; i++)
+		{
+			strcopy(s_EffectArgNames[this.index][i], 255, "");
+			strcopy(s_EffectArgValues[this.index][i], 255, "");
+		}
 	}
 }
 
-enum struct CFAbility  __nullable__
+bool b_AbilityExists[4096] = { false, ... };
+
+int i_AbilitySlot[4096] = { -1, ... };
+
+//TODO: Add all of the extra things like held, stockpile, etc
+methodmap CFAbility  __nullable__
 {
-	CFAbility()
+	public CFAbility()
 	{
-		
+		int slot = -1;
+		for (int i = 0; i < 4096; i++)
+		{
+			if (!b_AbilityExists[i])
+			{
+				slot = i;
+				break;
+			}
+		}
+
+		if (slot != -1)
+		{
+			b_AbilityExists[slot] = true;
+		}
+
+		return view_as<CFAbility>(slot);
 	}
+
+	property int index
+	{
+		public get() { return view_as<int>(this); }
+	}
+
+	property int i_AbilitySlot
+	{
+		public get() { return i_AbilitySlot[this.index]; }
+		public set(int value) { i_AbilitySlot[this.index] = value; }
+	}
+
+	property bool b_Exists
+	{
+		public get() { return b_AbilityExists[this.index]; }
+	}
+
+	public void Destroy() { b_AbilityExists[this.index] = false; }
 }
 
 CFAbility g_Abilities[MAXPLAYERS + 1][5];
 
+int i_CharacterClient[MAXPLAYERS + 1];
+
+float f_CharacterSpeed[MAXPLAYERS + 1];
+float f_CharacterMaxHP[MAXPLAYERS + 1];
+float f_CharacterScale[MAXPLAYERS + 1];
+float f_CharacterBaseSpeed[MAXPLAYERS + 1];
+float f_CharacterWeight[MAXPLAYERS + 1];
+
+TFClassType i_CharacterClass[MAXPLAYERS + 1];
+ArrayList g_CharacterEffects[MAXPLAYERS + 1] = { null, ... };
+
+char s_CharacterModel[MAXPLAYERS + 1][255];
+char s_CharacterName[MAXPLAYERS + 1][255];
+char s_CharacterArchetype[MAXPLAYERS + 1][255];
+char s_CharacterConfigMapPath[MAXPLAYERS + 1][255];
+
 //TODO: Add variables used for resources and ult charge
 methodmap CFCharacter __nullable__
 {
-	CFCharacter(int client, float speed, float maxHP, TFClassType class, char model[PLATFORM_MAX_PATH], char name[], float scale, float weight, char configMapPath[PLATFORM_MAX_PATH], char archetype[])
+	public CFCharacter(int client)
 	{
-		this.i_Client = client;
-		this.i_Class = class;
-
-		this.f_Speed = speed;
-		this.f_MaxHP = maxHP;
-		this.f_Scale = scale;
-		this.f_Weight = weight;
-
-		this.SetModel(model);
-		this.SetName(name);
-		this.SetConfigMapPath(configMapPath);
-		this.SetArchetype(archetype);
-	}
-
-	void SetModel(char[] model)
-	{
-		//TODO: Check if model is valid, apply if it is, return if not
-		strcopy(s_CharacterModel[this.index], PLATFORM_MAX_PATH, model);
-	}
-
-	void GetModel(char[] output)
-	{
-		strcopy(output, sizeof(output), s_CharacterModel[this.index]);
-	}
-
-	void SetName(char[] name)
-	{
-		strcopy(s_CharacterName[this.index], 255, name);
-	}
-
-	void GetName(char[] output)
-	{
-		strcopy(output, sizeof(output), s_CharacterName[this.index]);
-	}
-
-	void SetConfigMapPath(char[] path)
-	{
-		strcopy(s_CharacterConfigMapPath[this.index], PLATFORM_MAX_PATH, path);
-	}
-
-	void GetConfigMapPath(char[] output)
-	{
-		strcopy(output, sizeof(output), s_CharacterConfigMapPath[this.index]);
-	}
-
-	void SetArchetype(char[] name)
-	{
-		strcopy(s_CharacterArchetype[this.index], 255, name);
-	}
-
-	void GetArchetype(char[] output)
-	{
-		strcopy(output, sizeof(output), s_CharacterArchetype[this.index]);
+		return view_as<CFCharacter>(client);
 	}
 
 	property int index
@@ -156,8 +242,8 @@ methodmap CFCharacter __nullable__
 
 	property int i_Client
 	{
-		public get() { return GetClientOfUserId(i_CharacterClass[this.index]); }
-		public set(int value) { i_CharacterClass[this.index] = GetClientUserId(value); }
+		public get() { return GetClientOfUserId(i_CharacterClient[this.index]); }
+		public set(int value) { i_CharacterClient[this.index] = GetClientUserId(value); }
 	}
 
 	property float f_Speed
@@ -202,14 +288,104 @@ methodmap CFCharacter __nullable__
 		}
 	}
 
-	property ArrayList g_Abilities
+	property ArrayList g_Effects
 	{
-		public get() { g_CharacterAbilities[this.index] == null ? new ArrayList(255) : g_CharacterAbilities[this.index]; }
-		public set(ArrayList value) { g_CharacterAbilities[this.index] = value; }
+		public get() { g_CharacterEffects[this.index] == null ? new ArrayList(255) : g_CharacterEffects[this.index]; }
+		public set(ArrayList value) { g_CharacterEffects[this.index] = value; }
+	}
+
+	public void SetModel(char[] model)
+	{
+		//TODO: Check if model is valid, apply if it is, return if not
+		strcopy(s_CharacterModel[this.index], PLATFORM_MAX_PATH, model);
+	}
+
+	public void GetModel(char[] output, int size)
+	{
+		strcopy(output, size, s_CharacterModel[this.index]);
+	}
+
+	public void SetName(char[] name)
+	{
+		strcopy(s_CharacterName[this.index], 255, name);
+	}
+
+	public void GetName(char[] output, int size)
+	{
+		strcopy(output, size, s_CharacterName[this.index]);
+	}
+
+	public void SetConfigMapPath(char[] path)
+	{
+		strcopy(s_CharacterConfigMapPath[this.index], PLATFORM_MAX_PATH, path);
+	}
+
+	public void GetConfigMapPath(char[] output, int size)
+	{
+		strcopy(output, size, s_CharacterConfigMapPath[this.index]);
+	}
+
+	public void SetArchetype(char[] name)
+	{
+		strcopy(s_CharacterArchetype[this.index], 255, name);
+	}
+
+	public void GetArchetype(char[] output, int size)
+	{
+		strcopy(output, size, s_CharacterArchetype[this.index]);
 	}
 }
 
 CFCharacter g_Characters[MAXPLAYERS + 1];
+
+public void CFC_ApplyCharacter(int client, float speed, float maxHP, TFClassType class, char model[PLATFORM_MAX_PATH], char[] name, float scale, float weight, char configMapPath[PLATFORM_MAX_PATH], char[] archetype)
+{
+	CFCharacter character = new CFCharacter();
+
+	character.i_Client = client;
+	character.i_Class = class;
+
+	character.f_Speed = speed;
+	character.f_MaxHP = maxHP;
+	character.f_Scale = scale;
+	character.f_Weight = weight;
+
+	character.SetModel(model);
+	character.SetName(name);
+	character.SetConfigMapPath(configMapPath);
+	character.SetArchetype(archetype);
+
+	g_Characters[client] = character;
+}
+
+public void CFC_CreateEffect(int client, ConfigMap subsection)
+{
+	CFEffect effect = new CFEffect();
+
+	char plName[255], abName[255];
+	subsection.Get("plugin_name", plName, sizeof(plName));
+	subsection.Get("ability_name", abName, sizeof(abName));
+	int slot = GetIntFromConfigMap(subsection, "slot", -1);
+
+	effect.SetPluginName(plName);
+	effect.SetAbilityName(abName);
+	effect.i_AbilitySlot = slot;
+	effect.SetArgsAndValues(subsection);
+
+	PushArrayCell(g_Characters[client].g_Effects, effect);
+}
+
+public void CFC_CreateAbility(int client, ConfigMap subsection, CF_AbilityType type)
+{
+	CFAbility ability = new CFAbility();
+
+	int slot = view_as<int>(type) + 1;
+	ability.i_AbilitySlot = slot;
+
+	//TODO: Add all of the extra things like held, stockpile, etc
+
+	g_Abilities[client][slot] = ability;
+}
 
 public void CFC_StoreAbilities(int client, CF_AbilityType type, ConfigMap abilities)
 {
