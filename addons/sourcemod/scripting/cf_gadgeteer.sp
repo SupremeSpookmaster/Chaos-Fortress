@@ -2254,6 +2254,8 @@ enum struct LittleBuddy
 			StopSound(this.me.Index, SNDCHAN_AUTO, SOUND_DRONE_SCANNING);
 
 			this.b_HasEnemyTarget = true;
+			if (this.f_NextShot - GetGameTime() < (this.b_SentryMode ? 0.2 : 0.4))
+				this.f_NextShot = GetGameTime() + (this.b_SentryMode ? 0.2 : 0.4);
 		}
 
 		this.enemyTarget = EntRefToEntIndex(targ);
