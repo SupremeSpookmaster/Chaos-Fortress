@@ -2248,7 +2248,7 @@ public Native_CF_HasAbility(Handle plugin, int numParams)
 
 public CFEffect GetEffectFromAbility(int client, char[] plugin, char[] ability)
 {
-	char[] pluginName; char[] abName;
+	char pluginName[255]; char abName[255];
 	for (int i = 0; i < GetArraySize(g_Characters[client].g_Effects); i++)
 	{
 		CFEffect effect = GetEffect(client, i);
