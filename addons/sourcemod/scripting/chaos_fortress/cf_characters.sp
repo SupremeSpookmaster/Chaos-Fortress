@@ -133,6 +133,20 @@ methodmap CFEffect __nullable__
 	public void SetAbilityName(char[] pluginName) { strcopy(s_EffectAbilityName[this.index], 255, pluginName); }
 	public void GetAbilityName(char[] output, int size) { strcopy(output, size, s_EffectAbilityName[this.index]); }
 
+	public void GetArg(char[] arg, char[] output, int size, char[] defaultValue = "")
+	{
+		for (int i = 0; i < this.i_NumArgs; i++)
+		{
+			if (StrEqual(s_EffectArgNames[this.index][i], arg))
+			{
+				strcopy(output, size, s_EffectArgValues[this.index][i]);
+				return;
+			}
+		}
+
+		strcopy(output, size, defaultValue);
+	}
+
 	public void SetArgsAndValues(ConfigMap map)
 	{
 		this.ClearArgsAndValues();
@@ -166,6 +180,24 @@ methodmap CFEffect __nullable__
 bool b_AbilityExists[4096] = { false, ... };
 
 int i_AbilitySlot[4096] = { -1, ... };
+int i_AbilityWeaponSlot[4096] = { -1, ...};
+int i_AbilityAmmo[4096] = { 0, ... };
+int i_AbilityStocks[4096] = { 0, ...};
+int i_AbilityMaxStocks[4096] = { 0, ...};
+
+float f_AbilityCD[4096] = { 0.0, ... };
+float f_AbilityNextUseTime[4096] = { 0.0, ... };
+float f_AbilityCost[4096] = { 0.0, ... };
+float f_AbilityScale[4096] = { 0.0, ... };
+
+bool b_AbilityIsHeld[4096] = { false, ... };
+bool b_AbilityHeldBlock[4096] = { false, ... };
+bool b_AbilityIsGrounded[4096] = { false, ... };
+bool b_AbilityIsBlocked[4096] = { false, ... };
+
+char s_AbilityName[4096][255];
+
+Handle g_AbilityStockTimer[4096] = { null, ... };
 
 //TODO: Add all of the extra things like held, stockpile, etc
 methodmap CFAbility  __nullable__
@@ -201,12 +233,97 @@ methodmap CFAbility  __nullable__
 		public set(int value) { i_AbilitySlot[this.index] = value; }
 	}
 
+	property int i_WeaponSlot
+	{
+		public get() { return i_AbilityWeaponSlot[this.index]; }
+		public set(int value) { i_AbilityWeaponSlot[this.index] = value; }
+	}
+
+	property int i_AmmoRequirement
+	{
+		public get() { return i_AbilityAmmo[this.index]; }
+		public set(int value) { i_AbilityAmmo[this.index] = value; }
+	}
+
+	property int i_Stocks
+	{
+		public get() { return i_AbilityStocks[this.index]; }
+		public set(int value) { i_AbilityStocks[this.index] = value; }
+	}
+
+	property int i_MaxStocks
+	{
+		public get() { return i_AbilityMaxStocks[this.index]; }
+		public set(int value) { i_AbilityMaxStocks[this.index] = value; }
+	}
+
+	property float f_Cooldown
+	{
+		public get() { return f_AbilityCD[this.index]; }
+		public set(float value) { f_AbilityCD[this.index] = value; }
+	}
+
+	property float f_NextUseTime
+	{
+		public get() { return f_AbilityNextUseTime[this.index]; }
+		public set(float value) { f_AbilityNextUseTime[this.index] = value; }
+	}
+
+	property float f_ResourceCost
+	{
+		public get() { return f_AbilityCost[this.index]; }
+		public set(float value) { f_AbilityCost[this.index] = value; }
+	}
+
+	property float f_Scale
+	{
+		public get() { return f_AbilityScale[this.index]; }
+		public set(float value) { f_AbilityScale[this.index] = value; }
+	}
+
+	property bool b_HeldAbility
+	{
+		public get() { return b_AbilityIsHeld[this.index]; }
+		public set(bool value) { b_AbilityIsHeld[this.index] = value; }
+	}
+
+	property bool b_HeldAbilityBlocksOthers
+	{
+		public get() { return b_AbilityHeldBlock[this.index]; }
+		public set(bool value) { b_AbilityHeldBlock[this.index] = value; }
+	}
+
+	property bool b_RequireGrounded
+	{
+		public get() { return b_AbilityIsGrounded[this.index]; }
+		public set(bool value) { b_AbilityIsGrounded[this.index] = value; }
+	}
+
 	property bool b_Exists
 	{
 		public get() { return b_AbilityExists[this.index]; }
 	}
 
-	public void Destroy() { b_AbilityExists[this.index] = false; }
+	property bool b_Blocked
+	{
+		public get() { return b_AbilityIsBlocked[this.index]; }
+		public set(bool value) { b_AbilityIsBlocked[this.index] = value; }
+	}
+
+	property Handle g_StockTimer
+	{
+		public get() { return g_AbilityStockTimer[this.index]; }
+		public set(Handle value) { g_AbilityStockTimer[this.index] = value; }
+	}
+
+	public void GetName(char[] output, int size) { strcopy(output, size, s_AbilityName[this.index]); }
+	public void SetName(char[] name) { strcopy(s_AbilityName[this.index], 255, name); }
+
+	public void Destroy()
+	{ 
+		//TODO: Reset variables too
+		b_AbilityExists[this.index] = false; 
+	}
 }
 
 CFAbility g_Abilities[MAXPLAYERS + 1][5];
@@ -218,6 +335,15 @@ float f_CharacterMaxHP[MAXPLAYERS + 1];
 float f_CharacterScale[MAXPLAYERS + 1];
 float f_CharacterBaseSpeed[MAXPLAYERS + 1];
 float f_CharacterWeight[MAXPLAYERS + 1];
+float f_CharacterUltCharge[MAXPLAYERS + 1];
+float f_CharacterUltChargeRequired[MAXPLAYERS + 1];
+float f_CharacterUltChargeOnRegen[MAXPLAYERS + 1];
+float f_CharacterUltChargeOnDamage[MAXPLAYERS + 1];
+float f_CharacterUltChargeOnHurt[MAXPLAYERS + 1];
+float f_CharacterUltChargeOnHeal[MAXPLAYERS + 1];
+float f_CharacterUltChargeOnKill[MAXPLAYERS + 1];
+float f_CharacterUltChargeOnBuildingDamage[MAXPLAYERS + 1];
+float f_CharacterUltChargeOnDestruction[MAXPLAYERS + 1];
 
 TFClassType i_CharacterClass[MAXPLAYERS + 1];
 ArrayList g_CharacterEffects[MAXPLAYERS + 1] = { null, ... };
@@ -227,11 +353,14 @@ char s_CharacterName[MAXPLAYERS + 1][255];
 char s_CharacterArchetype[MAXPLAYERS + 1][255];
 char s_CharacterConfigMapPath[MAXPLAYERS + 1][255];
 
+bool b_CharacterExists[MAXPLAYERS + 1] = { false, ... };
+
 //TODO: Add variables used for resources and ult charge
 methodmap CFCharacter __nullable__
 {
 	public CFCharacter(int client)
 	{
+		b_CharacterExists[client] = true;
 		return view_as<CFCharacter>(client);
 	}
 
@@ -244,6 +373,11 @@ methodmap CFCharacter __nullable__
 	{
 		public get() { return GetClientOfUserId(i_CharacterClient[this.index]); }
 		public set(int value) { i_CharacterClient[this.index] = GetClientUserId(value); }
+	}
+
+	property bool b_Exists
+	{
+		public get() { return b_CharacterExists[this.index]; }
 	}
 
 	property float f_Speed
@@ -274,6 +408,60 @@ methodmap CFCharacter __nullable__
 	{
 		public get() { return f_CharacterWeight[this.index]; }
 		public set(float value) { f_CharacterWeight[this.index] = value; }
+	}
+
+	property float f_UltCharge
+	{
+		public get() { return f_CharacterUltCharge[this.index]; }
+		public set(float value) { f_CharacterUltCharge[this.index] = value; }
+	}
+
+	property float f_UltChargeRequired
+	{
+		public get() { return f_CharacterUltChargeRequired[this.index]; }
+		public set(float value) { f_CharacterUltChargeRequired[this.index] = value; }
+	}
+
+	property float f_UltChargeOnRegen
+	{
+		public get() { return f_CharacterUltChargeOnRegen[this.index]; }
+		public set(float value) { f_CharacterUltChargeOnRegen[this.index] = value; }
+	}
+
+	property float f_UltChargeOnDamage
+	{
+		public get() { return f_CharacterUltChargeOnDamage[this.index]; }
+		public set(float value) { f_CharacterUltChargeOnDamage[this.index] = value; }
+	}
+
+	property float f_UltChargeOnHurt
+	{
+		public get() { return f_CharacterUltChargeOnHurt[this.index]; }
+		public set(float value) { f_CharacterUltChargeOnHurt[this.index] = value; }
+	}
+
+	property float f_UltChargeOnHeal
+	{
+		public get() { return f_CharacterUltChargeOnHeal[this.index]; }
+		public set(float value) { f_CharacterUltChargeOnHeal[this.index] = value; }
+	}
+
+	property float f_UltChargeOnKill
+	{
+		public get() { return f_CharacterUltChargeOnKill[this.index]; }
+		public set(float value) { f_CharacterUltChargeOnKill[this.index] = value; }
+	}
+
+	property float f_UltChargeOnBuildingDamage
+	{
+		public get() { return f_CharacterUltChargeOnBuildingDamage[this.index]; }
+		public set(float value) { f_CharacterUltChargeOnBuildingDamage[this.index] = value; }
+	}
+
+	property float f_UltChargeOnDestruction
+	{
+		public get() { return f_CharacterUltChargeOnDestruction[this.index]; }
+		public set(float value) { f_CharacterUltChargeOnDestruction[this.index] = value; }
 	}
 
 	property TFClassType i_Class
@@ -334,13 +522,26 @@ methodmap CFCharacter __nullable__
 	{
 		strcopy(output, size, s_CharacterArchetype[this.index]);
 	}
+
+	public void Destroy()
+	{
+		delete this.g_Effects;
+		this.g_Effects = null;
+
+		for (int i = 0; i < 5; i++)
+		{
+			g_Abilities[this.index][i].Destroy();
+		}
+
+		b_CharacterExists[this.index] = false;
+	}
 }
 
 CFCharacter g_Characters[MAXPLAYERS + 1];
 
-public void CFC_ApplyCharacter(int client, float speed, float maxHP, TFClassType class, char model[PLATFORM_MAX_PATH], char[] name, float scale, float weight, char configMapPath[PLATFORM_MAX_PATH], char[] archetype)
+public void CFC_ApplyCharacter(int client, float speed, float maxHP, TFClassType class, char model[255], char name[255], float scale, float weight, char configMapPath[255], char archetype[255])
 {
-	CFCharacter character = new CFCharacter();
+	CFCharacter character = new CFCharacter(client);
 
 	character.i_Client = client;
 	character.i_Class = class;
@@ -375,14 +576,39 @@ public void CFC_CreateEffect(int client, ConfigMap subsection)
 	PushArrayCell(g_Characters[client].g_Effects, effect);
 }
 
-public void CFC_CreateAbility(int client, ConfigMap subsection, CF_AbilityType type)
+public void CFC_CreateAbility(int client, ConfigMap subsection, CF_AbilityType type, bool NewChar)
 {
 	CFAbility ability = new CFAbility();
 
 	int slot = view_as<int>(type) + 1;
 	ability.i_AbilitySlot = slot;
 
-	//TODO: Add all of the extra things like held, stockpile, etc
+	char name[255];
+	subsection.Get("name", name, sizeof(name));
+	ability.SetName(name);
+
+	ability.f_Cooldown = GetFloatFromConfigMap(subsection, "cooldown", 0.0);
+	float startingCD = GetFloatFromConfigMap(subsection, "starting_cd", 0.0)
+	CF_ApplyAbilityCooldown(client, startingCD, type, true, false);
+
+	ability.b_HeldAbility = GetBoolFromConfigMap(subsection, "held", false);
+	ability.f_ResourceCost = GetFloatFromConfigMap(subsection, "cost", 0.0);
+		
+	ability.f_Scale = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
+	ability.b_RequireGrounded = GetBoolFromConfigMap(subsection, "grounded", false);
+	ability.b_HeldAbilityBlocksOthers = GetBoolFromConfigMap(subsection, "held_block", false) && ability.b_HeldAbility;
+	ability.i_WeaponSlot = GetIntFromConfigMap(subsection, "weapon_slot", -1);
+	ability.i_AmmoRequirement = GetIntFromConfigMap(subsection, "ammo", 0);
+
+	if (NewChar)
+	{
+		ability.i_Stocks = GetIntFromConfigMap(subsection, "starting_stocks", 0);
+		ability.i_MaxStocks = GetIntFromConfigMap(subsection, "max_stocks", 0);
+		if (ability.i_MaxStocks > 0 && ability.i_Stocks < ability.i_MaxStocks)
+		{
+			CreateStockTimer(client, CF_AbilityType_M2, startingCD);
+		}
+	}
 
 	g_Abilities[client][slot] = ability;
 }
@@ -530,9 +756,6 @@ public void CFC_MakeNatives()
 	
 	CreateNative("CF_AttachParticle", Native_CF_AttachParticle);
 	CreateNative("CF_AttachWearable", Native_CF_AttachWearable);
-	
-	CreateNative("CF_GetCharacterArms", Native_CF_GetCharacterArms);
-	//CreateNative("CF_SetCharacterArms", Native_CF_SetCharacterArms);	//Crashes on Linux due to empty string (TODO)
 	
 	CreateNative("CF_GetCharacterBaseSpeed", Native_CF_GetCharacterBaseSpeed);
 	
@@ -1600,7 +1823,7 @@ public void CF_DestroyAllBuildings(int client)
 	i_DialogueReduction[client] = GetIntFromConfigMap(map, "character.be_quiet", 1);
 	float scale = GetFloatFromConfigMap(map, "character.scale", 1.0);
 	
-	g_Characters[client].Create(speed, health, Classes[class], model, name, scale, weight, conf, arms, archetype);
+	CFC_ApplyCharacter(client, speed, health, Classes[class], model, name, scale, weight, conf, archetype);
 		
 	ConfigMap GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 	
@@ -1664,8 +1887,8 @@ public void CF_DestroyAllBuildings(int client)
 		CFC_GiveWeapons(client, weapons);
 	}
 	
-	TF2_SetPlayerClass(client, g_Characters[client].Class);
-	CF_UpdateCharacterHP(client, g_Characters[client].Class, true);
+	TF2_SetPlayerClass(client, g_Characters[client].i_Class);
+	CF_UpdateCharacterHP(client, g_Characters[client].i_Class, true);
 	CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
 	
 	ConfigMap particles = map.GetSection("character.particles");
@@ -2108,7 +2331,7 @@ public void CF_DestroyAllBuildings(int client)
  	if (num > 8)
  		return;
  		
- 	float targSpd = g_Characters[client].Speed;
+ 	float targSpd = g_Characters[client].f_Speed;
  	float baseSpd = f_ClassBaseSpeed[num];
  	float speed = targSpd / baseSpd;
  	
@@ -2143,7 +2366,7 @@ public void CF_DestroyAllBuildings(int client)
  	if (!CF_IsPlayerCharacter(client))
  		return 0.0;
  		
- 	return g_Characters[client].MaxHP;
+ 	return g_Characters[client].f_MaxHP;
  }
  
  public Native_CF_SetCharacterMaxHealth(Handle plugin, int numParams)
@@ -2153,8 +2376,8 @@ public void CF_DestroyAllBuildings(int client)
 
  	if (CF_IsPlayerCharacter(client))
  	{
- 		g_Characters[client].MaxHP = NewMax;
- 		CF_UpdateCharacterHP(client, g_Characters[client].Class, false);
+ 		g_Characters[client].f_MaxHP = NewMax;
+ 		CF_UpdateCharacterHP(client, g_Characters[client].i_Class, false);
  	}
  }
  
@@ -2165,7 +2388,7 @@ public void CF_DestroyAllBuildings(int client)
  	if (!CF_IsPlayerCharacter(client))
  		return 0.0;
  		
- 	return g_Characters[client].Weight;
+ 	return g_Characters[client].f_Weight;
  }
  
  public Native_CF_SetCharacterWeight(Handle plugin, int numParams)
@@ -2174,7 +2397,7 @@ public void CF_DestroyAllBuildings(int client)
  	float NewWeight = GetNativeCell(2);
 
  	if (CF_IsPlayerCharacter(client))
- 		g_Characters[client].Weight = NewWeight;
+ 		g_Characters[client].f_Weight = NewWeight;
  }
  
  public Native_CF_ApplyKnockback(Handle plugin, int numParams)
@@ -2310,7 +2533,7 @@ public Native_CF_IsPlayerCharacter(Handle plugin, int numParams)
 	
 	if (IsValidClient(client))
 	{
-		ReturnValue = g_Characters[client].Exists;
+		ReturnValue = g_Characters[client].b_Exists;
 	}
 	
 	return ReturnValue;
@@ -2323,7 +2546,7 @@ public any Native_CF_GetCharacterClass(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return TFClass_Unknown;
 		
-	return g_Characters[client].Class;
+	return g_Characters[client].i_Class;
 }
 
 public Native_CF_SetCharacterClass(Handle plugin, int numParams)
@@ -2333,10 +2556,10 @@ public Native_CF_SetCharacterClass(Handle plugin, int numParams)
 	
 	if (CF_IsPlayerCharacter(client))
 	{
-		g_Characters[client].Class = NewClass;
+		g_Characters[client].i_Class = NewClass;
 		
-		TF2_SetPlayerClass(client, g_Characters[client].Class);
-		CF_UpdateCharacterHP(client, g_Characters[client].Class, false);
+		TF2_SetPlayerClass(client, g_Characters[client].i_Class);
+		CF_UpdateCharacterHP(client, g_Characters[client].i_Class, false);
 		CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
 	}
 }
@@ -2413,7 +2636,9 @@ public Native_CF_GetCharacterName(Handle plugin, int numParams)
 	
 	if (CF_IsPlayerCharacter(client))
 	{
-		SetNativeString(2, g_Characters[client].Name, size, false);
+		char name[255];
+		g_Characters[client].GetName(name, 255);
+		SetNativeString(2, name, size, false);
 		
 		#if defined DEBUG_CHARACTER_CREATION
 		char debugStrGet[255];
@@ -2438,7 +2663,7 @@ public Native_CF_SetCharacterName(Handle plugin, int numParams)
 	
 	if (CF_IsPlayerCharacter(client))
 	{
-		g_Characters[client].Name = NewName;
+		g_Characters[client].SetName(NewName);
 	}
 }
 
@@ -2449,7 +2674,9 @@ public Native_CF_GetCharacterModel(Handle plugin, int numParams)
 	
 	if (CF_IsPlayerCharacter(client))
 	{
-		SetNativeString(2, g_Characters[client].Model, size, false);
+		char model[255];
+		g_Characters[client].GetModel(model, 255);
+		SetNativeString(2, model, size, false);
 		
 		#if defined DEBUG_CHARACTER_CREATION
 		char debugStrGet[255];
@@ -2473,7 +2700,9 @@ public Native_CF_GetCharacterArchetype(Handle plugin, int numParams)
 	
 	if (CF_IsPlayerCharacter(client))
 	{
-		SetNativeString(2, g_Characters[client].Archetype, size, false);
+		char archetype[255];
+		g_Characters[client].GetArchetype(archetype, 255);
+		SetNativeString(2, archetype, size, false);
 	}
 	else
 	{
@@ -2491,7 +2720,7 @@ public Native_CF_SetCharacterModel(Handle plugin, int numParams)
 	
 	if (CF_IsPlayerCharacter(client) && CheckFile(NewModel))
 	{
-		g_Characters[client].Model = NewModel;
+		g_Characters[client].SetModel(NewModel);
 		//PrecacheModel(NewModel);
 		
 		SetVariantString(NewModel);
@@ -2507,7 +2736,7 @@ public Native_CF_SetCharacterArchetype(Handle plugin, int numParams)
 	
 	if (CF_IsPlayerCharacter(client) && CheckFile(NewArchetype))
 	{
-		g_Characters[client].Archetype = NewArchetype;
+		g_Characters[client].SetArchetype(NewArchetype);
 	}
 }
 
@@ -2517,7 +2746,7 @@ public any Native_CF_GetCharacterSpeed(Handle plugin, int numParams)
 
 	if (CF_IsPlayerCharacter(client))
 	{
-		return g_Characters[client].Speed;
+		return g_Characters[client].f_Speed;
 	}
 	
 	return 0.0;
@@ -2529,7 +2758,7 @@ public any Native_CF_GetCharacterBaseSpeed(Handle plugin, int numParams)
 
 	if (CF_IsPlayerCharacter(client))
 	{
-		return g_Characters[client].BaseSpeed;
+		return g_Characters[client].f_BaseSpeed;
 	}
 	
 	return 0.0;
@@ -2542,51 +2771,13 @@ public any Native_CF_SetCharacterSpeed(Handle plugin, int numParams)
 
 	if (CF_IsPlayerCharacter(client))
 	{
-		g_Characters[client].Speed = NewSpeed;
+		g_Characters[client].f_Speed = NewSpeed;
 		CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
 		TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.0001);
 	}
 	
 	return 0.0;
 }
-
-public Native_CF_GetCharacterArms(Handle plugin, int numParams)
-{
-	int client = GetNativeCell(1);
-	
-	if (CF_IsPlayerCharacter(client))
-	{
-		SetNativeString(2, g_Characters[client].Arms, 255);
-	}
-}
-
-/*public Native_CF_SetCharacterArms(Handle plugin, int numParams) //Crashes on Linux due to empty string (TODO)
-{
-	int client = GetNativeCell(1);
-	char arms[255];
-	GetNativeString(2, arms, sizeof(arms));
-	
-	if (CF_IsPlayerCharacter(client) && CheckFile(arms))
-	{
-		g_Characters[client].Arms = arms;
-		g_Characters[client].HasCustomArms = true;
-		int model = PrecacheModel(arms);
-		
-		int vm = GetEntPropEnt(client, Prop_Send, "m_hViewModel");
-		if (IsValidEntity(vm))
-		{
-			SetEntProp(vm, Prop_Send, "m_nModelIndex", model);
-		}
-		
-		int weapon = TF2_GetActiveWeapon(client);
-		if (IsValidEntity(weapon))
-		{
-			SetEntityModel(weapon, arms);
-			SetEntProp(weapon, Prop_Send, "m_nCustomViewmodelModelIndex", model);
-			SetEntProp(weapon, Prop_Send, "m_iViewModelIndex", model);
-		}
-	}
-}*/
 
 public any Native_CF_MakeClientCharacter(Handle plugin, int numParams)
 {
@@ -2620,7 +2811,7 @@ public any Native_CF_GetCharacterScale(Handle plugin, int numParams)
 
 	if (CF_IsPlayerCharacter(client))
 	{
-		return g_Characters[client].Scale;
+		return g_Characters[client].f_Scale;
 	}
 	
 	return 0.0;
@@ -2666,7 +2857,7 @@ public any Native_CF_SetCharacterScale(Handle plugin, int numParams)
 		}
 		else
 		{
-			g_Characters[client].Scale = NewScale;
+			g_Characters[client].f_Scale = NewScale;
 			
 			SetEntPropFloat(client, Prop_Send, "m_flModelScale", NewScale);
 			SetEntPropFloat(client, Prop_Send, "m_flStepSize", 18.0 * NewScale);
@@ -2712,7 +2903,7 @@ public void SetScale_DelayResize(DataPack pack)
 		
 	if (!CheckPlayerWouldGetStuck(client, NewScale))
 	{
-		g_Characters[client].Scale = NewScale;
+		g_Characters[client].f_Scale = NewScale;
 			
 		SetEntPropFloat(client, Prop_Send, "m_flModelScale", NewScale);
 		SetEntPropFloat(client, Prop_Send, "m_flStepSize", 18.0 * NewScale);
