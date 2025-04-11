@@ -1146,18 +1146,18 @@ public float Medigun_GetResMult(int victim)
 	return ReturnValue;
 }
 
-public float Medigun_GetDMGMult(int victim)
+public float Medigun_GetDMGMult(int attacker)
 {
 	float ReturnValue = 1.0;
 	
-	if (Medigun_Active[victim] && Medigun_CurrentBuff[victim] == MedigunBuff_DMG && IsValidMulti(Medigun_GetTarget(victim)))
-		ReturnValue += Medigun_Coefficient[victim][2];
+	if (Medigun_Active[attacker] && Medigun_CurrentBuff[attacker] == MedigunBuff_DMG && IsValidMulti(Medigun_GetTarget(attacker)))
+		ReturnValue += Medigun_Coefficient[attacker][2];
 		
-	if (Medigun_Healers[victim] != null)
+	if (Medigun_Healers[attacker] != null)
 	{
-		for (int i = 0; i < GetArraySize(Medigun_Healers[victim]); i++)
+		for (int i = 0; i < GetArraySize(Medigun_Healers[attacker]); i++)
 		{
-			int healer = GetArrayCell(Medigun_Healers[victim], i);
+			int healer = GetArrayCell(Medigun_Healers[attacker], i);
 			if (Medigun_CurrentBuff[healer] == MedigunBuff_DMG)
 				ReturnValue += Medigun_Coefficient[healer][2];
 		}
@@ -1490,7 +1490,7 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 	if (!IsValidClient(victim))
 		return Plugin_Continue;
 
-	float mult = Medigun_GetDMGMult(victim);
+	float mult = Medigun_GetDMGMult(attacker);
 	if (mult != 1.0)
 	{
 		damage *= mult;
