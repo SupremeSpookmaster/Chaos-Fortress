@@ -2246,58 +2246,54 @@ public Native_CF_HasAbility(Handle plugin, int numParams)
 	return ReturnValue;
 }
 
+public CFEffect GetEffectFromAbility(int client, char[] plugin, char[] ability)
+{
+	char[] pluginName; char[] abName;
+	for (int i = 0; i < GetArraySize(g_Characters[client].g_Effects); i++)
+	{
+		CFEffect effect = GetEffect(client, i);
+		effect.GetPluginName(pluginName, 255);
+		effect.GetAbilityName(abName, 255);
+
+		if (!StrEqual(plugin, pluginName) || !StrEqual(ability, abName))
+			continue;
+
+		return effect;
+	}
+
+	CFEffect failure = new CFEffect();
+	failure.Destroy();
+	return failure;
+}
+
+public CFEffect GetEffect(int client, int slot)
+{
+	return view_as<CFEffect>(GetArrayCell(g_Characters[client].g_Effects, slot));
+}
+
 public Native_CF_GetArgI(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
 	int defaultVal = GetNativeCell(5);
 	
 	if (!CF_IsPlayerCharacter(client))
-		return -1;
+		return defaultVal;
 		
 	char targetPlugin[255], targetAbility[255], argName[255], pluginName[255], abName[255], path[255];
 	g_Characters[client].GetConfigMapPath(path, 255);
-	
-	ConfigMap map = new ConfigMap(path);
-	if (map == null)
+
+	if (g_Characters[client].g_Effects == null)
 		return defaultVal;
 		
 	GetNativeString(2, targetPlugin, sizeof(targetPlugin));
 	GetNativeString(3, targetAbility, sizeof(targetAbility));
 	GetNativeString(4, argName, sizeof(argName));
-		
-	ConfigMap abilities = map.GetSection("character.abilities");
-	if (abilities == null)
-	{
-		DeleteCfg(map);
-		return defaultVal;
-	}
-		
-	int ReturnValue = defaultVal;
-		
-	int i = 1;
-	char secName[255];
-	Format(secName, sizeof(secName), "ability_%i", i);
-		
-	ConfigMap subsection = abilities.GetSection(secName);
-	while (subsection != null)
-	{
-		subsection.Get("ability_name", abName, sizeof(abName));
-		subsection.Get("plugin_name", pluginName, sizeof(pluginName));
-		
-		if (StrEqual(targetPlugin, pluginName) && StrEqual(targetAbility, abName))
-		{
-			ReturnValue = GetIntFromConfigMap(subsection, argName, defaultVal);
-			break;
-		}
-		
-		i++;
-		Format(secName, sizeof(secName), "ability_%i", i);
-		subsection = abilities.GetSection(secName);
-	}
+
+	CFEffect effect = GetEffectFromAbility(client, targetPlugin, targetAbility);
+	if (effect.b_Exists)
+		return effect.GetArgI(argName, defaultVal);
 	
-	DeleteCfg(map);
-	
-	return ReturnValue;
+	return defaultVal;
 }
 
 public any Native_CF_GetArgF(Handle plugin, int numParams)
@@ -2318,39 +2314,11 @@ public any Native_CF_GetArgF(Handle plugin, int numParams)
 	GetNativeString(3, targetAbility, sizeof(targetAbility));
 	GetNativeString(4, argName, sizeof(argName));
 		
-	ConfigMap abilities = map.GetSection("character.abilities");
-	if (abilities == null)
-	{
-		DeleteCfg(map);
-		return defaultVal;
-	}
-		
-	float ReturnValue = defaultVal;
-		
-	int i = 1;
-	char secName[255];
-	Format(secName, sizeof(secName), "ability_%i", i);
-		
-	ConfigMap subsection = abilities.GetSection(secName);
-	while (subsection != null)
-	{
-		subsection.Get("ability_name", abName, sizeof(abName));
-		subsection.Get("plugin_name", pluginName, sizeof(pluginName));
-		
-		if (StrEqual(targetPlugin, pluginName) && StrEqual(targetAbility, abName))
-		{
-			ReturnValue = GetFloatFromConfigMap(subsection, argName, defaultVal);
-			break;
-		}
-		
-		i++;
-		Format(secName, sizeof(secName), "ability_%i", i);
-		subsection = abilities.GetSection(secName);
-	}
+	CFEffect effect = GetEffectFromAbility(client, targetPlugin, targetAbility);
+	if (effect.b_Exists)
+		return effect.GetArgF(argName, defaultVal);
 	
-	DeleteCfg(map);
-	
-	return ReturnValue;
+	return defaultVal;
 }
 
 public any Native_CF_GetAbilitySlot(Handle plugin, int numParams)
@@ -2415,55 +2383,31 @@ public Native_CF_GetArgS(Handle plugin, int numParams)
 	int client = GetNativeCell(1);
 	int size = GetNativeCell(6);
 	
+	char defaultValue[255];
+	GetNativeString(7, defaultValue, 255);
+
 	if (!CF_IsPlayerCharacter(client))
 	{
-		SetNativeString(5, "", size, false);
+		SetNativeString(5, defaultValue, size, false);
 		return;
 	}
 		
 	char targetPlugin[255], targetAbility[255], argName[255], pluginName[255], abName[255], path[255];
-	
-	g_Characters[client].GetConfigMapPath(path, 255);
-	ConfigMap map = new ConfigMap(path);
-	if (map == null)
-		return;
 		
 	GetNativeString(2, targetPlugin, sizeof(targetPlugin));
 	GetNativeString(3, targetAbility, sizeof(targetAbility));
 	GetNativeString(4, argName, sizeof(argName));
-		
-	ConfigMap abilities = map.GetSection("character.abilities");
-	if (abilities == null)
+
+	CFEffect effect = GetEffectFromAbility(client, targetPlugin, targetAbility);
+	if (effect.b_Exists)
 	{
-		DeleteCfg(map);
-		SetNativeString(5, "", size, false);
+		char result[255];
+		effect.GetArgS(argName, result, 255, defaultValue);
+		SetNativeString(5, result, size, false);
 		return;
 	}
-		
-	int i = 1;
-	char secName[255];
-	Format(secName, sizeof(secName), "ability_%i", i);
-		
-	ConfigMap subsection = abilities.GetSection(secName);
-	while (subsection != null)
-	{
-		subsection.Get("ability_name", abName, sizeof(abName));
-		subsection.Get("plugin_name", pluginName, sizeof(pluginName));
-		
-		if (StrEqual(targetPlugin, pluginName) && StrEqual(targetAbility, abName))
-		{
-			char arg[255]; 
-			subsection.Get(argName, arg, sizeof(arg));
-			SetNativeString(5, arg, size, false);
-			break;
-		}
-		
-		i++;
-		Format(secName, sizeof(secName), "ability_%i", i);
-		subsection = abilities.GetSection(secName);
-	}
-	
-	DeleteCfg(map);
+
+	SetNativeString(5, defaultValue, size, false);
 }
 
 public Native_CF_GetAbilityConfigMapPath(Handle plugin, int numParams)

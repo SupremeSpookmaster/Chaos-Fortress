@@ -1330,10 +1330,11 @@ native CF_AbilityType CF_GetAbilitySlot(int client, char pluginName[255], char a
  * @param argName		The arg to check.
  * @param buffer		Output buffer.
  * @param size			Size of the output buffer.
+ * @param defaultValue	Default string to return if the arg is not found.
  *
  * @return The string obtained from the given ability's specified arg (empty if the arg was not found), stored in the output buffer.
  */
-native CF_GetArgS(int client, char pluginName[255], char abilityName[255], char argName[255], char output[255], int size);
+native CF_GetArgS(int client, char pluginName[255], char abilityName[255], char argName[255], char output[255], int size, char defaultValue[255] = "");
 
 /**
  * Gets a string value from a specified ability's arg.

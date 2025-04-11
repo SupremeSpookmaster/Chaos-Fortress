@@ -133,7 +133,25 @@ methodmap CFEffect __nullable__
 	public void SetAbilityName(char[] pluginName) { strcopy(s_EffectAbilityName[this.index], 255, pluginName); }
 	public void GetAbilityName(char[] output, int size) { strcopy(output, size, s_EffectAbilityName[this.index]); }
 
-	public void GetArg(char[] arg, char[] output, int size, char[] defaultValue = "")
+	public void GetArgI(char[] arg, int defaultValue = 0)
+	{
+		char def[16], val[255];
+		Format(def, 16, "%i", defaultValue);
+		this.GetArgS(arg, val, 255, def);
+
+		return StringToInt(val);
+	}
+
+	public void GetArgF(char[] arg, float defaultValue = 0.0)
+	{
+		char def[32], val[255];
+		Format(def, 16, "%f", defaultValue);
+		this.GetArgS(arg, val, 255, def);
+
+		return StringToFloat(val);
+	}
+
+	public void GetArgS(char[] arg, char[] output, int size, char[] defaultValue = "")
 	{
 		for (int i = 0; i < this.i_NumArgs; i++)
 		{
@@ -155,12 +173,14 @@ methodmap CFEffect __nullable__
 
 		for (int i = 0; i < snap.Length; i++)
 		{
-			snap.GetKey(i, s_EffectArgNames[this.index][i], 255);
+			char key[255];
+			snap.GetKey(i, key, 255);
 
-			if (StrEqual(s_EffectArgNames[this.index][i], "plugin_name") || StrEqual(s_EffectArgNames[this.index][i], "slot") || StrEqual(s_EffectArgNames[this.index][i], "ability_name"))
+			if (StrEqual(key, "plugin_name") || StrEqual(key, "slot") || StrEqual(key, "ability_name"))
 				continue;
 
-			map.Get(s_EffectArgNames[this.index][i], s_EffectArgValues[this.index][i], 255);
+			strcopy(s_EffectArgNames[this.index][this.i_NumArgs], 255, key);
+			map.Get(key, s_EffectArgValues[this.index][this.i_NumArgs], 255);
 			i_EffectArgs[this.index]++;
 		}
 
@@ -174,6 +194,8 @@ methodmap CFEffect __nullable__
 			strcopy(s_EffectArgNames[this.index][i], 255, "");
 			strcopy(s_EffectArgValues[this.index][i], 255, "");
 		}
+
+		i_EffectArgs[this.index] = 0;
 	}
 }
 
