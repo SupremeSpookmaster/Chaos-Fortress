@@ -556,7 +556,8 @@ void OnScytheCollide(int entity, int owner, int team, int other, float pos[3])
 		SDKHooks_TakeDamage(other, entity, owner, damage, DMG_BULLET|DMG_PREVENT_PHYSICS_FORCE, _, _, pos);
 		KillFeedType = -1;
 
-		ApplyVulnStack(other, owner, 1.065, 5.0);
+		if (IsValidClient(other))
+			ApplyVulnStack(other, owner, 1.065, 5.0);
 	}
 
 	// CF does not feature a way to play a sound from config in another location
