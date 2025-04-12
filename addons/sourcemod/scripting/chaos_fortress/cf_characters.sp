@@ -125,7 +125,12 @@ methodmap CFEffect __nullable__
 		public get() { return b_EffectExists[this.index]; }
 	}
 
-	public void Destroy() { b_EffectExists[this.index] = false; }
+	public void Destroy()
+	{ 
+		this.ClearArgsAndValues();
+		this.i_AbilitySlot = -1;
+		b_EffectExists[this.index] = false;
+	}
 
 	public void SetPluginName(char[] pluginName) { strcopy(s_EffectPluginName[this.index], 255, pluginName); }
 	public void GetPluginName(char[] output, int size) { strcopy(output, size, s_EffectPluginName[this.index]); }
@@ -350,7 +355,21 @@ methodmap CFAbility  __nullable__
 
 	public void Destroy()
 	{ 
-		//TODO: Reset variables too
+		this.i_AbilitySlot = -1;
+		this.i_WeaponSlot = -1;
+		this.i_AmmoRequirement = 0;
+		this.i_Stocks = 0;
+		this.i_MaxStocks = 0;
+		this.f_Cooldown = 0.0;
+		this.f_NextUseTime = 0.0;
+		this.f_ResourceCost = 0.0;
+		this.f_Scale = 0.0;
+		this.b_HeldAbility = false;
+		this.b_HeldAbilityBlocksOthers = false;
+		this.b_RequireGrounded = false;
+		this.b_Blocked = false;
+		this.b_CurrentlyHeld = false;
+		this.SetName("");
 		b_AbilityExists[this.index] = false; 
 	}
 }
@@ -420,7 +439,7 @@ methodmap CFCharacter __nullable__
 	property int i_Client
 	{
 		public get() { return GetClientOfUserId(i_CharacterClient[this.index]); }
-		public set(int value) { i_CharacterClient[this.index] = GetClientUserId(value); }
+		public set(int value) { i_CharacterClient[this.index] = (IsValidClient(value) ? GetClientUserId(value) : -1); }
 	}
 
 	property bool b_Exists
@@ -707,6 +726,44 @@ methodmap CFCharacter __nullable__
 		{
 			g_Abilities[this.index][i].Destroy();
 		}
+
+		this.i_Client = -1;
+		this.b_ResourceIsUlt = false;
+		this.b_ResourceIsPercentage = false;
+		this.b_ResourceIsMetal = false;
+		this.f_Speed = 0.0;
+		this.f_MaxHP = 0.0;
+		this.f_Scale = 0.0;
+		this.f_BaseSpeed = 0.0;
+		this.f_Weight = 0.0;
+		this.f_UltCharge = 0.0;
+		this.f_UltChargeRequired = 0.0;
+		this.f_UltChargeOnRegen = 0.0;
+		this.f_UltChargeOnHurt = 0.0;
+		this.f_UltChargeOnDamage = 0.0;
+		this.f_UltChargeOnHeal = 0.0;
+		this.f_UltChargeOnKill = 0.0;
+		this.f_UltChargeOnBuildingDamage = 0.0;
+		this.f_UltChargeOnDestruction = 0.0;
+		this.f_ResourcesToTriggerSound = 0.0;
+		this.f_ResourcesSinceLastGain = 0.0;
+		this.f_Resources = 0.0;
+		this.f_MaxResources = 0.0;
+		this.f_ResourceRegenInterval = 0.0;
+		this.f_NextResourceRegen = 0.0;
+		this.f_ResourcesOnRegen = 0.0;
+		this.f_ResourcesOnHurt = 0.0;
+		this.f_ResourcesOnDamage = 0.0;
+		this.f_ResourcesOnHeal = 0.0;
+		this.f_ResourcesOnKill = 0.0;
+		this.f_ResourcesOnBuildingDamage = 0.0;
+		this.f_ResourcesOnDestruction = 0.0;
+		this.SetModel("");
+		this.SetName("");
+		this.SetConfigMapPath("");
+		this.SetResourceName("");
+		this.SetResourceNamePlural("");
+		this.SetArchetype("");
 
 		b_CharacterExists[this.index] = false;
 	}
