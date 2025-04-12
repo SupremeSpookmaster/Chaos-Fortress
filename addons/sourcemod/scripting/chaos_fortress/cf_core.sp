@@ -16,7 +16,7 @@
 #include "chaos_fortress/cf_abilities.sp"
 #include "chaos_fortress/cf_animator.sp"
 
-bool b_InSpawn[2049][4];
+bool b_InSpawn[2049][5];
 
 float f_SpawnGrace = 3.0;
 float f_RespawnTimeRed = 9.0;

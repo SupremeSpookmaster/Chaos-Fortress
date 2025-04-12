@@ -72,22 +72,22 @@ public const float f_ClassBaseSpeed[] =
 //CFEffect is the methodmap used for the abilities themselves.
 //It contains the following: "plugin_name", "ability_name", slot, and a list of the ability's args and their corresponding values.
 
-bool b_EffectExists[4096] = { false, ... };
+bool b_EffectExists[2048] = { false, ... };
 
-int i_EffectSlot[4096] = { -1, ... };
-int i_EffectArgs[4096] = { 0, ... };
+int i_EffectSlot[2048] = { -1, ... };
+int i_EffectArgs[2048] = { 0, ... };
 
-char s_EffectPluginName[4096][255];
-char s_EffectAbilityName[4096][255];
-char s_EffectArgNames[4096][255][255];
-char s_EffectArgValues[4096][255][255];
+char s_EffectPluginName[2048][255];
+char s_EffectAbilityName[2048][255];
+char s_EffectArgNames[2048][255][255];
+char s_EffectArgValues[2048][255][255];
 
 methodmap CFEffect __nullable__
 {
 	public CFEffect()
 	{
 		int slot = -1;
-		for (int i = 0; i < 4096; i++)
+		for (int i = 0; i < 2048; i++)
 		{
 			if (!b_EffectExists[i])
 			{
@@ -133,7 +133,7 @@ methodmap CFEffect __nullable__
 	public void SetAbilityName(char[] pluginName) { strcopy(s_EffectAbilityName[this.index], 255, pluginName); }
 	public void GetAbilityName(char[] output, int size) { strcopy(output, size, s_EffectAbilityName[this.index]); }
 
-	public void GetArgI(char[] arg, int defaultValue = 0)
+	public int GetArgI(char[] arg, int defaultValue = 0)
 	{
 		char def[16], val[255];
 		Format(def, 16, "%i", defaultValue);
@@ -142,7 +142,7 @@ methodmap CFEffect __nullable__
 		return StringToInt(val);
 	}
 
-	public void GetArgF(char[] arg, float defaultValue = 0.0)
+	public float GetArgF(char[] arg, float defaultValue = 0.0)
 	{
 		char def[32], val[255];
 		Format(def, 16, "%f", defaultValue);
@@ -199,27 +199,28 @@ methodmap CFEffect __nullable__
 	}
 }
 
-bool b_AbilityExists[4096] = { false, ... };
+bool b_AbilityExists[2048] = { false, ... };
 
-int i_AbilitySlot[4096] = { -1, ... };
-int i_AbilityWeaponSlot[4096] = { -1, ...};
-int i_AbilityAmmo[4096] = { 0, ... };
-int i_AbilityStocks[4096] = { 0, ...};
-int i_AbilityMaxStocks[4096] = { 0, ...};
+int i_AbilitySlot[2048] = { -1, ... };
+int i_AbilityWeaponSlot[2048] = { -1, ...};
+int i_AbilityAmmo[2048] = { 0, ... };
+int i_AbilityStocks[2048] = { 0, ...};
+int i_AbilityMaxStocks[2048] = { 0, ...};
 
-float f_AbilityCD[4096] = { 0.0, ... };
-float f_AbilityNextUseTime[4096] = { 0.0, ... };
-float f_AbilityCost[4096] = { 0.0, ... };
-float f_AbilityScale[4096] = { 0.0, ... };
+float f_AbilityCD[2048] = { 0.0, ... };
+float f_AbilityNextUseTime[2048] = { 0.0, ... };
+float f_AbilityCost[2048] = { 0.0, ... };
+float f_AbilityScale[2048] = { 0.0, ... };
 
-bool b_AbilityIsHeld[4096] = { false, ... };
-bool b_AbilityHeldBlock[4096] = { false, ... };
-bool b_AbilityIsGrounded[4096] = { false, ... };
-bool b_AbilityIsBlocked[4096] = { false, ... };
+bool b_AbilityIsHeld[2048] = { false, ... };
+bool b_AbilityHeldBlock[2048] = { false, ... };
+bool b_AbilityIsGrounded[2048] = { false, ... };
+bool b_AbilityIsBlocked[2048] = { false, ... };
+bool b_AbilityCurrentlyHeld[2048] = { false, ... };
 
-char s_AbilityName[4096][255];
+char s_AbilityName[2048][255];
 
-Handle g_AbilityStockTimer[4096] = { null, ... };
+Handle g_AbilityStockTimer[2048] = { null, ... };
 
 //TODO: Add all of the extra things like held, stockpile, etc
 methodmap CFAbility  __nullable__
@@ -227,7 +228,7 @@ methodmap CFAbility  __nullable__
 	public CFAbility()
 	{
 		int slot = -1;
-		for (int i = 0; i < 4096; i++)
+		for (int i = 0; i < 2048; i++)
 		{
 			if (!b_AbilityExists[i])
 			{
@@ -332,6 +333,12 @@ methodmap CFAbility  __nullable__
 		public set(bool value) { b_AbilityIsBlocked[this.index] = value; }
 	}
 
+	property bool b_CurrentlyHeld
+	{
+		public get() { return b_AbilityCurrentlyHeld[this.index]; }
+		public set(bool value) { b_AbilityCurrentlyHeld[this.index] = value; }
+	}
+
 	property Handle g_StockTimer
 	{
 		public get() { return g_AbilityStockTimer[this.index]; }
@@ -367,6 +374,25 @@ float f_CharacterUltChargeOnKill[MAXPLAYERS + 1];
 float f_CharacterUltChargeOnBuildingDamage[MAXPLAYERS + 1];
 float f_CharacterUltChargeOnDestruction[MAXPLAYERS + 1];
 
+float f_CharacterResources[MAXPLAYERS + 1];
+float f_CharacterMaxResources[MAXPLAYERS + 1];
+float f_CharacterResourceRegenInterval[MAXPLAYERS + 1];
+float f_CharacterResourceNextRegen[MAXPLAYERS + 1];
+float f_CharacterResourcesOnRegen[MAXPLAYERS + 1];
+float f_CharacterResourcesOnDamage[MAXPLAYERS + 1];
+float f_CharacterResourcesOnHurt[MAXPLAYERS + 1];
+float f_CharacterResourcesOnHeal[MAXPLAYERS + 1];
+float f_CharacterResourcesOnKill[MAXPLAYERS + 1];
+float f_CharacterResourcesOnBuildingDamage[MAXPLAYERS + 1];
+float f_CharacterResourcesOnDestruction[MAXPLAYERS + 1];
+float f_CharacterResourcesToTriggerSound[MAXPLAYERS + 1];
+float f_CharacterResourcesSinceLastGain[MAXPLAYERS + 1];
+bool b_CharacterResourceIsUlt[MAXPLAYERS + 1];
+bool b_CharacterResourceIsPercentage[MAXPLAYERS + 1];
+bool b_CharacterResourceIsMetal[MAXPLAYERS + 1];
+char s_CharacterResourceName[MAXPLAYERS + 1][255];
+char s_CharacterResourceNamePlural[MAXPLAYERS + 1][255];
+
 TFClassType i_CharacterClass[MAXPLAYERS + 1];
 ArrayList g_CharacterEffects[MAXPLAYERS + 1] = { null, ... };
 
@@ -400,6 +426,29 @@ methodmap CFCharacter __nullable__
 	property bool b_Exists
 	{
 		public get() { return b_CharacterExists[this.index]; }
+	}
+
+	property bool b_UsingResources
+	{
+		public get() { return this.f_MaxResources > 0.0; }
+	}
+
+	property bool b_ResourceIsUlt
+	{
+		public get() { return b_CharacterResourceIsUlt[this.index]; }
+		public set(bool value) { b_CharacterResourceIsUlt[this.index] = value; }
+	}
+
+	property bool b_ResourceIsPercentage
+	{
+		public get() { return b_CharacterResourceIsPercentage[this.index]; }
+		public set(bool value) { b_CharacterResourceIsPercentage[this.index] = value; }
+	}
+
+	property bool b_ResourceIsMetal
+	{
+		public get() { return b_CharacterResourceIsMetal[this.index]; }
+		public set(bool value) { b_CharacterResourceIsMetal[this.index] = value; }
 	}
 
 	property float f_Speed
@@ -486,6 +535,84 @@ methodmap CFCharacter __nullable__
 		public set(float value) { f_CharacterUltChargeOnDestruction[this.index] = value; }
 	}
 
+	property float f_Resources
+	{
+		public get() { return f_CharacterResources[this.index]; }
+		public set(float value) { f_CharacterResources[this.index] = value; }
+	}
+
+	property float f_MaxResources
+	{
+		public get() { return f_CharacterMaxResources[this.index]; }
+		public set(float value) { f_CharacterMaxResources[this.index] = value; }
+	}
+
+	property float f_ResourceRegenInterval
+	{
+		public get() { return f_CharacterResourceRegenInterval[this.index]; }
+		public set(float value) { f_CharacterResourceRegenInterval[this.index] = value; }
+	}
+
+	property float f_NextResourceRegen
+	{
+		public get() { return f_CharacterResourceNextRegen[this.index]; }
+		public set(float value) { f_CharacterResourceNextRegen[this.index] = value; }
+	}
+
+	property float f_ResourcesOnRegen
+	{
+		public get() { return f_CharacterResourcesOnRegen[this.index]; }
+		public set(float value) { f_CharacterResourcesOnRegen[this.index] = value; }
+	}
+
+	property float f_ResourcesOnDamage
+	{
+		public get() { return f_CharacterResourcesOnDamage[this.index]; }
+		public set(float value) { f_CharacterResourcesOnDamage[this.index] = value; }
+	}
+
+	property float f_ResourcesOnHurt
+	{
+		public get() { return f_CharacterResourcesOnHurt[this.index]; }
+		public set(float value) { f_CharacterResourcesOnHurt[this.index] = value; }
+	}
+
+	property float f_ResourcesOnHeal
+	{
+		public get() { return f_CharacterResourcesOnHeal[this.index]; }
+		public set(float value) { f_CharacterResourcesOnHeal[this.index] = value; }
+	}
+
+	property float f_ResourcesOnKill
+	{
+		public get() { return f_CharacterResourcesOnKill[this.index]; }
+		public set(float value) { f_CharacterResourcesOnKill[this.index] = value; }
+	}
+
+	property float f_ResourcesOnBuildingDamage
+	{
+		public get() { return f_CharacterResourcesOnBuildingDamage[this.index]; }
+		public set(float value) { f_CharacterResourcesOnBuildingDamage[this.index] = value; }
+	}
+
+	property float f_ResourcesOnDestruction
+	{
+		public get() { return f_CharacterResourcesOnDestruction[this.index]; }
+		public set(float value) { f_CharacterResourcesOnDestruction[this.index] = value; }
+	}
+
+	property float f_ResourcesToTriggerSound
+	{
+		public get() { return f_CharacterResourcesToTriggerSound[this.index]; }
+		public set(float value) { f_CharacterResourcesToTriggerSound[this.index] = value; }
+	}
+
+	property float f_ResourcesSinceLastGain
+	{
+		public get() { return f_CharacterResourcesSinceLastGain[this.index]; }
+		public set(float value) { f_CharacterResourcesSinceLastGain[this.index] = value; }
+	}
+
 	property TFClassType i_Class
 	{
 		public get() { return i_CharacterClass[this.index]; }
@@ -543,6 +670,26 @@ methodmap CFCharacter __nullable__
 	public void GetArchetype(char[] output, int size)
 	{
 		strcopy(output, size, s_CharacterArchetype[this.index]);
+	}
+
+	public void SetResourceName(char[] name)
+	{
+		strcopy(s_CharacterResourceName[this.index], 255, name);
+	}
+
+	public void GetResourceName(char[] output, int size)
+	{
+		strcopy(output, size, s_CharacterResourceName[this.index]);
+	}
+
+	public void SetResourceNamePlural(char[] name)
+	{
+		strcopy(s_CharacterResourceNamePlural[this.index], 255, name);
+	}
+
+	public void GetResourceNamePlural(char[] output, int size)
+	{
+		strcopy(output, size, s_CharacterResourceNamePlural[this.index]);
 	}
 
 	public void Destroy()
@@ -635,65 +782,19 @@ public void CFC_CreateAbility(int client, ConfigMap subsection, CF_AbilityType t
 	g_Abilities[client][slot] = ability;
 }
 
-public void CFC_StoreAbilities(int client, CF_AbilityType type, ConfigMap abilities)
+public void CFC_StoreAbilities(int client, ConfigMap abilities)
 {
-	int i = 1;
-	char secName[255], abName[255], pluginName[255];
-	Format(secName, sizeof(secName), "ability_%i", i);
-		
-	ConfigMap subsection = abilities.GetSection(secName);
+	char ab[255];
+	Format(ab, sizeof(ab), "ability_1");
+	int slot = 1;
+	ConfigMap subsection = abilities.GetSection(ab);
 	while (subsection != null)
 	{
-		int slot = GetIntFromConfigMap(subsection, "slot", 1) - 1;
-		
-		if (slot >= 0 && slot < 4)
-		{
-			if (slot == view_as<int>(type))
-			{
-				subsection.Get("ability_name", abName, sizeof(abName));
-				subsection.Get("plugin_name", pluginName, sizeof(pluginName));
-				
-				switch (type)
-				{
-					case CF_AbilityType_Ult:
-					{
-						if (g_Characters[client].Abilities_Ult == null)
-							g_Characters[client].Abilities_Ult = CreateArray(255);
-							
-						PushArrayString(g_Characters[client].Abilities_Ult, pluginName);
-						PushArrayString(g_Characters[client].Abilities_Ult, abName);
-					}
-					case CF_AbilityType_M2:
-					{
-						if (g_Characters[client].Abilities_M2 == null)
-							g_Characters[client].Abilities_M2 = CreateArray(255);
-							
-						PushArrayString(g_Characters[client].Abilities_M2, pluginName);
-						PushArrayString(g_Characters[client].Abilities_M2, abName);
-					}
-					case CF_AbilityType_M3:
-					{
-						if (g_Characters[client].Abilities_M3 == null)
-							g_Characters[client].Abilities_M3 = CreateArray(255);
-							
-						PushArrayString(g_Characters[client].Abilities_M3, pluginName);
-						PushArrayString(g_Characters[client].Abilities_M3, abName);
-					}
-					case CF_AbilityType_Reload:
-					{
-						if (g_Characters[client].Abilities_Reload == null)
-							g_Characters[client].Abilities_Reload = CreateArray(255);
-							
-						PushArrayString(g_Characters[client].Abilities_Reload, pluginName);
-						PushArrayString(g_Characters[client].Abilities_Reload, abName);
-					}
-				}
-			}
-		}
-		
-		i++;
-		Format(secName, sizeof(secName), "ability_%i", i);
-		subsection = abilities.GetSection(secName);
+		CFC_CreateEffect(client, subsection);
+
+		slot++;
+		Format(ab, sizeof(ab), "ability_%i", slot);
+		subsection = abilities.GetSection(ab);
 	}
 }
 
@@ -1794,9 +1895,9 @@ public void CF_DestroyAllBuildings(int client)
  	if (!IsValidClient(client) || !IsPlayerAlive(client))
  		return;
 
-	EndHeldM2(client, true, true);
-	EndHeldM3(client, true, true);
-	EndHeldReload(client, true, true);
+	EndHeldAbility(client, CF_AbilityType_M2, true, true);
+	EndHeldAbility(client, CF_AbilityType_M3, true, true);
+	EndHeldAbility(client, CF_AbilityType_Reload, true, true);
 
 	char conf[255];
 	GetClientCookie(client, c_DesiredCharacter, conf, sizeof(conf));
@@ -1846,6 +1947,9 @@ public void CF_DestroyAllBuildings(int client)
 	float scale = GetFloatFromConfigMap(map, "character.scale", 1.0);
 	
 	CFC_ApplyCharacter(client, speed, health, Classes[class], model, name, scale, weight, conf, archetype);
+	ConfigMap abilities = map.GetSection("character.abilities");
+	if (abilities != null)
+		CFC_StoreAbilities(client, abilities);
 		
 	ConfigMap GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 	
