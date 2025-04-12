@@ -1683,7 +1683,6 @@ stock float ClampBeamWidth(float w) { return w > 128.0 ? 128.0 : w; }
 stock int GetR(int c) { return abs((c>>16)&0xff); }
 stock int GetG(int c) { return abs((c>>8 )&0xff); }
 stock int GetB(int c) { return abs((c    )&0xff); }
-stock float fabs(float x) { return x<0 ? -x : x; }
 stock int abs(int x) { return x < 0 ? -x : x; }
 // if the distance between two points is greater than max distance allowed
 // fills result with a new destination point that lines on the line between src and dst

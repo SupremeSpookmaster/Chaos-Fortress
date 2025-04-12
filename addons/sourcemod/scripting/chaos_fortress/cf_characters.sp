@@ -144,8 +144,8 @@ methodmap CFEffect __nullable__
 
 	public float GetArgF(char[] arg, float defaultValue = 0.0)
 	{
-		char def[32], val[255];
-		Format(def, 16, "%f", defaultValue);
+		char def[64], val[255];
+		Format(def, 64, "%f", defaultValue);
 		this.GetArgS(arg, val, 255, def);
 
 		return StringToFloat(val);
@@ -627,7 +627,13 @@ methodmap CFCharacter __nullable__
 
 	property ArrayList g_Effects
 	{
-		public get() { g_CharacterEffects[this.index] == null ? new ArrayList(255) : g_CharacterEffects[this.index]; }
+		public get()
+		{ 
+			if (g_CharacterEffects[this.index] == null)
+				g_CharacterEffects[this.index] = CreateArray(255);
+				
+			return g_CharacterEffects[this.index]; 
+		}
 		public set(ArrayList value) { g_CharacterEffects[this.index] = value; }
 	}
 

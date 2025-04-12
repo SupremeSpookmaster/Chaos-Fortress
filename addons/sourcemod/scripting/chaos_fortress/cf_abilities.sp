@@ -588,7 +588,7 @@ void DeleteStockTimers(int client)
 {
 	for (int i = 0; i < 5; i++)
 	{
-		if (g_Abilities[client][i].g_StockTimer != null)
+		if (g_Abilities[client][i].g_StockTimer != null && g_Abilities[client][i].g_StockTimer != INVALID_HANDLE)
 		{
 			delete g_Abilities[client][i].g_StockTimer;
 			g_Abilities[client][i].g_StockTimer = null;
@@ -621,11 +621,11 @@ void CreateStockTimer(int client, CF_AbilityType type, float duration)
 	if (g_Abilities[client][slot].g_StockTimer == null)
 	{
 		DataPack pack = new DataPack();
+		g_Abilities[client][slot].g_StockTimer = CreateDataTimer(duration, Stock_Give, pack, TIMER_FLAG_NO_MAPCHANGE);
 		WritePackCell(pack, GetClientUserId(client));
 		WritePackCell(pack, slot);
 		WritePackCell(pack, client);
 
-		g_Abilities[client][slot].g_StockTimer = CreateDataTimer(duration, Stock_Give, pack, TIMER_FLAG_NO_MAPCHANGE);
 		g_Abilities[client][slot].f_NextUseTime = GetGameTime() + duration;
 	}
 }
@@ -1679,7 +1679,7 @@ public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
 		return;
 		
 	if (g_Abilities[client][slot].b_HeldAbility)
-		SubtractStock(client, view_as<CF_AbilityType>(slot));
+		SubtractStock(client, view_as<CF_AbilityType>(slot - 1));
 
 	CF_DoAbilitySlot(client, g_Abilities[client][slot].i_AbilitySlot);
 }
@@ -1876,11 +1876,10 @@ public Native_CF_GetArgI(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return defaultVal;
 		
-	char targetPlugin[255], targetAbility[255], argName[255], path[255];
-	g_Characters[client].GetConfigMapPath(path, 255);
-
 	if (g_Characters[client].g_Effects == null)
 		return defaultVal;
+
+	char targetPlugin[255], targetAbility[255], argName[255];
 		
 	GetNativeString(2, targetPlugin, sizeof(targetPlugin));
 	GetNativeString(3, targetAbility, sizeof(targetAbility));
@@ -1900,12 +1899,11 @@ public any Native_CF_GetArgF(Handle plugin, int numParams)
 	
 	if (!CF_IsPlayerCharacter(client))
 		return defaultVal;
-		
-	char targetPlugin[255], targetAbility[255], argName[255], path[255];
-	g_Characters[client].GetConfigMapPath(path, 255);
-	ConfigMap map = new ConfigMap(path);
-	if (map == null)
+
+	if (g_Characters[client].g_Effects == null)
 		return defaultVal;
+		
+	char targetPlugin[255], targetAbility[255], argName[255];
 		
 	GetNativeString(2, targetPlugin, sizeof(targetPlugin));
 	GetNativeString(3, targetAbility, sizeof(targetAbility));
