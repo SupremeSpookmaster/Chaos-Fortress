@@ -949,7 +949,7 @@ stock void SpawnShaker(float spawnLoc[3], int amp, int radius, int duration, int
 	}
 }
 
-stock int GetIntFromConfigMap(ConfigMap &map, char[] path, int defaultValue)
+stock int GetIntFromCFGMap(ConfigMap map, char[] path, int defaultValue)
 {
 	char value[255];
 	map.Get(path, value, sizeof(value));
@@ -962,7 +962,7 @@ stock int GetIntFromConfigMap(ConfigMap &map, char[] path, int defaultValue)
 	return StringToInt(value);
 }
 
-stock float GetFloatFromConfigMap(ConfigMap &map, char[] path, float defaultValue)
+stock float GetFloatFromCFGMap(ConfigMap map, char[] path, float defaultValue)
 {
 	char value[255];
 	map.Get(path, value, sizeof(value));
@@ -975,7 +975,7 @@ stock float GetFloatFromConfigMap(ConfigMap &map, char[] path, float defaultValu
 	return StringToFloat(value);
 }
 
-stock bool GetBoolFromConfigMap(ConfigMap &map, char[] path, bool defaultValue)
+stock bool GetBoolFromCFGMap(ConfigMap map, char[] path, bool defaultValue)
 {
 	char value[255];
 	map.Get(path, value, sizeof(value));

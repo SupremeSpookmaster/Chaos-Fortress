@@ -818,10 +818,7 @@ public void Medigun_Check(int client)
 	CF_GetArgS(client, DOKMED, MEDIGUN, "resistance_name", Medigun_Name[client][1], 255);
 	CF_GetArgS(client, DOKMED, MEDIGUN, "damage_name", Medigun_Name[client][2], 255);
 	
-	int slot = CF_GetArgI(client, DOKMED, MEDIGUN, "slot") - 1;
-	
-	if (slot > -1 && slot < 11)
-		Medigun_Slot[client] = view_as<CF_AbilityType>(slot);
+	Medigun_Slot[client] = CF_GetAbilitySlot(client, DOKMED, MEDIGUN);
 	
 	Medigun_Active[client] = true;
 	

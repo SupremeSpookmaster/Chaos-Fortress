@@ -285,19 +285,19 @@ public void CF_SetGameRules(int admin)
 	{
 		subsection.Get("default_character", s_DefaultCharacter, 255);
 		Format(s_DefaultCharacter, sizeof(s_DefaultCharacter), "configs/chaos_fortress/%s.cfg", s_DefaultCharacter);
-		CFA_SetChargeRetain(GetFloatFromConfigMap(subsection, "charge_retain", 0.0));
-		b_DisplayRole = GetBoolFromConfigMap(subsection, "display_role", false);
-		b_PreserveUlt = GetBoolFromConfigMap(subsection, "preserve_ult", false);
-		f_SpawnGrace = GetFloatFromConfigMap(subsection, "spawn_grace", 3.0);
-		f_RespawnTimeRed = GetFloatFromConfigMap(subsection, "respawn_red", 9.0);
-		f_RespawnTimeBlue = GetFloatFromConfigMap(subsection, "respawn_blue", 9.0);
-		f_GlobalKnockbackValue = GetFloatFromConfigMap(subsection, "knockback_modifier", 0.0);
+		CFA_SetChargeRetain(GetFloatFromCFGMap(subsection, "charge_retain", 0.0));
+		b_DisplayRole = GetBoolFromCFGMap(subsection, "display_role", false);
+		b_PreserveUlt = GetBoolFromCFGMap(subsection, "preserve_ult", false);
+		f_SpawnGrace = GetFloatFromCFGMap(subsection, "spawn_grace", 3.0);
+		f_RespawnTimeRed = GetFloatFromCFGMap(subsection, "respawn_red", 9.0);
+		f_RespawnTimeBlue = GetFloatFromCFGMap(subsection, "respawn_blue", 9.0);
+		f_GlobalKnockbackValue = GetFloatFromCFGMap(subsection, "knockback_modifier", 0.0);
 		
-		float KillValue = GetFloatFromConfigMap(subsection, "value_kills", 1.0);
-		float DeathValue = GetFloatFromConfigMap(subsection, "value_deaths", 1.0);
-		float HealValue = GetFloatFromConfigMap(subsection, "value_healing", 1000.0);
-		float KDA_Angry = GetFloatFromConfigMap(subsection, "kd_angry", 0.33);
-		float KDA_Happy = GetFloatFromConfigMap(subsection, "kd_happy", 2.33);
+		float KillValue = GetFloatFromCFGMap(subsection, "value_kills", 1.0);
+		float DeathValue = GetFloatFromCFGMap(subsection, "value_deaths", 1.0);
+		float HealValue = GetFloatFromCFGMap(subsection, "value_healing", 1000.0);
+		float KDA_Angry = GetFloatFromCFGMap(subsection, "kd_angry", 0.33);
+		float KDA_Happy = GetFloatFromCFGMap(subsection, "kd_happy", 2.33);
 		
 		CFKS_ApplyKDARules(KillValue, DeathValue, KDA_Angry, KDA_Happy, HealValue);
 		
@@ -320,10 +320,10 @@ public void CF_SetGameRules(int admin)
 	subsection = GameRules.GetSection("game_rules.killstreak_settings");
 	if (subsection != null)
 	{
-		int announcer = GetIntFromConfigMap(subsection, "killstreak_announcements", 0);
-		int interval = GetIntFromConfigMap(subsection, "killstreak_interval", 0);
-		int ended = GetIntFromConfigMap(subsection, "killstreak_ended", 0);
-		int godlike = GetIntFromConfigMap(subsection, "killstreak_godlike", 0);
+		int announcer = GetIntFromCFGMap(subsection, "killstreak_announcements", 0);
+		int interval = GetIntFromCFGMap(subsection, "killstreak_interval", 0);
+		int ended = GetIntFromCFGMap(subsection, "killstreak_ended", 0);
+		int godlike = GetIntFromCFGMap(subsection, "killstreak_godlike", 0);
 		
 		CFKS_Prepare(announcer, interval, ended, godlike);
 		
@@ -352,8 +352,8 @@ public void CF_SetGameRules(int admin)
 		{
 			char messageText[255];
 			messageSection.Get("message", messageText, 255);
-			float interval = GetFloatFromConfigMap(messageSection, "interval", 300.0);
-			int holiday = GetIntFromConfigMap(messageSection, "holiday", 0);
+			float interval = GetFloatFromCFGMap(messageSection, "interval", 300.0);
+			int holiday = GetIntFromCFGMap(messageSection, "holiday", 0);
 			
 			bool permissible = true;
 			
@@ -406,9 +406,9 @@ public int CF_GetCharacterLimit(char conf[255])
 	char path[255];
 	Format(path, sizeof(path), "game_rules.character_limits.%s", myConf);
 	
-	int limit = GetIntFromConfigMap(GameRules, path, 0);
+	int limit = GetIntFromCFGMap(GameRules, path, 0);
 	if (limit == 0)
-		limit = GetIntFromConfigMap(GameRules, "game_rules.character_limits.all", 0);
+		limit = GetIntFromCFGMap(GameRules, "game_rules.character_limits.all", 0);
 
 	DeleteCfg(GameRules);
 

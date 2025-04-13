@@ -354,6 +354,16 @@ public void ScoreThink(int entity)
 	}
 }
 
+public void CFA_StockLogic(int client, CFAbility ability, CF_AbilityType type)
+{
+	if (ability.i_MaxStocks < 1 || ability.i_Stocks >= ability.i_MaxStocks || CF_GetAbilityCooldown(client, type) > 0.0)
+		return;
+
+	ability.i_Stocks++;
+	if (ability.i_Stocks < ability.i_MaxStocks)
+		CF_ApplyAbilityCooldown(client, ability.f_Cooldown, type, true, false);
+}
+
 public Action CFA_HUDTimer(Handle timer)
 {
 	int rState = CF_GetRoundState();
@@ -434,6 +444,8 @@ public Action CFA_HUDTimer(Handle timer)
 					}
 					else
 					{
+						CFA_StockLogic(client, ability, type);
+
 						if (ability.b_HeldAbility)
 						{
 							if (ability.b_CurrentlyHeld)
@@ -444,7 +456,7 @@ public Action CFA_HUDTimer(Handle timer)
 						Format(button, sizeof(button), "[%s]", button);
 
 						char suffix[255];
-						if (AbilityUsesStocks(client, type))
+						if (ability.i_MaxStocks > 0)
 							Format(suffix, sizeof(suffix), "[%i/%i]", ability.i_Stocks, ability.i_MaxStocks);
 
 						if (!CanUse && !tooPoor && !wouldBeStuck && remCD < 0.1)
@@ -563,92 +575,26 @@ public void CFA_PlayerKilled(int attacker, int victim)
 		CF_SilenceCharacter(victim, 0.2);
 }
 
-public bool CFA_InitializeUltimate(int client, ConfigMap map)
+public bool CFA_InitializeUltimate(int client, ConfigMap map, bool IsNewCharacter)
 {
 	ConfigMap subsection = map.GetSection("character.ultimate_stats");
 	if (subsection != null)
 	{
-		g_Characters[client].f_UltChargeRequired = GetFloatFromConfigMap(subsection, "charge", 0.0);
-		g_Characters[client].f_UltChargeOnRegen = GetFloatFromConfigMap(subsection, "on_regen", 0.0);
-		g_Characters[client].f_UltChargeOnDamage = GetFloatFromConfigMap(subsection, "on_damage", 0.0);
-		g_Characters[client].f_UltChargeOnHurt = GetFloatFromConfigMap(subsection, "on_hurt", 0.0);
-		g_Characters[client].f_UltChargeOnHeal = GetFloatFromConfigMap(subsection, "on_heal", 0.0);
-		g_Characters[client].f_UltChargeOnKill = GetFloatFromConfigMap(subsection, "on_kill", 0.0);
-		g_Characters[client].f_UltChargeOnBuildingDamage = GetFloatFromConfigMap(subsection, "on_damage_building", 0.0);
-		g_Characters[client].f_UltChargeOnDestruction = GetFloatFromConfigMap(subsection, "on_kill_building", 0.0);
+		g_Characters[client].f_UltChargeRequired = GetFloatFromCFGMap(subsection, "charge", 0.0);
+		g_Characters[client].f_UltChargeOnRegen = GetFloatFromCFGMap(subsection, "on_regen", 0.0);
+		g_Characters[client].f_UltChargeOnDamage = GetFloatFromCFGMap(subsection, "on_damage", 0.0);
+		g_Characters[client].f_UltChargeOnHurt = GetFloatFromCFGMap(subsection, "on_hurt", 0.0);
+		g_Characters[client].f_UltChargeOnHeal = GetFloatFromCFGMap(subsection, "on_heal", 0.0);
+		g_Characters[client].f_UltChargeOnKill = GetFloatFromCFGMap(subsection, "on_kill", 0.0);
+		g_Characters[client].f_UltChargeOnBuildingDamage = GetFloatFromCFGMap(subsection, "on_damage_building", 0.0);
+		g_Characters[client].f_UltChargeOnDestruction = GetFloatFromCFGMap(subsection, "on_kill_building", 0.0);
 
-		CFC_CreateAbility(client, subsection, CF_AbilityType_Ult, false);
+		CFC_CreateAbility(client, subsection, CF_AbilityType_Ult, IsNewCharacter);
 	}
+	else
+		g_Abilities[client][1].Destroy();
 	
 	return g_Abilities[client][1].b_Exists;
-}
-
-void DeleteStockTimers(int client)
-{
-	for (int i = 0; i < 5; i++)
-	{
-		if (g_Abilities[client][i].g_StockTimer != null && g_Abilities[client][i].g_StockTimer != INVALID_HANDLE)
-		{
-			delete g_Abilities[client][i].g_StockTimer;
-			g_Abilities[client][i].g_StockTimer = null;
-		}
-	}
-}
-
-void CreateStockTimerNextFrame(int client, CF_AbilityType type, float duration)
-{
-	DataPack pack = new DataPack();
-	RequestFrame(CreateIt, pack);
-	WritePackCell(pack, GetClientUserId(client));
-	WritePackCell(pack, type);
-	WritePackFloat(pack, duration);
-}
-
-void CreateIt(DataPack pack)
-{
-	ResetPack(pack);
-	int client = GetClientOfUserId(ReadPackCell(pack));
-	CF_AbilityType type = ReadPackCell(pack);
-	float duration = ReadPackFloat(pack);
-	if (CF_IsPlayerCharacter(client))
-		CreateStockTimer(client, type, duration);
-}
-
-void CreateStockTimer(int client, CF_AbilityType type, float duration)
-{
-	int slot = view_as<int>(type) + 1;
-	if (g_Abilities[client][slot].g_StockTimer == null)
-	{
-		DataPack pack = new DataPack();
-		g_Abilities[client][slot].g_StockTimer = CreateDataTimer(duration, Stock_Give, pack, TIMER_FLAG_NO_MAPCHANGE);
-		WritePackCell(pack, GetClientUserId(client));
-		WritePackCell(pack, slot);
-		WritePackCell(pack, client);
-
-		g_Abilities[client][slot].f_NextUseTime = GetGameTime() + duration;
-	}
-}
-
-public Action Stock_Give(Handle stocky, DataPack pack)
-{
-	ResetPack(pack);
-	int client = GetClientOfUserId(ReadPackCell(pack));
-	int type = ReadPackCell(pack);
-	int slot = ReadPackCell(pack);
-
-	g_Abilities[slot][type].g_StockTimer = null;
-
-	if (CF_IsPlayerCharacter(client))
-	{
-		if (g_Abilities[client][type].i_Stocks < g_Abilities[client][type].i_MaxStocks)
-		{
-			g_Abilities[client][type].i_Stocks++;
-			if (g_Abilities[client][type].i_Stocks < g_Abilities[client][type].i_MaxStocks)
-				CreateStockTimerNextFrame(client, view_as<CF_AbilityType>(type - 1), g_Abilities[client][type].f_Cooldown);
-		}
-	}
-
-	return Plugin_Continue;
 }
 
 public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
@@ -663,6 +609,8 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		CFC_CreateAbility(client, subsection, CF_AbilityType_M2, NewChar);
 		AtLeastOne = true;
 	}
+	else
+		g_Abilities[client][2].Destroy();
 	
 	subsection = map.GetSection("character.m3_ability");
 	if (subsection != null)
@@ -670,6 +618,8 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		CFC_CreateAbility(client, subsection, CF_AbilityType_M3, NewChar);
 		AtLeastOne = true;
 	}
+	else
+		g_Abilities[client][3].Destroy();
 	
 	subsection = map.GetSection("character.reload_ability");
 	if (subsection != null)
@@ -677,6 +627,8 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		CFC_CreateAbility(client, subsection, CF_AbilityType_Reload, NewChar);
 		AtLeastOne = true;
 	}
+	else
+		g_Abilities[client][4].Destroy();
 	
 	return AtLeastOne;
 }
@@ -686,12 +638,12 @@ public void CFA_InitializeResources(int client, ConfigMap map, bool NewChar)
 	ConfigMap subsection = map.GetSection("character.special_resource");
 	if (subsection != null)
 	{
-		g_Characters[client].b_ResourceIsUlt = GetBoolFromConfigMap(subsection, "is_ult", false);
+		g_Characters[client].b_ResourceIsUlt = GetBoolFromCFGMap(subsection, "is_ult", false);
 		
 		if (!g_Characters[client].b_ResourceIsUlt)
 		{
-			g_Characters[client].b_ResourceIsPercentage = GetBoolFromConfigMap(subsection, "percentage", false);
-			g_Characters[client].b_ResourceIsMetal = GetBoolFromConfigMap(subsection, "is_metal", false);
+			g_Characters[client].b_ResourceIsPercentage = GetBoolFromCFGMap(subsection, "percentage", false);
+			g_Characters[client].b_ResourceIsMetal = GetBoolFromCFGMap(subsection, "is_metal", false);
 			
 			char name[255], namePlural[255];
 			subsection.Get("name", name, 255);
@@ -699,14 +651,14 @@ public void CFA_InitializeResources(int client, ConfigMap map, bool NewChar)
 			g_Characters[client].SetResourceName(name);
 			g_Characters[client].SetResourceNamePlural(namePlural);
 
-			float start = GetFloatFromConfigMap(subsection, "start", 0.0);
-			float preserve = GetFloatFromConfigMap(subsection, "preserve", 0.0) * CF_GetSpecialResource(client);
+			float start = GetFloatFromCFGMap(subsection, "start", 0.0);
+			float preserve = GetFloatFromCFGMap(subsection, "preserve", 0.0) * CF_GetSpecialResource(client);
 
-			g_Characters[client].f_MaxResources = GetFloatFromConfigMap(subsection, "max", 0.0);
-			g_Characters[client].f_ResourceRegenInterval = GetFloatFromConfigMap(subsection, "regen_interval", 0.1);
+			g_Characters[client].f_MaxResources = GetFloatFromCFGMap(subsection, "max", 0.0);
+			g_Characters[client].f_ResourceRegenInterval = GetFloatFromCFGMap(subsection, "regen_interval", 0.1);
 			g_Characters[client].f_NextResourceRegen = GetGameTime() + g_Characters[client].f_ResourceRegenInterval;
 			
-			bool IgnoreResupply = GetBoolFromConfigMap(subsection, "ignore_resupply", true);
+			bool IgnoreResupply = GetBoolFromCFGMap(subsection, "ignore_resupply", true);
 			
 			if (!IgnoreResupply || NewChar)
 			{
@@ -724,15 +676,15 @@ public void CFA_InitializeResources(int client, ConfigMap map, bool NewChar)
 				g_Characters[client].f_NextResourceRegen = GetGameTime() + 0.2;
 			}
 			
-			g_Characters[client].f_ResourcesOnRegen = GetFloatFromConfigMap(subsection, "on_regen", 0.0);
-			g_Characters[client].f_ResourcesOnDamage = GetFloatFromConfigMap(subsection, "on_damage", 0.0);
-			g_Characters[client].f_ResourcesOnHurt = GetFloatFromConfigMap(subsection, "on_hurt", 0.0);
-			g_Characters[client].f_ResourcesOnHeal = GetFloatFromConfigMap(subsection, "on_heal", 0.0);
-			g_Characters[client].f_ResourcesOnKill = GetFloatFromConfigMap(subsection, "on_kill", 0.0);
-			g_Characters[client].f_ResourcesOnBuildingDamage = GetFloatFromConfigMap(subsection, "on_damage_building", 0.0);
-			g_Characters[client].f_ResourcesOnDestruction = GetFloatFromConfigMap(subsection, "on_kill_building", 0.0);
+			g_Characters[client].f_ResourcesOnRegen = GetFloatFromCFGMap(subsection, "on_regen", 0.0);
+			g_Characters[client].f_ResourcesOnDamage = GetFloatFromCFGMap(subsection, "on_damage", 0.0);
+			g_Characters[client].f_ResourcesOnHurt = GetFloatFromCFGMap(subsection, "on_hurt", 0.0);
+			g_Characters[client].f_ResourcesOnHeal = GetFloatFromCFGMap(subsection, "on_heal", 0.0);
+			g_Characters[client].f_ResourcesOnKill = GetFloatFromCFGMap(subsection, "on_kill", 0.0);
+			g_Characters[client].f_ResourcesOnBuildingDamage = GetFloatFromCFGMap(subsection, "on_damage_building", 0.0);
+			g_Characters[client].f_ResourcesOnDestruction = GetFloatFromCFGMap(subsection, "on_kill_building", 0.0);
 			
-			g_Characters[client].f_ResourcesToTriggerSound = GetFloatFromConfigMap(subsection, "sound_amt", 0.0);
+			g_Characters[client].f_ResourcesToTriggerSound = GetFloatFromCFGMap(subsection, "sound_amt", 0.0);
 			g_Characters[client].f_ResourcesSinceLastGain = 0.0;
 		}
 	}
@@ -760,6 +712,7 @@ public void CFA_MapEnd()
 	for (int i = 0; i <= MaxClients; i++)
 	{
 		g_Characters[i].Destroy();
+		g_Characters[i] = null;
 	}
 
 	for (int i = 0; i < 2049; i++)
@@ -984,6 +937,7 @@ void EndHeldAbility(int client, CF_AbilityType type, bool TriggerCallback, bool 
 				case CF_AbilityType_Reload:
 					CF_PlayRandomSound(client, "", "sound_heldend_reload");
 			}
+
 			SubtractStock(client, type);
 		}
 			
@@ -1014,7 +968,8 @@ void SubtractStock(int client, CF_AbilityType type)
 
 	int slot = view_as<int>(type) + 1;
 	g_Abilities[client][slot].i_Stocks--;
-	CreateStockTimer(client, type, g_Abilities[client][slot].f_Cooldown);
+	if (CF_GetAbilityCooldown(client, type) <= 0.0)
+		CF_ApplyAbilityCooldown(client, g_Abilities[client][slot].f_Cooldown, type, true);
 }
 
 public void ResetHeldButtonStats(int client)
@@ -1095,7 +1050,7 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 			ConfigMap map = new ConfigMap(path);
 			if (map != null)
 			{
-				float distance = GetFloatFromConfigMap(map, "character.ultimate_stats.radius", 999999.0);
+				float distance = GetFloatFromCFGMap(map, "character.ultimate_stats.radius", 999999.0);
 				float pos[3];
 				GetClientAbsOrigin(client, pos);
 				
@@ -1158,10 +1113,11 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 	BlockedByResize = false;
 	BlockedByTooFewResources = false;
 
+	int slot = view_as<int>(type) + 1;
 	bool UsingStocks = AbilityUsesStocks(client, type);
 	remCD = CF_GetAbilityCooldown(client, type);
 	
-	if (remCD > 0.0 && !UsingStocks)
+	if (remCD > 0.0 && (!UsingStocks || g_Abilities[client][slot].i_Stocks < 1))
 		return false;
 	
 	if (i_HeldBlocked[client] != CF_AbilityType_None && i_HeldBlocked[client] != type)
@@ -1170,14 +1126,13 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 	if (TF2_IsPlayerStunned(client))
 		return false;
 
-	int slot = view_as<int>(type) + 1;
 	if (g_Abilities[client][slot].b_Blocked)
 		return false;
 
 	if (g_Abilities[client][slot].b_RequireGrounded && GetEntityFlags(client) & FL_ONGROUND == 0)
 		return false;
 
-	if (g_Abilities[client][slot].i_Stocks < 1 && g_Abilities[client][slot].i_MaxStocks > 0)
+	if (g_Abilities[client][slot].i_Stocks < 1 && UsingStocks)
 		return false;
 
 	int acWep = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
@@ -1567,9 +1522,6 @@ public Native_CF_ApplyAbilityCooldown(Handle plugin, int numParams)
 	{
 		int slot = view_as<int>(type) + 1;
 		g_Abilities[client][slot].f_NextUseTime = (override || GetGameTime() >= g_Abilities[client][slot].f_NextUseTime) ? gameTime + cd : g_Abilities[client][slot].f_NextUseTime + cd;
-
-		if (AbilityUsesStocks(client, type))
-			CreateStockTimer(client, type, override ? cd : (CF_GetAbilityCooldown(client, type) + cd));
 	}
 }
 
@@ -1588,9 +1540,6 @@ public void ApplyCDOnDelay(DataPack pack)
 		
 	int slot = view_as<int>(type) + 1;
 	g_Abilities[client][slot].f_NextUseTime = (override || GetGameTime() >= g_Abilities[client][slot].f_NextUseTime) ? gameTime + cd : g_Abilities[client][slot].f_NextUseTime + cd;
-
-	if (AbilityUsesStocks(client, type))
-		CreateStockTimer(client, type, override ? cd : (CF_GetAbilityCooldown(client, type) + cd));
 }
 
 public any Native_CF_GetAbilityCooldown(Handle plugin, int numParams)
@@ -1659,7 +1608,7 @@ public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return;
 		
-	if (g_Abilities[client][slot].b_HeldAbility)
+	if (!g_Abilities[client][slot].b_HeldAbility)
 		SubtractStock(client, view_as<CF_AbilityType>(slot - 1));
 
 	CF_DoAbilitySlot(client, g_Abilities[client][slot].i_AbilitySlot);
@@ -1779,12 +1728,7 @@ public Native_CF_HasAbility(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return false;
 		
-	char targetPlugin[255], targetAbility[255], path[255];
-	g_Characters[client].GetConfigMapPath(path, 255);
-	
-	ConfigMap map = new ConfigMap(path);
-	if (map == null)
-		return false;
+	char targetPlugin[255], targetAbility[255];
 		
 	GetNativeString(2, targetPlugin, sizeof(targetPlugin));
 	GetNativeString(3, targetAbility, sizeof(targetAbility));
@@ -1927,51 +1871,23 @@ public Native_CF_GetAbilityConfigMapPath(Handle plugin, int numParams)
 		return;
 	}
 		
-	char targetPlugin[255], targetAbility[255], section[255], pluginName[255], abName[255], path[255];
-	
-	g_Characters[client].GetConfigMapPath(path, 255);
-	ConfigMap map = new ConfigMap(path);
-	if (map == null)
-	{
-		SetNativeString(5, "", length);
-		return;
-	}
-		
+	char targetPlugin[255], targetAbility[255], section[255];
+
 	GetNativeString(2, targetPlugin, sizeof(targetPlugin));
 	GetNativeString(3, targetAbility, sizeof(targetAbility));
 	GetNativeString(4, section, sizeof(section));
-		
-	ConfigMap abilities = map.GetSection("character.abilities");
-	if (abilities == null)
+
+	CFEffect effect = GetEffectFromAbility(client, targetPlugin, targetAbility);
+	if (effect.b_Exists)
 	{
-		DeleteCfg(map);
-		SetNativeString(5, "", length);
+		char path[255], abIndex[255];
+		effect.GetAbilityIndex(abIndex, 255);
+		Format(path, sizeof(path), "character.abilities.%s.%s", abIndex, section);
+		SetNativeString(5, path, length);
 		return;
 	}
-		
-	int i = 1;
-	char secName[255];
-	Format(secName, sizeof(secName), "ability_%i", i);
-		
-	ConfigMap subsection = abilities.GetSection(secName);
-	while (subsection != null)
-	{
-		subsection.Get("ability_name", abName, sizeof(abName));
-		subsection.Get("plugin_name", pluginName, sizeof(pluginName));
-		
-		if (StrEqual(targetPlugin, pluginName) && StrEqual(targetAbility, abName))
-		{
-			Format(path, sizeof(path), "character.abilities.%s.%s", secName, section);
-			SetNativeString(5, path, length);
-			break;
-		}
-		
-		i++;
-		Format(secName, sizeof(secName), "ability_%i", i);
-		subsection = abilities.GetSection(secName);
-	}
-	
-	DeleteCfg(map);
+
+	SetNativeString(5, "", length);
 }
 
 public any Native_CF_IsAbilitySlotBlocked(Handle plugin, int numParams)
@@ -2648,7 +2564,7 @@ public Native_CF_ChangeAbilityTitle(Handle plugin, int numParams)
 	char newName[255];
 	GetNativeString(3, newName, sizeof(newName));
 	
-	if (!CF_IsPlayerCharacter(client))
+	if (!CF_IsPlayerCharacter(client) || type > CF_AbilityType_Reload)
 		return;
 
 	int slot = view_as<int>(type) + 1;
@@ -3530,8 +3446,8 @@ public Native_CF_SetAbilityStocks(Handle plugin, int numParams)
 	if (g_Abilities[client][slot].i_Stocks > g_Abilities[client][slot].i_MaxStocks && !ignoreMax)
 		g_Abilities[client][slot].i_Stocks = g_Abilities[client][slot].i_MaxStocks;
 
-	if (g_Abilities[client][slot].i_Stocks < g_Abilities[client][slot].i_MaxStocks)
-		CreateStockTimer(client, type, g_Abilities[client][slot].f_Cooldown);
+	if (g_Abilities[client][slot].i_Stocks < g_Abilities[client][slot].i_MaxStocks && CF_GetAbilityCooldown(client, type) <= 0.0)
+		CF_ApplyAbilityCooldown(client, g_Abilities[client][slot].f_Cooldown, type, true);
 }
 
 public Native_CF_SetAbilityMaxStocks(Handle plugin, int numParams)
@@ -3545,7 +3461,9 @@ public Native_CF_SetAbilityMaxStocks(Handle plugin, int numParams)
 
 	int slot = view_as<int>(type) + 1;
 	g_Abilities[client][slot].i_MaxStocks = numStocks;
-	CreateStockTimer(client, type, g_Abilities[client][slot].f_Cooldown);
+
+	if (g_Abilities[client][slot].i_Stocks < g_Abilities[client][slot].i_MaxStocks && CF_GetAbilityCooldown(client, type) <= 0.0)
+		CF_ApplyAbilityCooldown(client, g_Abilities[client][slot].f_Cooldown, type, true);
 }
 
 public Native_CF_GetAbilityStocks(Handle plugin, int numParams)

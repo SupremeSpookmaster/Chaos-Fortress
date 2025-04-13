@@ -190,27 +190,27 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 			
 		if (section != null)
 		{			
-			level = GetIntFromConfigMap(section, "level", 100);
-			playMode = GetIntFromConfigMap(section, "source", 0);
+			level = GetIntFromCFGMap(section, "level", 100);
+			playMode = GetIntFromCFGMap(section, "source", 0);
 				
-			volume = GetFloatFromConfigMap(section, "volume", 1.0);
-			channel = GetIntFromConfigMap(section, "channel", 7);
-			global = GetBoolFromConfigMap(section, "global", false);
+			volume = GetFloatFromCFGMap(section, "volume", 1.0);
+			channel = GetIntFromCFGMap(section, "channel", 7);
+			global = GetBoolFromCFGMap(section, "global", false);
 				
-			float chance = GetFloatFromConfigMap(section, "chance", 1.0);
+			float chance = GetFloatFromCFGMap(section, "chance", 1.0);
 			
-			minPitch = GetIntFromConfigMap(section, "pitch_min", 100);
-			maxPitch = GetIntFromConfigMap(section, "pitch_max", 100);
-			times = GetIntFromConfigMap(section, "times", 1);
+			minPitch = GetIntFromCFGMap(section, "pitch_min", 100);
+			maxPitch = GetIntFromCFGMap(section, "pitch_max", 100);
+			times = GetIntFromCFGMap(section, "times", 1);
 				
 			CanPlay = GetRandomFloat(0.0, 1.0) <= chance;
 			
 			/*if (echoSection != null && CanPlay)
 			{
-				int numEchoes = GetIntFromConfigMap(echoSection, "times", 100);
-				float echoDelay = GetFloatFromConfigMap(echoSection, "delay", 0.33);
-				int levelReduction = GetIntFromConfigMap(echoSection, "level_reduction", 30);
-				float volumeReduction = GetFloatFromConfigMap(echoSection, "volume_reduction", 0.33);
+				int numEchoes = GetIntFromCFGMap(echoSection, "times", 100);
+				float echoDelay = GetFloatFromCFGMap(echoSection, "delay", 0.33);
+				int levelReduction = GetIntFromCFGMap(echoSection, "level_reduction", 30);
+				float volumeReduction = GetFloatFromCFGMap(echoSection, "volume_reduction", 0.33);
 				
 				DataPack pack = new DataPack();
 				CreateDataTimer(echoDelay, Sound_Echo, pack, TIMER_FLAG_NO_MAPCHANGE);

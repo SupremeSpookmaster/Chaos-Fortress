@@ -8,6 +8,8 @@
 //#define USE_PREVIEWS
 //#define TESTING
 
+#include <handledebugger>
+
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Rewrite the wiki.
 //		- May end up just scrapping the wiki. It adds way too much upkeep for next to no benefit.
@@ -262,7 +264,7 @@ public void PlayerReset(Event gEvent, const char[] sEvName, bool bDontBroadcast)
 		//Do it twice in a row because otherwise your viewmodels get screwed the first time you spawn.
 		//I have no clue why. Yes, I tried delaying the class change by a frame. No, it did not work.
 		//Yes, I am aware this is EXTREMELY suboptimal, no I am not happy I had to do it, but I'm sick of trying to make this thing work seamlessly so I just tossed in a hack and called it a day.
-		CF_MakeCharacter(client, false);
+		//CF_MakeCharacter(client, false);
 		CF_MakeCharacter(client, _, _, _, "You became: %s");
 	}
 	

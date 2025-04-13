@@ -229,14 +229,14 @@ enum struct ResourceParticle
 
 	void CreateFromArgs(ConfigMap path)
 	{
-		this.minResource = GetFloatFromConfigMap(path, "min_resource", 0.0);
-		this.maxResource = GetFloatFromConfigMap(path, "max_resource", 0.0);
-		this.xOff = GetFloatFromConfigMap(path, "x_offset", 0.0);
-		this.yOff = GetFloatFromConfigMap(path, "y_offset", 0.0);
-		this.zOff = GetFloatFromConfigMap(path, "z_offset", 0.0);
-		this.lifespan = GetFloatFromConfigMap(path, "lifespan", 0.0);
-		this.ignoreActiveState = GetBoolFromConfigMap(path, "multiple", false);
-		this.isUlt = GetBoolFromConfigMap(path, "use_ult", false);
+		this.minResource = GetFloatFromCFGMap(path, "min_resource", 0.0);
+		this.maxResource = GetFloatFromCFGMap(path, "max_resource", 0.0);
+		this.xOff = GetFloatFromCFGMap(path, "x_offset", 0.0);
+		this.yOff = GetFloatFromCFGMap(path, "y_offset", 0.0);
+		this.zOff = GetFloatFromCFGMap(path, "z_offset", 0.0);
+		this.lifespan = GetFloatFromCFGMap(path, "lifespan", 0.0);
+		this.ignoreActiveState = GetBoolFromCFGMap(path, "multiple", false);
+		this.isUlt = GetBoolFromCFGMap(path, "use_ult", false);
 		path.Get("effect_red", this.effect_Red, 255);
 		path.Get("effect_blue", this.effect_Blue, 255);
 		path.Get("point", this.point, 255);
@@ -1344,7 +1344,7 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 				EmitSoundToClient(victim, sound, _, _, _, _, _, GetRandomInt(80, 110));
 			}
 
-			damage *= GetFloatFromConfigMap(interactions, "damage_dealt", 1.0);
+			damage *= GetFloatFromCFGMap(interactions, "damage_dealt", 1.0);
 
 			DeleteCfg(map);
 
@@ -1388,7 +1388,7 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 				EmitSoundToClient(victim, sound, _, _, _, _, _, GetRandomInt(80, 110));
 			}
 
-			damage *= GetFloatFromConfigMap(interactions, "damage_taken", 1.0);
+			damage *= GetFloatFromCFGMap(interactions, "damage_taken", 1.0);
 
 			DeleteCfg(map);
 

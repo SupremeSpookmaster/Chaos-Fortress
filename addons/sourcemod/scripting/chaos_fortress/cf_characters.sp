@@ -79,6 +79,7 @@ int i_EffectArgs[2048] = { 0, ... };
 
 char s_EffectPluginName[2048][255];
 char s_EffectAbilityName[2048][255];
+char s_EffectAbilityIndex[2049][255];
 char s_EffectArgNames[2048][255][255];
 char s_EffectArgValues[2048][255][255];
 
@@ -129,14 +130,20 @@ methodmap CFEffect __nullable__
 	{ 
 		this.ClearArgsAndValues();
 		this.i_AbilitySlot = -1;
+		this.SetPluginName("");
+		this.SetAbilityName("");
+		this.SetAbilityIndex("");
 		b_EffectExists[this.index] = false;
 	}
 
 	public void SetPluginName(char[] pluginName) { strcopy(s_EffectPluginName[this.index], 255, pluginName); }
 	public void GetPluginName(char[] output, int size) { strcopy(output, size, s_EffectPluginName[this.index]); }
 
-	public void SetAbilityName(char[] pluginName) { strcopy(s_EffectAbilityName[this.index], 255, pluginName); }
+	public void SetAbilityName(char[] abilityName) { strcopy(s_EffectAbilityName[this.index], 255, abilityName); }
 	public void GetAbilityName(char[] output, int size) { strcopy(output, size, s_EffectAbilityName[this.index]); }
+
+	public void SetAbilityIndex(char[] abilityIndex) { strcopy(s_EffectAbilityIndex[this.index], 255, abilityIndex); }
+	public void GetAbilityIndex(char[] output, int size) { strcopy(output, size, s_EffectAbilityIndex[this.index]); }
 
 	public int GetArgI(char[] arg, int defaultValue = 0)
 	{
@@ -224,8 +231,6 @@ bool b_AbilityIsBlocked[2048] = { false, ... };
 bool b_AbilityCurrentlyHeld[2048] = { false, ... };
 
 char s_AbilityName[2048][255];
-
-Handle g_AbilityStockTimer[2048] = { null, ... };
 
 methodmap CFAbility  __nullable__
 {
@@ -343,12 +348,6 @@ methodmap CFAbility  __nullable__
 		public set(bool value) { b_AbilityCurrentlyHeld[this.index] = value; }
 	}
 
-	property Handle g_StockTimer
-	{
-		public get() { return g_AbilityStockTimer[this.index]; }
-		public set(Handle value) { g_AbilityStockTimer[this.index] = value; }
-	}
-
 	public void GetName(char[] output, int size) { strcopy(output, size, s_AbilityName[this.index]); }
 	public void SetName(char[] name) { strcopy(s_AbilityName[this.index], 255, name); }
 
@@ -423,7 +422,7 @@ bool b_CharacterExists[MAXPLAYERS + 1] = { false, ... };
 
 methodmap CFCharacter __nullable__
 {
-	public CFCharacter(int client)
+	public CFCharacter()
 	{
 		for (int slot = 1; slot <= MaxClients; slot++)
 		{
@@ -434,7 +433,7 @@ methodmap CFCharacter __nullable__
 			}
 		}
 
-		return view_as<CFCharacter>(client);
+		return view_as<CFCharacter>(-1);
 	}
 
 	property int index
@@ -732,6 +731,7 @@ methodmap CFCharacter __nullable__
 		for (int i = 0; i < 5; i++)
 		{
 			g_Abilities[this.i_Client][i].Destroy();
+			g_Abilities[this.i_Client][i] = null;
 		}
 
 		this.i_Client = -1;
@@ -776,11 +776,24 @@ methodmap CFCharacter __nullable__
 	}
 }
 
-CFCharacter g_Characters[MAXPLAYERS + 1];
+CFCharacter g_Characters[MAXPLAYERS + 1] = { null, ... };
+
+public CFCharacter GetCharacterFromClient(int client)
+{
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (g_Characters[i].i_Client == client)
+			return g_Characters[i];
+	}
+
+	return null;
+}
 
 public void CFC_ApplyCharacter(int client, float speed, float maxHP, TFClassType class, char model[255], char name[255], float scale, float weight, char configMapPath[255], char archetype[255])
 {
-	CFCharacter character = new CFCharacter(client);
+	CFCharacter character = GetCharacterFromClient(client);
+	if (character == null)
+		character = new CFCharacter();
 
 	character.i_Client = client;
 	character.i_Class = class;
@@ -798,17 +811,18 @@ public void CFC_ApplyCharacter(int client, float speed, float maxHP, TFClassType
 	g_Characters[client] = character;
 }
 
-public void CFC_CreateEffect(int client, ConfigMap subsection)
+public void CFC_CreateEffect(int client, ConfigMap subsection, char abNum[255])
 {
 	CFEffect effect = new CFEffect();
 
 	char plName[255], abName[255];
 	subsection.Get("plugin_name", plName, sizeof(plName));
 	subsection.Get("ability_name", abName, sizeof(abName));
-	int slot = GetIntFromConfigMap(subsection, "slot", -1);
+	int slot = GetIntFromCFGMap(subsection, "slot", -1);
 
 	effect.SetPluginName(plName);
 	effect.SetAbilityName(abName);
+	effect.SetAbilityIndex(abNum);
 	effect.i_AbilitySlot = slot;
 	effect.SetArgsAndValues(subsection);
 
@@ -822,50 +836,60 @@ public void CFC_CreateEffect(int client, ConfigMap subsection)
 
 public void CFC_CreateAbility(int client, ConfigMap subsection, CF_AbilityType type, bool NewChar)
 {
-	CFAbility ability = new CFAbility();
-
 	int slot = view_as<int>(type) + 1;
+
+	CFAbility ability;
+	if (NewChar)
+		ability = new CFAbility();
+	else
+	{
+		ability = g_Abilities[client][slot];
+		if (!ability.b_Exists)
+			ability = new CFAbility();
+	}
+
 	ability.i_AbilitySlot = slot;
 
 	char name[255];
 	subsection.Get("name", name, sizeof(name));
 	ability.SetName(name);
 
-	ability.f_Cooldown = GetFloatFromConfigMap(subsection, "cooldown", 0.0);
-	float startingCD = GetFloatFromConfigMap(subsection, "starting_cd", 0.0)
+	ability.f_Cooldown = GetFloatFromCFGMap(subsection, "cooldown", 0.0);
+	float startingCD = GetFloatFromCFGMap(subsection, "starting_cd", 0.0)
 	CF_ApplyAbilityCooldown(client, startingCD, type, true, false);
 
-	ability.b_HeldAbility = GetBoolFromConfigMap(subsection, "held", false);
-	ability.f_ResourceCost = GetFloatFromConfigMap(subsection, "cost", 0.0);
+	ability.b_HeldAbility = GetBoolFromCFGMap(subsection, "held", false);
+	ability.f_ResourceCost = GetFloatFromCFGMap(subsection, "cost", 0.0);
 		
-	ability.f_Scale = GetFloatFromConfigMap(subsection, "max_scale", 0.0);
-	ability.b_RequireGrounded = GetBoolFromConfigMap(subsection, "grounded", false);
-	ability.b_HeldAbilityBlocksOthers = GetBoolFromConfigMap(subsection, "held_block", false) && ability.b_HeldAbility;
-	ability.i_WeaponSlot = GetIntFromConfigMap(subsection, "weapon_slot", -1);
-	ability.i_AmmoRequirement = GetIntFromConfigMap(subsection, "ammo", 0);
+	ability.f_Scale = GetFloatFromCFGMap(subsection, "max_scale", 0.0);
+	ability.b_RequireGrounded = GetBoolFromCFGMap(subsection, "grounded", false);
+	ability.b_HeldAbilityBlocksOthers = GetBoolFromCFGMap(subsection, "held_block", false) && ability.b_HeldAbility;
+	ability.i_WeaponSlot = GetIntFromCFGMap(subsection, "weapon_slot", -1);
+	ability.i_AmmoRequirement = GetIntFromCFGMap(subsection, "ammo", 0);
 
 	if (NewChar)
 	{
-		ability.i_Stocks = GetIntFromConfigMap(subsection, "starting_stocks", 0);
-		ability.i_MaxStocks = GetIntFromConfigMap(subsection, "max_stocks", 0);
-		if (ability.i_MaxStocks > 0 && ability.i_Stocks < ability.i_MaxStocks)
-		{
-			CreateStockTimer(client, type, startingCD);
-		}
+		ability.i_Stocks = GetIntFromCFGMap(subsection, "starting_stocks", 0);
 	}
+
+	ability.i_MaxStocks = GetIntFromCFGMap(subsection, "max_stocks", 0);
 
 	g_Abilities[client][slot] = ability;
 }
 
 public void CFC_StoreAbilities(int client, ConfigMap abilities)
 {
+	ArrayList effects = g_Characters[client].g_Effects;
+	if (effects != null)
+		effects.Clear();
+
 	char ab[255];
 	Format(ab, sizeof(ab), "ability_1");
 	int slot = 1;
 	ConfigMap subsection = abilities.GetSection(ab);
 	while (subsection != null)
 	{
-		CFC_CreateEffect(client, subsection);
+		CFC_CreateEffect(client, subsection, ab);
 
 		slot++;
 		Format(ab, sizeof(ab), "ability_%i", slot);
@@ -917,6 +941,7 @@ public void CFC_Disconnect(int client)
 {
 	b_FirstSpawn[client] = true;
 	g_Characters[client].Destroy();
+	g_Characters[client] = null;
 }
 
 public void CFC_MakeNatives()
@@ -1488,6 +1513,7 @@ int i_NumItemsInInfoMenu[MAXPLAYERS + 1] = { 0, ... };
  	ConfigMap section = Character.GetSection("character.menu_display");
  	if (section == null)
  	{
+		DeleteCfg(Character);
  		ConfigMap rules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
  		
  		if (rules == null)		//Don't bother printing an error to the console because this should get thrown in SetGameRules if it's going to get thrown here, unless someone is deliberately deleting server files in which case that's their own fault.
@@ -1498,6 +1524,7 @@ int i_NumItemsInInfoMenu[MAXPLAYERS + 1] = { 0, ... };
  		if (section == null)
  		{
  			PrintToServer("ERROR: Character config ''%s'' does not have default menu information, and neither does your game_rules.cfg.");
+			DeleteCfg(rules);
  			return;
  		}
  		
@@ -1536,12 +1563,12 @@ int i_NumItemsInInfoMenu[MAXPLAYERS + 1] = { 0, ... };
  				skin = "1";
  			}
  			
- 			float xOff = GetFloatFromConfigMap(section, "attachment_x_offset", 0.0);
- 			float yOff = GetFloatFromConfigMap(section, "attachment_y_offset", 0.0);
- 			float zOff = GetFloatFromConfigMap(section, "attachment_z_offset", 0.0);
- 			float xRot = GetFloatFromConfigMap(section, "attachment_x_rotation", 0.0);
- 			float yRot = GetFloatFromConfigMap(section, "attachment_y_rotation", 0.0);
- 			float zRot = GetFloatFromConfigMap(section, "attachment_z_rotation", 0.0);
+ 			float xOff = GetFloatFromCFGMap(section, "attachment_x_offset", 0.0);
+ 			float yOff = GetFloatFromCFGMap(section, "attachment_y_offset", 0.0);
+ 			float zOff = GetFloatFromCFGMap(section, "attachment_z_offset", 0.0);
+ 			float xRot = GetFloatFromCFGMap(section, "attachment_x_rotation", 0.0);
+ 			float yRot = GetFloatFromCFGMap(section, "attachment_y_rotation", 0.0);
+ 			float zRot = GetFloatFromCFGMap(section, "attachment_z_rotation", 0.0);
  			
  			int wep = AttachModelToEntity(weapon, attachment, preview, _, skin, xOff, yOff, zOff, xRot, yRot, zRot);
  			if (IsValidEntity(wep))
@@ -2001,10 +2028,12 @@ public void CF_DestroyAllBuildings(int client)
 	if (ConfigsAreDifferent)
 		CF_DestroyAllBuildings(client);
 
-	CF_UnmakeCharacter(client, false, _, false);
+	//CF_UnmakeCharacter(client, false, _, false);
 	bool IsNewCharacter = ConfigsAreDifferent || b_IsDead[client] || b_FirstSpawn[client] || ForceNewCharStatus;
 	if (IsNewCharacter)
 		CF_UnmakeCharacter(client, true, ConfigsAreDifferent ? CF_CRR_SWITCHED_CHARACTER : CF_CRR_RESPAWNED);
+
+	CPrintToChat(client, "New character: %i\nConfigsAreDifferent: %i", IsNewCharacter, ConfigsAreDifferent);
 		
 	CF_SetPlayerConfig(client, conf);
 	SetClientCookie(client, c_DesiredCharacter, conf);
@@ -2015,12 +2044,12 @@ public void CF_DestroyAllBuildings(int client)
 	map.Get("character.arms", arms, sizeof(arms));
 	map.Get("character.menu_display.role", archetype, sizeof(archetype));
 	//map.Get("character.animator_model", animator, sizeof(animator));
-	float speed = GetFloatFromConfigMap(map, "character.speed", 300.0);
-	float health = GetFloatFromConfigMap(map, "character.health", 250.0);
-	float weight = GetFloatFromConfigMap(map, "character.weight", 0.0);
-	int class = GetIntFromConfigMap(map, "character.class", 1) - 1;
-	i_DialogueReduction[client] = GetIntFromConfigMap(map, "character.be_quiet", 1);
-	float scale = GetFloatFromConfigMap(map, "character.scale", 1.0);
+	float speed = GetFloatFromCFGMap(map, "character.speed", 300.0);
+	float health = GetFloatFromCFGMap(map, "character.health", 250.0);
+	float weight = GetFloatFromCFGMap(map, "character.weight", 0.0);
+	int class = GetIntFromCFGMap(map, "character.class", 1) - 1;
+	i_DialogueReduction[client] = GetIntFromCFGMap(map, "character.be_quiet", 1);
+	float scale = GetFloatFromCFGMap(map, "character.scale", 1.0);
 	
 	CFC_ApplyCharacter(client, speed, health, Classes[class], model, name, scale, weight, conf, archetype);
 	ConfigMap abilities = map.GetSection("character.abilities");
@@ -2141,10 +2170,10 @@ public void CF_DestroyAllBuildings(int client)
 	 	ShowHudText(client, -1, message, name);
 	}
  	
- 	bool hasUlt = CFA_InitializeUltimate(client, map);
- 	bool hasAbilities = CFA_InitializeAbilities(client, map, IsNewCharacter);
- 	
- 	CFA_ToggleHUD(client, hasUlt || hasAbilities);
+	bool hasUlt = CFA_InitializeUltimate(client, map, IsNewCharacter);
+	bool hasAbilities = CFA_InitializeAbilities(client, map, IsNewCharacter);
+		
+	CFA_ToggleHUD(client, hasUlt || hasAbilities);
  	CF_SetHUDColor(client, 255, 255, 255, 255);
  	
  	b_CharacterApplied[client] = true;
@@ -2215,10 +2244,10 @@ public void CF_DestroyAllBuildings(int client)
 		char classname[255], atts[255];
 		
 		subsection.Get("classname", classname, sizeof(classname));
-		int index = GetIntFromConfigMap(subsection, "index", 0);
+		int index = GetIntFromCFGMap(subsection, "index", 0);
 		subsection.Get("attributes", atts, sizeof(atts));
-		bool visible = GetBoolFromConfigMap(subsection, "visible", true);
-		int paint = GetIntFromConfigMap(subsection, "paint", -1);
+		bool visible = GetBoolFromCFGMap(subsection, "visible", true);
+		int paint = GetIntFromCFGMap(subsection, "paint", -1);
 		//TODO: Maybe add support for wearable scale?
 		
 		int hat = CreateWearable(client, index, atts, paint, visible, 0.0, true);
@@ -2271,11 +2300,11 @@ public void CF_DestroyAllBuildings(int client)
 		char classname[255], atts[255];
 		
 		subsection.Get("classname", classname, sizeof(classname));
-		int index = GetIntFromConfigMap(subsection, "index", 0);
+		int index = GetIntFromCFGMap(subsection, "index", 0);
 		subsection.Get("attributes", atts, sizeof(atts));
-		bool visible = GetBoolFromConfigMap(subsection, "visible", true);
-		int paint = GetIntFromConfigMap(subsection, "paint", -1);
-		int style = GetIntFromConfigMap(subsection, "style", 0);
+		bool visible = GetBoolFromCFGMap(subsection, "visible", true);
+		int paint = GetIntFromCFGMap(subsection, "paint", -1);
+		int style = GetIntFromCFGMap(subsection, "style", 0);
 		//TODO: Maybe add support for wearable scale?
 		
 		CF_AttachWearable(client, index, classname, visible, paint, style, false, atts, 0.0);
@@ -2306,22 +2335,22 @@ public void CF_DestroyAllBuildings(int client)
 		subsection.Get("classname", classname, sizeof(classname));
 		subsection.Get("kill_icon", icon, sizeof(icon));
 			
-		int index = GetIntFromConfigMap(subsection, "index", 1);
-		int level = GetIntFromConfigMap(subsection, "level", 77);
-		int quality = GetIntFromConfigMap(subsection, "quality", 7);
-		int slot = GetIntFromConfigMap(subsection, "slot", 0);
-		int reserve = GetIntFromConfigMap(subsection, "reserve", 0);
-		int clip = GetIntFromConfigMap(subsection, "clip", 0);
-		int ForceClass = GetIntFromConfigMap(subsection, "force_class", 0);
+		int index = GetIntFromCFGMap(subsection, "index", 1);
+		int level = GetIntFromCFGMap(subsection, "level", 77);
+		int quality = GetIntFromCFGMap(subsection, "quality", 7);
+		int slot = GetIntFromCFGMap(subsection, "slot", 0);
+		int reserve = GetIntFromCFGMap(subsection, "reserve", 0);
+		int clip = GetIntFromCFGMap(subsection, "clip", 0);
+		int ForceClass = GetIntFromCFGMap(subsection, "force_class", 0);
 			
 		subsection.Get("attributes", attributes, sizeof(attributes));
 			
-		bool visible = GetBoolFromConfigMap(subsection, "visible", true);
+		bool visible = GetBoolFromCFGMap(subsection, "visible", true);
 		if (visible)
 		{
 			subsection.Get("model_override", override, sizeof(override));
 		}
-		bool unequip = GetBoolFromConfigMap(subsection, "unequip", true);
+		bool unequip = GetBoolFromCFGMap(subsection, "unequip", true);
 			
 		char fireAbility[255], firePlugin[255], fireSound[255], fireSlot[255];
 		subsection.Get("fire_ability", fireAbility, 255);
@@ -2417,9 +2446,9 @@ public void CF_DestroyAllBuildings(int client)
 		
 		subsection.Get("point", point, sizeof(point));
 		
-		float xOff = GetFloatFromConfigMap(subsection, "x_offset", 0.0);
-		float yOff = GetFloatFromConfigMap(subsection, "y_offset", 0.0);
-		float zOff = GetFloatFromConfigMap(subsection, "z_offset", 0.0);
+		float xOff = GetFloatFromCFGMap(subsection, "x_offset", 0.0);
+		float yOff = GetFloatFromCFGMap(subsection, "y_offset", 0.0);
+		float zOff = GetFloatFromCFGMap(subsection, "z_offset", 0.0);
 		
 		int part = AttachParticleToEntity(entity, partName, point, 0.0, xOff, yOff, zOff);
 		i_PreviewOwner[part] = GetClientUserId(client);
@@ -2460,9 +2489,9 @@ public void CF_DestroyAllBuildings(int client)
 		
 		subsection.Get("point", point, sizeof(point));
 		
-		float xOff = GetFloatFromConfigMap(subsection, "x_offset", 0.0);
-		float yOff = GetFloatFromConfigMap(subsection, "y_offset", 0.0);
-		float zOff = GetFloatFromConfigMap(subsection, "z_offset", 0.0);
+		float xOff = GetFloatFromCFGMap(subsection, "x_offset", 0.0);
+		float yOff = GetFloatFromCFGMap(subsection, "y_offset", 0.0);
+		float zOff = GetFloatFromCFGMap(subsection, "z_offset", 0.0);
 		
 		CF_AttachParticle(client, partName, point, false, 0.0, xOff, yOff, zOff);
 		
@@ -2676,9 +2705,7 @@ public void CF_DestroyAllBuildings(int client)
 	SDKUnhook(client, SDKHook_OnTakeDamageAlivePost, CFDMG_OnTakeDamageAlive_Post);
  	b_CharacterApplied[client] = false;
  	g_Characters[client].Destroy();
-	
- 	DeleteStockTimers(client);
-
+	g_Characters[client] = null;
  	CFC_DeleteParticles(client, true);
  	CFA_RemoveAnimator(client);
  }
