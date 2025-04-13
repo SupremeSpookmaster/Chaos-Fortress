@@ -1090,8 +1090,7 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 					played = played2;
 			}
 			
-			//char conf[255];
-			//CF_GetPlayerConfig(client, conf, sizeof(conf));
+			//TODO: Convert ult radius into a g_Character stat and just read it here
 			char path[255];
 			g_Characters[client].GetConfigMapPath(path, 255);
 			ConfigMap map = new ConfigMap(path);
@@ -1333,7 +1332,7 @@ public Native_CF_SetUltCharge(Handle plugin, int numParams)
 	}
 }
 
-//TODO: Sound cues!
+//TODO: Sound cue: "sound_ultimate_not_ready_callout"
 public void CFA_UltMessage(int client)
 {
 	float charge = g_Characters[client].f_UltCharge / g_Characters[client].f_UltChargeRequired;
@@ -1359,6 +1358,8 @@ public void CFA_UltMessage(int client)
 		if (IsValidMulti(i, false, _, true, team))
 			CPrintToChat(i, message);
 	}
+
+	CF_PlayRandomSound(client, "", "sound_ultimate_ready");
 }
 
 public any Native_CF_GetUltCharge(Handle plugin, int numParams)
@@ -1634,39 +1635,20 @@ public Native_CF_DoAbilitySlot(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return;
 
+	if (g_Characters[client].g_Effects == null)
+		return;
+
 	int slot = GetNativeCell(2);
-		
-	char pluginName[255], abName[255], path[255];
-	g_Characters[client].GetConfigMapPath(path, 255);
-	
-	ConfigMap map = new ConfigMap(path);
-	if (map == null)
-		return;
-		
-	ConfigMap abilities = map.GetSection("character.abilities");
-	if (abilities == null)
+	char pluginName[255], abName[255];
+	for (int i = 0; i < GetArraySize(g_Characters[client].g_Effects); i++)
 	{
-		DeleteCfg(map);
-		return;
-	}
-		
-	int i = 1;
-	char secName[255];
-	Format(secName, sizeof(secName), "ability_%i", i);
-		
-	ConfigMap subsection = abilities.GetSection(secName);
-	while (subsection != null)
-	{
-		if (GetIntFromConfigMap(subsection, "slot", -1) == slot)
+		CFEffect effect = view_as<CFEffect>(GetArrayCell(g_Characters[client].g_Effects, i));
+		if (effect.i_AbilitySlot == slot)
 		{
-			subsection.Get("ability_name", abName, sizeof(abName));
-			subsection.Get("plugin_name", pluginName, sizeof(pluginName));
+			effect.GetPluginName(pluginName, 255);
+			effect.GetAbilityName(abName, 255);
 			CF_DoAbility(client, pluginName, abName);
 		}
-		
-		i++;
-		Format(secName, sizeof(secName), "ability_%i", i);
-		subsection = abilities.GetSection(secName);
 	}
 }
 
@@ -1798,7 +1780,7 @@ public Native_CF_HasAbility(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return false;
 		
-	char targetPlugin[255], targetAbility[255], pluginName[255], abName[255], path[255];
+	char targetPlugin[255], targetAbility[255], path[255];
 	g_Characters[client].GetConfigMapPath(path, 255);
 	
 	ConfigMap map = new ConfigMap(path);
@@ -1808,39 +1790,7 @@ public Native_CF_HasAbility(Handle plugin, int numParams)
 	GetNativeString(2, targetPlugin, sizeof(targetPlugin));
 	GetNativeString(3, targetAbility, sizeof(targetAbility));
 		
-	ConfigMap abilities = map.GetSection("character.abilities");
-	if (abilities == null)
-	{
-		DeleteCfg(map);
-		return false;
-	}
-		
-	bool ReturnValue = false;
-		
-	int i = 1;
-	char secName[255];
-	Format(secName, sizeof(secName), "ability_%i", i);
-		
-	ConfigMap subsection = abilities.GetSection(secName);
-	while (subsection != null)
-	{
-		subsection.Get("ability_name", abName, sizeof(abName));
-		subsection.Get("plugin_name", pluginName, sizeof(pluginName));
-		
-		if (StrEqual(targetPlugin, pluginName) && StrEqual(targetAbility, abName))
-		{
-			ReturnValue = true;
-			break;
-		}
-		
-		i++;
-		Format(secName, sizeof(secName), "ability_%i", i);
-		subsection = abilities.GetSection(secName);
-	}
-	
-	DeleteCfg(map);
-	
-	return ReturnValue;
+	return GetEffectFromAbility(client, targetPlugin, targetAbility).b_Exists;
 }
 
 public CFEffect GetEffectFromAbility(int client, char[] plugin, char[] ability)
@@ -1923,54 +1873,16 @@ public any Native_CF_GetAbilitySlot(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return CF_AbilityType_None;
 		
-	char targetPlugin[255], targetAbility[255], pluginName[255], abName[255], path[255];
-	
-	g_Characters[client].GetConfigMapPath(path, 255);
-	ConfigMap map = new ConfigMap(path);
-	if (map == null)
-		return CF_AbilityType_None;
+	char targetPlugin[255], targetAbility[255];
 		
 	GetNativeString(2, targetPlugin, sizeof(targetPlugin));
 	GetNativeString(3, targetAbility, sizeof(targetAbility));
-		
-	ConfigMap abilities = map.GetSection("character.abilities");
-	if (abilities == null)
-	{
-		DeleteCfg(map);
-		return CF_AbilityType_None;
-	}
-		
-	CF_AbilityType ReturnValue = CF_AbilityType_None;
-		
-	int i = 1;
-	char secName[255];
-	Format(secName, sizeof(secName), "ability_%i", i);
-		
-	ConfigMap subsection = abilities.GetSection(secName);
-	while (subsection != null)
-	{
-		subsection.Get("ability_name", abName, sizeof(abName));
-		subsection.Get("plugin_name", pluginName, sizeof(pluginName));
-		
-		if (StrEqual(targetPlugin, pluginName) && StrEqual(targetAbility, abName))
-		{
-			int slotNum = GetIntFromConfigMap(subsection, "slot", -1);
-			if (slotNum < 1)
-				ReturnValue = CF_AbilityType_Custom;
-			else
-				ReturnValue = view_as<CF_AbilityType>(slotNum - 1);
-			
-			break;
-		}
-		
-		i++;
-		Format(secName, sizeof(secName), "ability_%i", i);
-		subsection = abilities.GetSection(secName);
-	}
+
+	CFEffect effect = GetEffectFromAbility(client, targetPlugin, targetAbility);
+	if (effect.b_Exists)
+		return view_as<CF_AbilityType>(effect.i_AbilitySlot - 1);
 	
-	DeleteCfg(map);
-	
-	return ReturnValue;
+	return CF_AbilityType_None;
 }
 
 public Native_CF_GetArgS(Handle plugin, int numParams)
@@ -3633,7 +3545,7 @@ public Native_CF_SetAbilityMaxStocks(Handle plugin, int numParams)
 		return;
 
 	int slot = view_as<int>(type) + 1;
-	g_Abilities[client][slot].i_Stocks = numStocks;
+	g_Abilities[client][slot].i_MaxStocks = numStocks;
 	CreateStockTimer(client, type, g_Abilities[client][slot].f_Cooldown);
 }
 

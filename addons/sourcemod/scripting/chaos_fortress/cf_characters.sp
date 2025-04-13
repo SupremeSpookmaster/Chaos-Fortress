@@ -227,7 +227,6 @@ char s_AbilityName[2048][255];
 
 Handle g_AbilityStockTimer[2048] = { null, ... };
 
-//TODO: Add all of the extra things like held, stockpile, etc
 methodmap CFAbility  __nullable__
 {
 	public CFAbility()
@@ -422,12 +421,19 @@ char s_CharacterConfigMapPath[MAXPLAYERS + 1][255];
 
 bool b_CharacterExists[MAXPLAYERS + 1] = { false, ... };
 
-//TODO: Add variables used for resources and ult charge
 methodmap CFCharacter __nullable__
 {
 	public CFCharacter(int client)
 	{
-		b_CharacterExists[client] = true;
+		for (int slot = 1; slot <= MaxClients; slot++)
+		{
+			if (!b_CharacterExists[slot])
+			{
+				b_CharacterExists[slot] = true;
+				return view_as<CFCharacter>(slot);
+			}
+		}
+
 		return view_as<CFCharacter>(client);
 	}
 
@@ -658,7 +664,6 @@ methodmap CFCharacter __nullable__
 
 	public void SetModel(char[] model)
 	{
-		//TODO: Check if model is valid, apply if it is, return if not
 		strcopy(s_CharacterModel[this.index], PLATFORM_MAX_PATH, model);
 	}
 
@@ -719,12 +724,20 @@ methodmap CFCharacter __nullable__
 
 	public void Destroy()
 	{
-		delete this.g_Effects;
-		this.g_Effects = null;
+		if (this.g_Effects != null)
+		{
+			for (int i = 0; i < GetArraySize(this.g_Effects); i++)
+			{
+				view_as<CFEffect>(GetArrayCell(this.g_Effects, i)).Destroy();
+			}
+
+			delete this.g_Effects;
+			this.g_Effects = null;
+		}
 
 		for (int i = 0; i < 5; i++)
 		{
-			g_Abilities[this.index][i].Destroy();
+			g_Abilities[this.i_Client][i].Destroy();
 		}
 
 		this.i_Client = -1;
@@ -838,7 +851,7 @@ public void CFC_CreateAbility(int client, ConfigMap subsection, CF_AbilityType t
 		ability.i_MaxStocks = GetIntFromConfigMap(subsection, "max_stocks", 0);
 		if (ability.i_MaxStocks > 0 && ability.i_Stocks < ability.i_MaxStocks)
 		{
-			CreateStockTimer(client, CF_AbilityType_M2, startingCD);
+			CreateStockTimer(client, type, startingCD);
 		}
 	}
 
@@ -904,6 +917,7 @@ Handle c_DesiredCharacter;
 public void CFC_Disconnect(int client)
 {
 	b_FirstSpawn[client] = true;
+	g_Characters[client].Destroy();
 }
 
 public void CFC_MakeNatives()
@@ -1958,6 +1972,7 @@ public void CF_DestroyAllBuildings(int client)
  	if (!IsValidClient(client) || !IsPlayerAlive(client))
  		return;
 
+	g_Characters[client].Destroy();
 	EndHeldAbility(client, CF_AbilityType_M2, true, true);
 	EndHeldAbility(client, CF_AbilityType_M3, true, true);
 	EndHeldAbility(client, CF_AbilityType_Reload, true, true);
