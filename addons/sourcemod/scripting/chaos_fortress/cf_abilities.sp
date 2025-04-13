@@ -357,187 +357,186 @@ public void ScoreThink(int entity)
 public Action CFA_HUDTimer(Handle timer)
 {
 	int rState = CF_GetRoundState();
-	bool wouldBeStuck;
-	bool tooPoor;
-	bool CanUse;
-	float remCD;
 	
 	for (int client = 1; client <= MaxClients; client++)
 	{
-		if (CF_IsPlayerCharacter(client))
+		bool wouldBeStuck, tooPoor, CanUse;
+		float remCD;
+
+		if (!CF_IsPlayerCharacter(client))
+			continue;
+
+		if (!IsPlayerAlive(client))
+			continue;
+
+		bool showHUD = GetClientButtons(client) & IN_SCORE == 0 && b_UseHUD[client];
+		char HUDText[255];
+
+		for (int i = 0; i < 4; i++)
 		{
-			bool showHUD = GetClientButtons(client) & IN_SCORE == 0 && b_UseHUD[client];
-			if (IsPlayerAlive(client))
+			int slot = i + 1;
+			CF_AbilityType type = view_as<CF_AbilityType>(i);
+			bool resourcesNext = type == CF_AbilityType_Ult;
+
+			char name[255], namePlural[255];
+			g_Characters[client].GetResourceName(name, 255);
+			g_Characters[client].GetResourceNamePlural(namePlural, 255);
+
+			CFAbility ability = g_Abilities[client][slot];
+			if (ability.b_Exists)
 			{
-				char HUDText[255];
-
-				for (int i = 0; i < 4; i++)
+				char title[255], button[64];
+				ability.GetName(title, sizeof(title));
+				switch(type)
 				{
-					int slot = i + 1;
-					CF_AbilityType type = view_as<CF_AbilityType>(i);
-					bool resourcesNext = type == CF_AbilityType_Ult;
-
-					char name[255], namePlural[255];
-					g_Characters[client].GetResourceName(name, 255);
-					g_Characters[client].GetResourceNamePlural(namePlural, 255);
-
-					CFAbility ability = g_Abilities[client][slot];
-					if (ability.b_Exists)
+					case CF_AbilityType_Ult:
 					{
-						char title[255], button[64];
-						ability.GetName(title, sizeof(title));
-						switch(type)
+						button = "(READY, CALL FOR MEDIC)";
+					}
+					case CF_AbilityType_M2:
+					{
+						button = "M2";
+					}
+					case CF_AbilityType_M3:
+					{
+						button = "Spec. Attack";
+					}
+					case CF_AbilityType_Reload:
+					{
+						button = "Reload";
+					}
+				}
+
+				remCD = CF_GetAbilityCooldown(client, type);
+				if (remCD < 0.1 && type == CF_AbilityType_Ult && rState == 1)
+				{
+					CF_GiveUltCharge(client, g_Characters[client].f_UltChargeOnRegen/10.0, CF_ResourceType_Percentage);
+				}
+
+				if (showHUD)
+				{
+					CanUse = CF_CanPlayerUseAbilitySlot(client, type, wouldBeStuck, tooPoor);
+
+					if (type == CF_AbilityType_Ult)
+					{	
+						if (!CanUse && !tooPoor && !wouldBeStuck)
 						{
-							case CF_AbilityType_Ult:
-							{
-								button = "(READY, CALL FOR MEDIC)";
-							}
-							case CF_AbilityType_M2:
-							{
-								button = "M2";
-							}
-							case CF_AbilityType_M3:
-							{
-								button = "Spec. Attack";
-							}
-							case CF_AbilityType_Reload:
-							{
-								button = "Reload";
-							}
+							Format(HUDText, sizeof(HUDText), "%s: %i[PERCENT] [BLOCKED]\n", title, RoundToFloor((g_Characters[client].f_UltCharge/g_Characters[client].f_UltChargeRequired) * 100.0));
 						}
-
-						remCD = CF_GetAbilityCooldown(client, type);
-						if (remCD < 0.1 && type == CF_AbilityType_Ult && rState == 1)
+						else if (wouldBeStuck && !tooPoor)
 						{
-							CF_GiveUltCharge(client, g_Characters[client].f_UltChargeOnRegen/10.0, CF_ResourceType_Percentage);
+							Format(HUDText, sizeof(HUDText), "%s: %i[PERCENT] [BLOCKED; YOU WOULD GET STUCK]\n", title, RoundToFloor((g_Characters[client].f_UltCharge/g_Characters[client].f_UltChargeRequired) * 100.0));
 						}
-
-						if (showHUD)
+						else
 						{
-							CanUse = CF_CanPlayerUseAbilitySlot(client, type, wouldBeStuck, tooPoor);
+							Format(HUDText, sizeof(HUDText), "%s: %i[PERCENT] %s\n", title, RoundToFloor((g_Characters[client].f_UltCharge/g_Characters[client].f_UltChargeRequired) * 100.0), g_Characters[client].f_UltCharge >= g_Characters[client].f_UltChargeRequired ? button : "");
+						}
+					}
+					else
+					{
+						if (ability.b_HeldAbility)
+						{
+							if (ability.b_CurrentlyHeld)
+								button = "ACTIVE";
+							else
+								Format(button, sizeof(button), "HOLD %s", button);
+						}
+						Format(button, sizeof(button), "[%s]", button);
 
-							if (type == CF_AbilityType_Ult)
-							{	
-								if (!CanUse && !tooPoor && !wouldBeStuck)
+						char suffix[255];
+						if (AbilityUsesStocks(client, type))
+							Format(suffix, sizeof(suffix), "[%i/%i]", ability.i_Stocks, ability.i_MaxStocks);
+
+						if (!CanUse && !tooPoor && !wouldBeStuck && remCD < 0.1)
+						{
+							Format(button, sizeof(button), "[BLOCKED]");
+						}
+						else if (wouldBeStuck && !tooPoor)
+						{
+							Format(button, sizeof(button), "[BLOCKED; YOU WOULD GET STUCK]");
+						}
+						else
+						{
+							if (g_Characters[client].b_UsingResources && ability.f_ResourceCost > 0.0)
+							{
+								if (g_Characters[client].b_ResourceIsUlt)
 								{
-									Format(HUDText, sizeof(HUDText), "%s: %i[PERCENT] [BLOCKED]\n", title, RoundToFloor((g_Characters[client].f_UltCharge/g_Characters[client].f_UltChargeRequired) * 100.0));
-								}
-								else if (wouldBeStuck && !tooPoor)
-								{
-									Format(HUDText, sizeof(HUDText), "%s: %i[PERCENT] [BLOCKED; YOU WOULD GET STUCK]\n", title, RoundToFloor((g_Characters[client].f_UltCharge/g_Characters[client].f_UltChargeRequired) * 100.0));
+									Format(suffix, sizeof(suffix), "%s [%.2f[PERCENT] Ult.]", suffix, (ability.f_ResourceCost/g_Characters[client].f_UltChargeRequired) * 100.0);
 								}
 								else
 								{
-									Format(HUDText, sizeof(HUDText), "%s: %i[PERCENT] %s\n", title, RoundToFloor((g_Characters[client].f_UltCharge/g_Characters[client].f_UltChargeRequired) * 100.0), g_Characters[client].f_UltCharge >= g_Characters[client].f_UltChargeRequired ? button : "");
-								}
-							}
-							else
-							{
-								if (ability.b_HeldAbility)
-								{
-									if (ability.b_CurrentlyHeld)
-										button = "ACTIVE";
+									if (g_Characters[client].b_ResourceIsPercentage && g_Characters[client].f_MaxResources > 0.0)
+										Format(suffix, sizeof(suffix), "%s [%i[PERCENT] %s]", suffix, RoundToFloor((ability.f_ResourceCost/g_Characters[client].f_MaxResources) * 100.0), ability.f_ResourceCost != 1.0 ? namePlural : name);
 									else
-										Format(button, sizeof(button), "HOLD %s", button);
+										Format(suffix, sizeof(suffix), "%s [%i %s]", suffix, RoundToFloor(ability.f_ResourceCost), ability.f_ResourceCost != 1.0 ? namePlural : name);
 								}
-								Format(button, sizeof(button), "[%s]", button);
-
-								char suffix[255];
-								if (AbilityUsesStocks(client, type))
-									Format(suffix, sizeof(suffix), "[%i/%i]", ability.i_Stocks, ability.i_MaxStocks);
-
-								if (!CanUse && !tooPoor && !wouldBeStuck && remCD < 0.1)
-								{
-									Format(button, sizeof(button), "[BLOCKED]");
-								}
-								else if (wouldBeStuck && !tooPoor)
-								{
-									Format(button, sizeof(button), "[BLOCKED; YOU WOULD GET STUCK]");
-								}
-								else
-								{
-									if (g_Characters[client].b_UsingResources && ability.f_ResourceCost > 0.0)
-									{
-										if (g_Characters[client].b_ResourceIsUlt)
-										{
-											Format(suffix, sizeof(suffix), "%s [%.2f[PERCENT] Ult.]", suffix, (ability.f_ResourceCost/g_Characters[client].f_UltChargeRequired) * 100.0);
-										}
-										else
-										{
-											if (g_Characters[client].b_ResourceIsPercentage && g_Characters[client].f_MaxResources > 0.0)
-												Format(suffix, sizeof(suffix), "%s [%i[PERCENT] %s]", suffix, RoundToFloor((ability.f_ResourceCost/g_Characters[client].f_MaxResources) * 100.0), ability.f_ResourceCost != 1.0 ? namePlural : name);
-											else
-												Format(suffix, sizeof(suffix), "%s [%i %s]", suffix, RoundToFloor(ability.f_ResourceCost), ability.f_ResourceCost != 1.0 ? namePlural : name);
-										}
-									}
+							}
 									
-									if (remCD > 0.0)
-										Format(suffix, sizeof(suffix), "%s (%.1f)", suffix, remCD);
-								}
+							if (remCD > 0.0)
+								Format(suffix, sizeof(suffix), "%s (%.1f)", suffix, remCD);
+						}
 
-								Format(HUDText, sizeof(HUDText), "%s %s %s %s\n", HUDText, button, title, suffix);
-							}
-						}
-					}
-
-					if (resourcesNext && g_Characters[client].b_UsingResources && !g_Characters[client].b_ResourceIsUlt)
-					{
-						if (GetGameTime() >= g_Characters[client].f_NextResourceRegen)
-						{
-							CF_GiveSpecialResource(client, 1.0, CF_ResourceType_Regen);
-							g_Characters[client].f_NextResourceRegen = GetGameTime() + g_Characters[client].f_ResourceRegenInterval;
-						}
-						
-						if (showHUD)
-						{
-							if (g_Characters[client].f_MaxResources > 0.0)
-							{
-								if (g_Characters[client].b_ResourceIsPercentage)
-									Format(HUDText, sizeof(HUDText), "%s\n%s: %i[PERCENT]\n", HUDText, CF_GetSpecialResource(client) != 1.0 ? namePlural : name, RoundToFloor((CF_GetSpecialResource(client)/g_Characters[client].f_MaxResources) * 100.0));
-								else
-									Format(HUDText, sizeof(HUDText), "%s\n%s: %i/%i\n", HUDText, CF_GetSpecialResource(client) != 1.0 ? namePlural : name, RoundToFloor(CF_GetSpecialResource(client)), RoundToFloor(g_Characters[client].f_MaxResources));
-							}
-							else
-							{
-								Format(HUDText, sizeof(HUDText), "%s\n%s: %i\n", HUDText, CF_GetSpecialResource(client) != 1.0 ? namePlural : name, RoundToFloor(CF_GetSpecialResource(client)));
-							}
-						}
+						Format(HUDText, sizeof(HUDText), "%s %s %s %s\n", HUDText, button, title, suffix);
 					}
 				}
-					
-				int r = i_HUDR[client];
-				int g = i_HUDG[client];
-				int b = i_HUDB[client];
-				int a = i_HUDA[client];
+			}
 
-				if (r == 255 && g == 255 && b == 255)
+			if (resourcesNext && g_Characters[client].b_UsingResources && !g_Characters[client].b_ResourceIsUlt)
+			{
+				if (GetGameTime() >= g_Characters[client].f_NextResourceRegen)
 				{
-					r = 255;
-					g = 160;
-					b = 160;
-					if (TF2_GetClientTeam(client) == TFTeam_Blue)
+					CF_GiveSpecialResource(client, 1.0, CF_ResourceType_Regen);
+					g_Characters[client].f_NextResourceRegen = GetGameTime() + g_Characters[client].f_ResourceRegenInterval;
+				}
+						
+				if (showHUD)
+				{
+					if (g_Characters[client].f_MaxResources > 0.0)
 					{
-						b = 255;
-						r = 160;
+						if (g_Characters[client].b_ResourceIsPercentage)
+							Format(HUDText, sizeof(HUDText), "%s\n%s: %i[PERCENT]\n", HUDText, CF_GetSpecialResource(client) != 1.0 ? namePlural : name, RoundToFloor((CF_GetSpecialResource(client)/g_Characters[client].f_MaxResources) * 100.0));
+						else
+							Format(HUDText, sizeof(HUDText), "%s\n%s: %i/%i\n", HUDText, CF_GetSpecialResource(client) != 1.0 ? namePlural : name, RoundToFloor(CF_GetSpecialResource(client)), RoundToFloor(g_Characters[client].f_MaxResources));
+					}
+					else
+					{
+						Format(HUDText, sizeof(HUDText), "%s\n%s: %i\n", HUDText, CF_GetSpecialResource(client) != 1.0 ? namePlural : name, RoundToFloor(CF_GetSpecialResource(client)));
 					}
 				}
-
-				Call_StartForward(g_OnHUDDisplayed);
-
-				Call_PushCell(client);
-				Call_PushStringEx(HUDText, sizeof(HUDText), SM_PARAM_STRING_UTF8|SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
-				Call_PushCellRef(r);
-				Call_PushCellRef(g);
-				Call_PushCellRef(b);
-				Call_PushCellRef(a);
-
-				Call_Finish();
-
-				ReplaceString(HUDText, sizeof(HUDText), "[PERCENT]", "%%");
-				SetHudTextParams(-1.0, 0.8, 0.1, r, g, b, a);
-				ShowSyncHudText(client, HudSync, HUDText);
 			}
 		}
+					
+		int r = i_HUDR[client];
+		int g = i_HUDG[client];
+		int b = i_HUDB[client];
+		int a = i_HUDA[client];
+
+		if (r == 255 && g == 255 && b == 255)
+		{
+			r = 255;
+			g = 160;
+			b = 160;
+			if (TF2_GetClientTeam(client) == TFTeam_Blue)
+			{
+				b = 255;
+				r = 160;
+			}
+		}
+
+		Call_StartForward(g_OnHUDDisplayed);
+
+		Call_PushCell(client);
+		Call_PushStringEx(HUDText, sizeof(HUDText), SM_PARAM_STRING_UTF8|SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
+		Call_PushCellRef(r);
+		Call_PushCellRef(g);
+		Call_PushCellRef(b);
+		Call_PushCellRef(a);
+
+		Call_Finish();
+
+		ReplaceString(HUDText, sizeof(HUDText), "[PERCENT]", "%%");
+		SetHudTextParams(-1.0, 0.8, 0.1, r, g, b, a);
+		ShowSyncHudText(client, HudSync, HUDText);
 	}
 	
 	return Plugin_Continue;

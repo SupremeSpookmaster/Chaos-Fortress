@@ -652,13 +652,7 @@ methodmap CFCharacter __nullable__
 
 	property ArrayList g_Effects
 	{
-		public get()
-		{ 
-			if (g_CharacterEffects[this.index] == null)
-				g_CharacterEffects[this.index] = CreateArray(255);
-				
-			return g_CharacterEffects[this.index]; 
-		}
+		public get() { return g_CharacterEffects[this.index]; }
 		public set(ArrayList value) { g_CharacterEffects[this.index] = value; }
 	}
 
@@ -818,7 +812,12 @@ public void CFC_CreateEffect(int client, ConfigMap subsection)
 	effect.i_AbilitySlot = slot;
 	effect.SetArgsAndValues(subsection);
 
-	PushArrayCell(g_Characters[client].g_Effects, effect);
+	ArrayList effects = g_Characters[client].g_Effects;
+	if (effects == null)
+		effects = CreateArray(255);
+
+	PushArrayCell(effects, effect);
+	g_Characters[client].g_Effects = effects;
 }
 
 public void CFC_CreateAbility(int client, ConfigMap subsection, CF_AbilityType type, bool NewChar)
@@ -1972,7 +1971,6 @@ public void CF_DestroyAllBuildings(int client)
  	if (!IsValidClient(client) || !IsPlayerAlive(client))
  		return;
 
-	g_Characters[client].Destroy();
 	EndHeldAbility(client, CF_AbilityType_M2, true, true);
 	EndHeldAbility(client, CF_AbilityType_M3, true, true);
 	EndHeldAbility(client, CF_AbilityType_Reload, true, true);
