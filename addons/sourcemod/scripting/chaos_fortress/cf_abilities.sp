@@ -1716,9 +1716,13 @@ public bool ScanAllAbilities(int client, int slot)
 	CFCharacter chara = GetCharacterFromClient(client);
 	for (int i = 0; i < GetArraySize(chara.g_Effects); i++)
 	{
+		CFEffect effect = view_as<CFEffect>(GetArrayCell(chara.g_Effects, i));
+		if (effect.i_AbilitySlot != slot)
+			continue;
+
 		char abName[255], plugName[255];
-		view_as<CFEffect>(GetArrayCell(chara.g_Effects, i)).GetPluginName(plugName, 255);
-		view_as<CFEffect>(GetArrayCell(chara.g_Effects, i)).GetAbilityName(abName, 255);
+		effect.GetPluginName(plugName, 255);
+		effect.GetAbilityName(abName, 255);
 
 		Call_StartForward(g_AttemptAbility);
 			
