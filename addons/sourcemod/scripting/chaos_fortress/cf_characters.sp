@@ -1018,8 +1018,6 @@ Handle CF_CharacterParticles[MAXPLAYERS + 1] = { null, ... };
 
 ConfigMap Characters;
 
-Menu CF_CharactersMenu;
-
 #if defined USE_PREVIEWS
 int i_CFPreviewModel[MAXPLAYERS + 1] = { -1, ... };
 int i_PreviewOwner[2049] = { -1, ... };
@@ -1303,11 +1301,10 @@ public int CF_GetNumPlayers(char conf[255], int client)
  	DeleteCfg(Character);
  }
  
- public void CF_BuildCharactersMenu()
+ public Menu CF_BuildCharactersMenu()
  {
- 	delete CF_CharactersMenu;
- 	CF_CharactersMenu = new Menu(CFC_Menu);
-	CF_CharactersMenu.SetTitle("Welcome to Chaos Fortress!\nWhich character would you like to spawn as?");
+ 	Menu menu = new Menu(CFC_Menu);
+	menu.SetTitle("Welcome to Chaos Fortress!\nWhich character would you like to spawn as?");
 	
 	char name[255];
 	for (int i = 0; i < GetArraySize(CF_Characters_Names); i++)
@@ -1318,11 +1315,13 @@ public int CF_GetNumPlayers(char conf[255], int client)
 		PrintToServer("CREATING CHARACTER MENU: ADDED ITEM ''%s''", name);
 		#endif
 		
-		CF_CharactersMenu.AddItem("Character", name);
+		menu.AddItem("Character", name);
 	}
+
+	return menu;
  }
  
-public CFC_Menu(Menu CFC_Menu, MenuAction action, int client, int param)
+public CFC_Menu(Menu menu, MenuAction action, int client, int param)
 {	
 	if (!IsValidClient(client))
 	return;
@@ -1332,7 +1331,8 @@ public CFC_Menu(Menu CFC_Menu, MenuAction action, int client, int param)
 		char conf[255];
 		GetArrayString(CF_Characters_Configs, param, conf, 255);
 
-		CFC_BuildInfoMenu(client, conf, false, false, -1);		
+		CFC_BuildInfoMenu(client, conf, false, false, -1);
+		delete menu;		
 	} 
 	else if (action == MenuAction_End)
 	{
@@ -1368,8 +1368,7 @@ public Action CFC_OpenMenu(int client, int args)
 		return Plugin_Continue;
 	}
 		
-	Menu menu = new Menu(CFC_Menu);
-	CopyMenu(menu, CF_CharactersMenu);
+	Menu menu = CF_BuildCharactersMenu();
 	menu.Display(client, MENU_TIME_FOREVER);
 	b_ReadingLore[client] = false;
 	i_DetailedDescPage[client] = -1;
@@ -1794,7 +1793,7 @@ void CFC_AddItemToInfoMenu(int client, Menu menu, const char[] info, const char[
 	i_NumItemsInInfoMenu[client]++;
 }
  
- public CFC_InfoMenu(Menu CFC_Menu, MenuAction action, int client, int param)
+ public CFC_InfoMenu(Menu menu, MenuAction action, int client, int param)
 {	
 	if (!IsValidClient(client))
 	return;
@@ -1850,7 +1849,9 @@ void CFC_AddItemToInfoMenu(int client, Menu menu, const char[] info, const char[
 		else
 		{
 			CFC_OpenMenu(client, 0);
-		}		
+		}
+
+		delete menu;	
 	}
 	else if (action == MenuAction_End || action == MenuAction_Cancel)
 	{
@@ -2077,7 +2078,6 @@ public void CFC_MapEnd()
 {
 	delete CF_Characters_Configs;
 	delete CF_Characters_Names;
-	delete CF_CharactersMenu;
 
 	for (int i = 0; i <= MaxClients; i++)
 	{
