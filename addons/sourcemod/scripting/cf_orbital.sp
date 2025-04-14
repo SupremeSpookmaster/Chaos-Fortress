@@ -43,6 +43,7 @@ int laserModel;
 #define SOUND_STRIKE_BLAST				")weapons/cow_mangler_explode.wav"
 #define SOUND_STRIKE_BLAST_2			")weapons/cow_mangler_explosion_charge_01.wav"
 #define SOUND_STRIKE_WARNING			")ambient_mp3/alarms/doomsday_lift_alarm.mp3"
+#define SOUND_TRACER_FULLCHARGE_LOOP	")weapons/crit_power.wav"
 
 #define MODEL_TASER						"models/weapons/w_models/w_drg_ball.mdl"
 
@@ -58,6 +59,7 @@ public void OnMapStart()
 	PrecacheSound(SOUND_STRIKE_BLAST);
 	PrecacheSound(SOUND_STRIKE_BLAST_2);
 	PrecacheSound(SOUND_STRIKE_WARNING);
+	PrecacheSound(SOUND_TRACER_FULLCHARGE_LOOP);
 }
 
 public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
@@ -168,6 +170,8 @@ public void Tracer_Activate(int client)
 public void Tracer_Disable(int client)
 {
 	SDKUnhook(client, SDKHook_PreThink, Tracer_PreThink);
+	StopSound(client, SNDCHAN_AUTO, SOUND_TRACER_FULLCHARGE_LOOP);
+	TF2_RemoveCondition(client, TFCond_FocusBuff);
 	
 	CF_PlayRandomSound(client, "", "sound_tracer_unscope");
 }
@@ -200,6 +204,8 @@ public Action Tracer_PreThink(int client)
 		Tracer_FullyCharged[client] = true;
 
 		CF_PlayRandomSound(client, "", "sound_tracer_fully_charged");
+		TF2_AddCondition(client, TFCond_FocusBuff);
+		EmitSoundToClient(client, SOUND_TRACER_FULLCHARGE_LOOP, _, _, _, _, _, 80);
 	}
 	
 	if (GetGameTime() >= Tracer_NextBeam[client])
