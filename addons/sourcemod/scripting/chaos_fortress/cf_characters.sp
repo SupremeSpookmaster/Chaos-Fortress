@@ -966,10 +966,6 @@ public void CFC_CreateAbility(int client, ConfigMap subsection, CF_AbilityType t
 	subsection.Get("name", name, sizeof(name));
 	ability.SetName(name);
 
-	ability.f_Cooldown = GetFloatFromCFGMap(subsection, "cooldown", 0.0);
-	float startingCD = GetFloatFromCFGMap(subsection, "starting_cd", 0.0)
-	CF_ApplyAbilityCooldown(client, startingCD, type, true, false);
-
 	ability.b_HeldAbility = GetBoolFromCFGMap(subsection, "held", false);
 	ability.f_ResourceCost = GetFloatFromCFGMap(subsection, "cost", 0.0);
 		
@@ -985,6 +981,13 @@ public void CFC_CreateAbility(int client, ConfigMap subsection, CF_AbilityType t
 	}
 
 	ability.i_MaxStocks = GetIntFromCFGMap(subsection, "max_stocks", 0);
+
+	ability.f_Cooldown = GetFloatFromCFGMap(subsection, "cooldown", 0.0);
+	float startingCD = GetFloatFromCFGMap(subsection, "starting_cd", 0.0);
+	if (ability.i_MaxStocks > 0 && ability.i_MaxStocks <= ability.i_Stocks)
+		startingCD = 0.0;
+		
+	CF_ApplyAbilityCooldown(client, startingCD, type, true, false);
 
 	ability.GetName(name, 255);
 

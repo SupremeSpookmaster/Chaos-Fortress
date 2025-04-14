@@ -3269,6 +3269,14 @@ stock float CF_FixAngle(float angle)
 	return angle;
 }
 
+stock bool IsRespawnVisualizer(int entity)
+{
+	char classname[64];
+	GetEntityClassname(entity, classname, sizeof(classname));
+
+	return StrEqual(classname, "func_respawnroomvisualizer");
+}
+
 //Returns true if the entity is a solid brush. Primarily just filters out "info_" and "trigger_" entities, as well as MOST "func_" entities.
 //Returns true by default for entities that are not brushes.
 stock bool Brush_Is_Solid(int entity)
@@ -3295,14 +3303,24 @@ stock bool Brush_Is_Solid(int entity)
 		}
 	}
 
-	return ((GetEntProp(entity, Prop_Send, "m_nSolidType") != 0) && ((GetEntProp(entity, Prop_Send, "m_usSolidFlags") & 4) == 0) && CollisionGroupIsSolid(entity));
+	return CollisionGroupIsSolid(entity);
 }
 
-stock bool CollisionGroupIsSolid(int entity)
+stock bool CollisionGroupIsSolid(int entity, bool countNPCsAsSolid = true)
 {
+	bool isSolid = (GetEntProp(entity, Prop_Send, "m_nSolidType") != 0) && ((GetEntProp(entity, Prop_Send, "m_usSolidFlags") & 4) == 0);
+	if (!isSolid)
+		return false;
+
 	int group = GetEntProp(entity, Prop_Send, "m_CollisionGroup");
-	return (group != 1 && group != 2 && group != 3 && group != 10 && group != 12 && group != 13 && 
-	group != 14 && group != 16 && group != 17 && group != 18 && group != 25 && group != 26);
+
+	isSolid = (group != 1 && group != 2 && group != 3 && group != 10 && group != 12 && group != 13 && 
+	group != 14 && group != 16 && group != 17 && group != 18 && group != 25);
+
+	if (!countNPCsAsSolid)
+		return isSolid;
+
+	return isSolid || group == 26;
 }
 
 stock void UTIL_ImpactTrace(int client, const float start[3], int iDamageType, const char[] pCustomImpactName = "Impact")

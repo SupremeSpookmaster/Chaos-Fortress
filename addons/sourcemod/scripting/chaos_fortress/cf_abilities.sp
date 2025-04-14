@@ -2187,7 +2187,7 @@ public Native_CF_FireGenericRocket(Handle plugin, int numParams)
 
 public void GenericProjectile_OnTouch(int rocket, int other)
 {
-	if (!Brush_Is_Solid(other))
+	if (!CollisionGroupIsSolid(other, true))
 		return;
 
 	Handle plugin = GetPluginHandle(s_ProjectileLogicPlugin[rocket]);

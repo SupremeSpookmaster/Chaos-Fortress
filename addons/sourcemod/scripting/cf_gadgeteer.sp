@@ -4048,7 +4048,7 @@ public void Buddy_Think(int buddy)
 				if (speed < 150.0)
 					speed = 0.0;
 
-				npc.f_Speed = LerpCurve(npc.f_Speed, speed, 10.0, 10.0);
+				npc.f_Speed = LerpCurve(npc.f_Speed, speed, 70.0, 70.0);
 				if (npc.f_Speed <= 0.0)
 					npc.f_YawRate = 0.0;
 				else
