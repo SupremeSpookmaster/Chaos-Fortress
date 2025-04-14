@@ -1940,3 +1940,22 @@ native void CF_InitiateHomingProjectile(int projectile, int target, float maxHom
  * @param projectile		The projectile.
  */
 native void CF_TerminateHomingProjectile(int projectile);
+
+/**
+ * Sets the ability slot to be activated when the given ability type is used.
+ * 
+ * @param client		The client whose slot to set.
+ * @param type			The type of ability to change the slot of.
+ * @param slot			The new ability slot to be used by the given ability type.
+ */
+native void CF_SetAbilityTypeSlot(int client, CF_AbilityType type, int slot);
+
+/**
+ * Retrieves the ability slot to be activated when the given ability type is used.
+ * 
+ * @param client		The client whose slot to get.
+ * @param type			The type of ability to retrieve the slot of.
+ * 
+ * @return		The ability slot to be activated when the given ability type is used, or -1 if the client is invalid or does not have the given ability type.
+ */
+native void CF_GetAbilityTypeSlot(int client, CF_AbilityType type, int slot);

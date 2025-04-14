@@ -117,6 +117,8 @@ public void CFA_MakeNatives()
 	CreateNative("CF_HasLineOfSight", Native_CF_HasLineOfSight);
 	CreateNative("CF_InitiateHomingProjectile", Native_CF_InitiateHomingProjectile);
 	CreateNative("CF_TerminateHomingProjectile", Native_CF_TerminateHomingProjectile);
+	CreateNative("CF_SetAbilityTypeSlot", Native_CF_SetAbilityTypeSlot);
+	CreateNative("CF_GetAbilityTypeSlot", Native_CF_GetAbilityTypeSlot);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -4202,4 +4204,33 @@ public Native_CF_TerminateHomingProjectile(Handle plugin, int numParams)
 		delete g_HomingTimer[projectile];
 		g_HomingTimer[projectile] = null;
 	}
+}
+
+public Native_CF_SetAbilityTypeSlot(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	CF_AbilityType type = GetNativeCell(2);
+	int slot = GetNativeCell(3);
+
+	if (!CF_IsPlayerCharacter(client))
+		return;
+
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab != null)
+		ab.i_AbilitySlot = slot;
+}
+
+public int Native_CF_GetAbilityTypeSlot(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	CF_AbilityType type = GetNativeCell(2);
+
+	if (!CF_IsPlayerCharacter(client))
+		return -1;
+
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab != null)
+		return ab.i_AbilitySlot;
+
+	return -1;
 }
