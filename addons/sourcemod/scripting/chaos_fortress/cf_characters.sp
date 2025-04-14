@@ -363,7 +363,6 @@ methodmap CFAbility  __nullable__
 	{ 
 		char name[255];
 		this.GetName(name, 255);
-		CPrintToChat(this.i_Client, "{unusual}Ability %s was removed from slot %i", name, this.i_Type);
 		this.i_AbilitySlot = -1;
 		this.i_Type = -1;
 		this.i_WeaponSlot = -1;
@@ -470,6 +469,7 @@ char s_CharacterArchetype[MAXPLAYERS + 1][255];
 char s_CharacterConfigMapPath[MAXPLAYERS + 1][255];
 
 bool b_CharacterExists[MAXPLAYERS + 1] = { false, ... };
+bool b_CharacterUsesResources[MAXPLAYERS + 1] = { false, ... };
 
 methodmap CFCharacter __nullable__
 {
@@ -506,7 +506,8 @@ methodmap CFCharacter __nullable__
 
 	property bool b_UsingResources
 	{
-		public get() { return this.f_MaxResources > 0.0; }
+		public get() { return b_CharacterUsesResources[this.index]; }
+		public set(bool value) { b_CharacterUsesResources[this.index] = value; }
 	}
 
 	property bool b_ResourceIsUlt
@@ -767,7 +768,7 @@ methodmap CFCharacter __nullable__
 		strcopy(output, size, s_CharacterResourceNamePlural[this.index]);
 	}
 
-	public void Destroy()
+	public void Destroy(bool fullClear = false)
 	{
 		if (this.g_Effects != null)
 		{
@@ -787,9 +788,6 @@ methodmap CFCharacter __nullable__
 				ab.Destroy();
 		}
 
-		RemoveCharacterFromList(view_as<CFCharacter>(this.index));
-
-		this.i_Client = -1;
 		this.b_ResourceIsUlt = false;
 		this.b_ResourceIsPercentage = false;
 		this.b_ResourceIsMetal = false;
@@ -798,8 +796,7 @@ methodmap CFCharacter __nullable__
 		this.f_Scale = 0.0;
 		this.f_BaseSpeed = 0.0;
 		this.f_Weight = 0.0;
-		this.f_UltCharge = 0.0;
-		this.f_UltChargeRequired = 0.0;
+
 		this.f_UltChargeOnRegen = 0.0;
 		this.f_UltChargeOnHurt = 0.0;
 		this.f_UltChargeOnDamage = 0.0;
@@ -809,8 +806,6 @@ methodmap CFCharacter __nullable__
 		this.f_UltChargeOnDestruction = 0.0;
 		this.f_ResourcesToTriggerSound = 0.0;
 		this.f_ResourcesSinceLastGain = 0.0;
-		this.f_Resources = 0.0;
-		this.f_MaxResources = 0.0;
 		this.f_ResourceRegenInterval = 0.0;
 		this.f_NextResourceRegen = 0.0;
 		this.f_ResourcesOnRegen = 0.0;
@@ -827,7 +822,18 @@ methodmap CFCharacter __nullable__
 		this.SetResourceNamePlural("");
 		this.SetArchetype("");
 
-		b_CharacterExists[this.index] = false;
+		//This is used only for cases where we need to *completely* remove a client's character status, such as on map end or if the client disconnects.
+		//Otherwise, we preserve their current ult/resource stats so that we don't lose everything just because we died or switched our character.
+		if (fullClear)
+		{
+			RemoveCharacterFromList(view_as<CFCharacter>(this.index));
+			this.i_Client = -1;
+			this.f_UltCharge = 0.0;
+			this.f_UltChargeRequired = 0.0;
+			this.f_Resources = 0.0;
+			this.f_MaxResources = 0.0;
+			b_CharacterExists[this.index] = false;
+		}
 	}
 }
 
@@ -907,6 +913,7 @@ public void CFC_ApplyCharacter(int client, float speed, float maxHP, TFClassType
 	character.i_Class = class;
 
 	character.f_Speed = speed;
+	character.f_BaseSpeed = speed;
 	character.f_MaxHP = maxHP;
 	character.f_Scale = scale;
 	character.f_Weight = weight;
@@ -1049,7 +1056,7 @@ public void CFC_Disconnect(int client)
 	b_FirstSpawn[client] = true;
 	CFCharacter chara = GetCharacterFromClient(client);
 	if (chara != null)
-		chara.Destroy();
+		chara.Destroy(true);
 }
 
 public void CFC_MakeNatives()
@@ -2074,7 +2081,6 @@ public void CFC_MapEnd()
 
 	for (int i = 0; i <= MaxClients; i++)
 	{
-		CF_UnmakeCharacter(i, false, _, false);
 		delete CF_CharacterParticles[i];
 	}
 
@@ -2810,9 +2816,11 @@ public void CF_DestroyAllBuildings(int client)
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
 	SDKUnhook(client, SDKHook_OnTakeDamageAlivePost, CFDMG_OnTakeDamageAlive_Post);
  	b_CharacterApplied[client] = false;
+
  	CFCharacter chara = GetCharacterFromClient(client);
 	if (chara != null)
-		chara.Destroy();
+		chara.Destroy(false);
+
  	CFC_DeleteParticles(client, true);
  	CFA_RemoveAnimator(client);
  }

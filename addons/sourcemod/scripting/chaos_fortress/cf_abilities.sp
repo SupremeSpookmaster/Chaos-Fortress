@@ -647,10 +647,14 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 
 public void CFA_InitializeResources(int client, ConfigMap map, bool NewChar)
 {
+	CFCharacter chara = GetCharacterFromClient(client);
+	if (chara == null)
+		return;
+
 	ConfigMap subsection = map.GetSection("character.special_resource");
-	if (subsection != null)
+	chara.b_UsingResources = subsection != null;
+	if (chara.b_UsingResources)
 	{
-		CFCharacter chara = GetCharacterFromClient(client);
 		chara.b_ResourceIsUlt = GetBoolFromCFGMap(subsection, "is_ult", false);
 		
 		if (!chara.b_ResourceIsUlt)
@@ -701,8 +705,6 @@ public void CFA_InitializeResources(int client, ConfigMap map, bool NewChar)
 			chara.f_ResourcesSinceLastGain = 0.0;
 		}
 	}
-	else
-		CF_SetSpecialResource(client, 0.0);
 }
 
 public void CFA_SetChargeRetain(float amt)
@@ -727,7 +729,7 @@ public void CFA_MapEnd()
 	{
 		CFCharacter chara = GetCharacterFromClient(i);
 		if (chara != null)
-			chara.Destroy();
+			chara.Destroy(true);
 	}
 
 	for (int i = 0; i < 2049; i++)
@@ -938,6 +940,8 @@ void EndHeldAbility(int client, CF_AbilityType type, bool TriggerCallback, bool 
 	else
 	{
 		CFAbility ab = GetAbilityFromClient(client, type);
+		if (ab == null)
+			return;
 
 		if (!AbilityUsesStocks(client, type))
 			CF_ApplyAbilityCooldown(client, ab.f_Cooldown, type, true, false);
@@ -986,7 +990,11 @@ void EndHeldAbility(int client, CF_AbilityType type, bool TriggerCallback, bool 
 
 bool AbilityUsesStocks(int client, CF_AbilityType type)
 {
-	return GetAbilityFromClient(client, type).i_MaxStocks > 0;
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab == null)
+		return false;
+
+	return ab.i_MaxStocks > 0;
 }
 
 void SubtractStock(int client, CF_AbilityType type)
@@ -1810,22 +1818,30 @@ public Native_CF_HasAbility(Handle plugin, int numParams)
 	GetNativeString(2, targetPlugin, sizeof(targetPlugin));
 	GetNativeString(3, targetAbility, sizeof(targetAbility));
 		
-	return GetEffectFromAbility(client, targetPlugin, targetAbility).b_Exists;
+	CFEffect effect = GetEffectFromAbility(client, targetPlugin, targetAbility);
+	if (effect == null)
+		return false;
+
+	return effect.b_Exists;
 }
 
 public CFEffect GetEffectFromAbility(int client, char[] plugin, char[] ability)
 {
-	char pluginName[255]; char abName[255];
-	for (int i = 0; i < GetArraySize(GetCharacterFromClient(client).g_Effects); i++)
+	CFCharacter chara = GetCharacterFromClient(client);
+	if (chara != null && chara.g_Effects != null)
 	{
-		CFEffect effect = GetEffect(client, i);
-		effect.GetPluginName(pluginName, 255);
-		effect.GetAbilityName(abName, 255);
+		char pluginName[255]; char abName[255];
+		for (int i = 0; i < GetArraySize(chara.g_Effects); i++)
+		{
+			CFEffect effect = GetEffect(client, i);
+			effect.GetPluginName(pluginName, 255);
+			effect.GetAbilityName(abName, 255);
 
-		if (!StrEqual(plugin, pluginName) || !StrEqual(ability, abName))
-			continue;
+			if (!StrEqual(plugin, pluginName) || !StrEqual(ability, abName))
+				continue;
 
-		return effect;
+			return effect;
+		}
 	}
 
 	CFEffect failure = new CFEffect();
