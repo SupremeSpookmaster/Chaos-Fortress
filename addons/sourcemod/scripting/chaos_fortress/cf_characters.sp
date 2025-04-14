@@ -780,7 +780,7 @@ methodmap CFCharacter __nullable__
 			this.g_Effects = null;
 		}
 
-		for (int i = 0; i < 5; i++)
+		for (int i = 0; i < 4; i++)
 		{
 			CFAbility ab = GetAbilityFromClient(this.i_Client, view_as<CF_AbilityType>(i));
 			if (ab != null)

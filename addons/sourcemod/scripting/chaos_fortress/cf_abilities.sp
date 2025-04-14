@@ -1023,7 +1023,8 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 	
 	int slot = view_as<int>(type) + 1;
 	CFAbility ab = GetAbilityFromClient(client, type);
-	if (ab == null)
+	CFCharacter chara = GetCharacterFromClient(client);
+	if (ab == null || chara == null)
 		return;
 
 	float cooldown = ab.f_Cooldown;
@@ -1036,6 +1037,7 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 	{
 		case CF_AbilityType_Ult:
 		{
+			cost = chara.f_UltChargeRequired;
 			toCall = g_OnUltUsed;
 		}
 		case CF_AbilityType_M2:
@@ -1063,8 +1065,6 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 	
 	if (result != Plugin_Stop && result != Plugin_Handled)
 	{
-		CFCharacter chara = GetCharacterFromClient(client);
-
 		CF_ActivateAbilitySlot(client, slot);
 		
 		if (type == CF_AbilityType_Ult)
@@ -1194,7 +1194,7 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 	}
 
 	CFCharacter chara = GetCharacterFromClient(client);
-	if (type == CF_AbilityType_Ult && !HasEnoughResources(client, chara.f_UltCharge, type))
+	if (type == CF_AbilityType_Ult && !HasEnoughResources(client, chara.f_UltChargeRequired, type))
 	{
 		BlockedByTooFewResources = true;
 		return false;
