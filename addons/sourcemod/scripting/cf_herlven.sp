@@ -11,6 +11,14 @@ int BEAM_Combine_Red;
 int Glow_Sprite_Red;
 int Glow_Sprite_Blue;
 
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	MarkNativeAsOptional("PNPC_IsNPC");
+	MarkNativeAsOptional("PNPC.f_Speed.get");
+	MarkNativeAsOptional("PNPC.b_IsABuilding.get");
+	return APLRes_Success;
+}
+
 /*
 	Laser .vmt's that work (but mainly look good):
 

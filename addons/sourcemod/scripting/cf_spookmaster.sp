@@ -31,6 +31,14 @@
 
 #define MODEL_DISCARD				"models/props_mvm/mvm_human_skull_collide.mdl"
 
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	MarkNativeAsOptional("PNPC.Ignite");
+	MarkNativeAsOptional("PNPC.b_IsABuilding.get");
+	MarkNativeAsOptional("PNPC_IsNPC");
+	return APLRes_Success;
+}
+
 public void OnMapStart()
 {
 	PrecacheSound(SOUND_DISCARD_EXPLODE, true);

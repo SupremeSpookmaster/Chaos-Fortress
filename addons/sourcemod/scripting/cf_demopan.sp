@@ -44,6 +44,15 @@ float f_WasCharging[MAXPLAYERS + 1] = { 0.0, ... };
 #define SOUND_TRADE_EXPLOSION_1			")weapons/explode1.wav"
 #define SOUND_TRADE_EXPLOSION_2			")ui/notification_alert.wav"
 
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	MarkNativeAsOptional("PNPC.SetVelocity");
+	MarkNativeAsOptional("PNPC_IsNPC");
+	MarkNativeAsOptional("PNPC.i_Health.get");
+	MarkNativeAsOptional("PNPC.b_IsABuilding.get");
+	return APLRes_Success;
+}
+
 public void OnMapStart()
 {
 	PrecacheSound(SOUND_BOMB_EXPLODE);

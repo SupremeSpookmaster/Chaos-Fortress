@@ -58,6 +58,13 @@
 
 int laserModel;
 
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	MarkNativeAsOptional("PNPC_HealEntity");
+	MarkNativeAsOptional("PNPC.b_IsABuilding.get");
+	return APLRes_Success;
+}
+
 public void OnMapStart()
 {
 	PrecacheModel(MODEL_FLASK_RED);
