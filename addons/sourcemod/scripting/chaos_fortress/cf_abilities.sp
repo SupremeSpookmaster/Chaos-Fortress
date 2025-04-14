@@ -1717,7 +1717,7 @@ public bool ScanAllAbilities(int client, int slot)
 	for (int i = 0; i < GetArraySize(chara.g_Effects); i++)
 	{
 		CFEffect effect = view_as<CFEffect>(GetArrayCell(chara.g_Effects, i));
-		if (effect.i_AbilitySlot != slot)
+		if (effect == null || effect.i_AbilitySlot != slot)
 			continue;
 
 		char abName[255], plugName[255];
