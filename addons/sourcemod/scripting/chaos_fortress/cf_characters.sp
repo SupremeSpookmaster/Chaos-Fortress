@@ -218,6 +218,8 @@ int i_AbilityWeaponSlot[2048] = { -1, ...};
 int i_AbilityAmmo[2048] = { 0, ... };
 int i_AbilityStocks[2048] = { 0, ...};
 int i_AbilityMaxStocks[2048] = { 0, ...};
+int i_AbilityClient[2049] = { -1, ... };
+int i_AbilityType[2049] = { -1, ... };
 
 float f_AbilityCD[2048] = { 0.0, ... };
 float f_AbilityNextUseTime[2048] = { 0.0, ... };
@@ -236,22 +238,16 @@ methodmap CFAbility  __nullable__
 {
 	public CFAbility()
 	{
-		int slot = -1;
 		for (int i = 0; i < 2048; i++)
 		{
 			if (!b_AbilityExists[i])
 			{
-				slot = i;
-				break;
+				b_AbilityExists[i] = true;
+				return view_as<CFAbility>(i);
 			}
 		}
 
-		if (slot != -1)
-		{
-			b_AbilityExists[slot] = true;
-		}
-
-		return view_as<CFAbility>(slot);
+		return view_as<CFAbility>(-1);
 	}
 
 	property int index
@@ -259,10 +255,22 @@ methodmap CFAbility  __nullable__
 		public get() { return view_as<int>(this); }
 	}
 
+	property int i_Client
+	{
+		public get() { return GetClientOfUserId(i_AbilityClient[this.index]); }
+		public set(int value) { i_AbilityClient[this.index] = (IsValidClient(value) ? GetClientUserId(value) : -1); }
+	}
+
 	property int i_AbilitySlot
 	{
 		public get() { return i_AbilitySlot[this.index]; }
 		public set(int value) { i_AbilitySlot[this.index] = value; }
+	}
+
+	property int i_Type
+	{
+		public get() { return i_AbilityType[this.index]; }
+		public set(int value) { i_AbilityType[this.index] = value; }
 	}
 
 	property int i_WeaponSlot
@@ -353,7 +361,11 @@ methodmap CFAbility  __nullable__
 
 	public void Destroy()
 	{ 
+		char name[255];
+		this.GetName(name, 255);
+		CPrintToChat(this.i_Client, "{unusual}Ability %s was removed from slot %i", name, this.i_Type);
 		this.i_AbilitySlot = -1;
+		this.i_Type = -1;
 		this.i_WeaponSlot = -1;
 		this.i_AmmoRequirement = 0;
 		this.i_Stocks = 0;
@@ -368,11 +380,35 @@ methodmap CFAbility  __nullable__
 		this.b_Blocked = false;
 		this.b_CurrentlyHeld = false;
 		this.SetName("");
+		this.i_Client = -1;
 		b_AbilityExists[this.index] = false; 
 	}
 }
 
-CFAbility g_Abilities[MAXPLAYERS + 1][5];
+CFAbility g_Abilities[2048]
+
+public CFAbility GetAbilityFromClient(int client, CF_AbilityType type)
+{
+	int slot = view_as<int>(type) + 1;
+	for (int i = 0; i < 2048; i++)
+	{
+		CFAbility ab = g_Abilities[i];
+		if (ab == null || !ab.b_Exists)
+			continue;
+
+		if (ab.i_Client == client && ab.i_Type == slot)
+			return ab;
+	}
+
+	return null;
+}
+
+public void DestroyAbility(int client, CF_AbilityType type)
+{
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab != null)
+		ab.Destroy();
+}
 
 int i_CharacterClient[MAXPLAYERS + 1];
 
@@ -424,15 +460,16 @@ methodmap CFCharacter __nullable__
 {
 	public CFCharacter()
 	{
-		for (int slot = 1; slot <= MaxClients; slot++)
+		for (int i = 1; i <= MaxClients; i++)
 		{
-			if (!b_CharacterExists[slot])
+			if (!b_CharacterExists[i])
 			{
-				b_CharacterExists[slot] = true;
-				return view_as<CFCharacter>(slot);
+				b_CharacterExists[i] = true;
+				return view_as<CFCharacter>(i);
 			}
 		}
 
+		CPrintToChatAll("{red}CHARACTER SLOT OVERFLOW! THIS SHOULD NEVER HAPPEN, SEND A SCREENSHOT OF THIS TO A DEV!");
 		return view_as<CFCharacter>(-1);
 	}
 
@@ -730,9 +767,12 @@ methodmap CFCharacter __nullable__
 
 		for (int i = 0; i < 5; i++)
 		{
-			g_Abilities[this.i_Client][i].Destroy();
-			g_Abilities[this.i_Client][i] = null;
+			CFAbility ab = GetAbilityFromClient(this.i_Client, view_as<CF_AbilityType>(i));
+			if (ab != null)
+				ab.Destroy();
 		}
+
+		RemoveCharacterFromList(view_as<CFCharacter>(this.index));
 
 		this.i_Client = -1;
 		this.b_ResourceIsUlt = false;
@@ -776,24 +816,78 @@ methodmap CFCharacter __nullable__
 	}
 }
 
-CFCharacter g_Characters[MAXPLAYERS + 1] = { null, ... };
+ArrayList g_Characters = null;
+
+int i_MostRecentCharaSlot[MAXPLAYERS + 1] = { -1, ... };
 
 public CFCharacter GetCharacterFromClient(int client)
 {
-	for (int i = 1; i <= MaxClients; i++)
+	if (g_Characters == null)
+		return null;
+
+	if (i_MostRecentCharaSlot[client] > -1 && i_MostRecentCharaSlot[client] < GetArraySize(g_Characters))
 	{
-		if (g_Characters[i].i_Client == client)
-			return g_Characters[i];
+		CFCharacter chara = view_as<CFCharacter>(GetArrayCell(g_Characters, i_MostRecentCharaSlot[client]));
+		if (chara.i_Client == client)
+			return chara;
+	}
+
+	for (int i = 1; i < GetArraySize(g_Characters); i++)
+	{
+		CFCharacter chara = view_as<CFCharacter>(GetArrayCell(g_Characters, i));
+		if (chara.i_Client == client)
+		{
+			i_MostRecentCharaSlot[client] = i;
+			return chara;
+		}
 	}
 
 	return null;
+}
+
+public void AddCharacterToList(CFCharacter chara)
+{ 
+	if (chara == null || chara.index < 0 || chara.index > MAXPLAYERS || !chara.b_Exists)
+		return;
+
+	if (g_Characters == null)
+		g_Characters = CreateArray(255);
+		
+	PushArrayCell(g_Characters, chara.index);
+	CPrintToChat(chara.i_Client, "{green}You were added to the character list.");
+}
+
+public void RemoveCharacterFromList(CFCharacter chara)
+{
+	if (g_Characters == null)
+		return;
+
+	for (int i = 0; i < GetArraySize(g_Characters); i++)
+	{
+		if (GetArrayCell(g_Characters, i) == chara.index)
+		{
+			RemoveFromArray(g_Characters, i);
+			CPrintToChat(chara.i_Client, "{red}You were removed from the character list.");
+			break;
+		}
+	}
+
+	if (GetArraySize(g_Characters) < 1)
+	{
+		delete g_Characters;
+		g_Characters = null;
+	}
 }
 
 public void CFC_ApplyCharacter(int client, float speed, float maxHP, TFClassType class, char model[255], char name[255], float scale, float weight, char configMapPath[255], char archetype[255])
 {
 	CFCharacter character = GetCharacterFromClient(client);
 	if (character == null)
+	{
 		character = new CFCharacter();
+		character.i_Client = client;
+		AddCharacterToList(character);
+	}
 
 	character.i_Client = client;
 	character.i_Class = class;
@@ -807,8 +901,7 @@ public void CFC_ApplyCharacter(int client, float speed, float maxHP, TFClassType
 	character.SetName(name);
 	character.SetConfigMapPath(configMapPath);
 	character.SetArchetype(archetype);
-
-	g_Characters[client] = character;
+	CPrintToChatAll("%N was assigned character index: %i", client, character.index);
 }
 
 public void CFC_CreateEffect(int client, ConfigMap subsection, char abNum[255])
@@ -826,29 +919,29 @@ public void CFC_CreateEffect(int client, ConfigMap subsection, char abNum[255])
 	effect.i_AbilitySlot = slot;
 	effect.SetArgsAndValues(subsection);
 
-	ArrayList effects = g_Characters[client].g_Effects;
+	CFCharacter chara = GetCharacterFromClient(client);
+	ArrayList effects = chara.g_Effects;
 	if (effects == null)
 		effects = CreateArray(255);
 
 	PushArrayCell(effects, effect);
-	g_Characters[client].g_Effects = effects;
+	chara.g_Effects = effects;
 }
 
 public void CFC_CreateAbility(int client, ConfigMap subsection, CF_AbilityType type, bool NewChar)
 {
 	int slot = view_as<int>(type) + 1;
 
-	CFAbility ability;
-	if (NewChar)
-		ability = new CFAbility();
-	else
+	CFAbility ability = GetAbilityFromClient(client, type);
+	if (ability == null)
 	{
-		ability = g_Abilities[client][slot];
-		if (!ability.b_Exists)
-			ability = new CFAbility();
+		CPrintToChat(client, "{magenta}Making new ability");
+		ability = new CFAbility();
 	}
 
 	ability.i_AbilitySlot = slot;
+	ability.i_Type = slot;
+	ability.i_Client = client;
 
 	char name[255];
 	subsection.Get("name", name, sizeof(name));
@@ -874,12 +967,15 @@ public void CFC_CreateAbility(int client, ConfigMap subsection, CF_AbilityType t
 
 	ability.i_MaxStocks = GetIntFromCFGMap(subsection, "max_stocks", 0);
 
-	g_Abilities[client][slot] = ability;
+	ability.GetName(name, 255);
+	CPrintToChat(client, "{orange}You were given ability %s in slot %i", name, slot);
+
+	g_Abilities[ability.index] = ability;
 }
 
 public void CFC_StoreAbilities(int client, ConfigMap abilities)
 {
-	ArrayList effects = g_Characters[client].g_Effects;
+	ArrayList effects = GetCharacterFromClient(client).g_Effects;
 	if (effects != null)
 		effects.Clear();
 
@@ -940,8 +1036,9 @@ Handle c_DesiredCharacter;
 public void CFC_Disconnect(int client)
 {
 	b_FirstSpawn[client] = true;
-	g_Characters[client].Destroy();
-	g_Characters[client] = null;
+	CFCharacter chara = GetCharacterFromClient(client);
+	if (chara != null)
+		chara.Destroy();
 }
 
 public void CFC_MakeNatives()
@@ -2118,8 +2215,9 @@ public void CF_DestroyAllBuildings(int client)
 		CFC_GiveWeapons(client, weapons);
 	}
 	
-	TF2_SetPlayerClass(client, g_Characters[client].i_Class);
-	CF_UpdateCharacterHP(client, g_Characters[client].i_Class, true);
+	CFCharacter chara = GetCharacterFromClient(client);
+	TF2_SetPlayerClass(client, chara.i_Class);
+	CF_UpdateCharacterHP(client, chara.i_Class, true);
 	CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
 	
 	ConfigMap particles = map.GetSection("character.particles");
@@ -2186,8 +2284,6 @@ public void CF_DestroyAllBuildings(int client)
  	CFA_UpdateMadeCharacter(client);
 	CF_SetRespawnTime(client);
  	
- 	//CF_SetCharacterArms(client, g_Characters[client].Arms); //Crashes on Linux due to empty string (TODO)
- 	
  	b_FirstSpawn[client] = false;
  	
  	if (callForward)
@@ -2197,6 +2293,19 @@ public void CF_DestroyAllBuildings(int client)
 	 	Call_PushCell(client);
 	 	
 	 	Call_Finish();
+	 }
+
+	 for (int i = 0; i < 5; i++)
+	 {
+		CF_AbilityType type = view_as<CF_AbilityType>(i);
+		CFAbility ab = GetAbilityFromClient(client, type);
+		if (ab != null)
+		{
+			ab.GetName(name, 255);
+			CPrintToChat(client, "{green}Ability %s detected in slot %i.", name, i);
+		}
+		else
+			CPrintToChat(client, "{red}No ability detected in slot %i.", i);
 	 }
  }
  
@@ -2562,7 +2671,7 @@ public void CF_DestroyAllBuildings(int client)
  	if (num > 8)
  		return;
  		
- 	float targSpd = g_Characters[client].f_Speed;
+ 	float targSpd = GetCharacterFromClient(client).f_Speed;
  	float baseSpd = f_ClassBaseSpeed[num];
  	float speed = targSpd / baseSpd;
  	
@@ -2597,7 +2706,7 @@ public void CF_DestroyAllBuildings(int client)
  	if (!CF_IsPlayerCharacter(client))
  		return 0.0;
  		
- 	return g_Characters[client].f_MaxHP;
+ 	return GetCharacterFromClient(client).f_MaxHP;
  }
  
  public Native_CF_SetCharacterMaxHealth(Handle plugin, int numParams)
@@ -2607,8 +2716,9 @@ public void CF_DestroyAllBuildings(int client)
 
  	if (CF_IsPlayerCharacter(client))
  	{
- 		g_Characters[client].f_MaxHP = NewMax;
- 		CF_UpdateCharacterHP(client, g_Characters[client].i_Class, false);
+		CFCharacter chara = GetCharacterFromClient(client);
+ 		chara.f_MaxHP = NewMax;
+ 		CF_UpdateCharacterHP(client, chara.i_Class, false);
  	}
  }
  
@@ -2619,7 +2729,7 @@ public void CF_DestroyAllBuildings(int client)
  	if (!CF_IsPlayerCharacter(client))
  		return 0.0;
  		
- 	return g_Characters[client].f_Weight;
+ 	return GetCharacterFromClient(client).f_Weight;
  }
  
  public Native_CF_SetCharacterWeight(Handle plugin, int numParams)
@@ -2628,7 +2738,7 @@ public void CF_DestroyAllBuildings(int client)
  	float NewWeight = GetNativeCell(2);
 
  	if (CF_IsPlayerCharacter(client))
- 		g_Characters[client].f_Weight = NewWeight;
+ 		GetCharacterFromClient(client).f_Weight = NewWeight;
  }
  
  public Native_CF_ApplyKnockback(Handle plugin, int numParams)
@@ -2704,8 +2814,9 @@ public void CF_DestroyAllBuildings(int client)
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
 	SDKUnhook(client, SDKHook_OnTakeDamageAlivePost, CFDMG_OnTakeDamageAlive_Post);
  	b_CharacterApplied[client] = false;
- 	g_Characters[client].Destroy();
-	g_Characters[client] = null;
+ 	CFCharacter chara = GetCharacterFromClient(client);
+	if (chara != null)
+		chara.Destroy();
  	CFC_DeleteParticles(client, true);
  	CFA_RemoveAnimator(client);
  }
@@ -2762,7 +2873,7 @@ public Native_CF_IsPlayerCharacter(Handle plugin, int numParams)
 	
 	if (IsValidClient(client))
 	{
-		ReturnValue = g_Characters[client].b_Exists;
+		ReturnValue = GetCharacterFromClient(client) != null;
 	}
 	
 	return ReturnValue;
@@ -2775,7 +2886,7 @@ public any Native_CF_GetCharacterClass(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return TFClass_Unknown;
 		
-	return g_Characters[client].i_Class;
+	return GetCharacterFromClient(client).i_Class;
 }
 
 public Native_CF_SetCharacterClass(Handle plugin, int numParams)
@@ -2785,10 +2896,11 @@ public Native_CF_SetCharacterClass(Handle plugin, int numParams)
 	
 	if (CF_IsPlayerCharacter(client))
 	{
-		g_Characters[client].i_Class = NewClass;
+		CFCharacter chara = GetCharacterFromClient(client);
+		chara.i_Class = NewClass;
 		
-		TF2_SetPlayerClass(client, g_Characters[client].i_Class);
-		CF_UpdateCharacterHP(client, g_Characters[client].i_Class, false);
+		TF2_SetPlayerClass(client, chara.i_Class);
+		CF_UpdateCharacterHP(client, chara.i_Class, false);
 		CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
 	}
 }
@@ -2866,7 +2978,7 @@ public Native_CF_GetCharacterName(Handle plugin, int numParams)
 	if (CF_IsPlayerCharacter(client))
 	{
 		char name[255];
-		g_Characters[client].GetName(name, 255);
+		GetCharacterFromClient(client).GetName(name, 255);
 		SetNativeString(2, name, size, false);
 		
 		#if defined DEBUG_CHARACTER_CREATION
@@ -2892,7 +3004,7 @@ public Native_CF_SetCharacterName(Handle plugin, int numParams)
 	
 	if (CF_IsPlayerCharacter(client))
 	{
-		g_Characters[client].SetName(NewName);
+		GetCharacterFromClient(client).SetName(NewName);
 	}
 }
 
@@ -2904,7 +3016,7 @@ public Native_CF_GetCharacterModel(Handle plugin, int numParams)
 	if (CF_IsPlayerCharacter(client))
 	{
 		char model[255];
-		g_Characters[client].GetModel(model, 255);
+		GetCharacterFromClient(client).GetModel(model, 255);
 		SetNativeString(2, model, size, false);
 		
 		#if defined DEBUG_CHARACTER_CREATION
@@ -2930,7 +3042,7 @@ public Native_CF_GetCharacterArchetype(Handle plugin, int numParams)
 	if (CF_IsPlayerCharacter(client))
 	{
 		char archetype[255];
-		g_Characters[client].GetArchetype(archetype, 255);
+		GetCharacterFromClient(client).GetArchetype(archetype, 255);
 		SetNativeString(2, archetype, size, false);
 	}
 	else
@@ -2949,7 +3061,7 @@ public Native_CF_SetCharacterModel(Handle plugin, int numParams)
 	
 	if (CF_IsPlayerCharacter(client) && CheckFile(NewModel))
 	{
-		g_Characters[client].SetModel(NewModel);
+		GetCharacterFromClient(client).SetModel(NewModel);
 		//PrecacheModel(NewModel);
 		
 		SetVariantString(NewModel);
@@ -2965,7 +3077,7 @@ public Native_CF_SetCharacterArchetype(Handle plugin, int numParams)
 	
 	if (CF_IsPlayerCharacter(client) && CheckFile(NewArchetype))
 	{
-		g_Characters[client].SetArchetype(NewArchetype);
+		GetCharacterFromClient(client).SetArchetype(NewArchetype);
 	}
 }
 
@@ -2975,7 +3087,7 @@ public any Native_CF_GetCharacterSpeed(Handle plugin, int numParams)
 
 	if (CF_IsPlayerCharacter(client))
 	{
-		return g_Characters[client].f_Speed;
+		return GetCharacterFromClient(client).f_Speed;
 	}
 	
 	return 0.0;
@@ -2987,7 +3099,7 @@ public any Native_CF_GetCharacterBaseSpeed(Handle plugin, int numParams)
 
 	if (CF_IsPlayerCharacter(client))
 	{
-		return g_Characters[client].f_BaseSpeed;
+		return GetCharacterFromClient(client).f_BaseSpeed;
 	}
 	
 	return 0.0;
@@ -3000,7 +3112,7 @@ public any Native_CF_SetCharacterSpeed(Handle plugin, int numParams)
 
 	if (CF_IsPlayerCharacter(client))
 	{
-		g_Characters[client].f_Speed = NewSpeed;
+		GetCharacterFromClient(client).f_Speed = NewSpeed;
 		CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
 		TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.0001);
 	}
@@ -3040,7 +3152,7 @@ public any Native_CF_GetCharacterScale(Handle plugin, int numParams)
 
 	if (CF_IsPlayerCharacter(client))
 	{
-		return g_Characters[client].f_Scale;
+		return GetCharacterFromClient(client).f_Scale;
 	}
 	
 	return 0.0;
@@ -3086,7 +3198,7 @@ public any Native_CF_SetCharacterScale(Handle plugin, int numParams)
 		}
 		else
 		{
-			g_Characters[client].f_Scale = NewScale;
+			GetCharacterFromClient(client).f_Scale = NewScale;
 			
 			SetEntPropFloat(client, Prop_Send, "m_flModelScale", NewScale);
 			SetEntPropFloat(client, Prop_Send, "m_flStepSize", 18.0 * NewScale);
@@ -3132,7 +3244,7 @@ public void SetScale_DelayResize(DataPack pack)
 		
 	if (!CheckPlayerWouldGetStuck(client, NewScale))
 	{
-		g_Characters[client].f_Scale = NewScale;
+		GetCharacterFromClient(client).f_Scale = NewScale;
 			
 		SetEntPropFloat(client, Prop_Send, "m_flModelScale", NewScale);
 		SetEntPropFloat(client, Prop_Send, "m_flStepSize", 18.0 * NewScale);

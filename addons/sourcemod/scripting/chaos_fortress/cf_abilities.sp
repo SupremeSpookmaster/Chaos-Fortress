@@ -242,7 +242,9 @@ public void CFA_AddHealingPoints(int client, int amt)
 public void CFA_Disconnect(int client)
 {
 	i_HealingDone[client] = 0;
-	g_Characters[client].f_UltCharge = 0.0;
+	CFCharacter chara = GetCharacterFromClient(client);
+	if (chara != null)
+		chara.f_UltCharge = 0.0;
 }
 
 public void CFA_OnEntityDestroyed(int entity)
@@ -379,21 +381,25 @@ public Action CFA_HUDTimer(Handle timer)
 		if (!IsPlayerAlive(client))
 			continue;
 
+		CFCharacter chara = GetCharacterFromClient(client);
+		if (chara == null)
+			continue;
+
 		bool showHUD = GetClientButtons(client) & IN_SCORE == 0 && b_UseHUD[client];
 		char HUDText[255];
 
 		for (int i = 0; i < 4; i++)
 		{
-			int slot = i + 1;
 			CF_AbilityType type = view_as<CF_AbilityType>(i);
 			bool resourcesNext = type == CF_AbilityType_Ult;
 
 			char name[255], namePlural[255];
-			g_Characters[client].GetResourceName(name, 255);
-			g_Characters[client].GetResourceNamePlural(namePlural, 255);
 
-			CFAbility ability = g_Abilities[client][slot];
-			if (ability.b_Exists)
+			chara.GetResourceName(name, 255);
+			chara.GetResourceNamePlural(namePlural, 255);
+
+			CFAbility ability = GetAbilityFromClient(client, type);
+			if (ability != null)
 			{
 				char title[255], button[64];
 				ability.GetName(title, sizeof(title));
@@ -420,7 +426,7 @@ public Action CFA_HUDTimer(Handle timer)
 				remCD = CF_GetAbilityCooldown(client, type);
 				if (remCD < 0.1 && type == CF_AbilityType_Ult && rState == 1)
 				{
-					CF_GiveUltCharge(client, g_Characters[client].f_UltChargeOnRegen/10.0, CF_ResourceType_Percentage);
+					CF_GiveUltCharge(client, chara.f_UltChargeOnRegen/10.0, CF_ResourceType_Percentage);
 				}
 
 				if (showHUD)
@@ -431,15 +437,15 @@ public Action CFA_HUDTimer(Handle timer)
 					{	
 						if (!CanUse && !tooPoor && !wouldBeStuck)
 						{
-							Format(HUDText, sizeof(HUDText), "%s: %i[PERCENT] [BLOCKED]\n", title, RoundToFloor((g_Characters[client].f_UltCharge/g_Characters[client].f_UltChargeRequired) * 100.0));
+							Format(HUDText, sizeof(HUDText), "%s: %i[PERCENT] [BLOCKED]\n", title, RoundToFloor((chara.f_UltCharge/chara.f_UltChargeRequired) * 100.0));
 						}
 						else if (wouldBeStuck && !tooPoor)
 						{
-							Format(HUDText, sizeof(HUDText), "%s: %i[PERCENT] [BLOCKED; YOU WOULD GET STUCK]\n", title, RoundToFloor((g_Characters[client].f_UltCharge/g_Characters[client].f_UltChargeRequired) * 100.0));
+							Format(HUDText, sizeof(HUDText), "%s: %i[PERCENT] [BLOCKED; YOU WOULD GET STUCK]\n", title, RoundToFloor((chara.f_UltCharge/chara.f_UltChargeRequired) * 100.0));
 						}
 						else
 						{
-							Format(HUDText, sizeof(HUDText), "%s: %i[PERCENT] %s\n", title, RoundToFloor((g_Characters[client].f_UltCharge/g_Characters[client].f_UltChargeRequired) * 100.0), g_Characters[client].f_UltCharge >= g_Characters[client].f_UltChargeRequired ? button : "");
+							Format(HUDText, sizeof(HUDText), "%s: %i[PERCENT] %s\n", title, RoundToFloor((chara.f_UltCharge/chara.f_UltChargeRequired) * 100.0), chara.f_UltCharge >= chara.f_UltChargeRequired ? button : "");
 						}
 					}
 					else
@@ -469,16 +475,16 @@ public Action CFA_HUDTimer(Handle timer)
 						}
 						else
 						{
-							if (g_Characters[client].b_UsingResources && ability.f_ResourceCost > 0.0)
+							if (chara.b_UsingResources && ability.f_ResourceCost > 0.0)
 							{
-								if (g_Characters[client].b_ResourceIsUlt)
+								if (chara.b_ResourceIsUlt)
 								{
-									Format(suffix, sizeof(suffix), "%s [%.2f[PERCENT] Ult.]", suffix, (ability.f_ResourceCost/g_Characters[client].f_UltChargeRequired) * 100.0);
+									Format(suffix, sizeof(suffix), "%s [%.2f[PERCENT] Ult.]", suffix, (ability.f_ResourceCost/chara.f_UltChargeRequired) * 100.0);
 								}
 								else
 								{
-									if (g_Characters[client].b_ResourceIsPercentage && g_Characters[client].f_MaxResources > 0.0)
-										Format(suffix, sizeof(suffix), "%s [%i[PERCENT] %s]", suffix, RoundToFloor((ability.f_ResourceCost/g_Characters[client].f_MaxResources) * 100.0), ability.f_ResourceCost != 1.0 ? namePlural : name);
+									if (chara.b_ResourceIsPercentage && chara.f_MaxResources > 0.0)
+										Format(suffix, sizeof(suffix), "%s [%i[PERCENT] %s]", suffix, RoundToFloor((ability.f_ResourceCost/chara.f_MaxResources) * 100.0), ability.f_ResourceCost != 1.0 ? namePlural : name);
 									else
 										Format(suffix, sizeof(suffix), "%s [%i %s]", suffix, RoundToFloor(ability.f_ResourceCost), ability.f_ResourceCost != 1.0 ? namePlural : name);
 								}
@@ -493,22 +499,22 @@ public Action CFA_HUDTimer(Handle timer)
 				}
 			}
 
-			if (resourcesNext && g_Characters[client].b_UsingResources && !g_Characters[client].b_ResourceIsUlt)
+			if (resourcesNext && chara.b_UsingResources && !chara.b_ResourceIsUlt)
 			{
-				if (GetGameTime() >= g_Characters[client].f_NextResourceRegen)
+				if (GetGameTime() >= chara.f_NextResourceRegen)
 				{
 					CF_GiveSpecialResource(client, 1.0, CF_ResourceType_Regen);
-					g_Characters[client].f_NextResourceRegen = GetGameTime() + g_Characters[client].f_ResourceRegenInterval;
+					chara.f_NextResourceRegen = GetGameTime() + chara.f_ResourceRegenInterval;
 				}
 						
 				if (showHUD)
 				{
-					if (g_Characters[client].f_MaxResources > 0.0)
+					if (chara.f_MaxResources > 0.0)
 					{
-						if (g_Characters[client].b_ResourceIsPercentage)
-							Format(HUDText, sizeof(HUDText), "%s\n%s: %i[PERCENT]\n", HUDText, CF_GetSpecialResource(client) != 1.0 ? namePlural : name, RoundToFloor((CF_GetSpecialResource(client)/g_Characters[client].f_MaxResources) * 100.0));
+						if (chara.b_ResourceIsPercentage)
+							Format(HUDText, sizeof(HUDText), "%s\n%s: %i[PERCENT]\n", HUDText, CF_GetSpecialResource(client) != 1.0 ? namePlural : name, RoundToFloor((CF_GetSpecialResource(client)/chara.f_MaxResources) * 100.0));
 						else
-							Format(HUDText, sizeof(HUDText), "%s\n%s: %i/%i\n", HUDText, CF_GetSpecialResource(client) != 1.0 ? namePlural : name, RoundToFloor(CF_GetSpecialResource(client)), RoundToFloor(g_Characters[client].f_MaxResources));
+							Format(HUDText, sizeof(HUDText), "%s\n%s: %i/%i\n", HUDText, CF_GetSpecialResource(client) != 1.0 ? namePlural : name, RoundToFloor(CF_GetSpecialResource(client)), RoundToFloor(chara.f_MaxResources));
 					}
 					else
 					{
@@ -518,37 +524,40 @@ public Action CFA_HUDTimer(Handle timer)
 			}
 		}
 					
-		int r = i_HUDR[client];
-		int g = i_HUDG[client];
-		int b = i_HUDB[client];
-		int a = i_HUDA[client];
-
-		if (r == 255 && g == 255 && b == 255)
+		if (showHUD)
 		{
-			r = 255;
-			g = 160;
-			b = 160;
-			if (TF2_GetClientTeam(client) == TFTeam_Blue)
+			int r = i_HUDR[client];
+			int g = i_HUDG[client];
+			int b = i_HUDB[client];
+			int a = i_HUDA[client];
+
+			if (r == 255 && g == 255 && b == 255)
 			{
-				b = 255;
-				r = 160;
+				r = 255;
+				g = 160;
+				b = 160;
+				if (TF2_GetClientTeam(client) == TFTeam_Blue)
+				{
+					b = 255;
+					r = 160;
+				}
 			}
+
+			Call_StartForward(g_OnHUDDisplayed);
+
+			Call_PushCell(client);
+			Call_PushStringEx(HUDText, sizeof(HUDText), SM_PARAM_STRING_UTF8|SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
+			Call_PushCellRef(r);
+			Call_PushCellRef(g);
+			Call_PushCellRef(b);
+			Call_PushCellRef(a);
+
+			Call_Finish();
+
+			ReplaceString(HUDText, sizeof(HUDText), "[PERCENT]", "%%");
+			SetHudTextParams(-1.0, 0.8, 0.1, r, g, b, a);
+			ShowSyncHudText(client, HudSync, HUDText);
 		}
-
-		Call_StartForward(g_OnHUDDisplayed);
-
-		Call_PushCell(client);
-		Call_PushStringEx(HUDText, sizeof(HUDText), SM_PARAM_STRING_UTF8|SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
-		Call_PushCellRef(r);
-		Call_PushCellRef(g);
-		Call_PushCellRef(b);
-		Call_PushCellRef(a);
-
-		Call_Finish();
-
-		ReplaceString(HUDText, sizeof(HUDText), "[PERCENT]", "%%");
-		SetHudTextParams(-1.0, 0.8, 0.1, r, g, b, a);
-		ShowSyncHudText(client, HudSync, HUDText);
 	}
 	
 	return Plugin_Continue;
@@ -577,24 +586,27 @@ public void CFA_PlayerKilled(int attacker, int victim)
 
 public bool CFA_InitializeUltimate(int client, ConfigMap map, bool IsNewCharacter)
 {
+	bool success = false;
 	ConfigMap subsection = map.GetSection("character.ultimate_stats");
 	if (subsection != null)
 	{
-		g_Characters[client].f_UltChargeRequired = GetFloatFromCFGMap(subsection, "charge", 0.0);
-		g_Characters[client].f_UltChargeOnRegen = GetFloatFromCFGMap(subsection, "on_regen", 0.0);
-		g_Characters[client].f_UltChargeOnDamage = GetFloatFromCFGMap(subsection, "on_damage", 0.0);
-		g_Characters[client].f_UltChargeOnHurt = GetFloatFromCFGMap(subsection, "on_hurt", 0.0);
-		g_Characters[client].f_UltChargeOnHeal = GetFloatFromCFGMap(subsection, "on_heal", 0.0);
-		g_Characters[client].f_UltChargeOnKill = GetFloatFromCFGMap(subsection, "on_kill", 0.0);
-		g_Characters[client].f_UltChargeOnBuildingDamage = GetFloatFromCFGMap(subsection, "on_damage_building", 0.0);
-		g_Characters[client].f_UltChargeOnDestruction = GetFloatFromCFGMap(subsection, "on_kill_building", 0.0);
+		CFCharacter chara = GetCharacterFromClient(client);
+		chara.f_UltChargeRequired = GetFloatFromCFGMap(subsection, "charge", 0.0);
+		chara.f_UltChargeOnRegen = GetFloatFromCFGMap(subsection, "on_regen", 0.0);
+		chara.f_UltChargeOnDamage = GetFloatFromCFGMap(subsection, "on_damage", 0.0);
+		chara.f_UltChargeOnHurt = GetFloatFromCFGMap(subsection, "on_hurt", 0.0);
+		chara.f_UltChargeOnHeal = GetFloatFromCFGMap(subsection, "on_heal", 0.0);
+		chara.f_UltChargeOnKill = GetFloatFromCFGMap(subsection, "on_kill", 0.0);
+		chara.f_UltChargeOnBuildingDamage = GetFloatFromCFGMap(subsection, "on_damage_building", 0.0);
+		chara.f_UltChargeOnDestruction = GetFloatFromCFGMap(subsection, "on_kill_building", 0.0);
 
 		CFC_CreateAbility(client, subsection, CF_AbilityType_Ult, IsNewCharacter);
+		success = true;
 	}
 	else
-		g_Abilities[client][1].Destroy();
+		DestroyAbility(client, CF_AbilityType_Ult);
 	
-	return g_Abilities[client][1].b_Exists;
+	return success;
 }
 
 public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
@@ -610,7 +622,7 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		AtLeastOne = true;
 	}
 	else
-		g_Abilities[client][2].Destroy();
+		DestroyAbility(client, CF_AbilityType_M2);
 	
 	subsection = map.GetSection("character.m3_ability");
 	if (subsection != null)
@@ -619,7 +631,7 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		AtLeastOne = true;
 	}
 	else
-		g_Abilities[client][3].Destroy();
+		DestroyAbility(client, CF_AbilityType_M3);
 	
 	subsection = map.GetSection("character.reload_ability");
 	if (subsection != null)
@@ -628,7 +640,7 @@ public bool CFA_InitializeAbilities(int client, ConfigMap map, bool NewChar)
 		AtLeastOne = true;
 	}
 	else
-		g_Abilities[client][4].Destroy();
+		DestroyAbility(client, CF_AbilityType_Reload);
 	
 	return AtLeastOne;
 }
@@ -638,25 +650,26 @@ public void CFA_InitializeResources(int client, ConfigMap map, bool NewChar)
 	ConfigMap subsection = map.GetSection("character.special_resource");
 	if (subsection != null)
 	{
-		g_Characters[client].b_ResourceIsUlt = GetBoolFromCFGMap(subsection, "is_ult", false);
+		CFCharacter chara = GetCharacterFromClient(client);
+		chara.b_ResourceIsUlt = GetBoolFromCFGMap(subsection, "is_ult", false);
 		
-		if (!g_Characters[client].b_ResourceIsUlt)
+		if (!chara.b_ResourceIsUlt)
 		{
-			g_Characters[client].b_ResourceIsPercentage = GetBoolFromCFGMap(subsection, "percentage", false);
-			g_Characters[client].b_ResourceIsMetal = GetBoolFromCFGMap(subsection, "is_metal", false);
+			chara.b_ResourceIsPercentage = GetBoolFromCFGMap(subsection, "percentage", false);
+			chara.b_ResourceIsMetal = GetBoolFromCFGMap(subsection, "is_metal", false);
 			
 			char name[255], namePlural[255];
 			subsection.Get("name", name, 255);
 			subsection.Get("name_plural", namePlural, 255);
-			g_Characters[client].SetResourceName(name);
-			g_Characters[client].SetResourceNamePlural(namePlural);
+			chara.SetResourceName(name);
+			chara.SetResourceNamePlural(namePlural);
 
 			float start = GetFloatFromCFGMap(subsection, "start", 0.0);
 			float preserve = GetFloatFromCFGMap(subsection, "preserve", 0.0) * CF_GetSpecialResource(client);
 
-			g_Characters[client].f_MaxResources = GetFloatFromCFGMap(subsection, "max", 0.0);
-			g_Characters[client].f_ResourceRegenInterval = GetFloatFromCFGMap(subsection, "regen_interval", 0.1);
-			g_Characters[client].f_NextResourceRegen = GetGameTime() + g_Characters[client].f_ResourceRegenInterval;
+			chara.f_MaxResources = GetFloatFromCFGMap(subsection, "max", 0.0);
+			chara.f_ResourceRegenInterval = GetFloatFromCFGMap(subsection, "regen_interval", 0.1);
+			chara.f_NextResourceRegen = GetGameTime() + chara.f_ResourceRegenInterval;
 			
 			bool IgnoreResupply = GetBoolFromCFGMap(subsection, "ignore_resupply", true);
 			
@@ -673,19 +686,19 @@ public void CFA_InitializeResources(int client, ConfigMap map, bool NewChar)
 			}
 			else
 			{
-				g_Characters[client].f_NextResourceRegen = GetGameTime() + 0.2;
+				chara.f_NextResourceRegen = GetGameTime() + 0.2;
 			}
 			
-			g_Characters[client].f_ResourcesOnRegen = GetFloatFromCFGMap(subsection, "on_regen", 0.0);
-			g_Characters[client].f_ResourcesOnDamage = GetFloatFromCFGMap(subsection, "on_damage", 0.0);
-			g_Characters[client].f_ResourcesOnHurt = GetFloatFromCFGMap(subsection, "on_hurt", 0.0);
-			g_Characters[client].f_ResourcesOnHeal = GetFloatFromCFGMap(subsection, "on_heal", 0.0);
-			g_Characters[client].f_ResourcesOnKill = GetFloatFromCFGMap(subsection, "on_kill", 0.0);
-			g_Characters[client].f_ResourcesOnBuildingDamage = GetFloatFromCFGMap(subsection, "on_damage_building", 0.0);
-			g_Characters[client].f_ResourcesOnDestruction = GetFloatFromCFGMap(subsection, "on_kill_building", 0.0);
+			chara.f_ResourcesOnRegen = GetFloatFromCFGMap(subsection, "on_regen", 0.0);
+			chara.f_ResourcesOnDamage = GetFloatFromCFGMap(subsection, "on_damage", 0.0);
+			chara.f_ResourcesOnHurt = GetFloatFromCFGMap(subsection, "on_hurt", 0.0);
+			chara.f_ResourcesOnHeal = GetFloatFromCFGMap(subsection, "on_heal", 0.0);
+			chara.f_ResourcesOnKill = GetFloatFromCFGMap(subsection, "on_kill", 0.0);
+			chara.f_ResourcesOnBuildingDamage = GetFloatFromCFGMap(subsection, "on_damage_building", 0.0);
+			chara.f_ResourcesOnDestruction = GetFloatFromCFGMap(subsection, "on_kill_building", 0.0);
 			
-			g_Characters[client].f_ResourcesToTriggerSound = GetFloatFromCFGMap(subsection, "sound_amt", 0.0);
-			g_Characters[client].f_ResourcesSinceLastGain = 0.0;
+			chara.f_ResourcesToTriggerSound = GetFloatFromCFGMap(subsection, "sound_amt", 0.0);
+			chara.f_ResourcesSinceLastGain = 0.0;
 		}
 	}
 	else
@@ -699,10 +712,11 @@ public void CFA_SetChargeRetain(float amt)
 
 public void CFA_ReduceUltCharge_CharacterSwitch(int client)
 {
-	float newCharge = g_Characters[client].f_UltChargeRequired * f_ChargeRetain;
+	CFCharacter chara = GetCharacterFromClient(client);
+	float newCharge = chara.f_UltChargeRequired * f_ChargeRetain;
 	
-	if (newCharge > g_Characters[client].f_UltCharge)
-		newCharge = g_Characters[client].f_UltCharge;
+	if (newCharge > chara.f_UltCharge)
+		newCharge = chara.f_UltCharge;
 		
 	CF_SetUltCharge(client, newCharge, true);
 }
@@ -711,8 +725,9 @@ public void CFA_MapEnd()
 {
 	for (int i = 0; i <= MaxClients; i++)
 	{
-		g_Characters[i].Destroy();
-		g_Characters[i] = null;
+		CFCharacter chara = GetCharacterFromClient(i);
+		if (chara != null)
+			chara.Destroy();
 	}
 
 	for (int i = 0; i < 2049; i++)
@@ -744,7 +759,7 @@ public void CF_OnPlayerCallForMedic(int client)
 	if (!CF_IsPlayerCharacter(client))
 		return;
 		
-	if (!g_Abilities[client][1].b_Exists)
+	if (GetAbilityFromClient(client, CF_AbilityType_Ult) == null)
 		return;
 		
 	if (CF_GetRoundState() != 1)
@@ -761,10 +776,11 @@ public Action CF_OnPlayerM2(int client, int &buttons, int &impulse, int &weapon)
 	if (!CF_IsPlayerCharacter(client))
 		return Plugin_Continue;
 		
-	if (!g_Abilities[client][2].b_Exists)
+	CFAbility ab = GetAbilityFromClient(client, CF_AbilityType_M2);
+	if (ab == null)
 		return Plugin_Continue;
 		
-	if (g_Abilities[client][2].b_HeldAbility)
+	if (ab.b_HeldAbility)
 	{
 		CF_AttemptHeldAbility(client, CF_AbilityType_M2, IN_ATTACK2);
 	}
@@ -781,10 +797,11 @@ public Action CF_OnPlayerM3(int client, int &buttons, int &impulse, int &weapon)
 	if (!CF_IsPlayerCharacter(client))
 		return Plugin_Continue;
 		
-	if (!g_Abilities[client][3].b_Exists)
+	CFAbility ab = GetAbilityFromClient(client, CF_AbilityType_M3);
+	if (ab == null)
 		return Plugin_Continue;
 		
-	if (g_Abilities[client][3].b_HeldAbility)
+	if (ab.b_HeldAbility)
 	{
 		CF_AttemptHeldAbility(client, CF_AbilityType_M3, IN_ATTACK3);
 	}
@@ -801,10 +818,11 @@ public Action CF_OnPlayerReload(int client, int &buttons, int &impulse, int &wea
 	if (!CF_IsPlayerCharacter(client))
 		return Plugin_Continue;
 		
-	if (!g_Abilities[client][4].b_Exists)
+	CFAbility ab = GetAbilityFromClient(client, CF_AbilityType_Reload);
+	if (ab == null)
 		return Plugin_Continue;
 	
-	if (g_Abilities[client][4].b_HeldAbility)
+	if (ab.b_HeldAbility)
 	{
 		CF_AttemptHeldAbility(client, CF_AbilityType_Reload, IN_RELOAD);
 	}
@@ -834,11 +852,13 @@ public void CF_AttemptHeldAbility(int client, CF_AbilityType type, int button)
 
 	if (result != Plugin_Stop && result != Plugin_Handled)
 	{
+		CFAbility ab = GetAbilityFromClient(client, type);
+
 		int slot = view_as<int>(type) + 1;
-		if (g_Abilities[client][slot].b_HeldAbilityBlocksOthers)
+		if (ab.b_HeldAbilityBlocksOthers)
 			i_HeldBlocked[client] = type;
 
-		g_Abilities[client][slot].b_CurrentlyHeld = true;
+		ab.b_CurrentlyHeld = true;
 
 		char soundSlot[255];
 		
@@ -886,8 +906,14 @@ public void CF_HeldAbilityFrame(DataPack pack)
 		return;
 	}
 
-	int slot = view_as<int>(type) + 1;
-	bool b_HoldingButton = (GetClientButtons(client) & button != 0) && g_Abilities[client][slot].b_CurrentlyHeld && CF_CanPlayerUseAbilitySlot(client, type);
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab == null)
+	{
+		delete pack;
+		return;
+	}
+
+	bool b_HoldingButton = (GetClientButtons(client) & button != 0) && ab.b_CurrentlyHeld && CF_CanPlayerUseAbilitySlot(client, type);
 
 	if (!b_HoldingButton)
 	{
@@ -911,18 +937,21 @@ void EndHeldAbility(int client, CF_AbilityType type, bool TriggerCallback, bool 
 	}
 	else
 	{
+		CFAbility ab = GetAbilityFromClient(client, type);
+
 		if (!AbilityUsesStocks(client, type))
-			CF_ApplyAbilityCooldown(client, g_Abilities[client][slot].f_Cooldown, type, true, false);
+			CF_ApplyAbilityCooldown(client, ab.f_Cooldown, type, true, false);
 			
-		if (g_Characters[client].b_UsingResources && !resupply)
+		CFCharacter chara = GetCharacterFromClient(client);
+		if (chara.b_UsingResources && !resupply)
 		{
-			if (g_Characters[client].b_ResourceIsUlt)
+			if (chara.b_ResourceIsUlt)
 			{
-				CF_GiveUltCharge(client, -g_Abilities[client][slot].f_ResourceCost, CF_ResourceType_Generic);
+				CF_GiveUltCharge(client, -ab.f_ResourceCost, CF_ResourceType_Generic);
 			}
 			else
 			{
-				CF_GiveSpecialResource(client, -g_Abilities[client][slot].f_ResourceCost, CF_ResourceType_Generic);
+				CF_GiveSpecialResource(client, -ab.f_ResourceCost, CF_ResourceType_Generic);
 			}
 		}
 			
@@ -941,8 +970,8 @@ void EndHeldAbility(int client, CF_AbilityType type, bool TriggerCallback, bool 
 			SubtractStock(client, type);
 		}
 			
-		g_Abilities[client][slot].b_CurrentlyHeld = false;
-		if (g_Abilities[client][slot].b_HeldAbilityBlocksOthers)
+		ab.b_CurrentlyHeld = false;
+		if (ab.b_HeldAbilityBlocksOthers)
 			i_HeldBlocked[client] = CF_AbilityType_None;
 
 		Call_StartForward(g_OnHeldEnd);
@@ -957,8 +986,7 @@ void EndHeldAbility(int client, CF_AbilityType type, bool TriggerCallback, bool 
 
 bool AbilityUsesStocks(int client, CF_AbilityType type)
 {
-	int slot = view_as<int>(type) + 1;
-	return g_Abilities[client][slot].i_MaxStocks > 0;
+	return GetAbilityFromClient(client, type).i_MaxStocks > 0;
 }
 
 void SubtractStock(int client, CF_AbilityType type)
@@ -966,16 +994,23 @@ void SubtractStock(int client, CF_AbilityType type)
 	if (!AbilityUsesStocks(client, type))
 		return;
 
-	int slot = view_as<int>(type) + 1;
-	g_Abilities[client][slot].i_Stocks--;
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab == null)
+		return;
+
+	ab.i_Stocks--;
 	if (CF_GetAbilityCooldown(client, type) <= 0.0)
-		CF_ApplyAbilityCooldown(client, g_Abilities[client][slot].f_Cooldown, type, true);
+		CF_ApplyAbilityCooldown(client, ab.f_Cooldown, type, true);
 }
 
 public void ResetHeldButtonStats(int client)
 {
 	for (int i = 0; i < 5; i++)
-		g_Abilities[client][i].b_CurrentlyHeld = false;
+	{
+		CFAbility ab = GetAbilityFromClient(client, view_as<CF_AbilityType>(i));
+		if (ab != null)
+			ab.b_CurrentlyHeld = false;
+	}
 }
 
 public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
@@ -987,8 +1022,12 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 	}
 	
 	int slot = view_as<int>(type) + 1;
-	float cooldown = g_Abilities[client][slot].f_Cooldown;
-	float cost = g_Abilities[client][slot].f_ResourceCost;
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab == null)
+		return;
+
+	float cooldown = ab.f_Cooldown;
+	float cost = ab.f_ResourceCost;
 	char soundSlot[255];
 	Action result;
 	GlobalForward toCall;
@@ -1024,6 +1063,8 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 	
 	if (result != Plugin_Stop && result != Plugin_Handled)
 	{
+		CFCharacter chara = GetCharacterFromClient(client);
+
 		CF_ActivateAbilitySlot(client, slot);
 		
 		if (type == CF_AbilityType_Ult)
@@ -1046,7 +1087,7 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 			
 			//TODO: Convert ult radius into a g_Character stat and just read it here
 			char path[255];
-			g_Characters[client].GetConfigMapPath(path, 255);
+			chara.GetConfigMapPath(path, 255);
 			ConfigMap map = new ConfigMap(path);
 			if (map != null)
 			{
@@ -1091,9 +1132,9 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 			CF_PlayRandomSound(client, "", soundSlot);
 		}
 
-		if (type != CF_AbilityType_Ult && g_Characters[client].b_UsingResources)
+		if (type != CF_AbilityType_Ult && chara.b_UsingResources)
 		{
-			if (g_Characters[client].b_ResourceIsUlt)
+			if (chara.b_ResourceIsUlt)
 				CF_GiveUltCharge(client, -cost);
 			else
 				CF_GiveSpecialResource(client, -cost);
@@ -1113,11 +1154,14 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 	BlockedByResize = false;
 	BlockedByTooFewResources = false;
 
-	int slot = view_as<int>(type) + 1;
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab == null)
+		return false;
+
 	bool UsingStocks = AbilityUsesStocks(client, type);
 	remCD = CF_GetAbilityCooldown(client, type);
 	
-	if (remCD > 0.0 && (!UsingStocks || g_Abilities[client][slot].i_Stocks < 1))
+	if (remCD > 0.0 && (!UsingStocks || ab.i_Stocks < 1))
 		return false;
 	
 	if (i_HeldBlocked[client] != CF_AbilityType_None && i_HeldBlocked[client] != type)
@@ -1126,36 +1170,37 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 	if (TF2_IsPlayerStunned(client))
 		return false;
 
-	if (g_Abilities[client][slot].b_Blocked)
+	if (ab.b_Blocked)
 		return false;
 
-	if (g_Abilities[client][slot].b_RequireGrounded && GetEntityFlags(client) & FL_ONGROUND == 0)
+	if (ab.b_RequireGrounded && GetEntityFlags(client) & FL_ONGROUND == 0)
 		return false;
 
-	if (g_Abilities[client][slot].i_Stocks < 1 && UsingStocks)
+	if (ab.i_Stocks < 1 && UsingStocks)
 		return false;
 
 	int acWep = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
 
-	if (g_Abilities[client][slot].i_WeaponSlot > -1 && (!IsValidEntity(acWep) || GetPlayerWeaponSlot(client, g_Abilities[client][slot].i_WeaponSlot) != acWep))
+	if (ab.i_WeaponSlot > -1 && (!IsValidEntity(acWep) || GetPlayerWeaponSlot(client, ab.i_WeaponSlot) != acWep))
 		return false;
 
-	if (g_Abilities[client][slot].i_AmmoRequirement > 0 && (!IsValidEntity(acWep) || g_Abilities[client][slot].i_AmmoRequirement < GetClip(acWep)))
+	if (ab.i_AmmoRequirement > 0 && (!IsValidEntity(acWep) || ab.i_AmmoRequirement < GetClip(acWep)))
 		return false;
 
-	if (type != CF_AbilityType_Ult && !HasEnoughResources(client, g_Abilities[client][slot].f_ResourceCost, type))
+	if (type != CF_AbilityType_Ult && !HasEnoughResources(client, ab.f_ResourceCost, type))
 	{
 		BlockedByTooFewResources = true;
 		return false;
 	}
 
-	if (type == CF_AbilityType_Ult && !HasEnoughResources(client, g_Characters[client].f_UltCharge, type))
+	CFCharacter chara = GetCharacterFromClient(client);
+	if (type == CF_AbilityType_Ult && !HasEnoughResources(client, chara.f_UltCharge, type))
 	{
 		BlockedByTooFewResources = true;
 		return false;
 	}
 
-	if (g_Abilities[client][slot].f_Scale > 0.0 && CheckPlayerWouldGetStuck(client, g_Abilities[client][slot].f_Scale))
+	if (ab.f_Scale > 0.0 && CheckPlayerWouldGetStuck(client, ab.f_Scale))
 	{
 		BlockedByResize = true;
 		return false;
@@ -1166,9 +1211,10 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 
 public bool HasEnoughResources(int client, float cost, CF_AbilityType type)
 {
-	if(g_Characters[client].b_UsingResources || type == CF_AbilityType_Ult)
+	CFCharacter chara = GetCharacterFromClient(client);
+	if(chara.b_UsingResources || type == CF_AbilityType_Ult)
 	{
-		float available = (g_Characters[client].b_ResourceIsUlt || type == CF_AbilityType_Ult) ? g_Characters[client].f_UltCharge : CF_GetSpecialResource(client);
+		float available = (chara.b_ResourceIsUlt || type == CF_AbilityType_Ult) ? chara.f_UltCharge : CF_GetSpecialResource(client);
 		if (cost > available)
 		{
 			return false;
@@ -1192,41 +1238,42 @@ public Native_CF_GiveUltCharge(Handle plugin, int numParams)
 	if (CF_GetAbilityCooldown(client, CF_AbilityType_Ult) > 0.0 && !IgnoreCD)
 		return;
 	
+	CFCharacter chara = GetCharacterFromClient(client);
 	if (type != CF_ResourceType_Generic)
 	{
 		switch(type)
 		{
 			case CF_ResourceType_Regen:
 			{
-				amt *= g_Characters[client].f_UltChargeOnRegen;
+				amt *= chara.f_UltChargeOnRegen;
 			}
 			case CF_ResourceType_DamageDealt:
 			{
-				amt *= g_Characters[client].f_UltChargeOnDamage;
+				amt *= chara.f_UltChargeOnDamage;
 			}
 			case CF_ResourceType_DamageTaken:
 			{
-				amt *= g_Characters[client].f_UltChargeOnHurt;
+				amt *= chara.f_UltChargeOnHurt;
 			}
 			case CF_ResourceType_Healing:
 			{
-				amt *= g_Characters[client].f_UltChargeOnHeal;
+				amt *= chara.f_UltChargeOnHeal;
 			}
 			case CF_ResourceType_Kill:
 			{
-				amt *= g_Characters[client].f_UltChargeOnKill;
+				amt *= chara.f_UltChargeOnKill;
 			}
 			case CF_ResourceType_Percentage:
 			{
-				amt = g_Characters[client].f_UltChargeRequired * amt * 0.01;
+				amt = chara.f_UltChargeRequired * amt * 0.01;
 			}
 			case CF_ResourceType_BuildingDamage:
 			{
-				amt *= g_Characters[client].f_UltChargeOnBuildingDamage;
+				amt *= chara.f_UltChargeOnBuildingDamage;
 			}
 			case CF_ResourceType_Destruction:
 			{
-				amt *= g_Characters[client].f_UltChargeOnDestruction;
+				amt *= chara.f_UltChargeOnDestruction;
 			}
 		}
 	}
@@ -1240,7 +1287,7 @@ public Native_CF_GiveUltCharge(Handle plugin, int numParams)
 	Call_Finish(result);
 
 	if (result != Plugin_Handled && result != Plugin_Stop)
-		CF_SetUltCharge(client, g_Characters[client].f_UltCharge + amt, IgnoreCD);
+		CF_SetUltCharge(client, chara.f_UltCharge + amt, IgnoreCD);
 }
 
 public Native_CF_SetUltCharge(Handle plugin, int numParams)
@@ -1254,13 +1301,15 @@ public Native_CF_SetUltCharge(Handle plugin, int numParams)
 	
 	bool IgnoreCD = GetNativeCell(3);
 	
+	CFCharacter chara = GetCharacterFromClient(client);
+
 	if (CF_GetAbilityCooldown(client, CF_AbilityType_Ult) > 0.0 && !IgnoreCD)
 		return;
 	
 	Call_StartForward(g_UltChargeApplied);
 	
 	Call_PushCell(client);
-	Call_PushFloat(g_Characters[client].f_UltCharge);
+	Call_PushFloat(chara.f_UltCharge);
 	Call_PushFloatRef(amt);
 	
 	Action result;
@@ -1271,15 +1320,15 @@ public Native_CF_SetUltCharge(Handle plugin, int numParams)
 		if (amt < 0.0)
 			amt = 0.0;
 			
-		if (amt >= g_Characters[client].f_UltChargeRequired)
+		if (amt >= chara.f_UltChargeRequired)
 		{
-			amt = g_Characters[client].f_UltChargeRequired;
+			amt = chara.f_UltChargeRequired;
 		}
 		
-		float oldCharge = g_Characters[client].f_UltCharge;
-		g_Characters[client].f_UltCharge = amt;
+		float oldCharge = chara.f_UltCharge;
+		chara.f_UltCharge = amt;
 
-		if (oldCharge < g_Characters[client].f_UltChargeRequired && g_Characters[client].f_UltCharge >= g_Characters[client].f_UltChargeRequired)
+		if (oldCharge < chara.f_UltChargeRequired && chara.f_UltCharge >= chara.f_UltChargeRequired)
 		{
 			CF_PlayRandomSound(client, "", "sound_ultimate_ready");
 		}
@@ -1289,9 +1338,14 @@ public Native_CF_SetUltCharge(Handle plugin, int numParams)
 //TODO: Sound cue: "sound_ultimate_not_ready_callout"
 public void CFA_UltMessage(int client)
 {
-	float charge = g_Characters[client].f_UltCharge / g_Characters[client].f_UltChargeRequired;
+	CFCharacter chara = GetCharacterFromClient(client);
+	CFAbility ab = GetAbilityFromClient(client, CF_AbilityType_Ult);
+	if (chara == null || ab == null)
+		return;
+
+	float charge = chara.f_UltCharge / chara.f_UltChargeRequired;
 	char message[255], ultName[255];
-	g_Abilities[client][1].GetName(ultName, 255);
+	ab.GetName(ultName, 255);
 	TFTeam team = TF2_GetClientTeam(client);
 	Format(message, sizeof(message), "%s%N{default}: My {olive}%s{default} is ", (team == TFTeam_Red ? "{red}" : "{blue}"), client, ultName);
 
@@ -1323,7 +1377,7 @@ public any Native_CF_GetUltCharge(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return 0.0;
 	
-	return g_Characters[client].f_UltCharge;
+	return GetCharacterFromClient(client).f_UltCharge;
 }
 
 public Native_CF_GiveSpecialResource(Handle plugin, int numParams)
@@ -1333,7 +1387,9 @@ public Native_CF_GiveSpecialResource(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return;
 		
-	if (!g_Characters[client].b_UsingResources || g_Characters[client].b_ResourceIsUlt)
+	CFCharacter chara = GetCharacterFromClient(client);
+
+	if (!chara.b_UsingResources || chara.b_ResourceIsUlt)
 		return;
 		
 	float amt = GetNativeCell(2);
@@ -1345,35 +1401,35 @@ public Native_CF_GiveSpecialResource(Handle plugin, int numParams)
 		{
 			case CF_ResourceType_Regen:
 			{
-				amt *= g_Characters[client].f_ResourcesOnRegen;
+				amt *= chara.f_ResourcesOnRegen;
 			}
 			case CF_ResourceType_DamageDealt:
 			{
-				amt *= g_Characters[client].f_ResourcesOnDamage;
+				amt *= chara.f_ResourcesOnDamage;
 			}
 			case CF_ResourceType_DamageTaken:
 			{
-				amt *= g_Characters[client].f_ResourcesOnHurt;
+				amt *= chara.f_ResourcesOnHurt;
 			}
 			case CF_ResourceType_Healing:
 			{
-				amt *= g_Characters[client].f_ResourcesOnHeal;
+				amt *= chara.f_ResourcesOnHeal;
 			}
 			case CF_ResourceType_Kill:
 			{
-				amt *= g_Characters[client].f_ResourcesOnKill;
+				amt *= chara.f_ResourcesOnKill;
 			}
 			case CF_ResourceType_Percentage:
 			{
-				amt = g_Characters[client].f_MaxResources * amt * 0.01;
+				amt = chara.f_MaxResources * amt * 0.01;
 			}
 			case CF_ResourceType_BuildingDamage:
 			{
-				amt *= g_Characters[client].f_ResourcesOnBuildingDamage;
+				amt *= chara.f_ResourcesOnBuildingDamage;
 			}
 			case CF_ResourceType_Destruction:
 			{
-				amt *= g_Characters[client].f_ResourcesOnDestruction;
+				amt *= chara.f_ResourcesOnDestruction;
 			}
 		}
 	}
@@ -1397,7 +1453,9 @@ public Native_CF_SetSpecialResource(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return;
 		
-	if (!g_Characters[client].b_UsingResources || g_Characters[client].b_ResourceIsUlt)
+	CFCharacter chara = GetCharacterFromClient(client);
+
+	if (!chara.b_UsingResources || chara.b_ResourceIsUlt)
 		return;
 		
 	float amt = GetNativeCell(2);
@@ -1416,26 +1474,26 @@ public Native_CF_SetSpecialResource(Handle plugin, int numParams)
 		if (amt < 0.0)
 			amt = 0.0;
 			
-		if (amt >= g_Characters[client].f_MaxResources && g_Characters[client].f_MaxResources > 0.0)
+		if (amt >= chara.f_MaxResources && chara.f_MaxResources > 0.0)
 		{
-			amt = g_Characters[client].f_MaxResources;
+			amt = chara.f_MaxResources;
 		}
 		
 		float oldResources = CF_GetSpecialResource(client);
 
-		g_Characters[client].f_Resources = amt;
-		if (g_Characters[client].b_ResourceIsMetal)
-			SetEntProp(client, Prop_Send, "m_iAmmo", RoundFloat(g_Characters[client].f_Resources), 4, 3);
+		chara.f_Resources = amt;
+		if (chara.b_ResourceIsMetal)
+			SetEntProp(client, Prop_Send, "m_iAmmo", RoundFloat(chara.f_Resources), 4, 3);
 		
 		if (amt != oldResources)
 		{
-			if (amt > oldResources && g_Characters[client].f_ResourcesToTriggerSound > 0.0)
+			if (amt > oldResources && chara.f_ResourcesToTriggerSound > 0.0)
 			{
 				float diff = amt - oldResources;
-				g_Characters[client].f_ResourcesSinceLastGain += diff;
-				if (g_Characters[client].f_ResourcesSinceLastGain >= g_Characters[client].f_ResourcesToTriggerSound)
+				chara.f_ResourcesSinceLastGain += diff;
+				if (chara.f_ResourcesSinceLastGain >= chara.f_ResourcesToTriggerSound)
 				{
-					g_Characters[client].f_ResourcesSinceLastGain -= g_Characters[client].f_ResourcesToTriggerSound;
+					chara.f_ResourcesSinceLastGain -= chara.f_ResourcesToTriggerSound;
 					
 					CF_PlayRandomSound(client, "", "sound_resource_gained");
 				}
@@ -1458,13 +1516,15 @@ public any Native_CF_GetSpecialResource(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return 0.0;
 		
-	if (!g_Characters[client].b_UsingResources || g_Characters[client].b_ResourceIsUlt)
+	CFCharacter chara = GetCharacterFromClient(client);
+
+	if (!chara.b_UsingResources || chara.b_ResourceIsUlt)
 		return 0.0;
 	
-	if (g_Characters[client].b_ResourceIsMetal)
+	if (chara.b_ResourceIsMetal)
 		return float(GetEntProp(client, Prop_Data, "m_iAmmo", 4, 3));
 		
-	return g_Characters[client].f_Resources;
+	return chara.f_Resources;
 }
 
 public any Native_CF_GetMaxSpecialResource(Handle plugin, int numParams)
@@ -1474,10 +1534,11 @@ public any Native_CF_GetMaxSpecialResource(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return 0.0;
 		
-	if (!g_Characters[client].b_UsingResources || g_Characters[client].b_ResourceIsUlt)
+	CFCharacter chara = GetCharacterFromClient(client);
+	if (!chara.b_UsingResources || chara.b_ResourceIsUlt)
 		return 0.0;
 	
-	return g_Characters[client].f_MaxResources;
+	return chara.f_MaxResources;
 }
 
 public Native_CF_SetMaxSpecialResource(Handle plugin, int numParams)
@@ -1488,10 +1549,12 @@ public Native_CF_SetMaxSpecialResource(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return;
 		
-	if (!g_Characters[client].b_UsingResources || g_Characters[client].b_ResourceIsUlt)
+	CFCharacter chara = GetCharacterFromClient(client);
+
+	if (!chara.b_UsingResources || chara.b_ResourceIsUlt)
 		return;
 	
-	g_Characters[client].f_MaxResources = amt;
+	chara.f_MaxResources = amt;
 }
 
 public Native_CF_ApplyAbilityCooldown(Handle plugin, int numParams)
@@ -1520,8 +1583,9 @@ public Native_CF_ApplyAbilityCooldown(Handle plugin, int numParams)
 	}
 	else
 	{
-		int slot = view_as<int>(type) + 1;
-		g_Abilities[client][slot].f_NextUseTime = (override || GetGameTime() >= g_Abilities[client][slot].f_NextUseTime) ? gameTime + cd : g_Abilities[client][slot].f_NextUseTime + cd;
+		CFAbility ab = GetAbilityFromClient(client, type);
+		if (ab != null)
+			ab.f_NextUseTime = (override || GetGameTime() >= ab.f_NextUseTime) ? gameTime + cd : ab.f_NextUseTime + cd;
 	}
 }
 
@@ -1537,9 +1601,10 @@ public void ApplyCDOnDelay(DataPack pack)
 	
 	if (!IsValidClient(client))
 		return;
-		
-	int slot = view_as<int>(type) + 1;
-	g_Abilities[client][slot].f_NextUseTime = (override || GetGameTime() >= g_Abilities[client][slot].f_NextUseTime) ? gameTime + cd : g_Abilities[client][slot].f_NextUseTime + cd;
+
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab != null)
+		ab.f_NextUseTime = (override || GetGameTime() >= ab.f_NextUseTime) ? gameTime + cd : ab.f_NextUseTime + cd;
 }
 
 public any Native_CF_GetAbilityCooldown(Handle plugin, int numParams)
@@ -1552,8 +1617,11 @@ public any Native_CF_GetAbilityCooldown(Handle plugin, int numParams)
 	CF_AbilityType type = GetNativeCell(2);
 	
 	float gameTime = GetGameTime();
-	int slot = view_as<int>(type) + 1;
-	return gameTime >= g_Abilities[client][slot].f_NextUseTime ? 0.0 : g_Abilities[client][slot].f_NextUseTime - gameTime;
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab == null)
+		return 0.0;
+
+	return gameTime >= ab.f_NextUseTime ? 0.0 : ab.f_NextUseTime - gameTime;
 }
 
 public Native_CF_DoAbility(Handle plugin, int numParams)
@@ -1583,14 +1651,16 @@ public Native_CF_DoAbilitySlot(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return;
 
-	if (g_Characters[client].g_Effects == null)
+	CFCharacter chara = GetCharacterFromClient(client);
+
+	if (chara.g_Effects == null)
 		return;
 
 	int slot = GetNativeCell(2);
 	char pluginName[255], abName[255];
-	for (int i = 0; i < GetArraySize(g_Characters[client].g_Effects); i++)
+	for (int i = 0; i < GetArraySize(chara.g_Effects); i++)
 	{
-		CFEffect effect = view_as<CFEffect>(GetArrayCell(g_Characters[client].g_Effects, i));
+		CFEffect effect = view_as<CFEffect>(GetArrayCell(chara.g_Effects, i));
 		if (effect.i_AbilitySlot == slot)
 		{
 			effect.GetPluginName(pluginName, 255);
@@ -1607,11 +1677,15 @@ public Native_CF_ActivateAbilitySlot(Handle plugin, int numParams)
 	
 	if (!CF_IsPlayerCharacter(client))
 		return;
+
+	CFAbility ab = GetAbilityFromClient(client, view_as<CF_AbilityType>(slot - 1));
+	if (ab == null)
+		return;
 		
-	if (!g_Abilities[client][slot].b_HeldAbility)
+	if (!ab.b_HeldAbility)
 		SubtractStock(client, view_as<CF_AbilityType>(slot - 1));
 
-	CF_DoAbilitySlot(client, g_Abilities[client][slot].i_AbilitySlot);
+	CF_DoAbilitySlot(client, ab.i_AbilitySlot);
 }
 
 public any Native_CF_CheckIsSlotBlocked(Handle plugin, int numParams)
@@ -1631,11 +1705,12 @@ public bool ScanAllAbilities(int client, int slot)
 {	
 	bool result = false;
 		
-	for (int i = 0; i < GetArraySize(g_Characters[client].g_Effects); i++)
+	CFCharacter chara = GetCharacterFromClient(client);
+	for (int i = 0; i < GetArraySize(chara.g_Effects); i++)
 	{
 		char abName[255], plugName[255];
-		view_as<CFEffect>(GetArrayCell(g_Characters[client].g_Effects, i)).GetPluginName(plugName, 255);
-		view_as<CFEffect>(GetArrayCell(g_Characters[client].g_Effects, i)).GetAbilityName(abName, 255);
+		view_as<CFEffect>(GetArrayCell(chara.g_Effects, i)).GetPluginName(plugName, 255);
+		view_as<CFEffect>(GetArrayCell(chara.g_Effects, i)).GetAbilityName(abName, 255);
 
 		Call_StartForward(g_AttemptAbility);
 			
@@ -1669,11 +1744,13 @@ public Native_CF_EndHeldAbilitySlot(Handle plugin, int numParams)
 	
 	char pluginName[255], abName[255];
 		
-	if (g_Characters[client].g_Effects != null)
+	CFCharacter chara = GetCharacterFromClient(client);
+
+	if (chara.g_Effects != null)
 	{
-		for (int i = 0; i < GetArraySize(g_Characters[client].g_Effects); i++)
+		for (int i = 0; i < GetArraySize(chara.g_Effects); i++)
 		{
-			CFEffect effect = view_as<CFEffect>(GetArrayCell(g_Characters[client].g_Effects, i));
+			CFEffect effect = view_as<CFEffect>(GetArrayCell(chara.g_Effects, i));
 			if (effect.i_AbilitySlot == slot)
 			{
 				effect.GetAbilityName(abName, 255)
@@ -1739,7 +1816,7 @@ public Native_CF_HasAbility(Handle plugin, int numParams)
 public CFEffect GetEffectFromAbility(int client, char[] plugin, char[] ability)
 {
 	char pluginName[255]; char abName[255];
-	for (int i = 0; i < GetArraySize(g_Characters[client].g_Effects); i++)
+	for (int i = 0; i < GetArraySize(GetCharacterFromClient(client).g_Effects); i++)
 	{
 		CFEffect effect = GetEffect(client, i);
 		effect.GetPluginName(pluginName, 255);
@@ -1758,7 +1835,7 @@ public CFEffect GetEffectFromAbility(int client, char[] plugin, char[] ability)
 
 public CFEffect GetEffect(int client, int slot)
 {
-	return view_as<CFEffect>(GetArrayCell(g_Characters[client].g_Effects, slot));
+	return view_as<CFEffect>(GetArrayCell(GetCharacterFromClient(client).g_Effects, slot));
 }
 
 public Native_CF_GetArgI(Handle plugin, int numParams)
@@ -1769,7 +1846,7 @@ public Native_CF_GetArgI(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return defaultVal;
 		
-	if (g_Characters[client].g_Effects == null)
+	if (GetCharacterFromClient(client).g_Effects == null)
 		return defaultVal;
 
 	char targetPlugin[255], targetAbility[255], argName[255];
@@ -1793,7 +1870,7 @@ public any Native_CF_GetArgF(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return defaultVal;
 
-	if (g_Characters[client].g_Effects == null)
+	if (GetCharacterFromClient(client).g_Effects == null)
 		return defaultVal;
 		
 	char targetPlugin[255], targetAbility[255], argName[255];
@@ -1898,8 +1975,11 @@ public any Native_CF_IsAbilitySlotBlocked(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return false;
 
-	int slot = view_as<int>(type) + 1;
-	return g_Abilities[client][slot].b_Blocked;
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab == null)
+		return false;
+
+	return ab.b_Blocked;
 }
 
 public Native_CF_BlockAbilitySlot(Handle plugin, int numParams)
@@ -1910,8 +1990,9 @@ public Native_CF_BlockAbilitySlot(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return;
 
-	int slot = view_as<int>(type) + 1;
-	g_Abilities[client][slot].b_Blocked = true;
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab != null)
+		ab.b_Blocked = true;
 }
 
 public Native_CF_UnblockAbilitySlot(Handle plugin, int numParams)
@@ -1922,8 +2003,9 @@ public Native_CF_UnblockAbilitySlot(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return;
 
-	int slot = view_as<int>(type) + 1;
-	g_Abilities[client][slot].b_Blocked = false;
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab != null)
+		ab.b_Blocked = false;
 }
 
 public Native_CF_SetHUDColor(Handle plugin, int numParams)
@@ -2567,8 +2649,9 @@ public Native_CF_ChangeAbilityTitle(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client) || type > CF_AbilityType_Reload)
 		return;
 
-	int slot = view_as<int>(type) + 1;
-	g_Abilities[client][slot].SetName(newName);
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab != null)
+		ab.SetName(newName);
 }
 
 public Native_CF_GetAbilityTitle(Handle plugin, int numParams)
@@ -2579,10 +2662,15 @@ public Native_CF_GetAbilityTitle(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return;
 
-	int slot = view_as<int>(type) + 1;
-	char name[255];
-	g_Abilities[client][slot].GetName(name, 255);
-	SetNativeString(3, name, 255);
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab != null)
+	{
+		char name[255];
+		ab.GetName(name, 255);
+		SetNativeString(3, name, 255);
+	}
+	
+	SetNativeString(3, "", 255);
 }
 
 public Native_CF_ChangeSpecialResourceTitle(Handle plugin, int numParams)
@@ -2595,8 +2683,9 @@ public Native_CF_ChangeSpecialResourceTitle(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return;
 		
-	g_Characters[client].SetResourceName(newName);
-	g_Characters[client].SetResourceNamePlural(newNamePlural);
+	CFCharacter chara = GetCharacterFromClient(client);
+	chara.SetResourceName(newName);
+	chara.SetResourceNamePlural(newNamePlural);
 }
 
 public Native_CF_GetSpecialResourceTitle(Handle plugin, int numParams)
@@ -2607,8 +2696,9 @@ public Native_CF_GetSpecialResourceTitle(Handle plugin, int numParams)
 		return;
 		
 	char name[255], namePlural[255];
-	g_Characters[client].GetResourceName(name, 255);
-	g_Characters[client].GetResourceNamePlural(namePlural, 255);
+	CFCharacter chara = GetCharacterFromClient(client);
+	chara.GetResourceName(name, 255);
+	chara.GetResourceNamePlural(namePlural, 255);
 	SetNativeString(2, name, 255);
 	SetNativeString(3, namePlural, 255);
 }
@@ -3441,13 +3531,16 @@ public Native_CF_SetAbilityStocks(Handle plugin, int numParams)
 	if (!AbilityUsesStocks(client, type))
 		return;
 
-	int slot = view_as<int>(type) + 1;
-	g_Abilities[client][slot].i_Stocks = numStocks;
-	if (g_Abilities[client][slot].i_Stocks > g_Abilities[client][slot].i_MaxStocks && !ignoreMax)
-		g_Abilities[client][slot].i_Stocks = g_Abilities[client][slot].i_MaxStocks;
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab == null)
+		return;
 
-	if (g_Abilities[client][slot].i_Stocks < g_Abilities[client][slot].i_MaxStocks && CF_GetAbilityCooldown(client, type) <= 0.0)
-		CF_ApplyAbilityCooldown(client, g_Abilities[client][slot].f_Cooldown, type, true);
+	ab.i_Stocks = numStocks;
+	if (ab.i_Stocks > ab.i_MaxStocks && !ignoreMax)
+		ab.i_Stocks = ab.i_MaxStocks;
+
+	if (ab.i_Stocks < ab.i_MaxStocks && CF_GetAbilityCooldown(client, type) <= 0.0)
+		CF_ApplyAbilityCooldown(client, ab.f_Cooldown, type, true);
 }
 
 public Native_CF_SetAbilityMaxStocks(Handle plugin, int numParams)
@@ -3459,29 +3552,36 @@ public Native_CF_SetAbilityMaxStocks(Handle plugin, int numParams)
 	if (!CF_IsPlayerCharacter(client))
 		return;
 
-	int slot = view_as<int>(type) + 1;
-	g_Abilities[client][slot].i_MaxStocks = numStocks;
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab == null)
+		return;
 
-	if (g_Abilities[client][slot].i_Stocks < g_Abilities[client][slot].i_MaxStocks && CF_GetAbilityCooldown(client, type) <= 0.0)
-		CF_ApplyAbilityCooldown(client, g_Abilities[client][slot].f_Cooldown, type, true);
+	ab.i_MaxStocks = numStocks;
+
+	if (ab.i_Stocks < ab.i_MaxStocks && CF_GetAbilityCooldown(client, type) <= 0.0)
+		CF_ApplyAbilityCooldown(client, ab.f_Cooldown, type, true);
 }
 
 public Native_CF_GetAbilityStocks(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
 	CF_AbilityType type = GetNativeCell(2);
-	int slot = view_as<int>(type) + 1;
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab == null)
+		return 0;
 
-	return g_Abilities[client][slot].i_Stocks;
+	return ab.i_Stocks;
 }
 
 public Native_CF_GetAbilityMaxStocks(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
 	CF_AbilityType type = GetNativeCell(2);
-	int slot = view_as<int>(type) + 1;
+	CFAbility ab = GetAbilityFromClient(client, type);
+	if (ab == null)
+		return 0;
 
-	return g_Abilities[client][slot].i_MaxStocks;
+	return ab.i_MaxStocks;
 }
 
 public Native_CF_StartLagCompensation(Handle plugin, int numParams)
