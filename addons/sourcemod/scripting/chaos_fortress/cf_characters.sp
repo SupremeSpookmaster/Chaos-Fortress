@@ -385,11 +385,23 @@ methodmap CFAbility  __nullable__
 	}
 }
 
-CFAbility g_Abilities[2048]
+CFAbility g_Abilities[2048];
+
+//A quick little optimization trick for looking up abilities in GetAbilityFromClient.
+//If we've previously successfully found an existing ability for this client in the given slot, check that cell first before we cycle through the entire array.
+int i_LastSlot[MAXPLAYERS + 1][5];
 
 public CFAbility GetAbilityFromClient(int client, CF_AbilityType type)
 {
 	int slot = view_as<int>(type) + 1;
+
+	if (i_LastSlot[client][slot] > -1 && i_LastSlot[client][slot] < 2048)
+	{
+		CFAbility ab = g_Abilities[i_LastSlot[client][slot]];
+		if (ab != null && ab.b_Exists && ab.i_Client == client && ab.i_Type == slot)
+			return ab;
+	}
+
 	for (int i = 0; i < 2048; i++)
 	{
 		CFAbility ab = g_Abilities[i];
@@ -397,7 +409,10 @@ public CFAbility GetAbilityFromClient(int client, CF_AbilityType type)
 			continue;
 
 		if (ab.i_Client == client && ab.i_Type == slot)
+		{
+			i_LastSlot[client][slot] = i;
 			return ab;
+		}
 	}
 
 	return null;
@@ -818,6 +833,7 @@ methodmap CFCharacter __nullable__
 
 ArrayList g_Characters = null;
 
+//Same as i_LastSlot but for CFCharacter:
 int i_MostRecentCharaSlot[MAXPLAYERS + 1] = { -1, ... };
 
 public CFCharacter GetCharacterFromClient(int client)
@@ -854,7 +870,6 @@ public void AddCharacterToList(CFCharacter chara)
 		g_Characters = CreateArray(255);
 		
 	PushArrayCell(g_Characters, chara.index);
-	CPrintToChat(chara.i_Client, "{green}You were added to the character list.");
 }
 
 public void RemoveCharacterFromList(CFCharacter chara)
@@ -867,7 +882,6 @@ public void RemoveCharacterFromList(CFCharacter chara)
 		if (GetArrayCell(g_Characters, i) == chara.index)
 		{
 			RemoveFromArray(g_Characters, i);
-			CPrintToChat(chara.i_Client, "{red}You were removed from the character list.");
 			break;
 		}
 	}
@@ -901,7 +915,6 @@ public void CFC_ApplyCharacter(int client, float speed, float maxHP, TFClassType
 	character.SetName(name);
 	character.SetConfigMapPath(configMapPath);
 	character.SetArchetype(archetype);
-	CPrintToChatAll("%N was assigned character index: %i", client, character.index);
 }
 
 public void CFC_CreateEffect(int client, ConfigMap subsection, char abNum[255])
@@ -935,7 +948,6 @@ public void CFC_CreateAbility(int client, ConfigMap subsection, CF_AbilityType t
 	CFAbility ability = GetAbilityFromClient(client, type);
 	if (ability == null)
 	{
-		CPrintToChat(client, "{magenta}Making new ability");
 		ability = new CFAbility();
 	}
 
@@ -968,7 +980,6 @@ public void CFC_CreateAbility(int client, ConfigMap subsection, CF_AbilityType t
 	ability.i_MaxStocks = GetIntFromCFGMap(subsection, "max_stocks", 0);
 
 	ability.GetName(name, 255);
-	CPrintToChat(client, "{orange}You were given ability %s in slot %i", name, slot);
 
 	g_Abilities[ability.index] = ability;
 }
@@ -2129,8 +2140,6 @@ public void CF_DestroyAllBuildings(int client)
 	bool IsNewCharacter = ConfigsAreDifferent || b_IsDead[client] || b_FirstSpawn[client] || ForceNewCharStatus;
 	if (IsNewCharacter)
 		CF_UnmakeCharacter(client, true, ConfigsAreDifferent ? CF_CRR_SWITCHED_CHARACTER : CF_CRR_RESPAWNED);
-
-	CPrintToChat(client, "New character: %i\nConfigsAreDifferent: %i", IsNewCharacter, ConfigsAreDifferent);
 		
 	CF_SetPlayerConfig(client, conf);
 	SetClientCookie(client, c_DesiredCharacter, conf);
@@ -2293,19 +2302,6 @@ public void CF_DestroyAllBuildings(int client)
 	 	Call_PushCell(client);
 	 	
 	 	Call_Finish();
-	 }
-
-	 for (int i = 0; i < 5; i++)
-	 {
-		CF_AbilityType type = view_as<CF_AbilityType>(i);
-		CFAbility ab = GetAbilityFromClient(client, type);
-		if (ab != null)
-		{
-			ab.GetName(name, 255);
-			CPrintToChat(client, "{green}Ability %s detected in slot %i.", name, i);
-		}
-		else
-			CPrintToChat(client, "{red}No ability detected in slot %i.", i);
 	 }
  }
  
