@@ -12,13 +12,16 @@
 #define SOUND_ARROW_SHOOT		")weapons/bow_shoot.wav"
 #define SOUND_EXPLOSIVE_LOOP	")misc/halloween/hwn_bomb_fuse.wav"
 #define SOUND_ARROW_WHOOSH		")weapons/fx/nearmiss/arrow_nearmiss.wav"
+#define SOUND_HEAVYDRAW_LOOP		"ambient/atmosphere/city_rumble_loop1.wav"
+#define SOUND_HEAVYDRAW_FULLCHARGE	")player/recharged.wav"
+#define SOUND_HEAVYDRAW_FULLCHARGE_LOOP	")weapons/crit_power.wav"
+
 #define PARTICLE_VOLLEY_BEGIN_RED	"drg_cow_explosioncore_charged"
 #define PARTICLE_VOLLEY_BEGIN_BLUE	"drg_cow_explosioncore_charged_blue"
 #define PARTICLE_VOLLEY_ACTIVE_RED	"dxhr_lightningball_parent_red"
 #define PARTICLE_VOLLEY_ACTIVE_BLUE	"dxhr_lightningball_parent_blue"
 #define PARTICLE_VOLLEY_FIRE_RED	"raygun_projectile_red"
 #define PARTICLE_VOLLEY_FIRE_BLUE	"raygun_projectile_blue"
-
 #define PARTICLE_EXPLOSIVE_RED	"superrare_burning1"
 #define PARTICLE_EXPLOSIVE_BLUE	"superrare_burning2"
 #define PARTICLE_VOLLEY_RED		"raygun_projectile_red_crit"
@@ -32,6 +35,9 @@ public void OnMapStart()
 	PrecacheSound(SOUND_ARROW_SHOOT);
 	PrecacheSound(SOUND_EXPLOSIVE_LOOP);
 	PrecacheSound(SOUND_ARROW_WHOOSH);
+	PrecacheSound(SOUND_HEAVYDRAW_LOOP);
+	PrecacheSound(SOUND_HEAVYDRAW_FULLCHARGE);
+	PrecacheSound(SOUND_HEAVYDRAW_FULLCHARGE_LOOP);
 }
 
 Handle g_hCTFCreateArrow;
@@ -86,6 +92,7 @@ char s_DrawAtts[MAXPLAYERS + 1][255];
 char s_DrawAbility[MAXPLAYERS + 1][255];
 char s_DrawPlugin[MAXPLAYERS + 1][255];
 char s_DrawEndSound[MAXPLAYERS + 1][255];
+char s_DrawFullChargeSound[MAXPLAYERS + 1][255];
 
 public void Draw_Activate(int client, char abilityName[255])
 {
@@ -104,18 +111,21 @@ public void Draw_Activate(int client, char abilityName[255])
 	CF_GetArgS(client, CBS, abilityName, "post_ability", s_DrawAbility[client], 255);
 	CF_GetArgS(client, CBS, abilityName, "post_plugin", s_DrawPlugin[client], 255);
 	CF_GetArgS(client, CBS, abilityName, "end_sound", s_DrawEndSound[client], 255);
+	CF_GetArgS(client, CBS, abilityName, "fullcharge_sound", s_DrawFullChargeSound[client], 255);
 	CF_GetArgS(client, CBS, abilityName, "start_sound", start_sound, sizeof(start_sound));
 	
 	CF_PlayRandomSound(client, "", start_sound);
 	
 	SetWeaponAttribsFromString(huntsman, attribs);
 	
-	RequestFrame(Draw_ForceDraw, GetClientUserId(client));
 	b_DrawActive[client] = true;
-	f_DrawChargeStartTime[client] = 0.0;
+	f_DrawChargeStartTime[client] = GetGameTime();
+
 	EmitSoundToClient(client, SOUND_ARROW_DRAW);
-	
-	TF2_AddCondition(client, TFCond_FocusBuff);
+	EmitSoundToClient(client, SOUND_HEAVYDRAW_LOOP);
+
+	RequestFrame(Draw_ForceDraw, GetClientUserId(client));
+	RequestFrame(Draw_FullChargeFX, GetClientUserId(client));
 }
 
 public void Draw_ForceDraw(int id)
@@ -127,6 +137,34 @@ public void Draw_ForceDraw(int id)
 	SetForceButtonState(client, true, IN_ATTACK);
 }
 
+public void Draw_FullChargeFX(int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client))
+		return;
+
+	if (!b_DrawActive[client])
+		return;
+
+	int huntsman = TF2_GetActiveWeapon(client);
+	if (!Draw_IsAHuntsman(huntsman))
+		return;
+
+	float duration_charged = GetGameTime() - f_DrawChargeStartTime[client];
+	float requiredChargeTime = GetAttributeValue(huntsman, 318, 1.0);
+	if (duration_charged > requiredChargeTime)
+	{
+		TF2_AddCondition(client, TFCond_FocusBuff);
+		EmitSoundToClient(client, SOUND_HEAVYDRAW_FULLCHARGE, _, _, _, _, _, 110);
+		EmitSoundToClient(client, SOUND_HEAVYDRAW_FULLCHARGE, _, _, _, _, _, 110);
+		EmitSoundToClient(client, SOUND_HEAVYDRAW_FULLCHARGE_LOOP, _, _, _, _, _, 80);
+		CF_PlayRandomSound(client, "", s_DrawFullChargeSound[client]);
+		return;
+	}
+
+	RequestFrame(Draw_FullChargeFX, id);
+}
+
 public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255], char abilityName[255])
 {
 	if (!StrEqual(pluginName, CBS))
@@ -136,6 +174,8 @@ public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255]
 	{
 		SetForceButtonState(client, false, IN_ATTACK);
 		TF2_RemoveCondition(client, TFCond_FocusBuff);
+		StopSound(client, SNDCHAN_AUTO, SOUND_HEAVYDRAW_LOOP);
+		StopSound(client, SNDCHAN_AUTO, SOUND_HEAVYDRAW_FULLCHARGE_LOOP);
 		
 		if (!resupply)
 		{
@@ -747,6 +787,7 @@ public Action CF_OnPlayerRunCmd(int client, int &buttons, int &impulse, int &wea
 
 public void CF_OnCharacterCreated(int client)
 {
+	b_DrawActive[client] = false;
 }
 
 public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
