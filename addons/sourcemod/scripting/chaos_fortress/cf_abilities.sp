@@ -1216,7 +1216,7 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 		return false;
 	}
 	
-	return !CF_CheckIsSlotBlocked(client, view_as<int>(type) + 1);
+	return !CF_CheckIsSlotBlocked(client, ab.i_AbilitySlot);
 }
 
 public bool HasEnoughResources(int client, float cost, CF_AbilityType type)
