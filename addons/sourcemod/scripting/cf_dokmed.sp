@@ -173,7 +173,7 @@ public void Cocainum_Activate(int client, char abilityName[255])
 
 		RequestFrame(Bottle_Spin, EntIndexToEntRef(bottle));
 		
-		CF_PlayRandomSound(client, "", "sound_cocainum_toss");
+		CF_PlayRandomSound(client, client, "sound_cocainum_toss");
 		CF_ForceViewmodelAnimation(client, "spell_fire");
 		Cocainum_VMAnim[client] = true;
 	}
@@ -590,7 +590,7 @@ public void Surgery_Activate(int client, char ability[255])
 		Surgery_WarningParticle[client] = EntIndexToEntRef(SpawnParticle(Surgery_Destination[client], team == TFTeam_Red ? PARTICLE_TELEPORT_WARNING_RED : PARTICLE_TELEPORT_WARNING_BLUE, delay));
 	
 		RequestFrame(Surgery_DelayedTeleport, GetClientUserId(client));
-		CF_PlayRandomSound(client, "", "sound_surgery_chargeup");
+		CF_PlayRandomSound(client, client, "sound_surgery_chargeup");
 	}
 }
 
@@ -676,8 +676,8 @@ public void Surgery_Teleport(int client)
 	SpawnParticle(Surgery_Destination[client], team == TFTeam_Red ? PARTICLE_TELEPORT_FLASH_RED_3 : PARTICLE_TELEPORT_FLASH_BLUE_3, 2.0);
 	SpawnParticle(Surgery_Destination[client], team == TFTeam_Red ? PARTICLE_TELEPORT_FLASH_RED_4 : PARTICLE_TELEPORT_FLASH_BLUE_4, 2.0);
 	
-	CF_PlayRandomSound(client, "", "sound_surgery_teleport");
-	CF_PlayRandomSound(client, "", "sound_surgery_teleport_dialogue");
+	CF_PlayRandomSound(client, client, "sound_surgery_teleport");
+	CF_PlayRandomSound(client, client, "sound_surgery_teleport_dialogue");
 	
 	Surgery_RecentlyTeleported[client] = GetGameTime() + 0.5;
 }

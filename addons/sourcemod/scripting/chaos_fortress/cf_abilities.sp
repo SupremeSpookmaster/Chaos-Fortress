@@ -572,15 +572,15 @@ public void CFA_PlayerKilled(int attacker, int victim)
 		CF_GiveSpecialResource(attacker, 1.0, CF_ResourceType_Kill);
 		CF_GiveUltCharge(attacker, 1.0, CF_ResourceType_Kill);
 		
-		CF_PlayRandomSound(attacker, "", "sound_kill");
+		CF_PlayRandomSound(attacker, attacker, "sound_kill");
 	}
 	
 	bool played = false;
 	if (attacker == victim)
-		played = CF_PlayRandomSound(attacker, "", "sound_suicide");
+		played = CF_PlayRandomSound(attacker, attacker, "sound_suicide");
 
 	if (!played)
-		played = CF_PlayRandomSound(victim, "", "sound_killed");
+		played = CF_PlayRandomSound(victim, attacker, "sound_killed");
 
 	if (played)
 		CF_SilenceCharacter(victim, 0.2);
@@ -889,7 +889,7 @@ public void CF_AttemptHeldAbility(int client, CF_AbilityType type, int button)
 		WritePackCell(pack, button);
 		
 		CF_ActivateAbilitySlot(client, slot);
-		CF_PlayRandomSound(client, "", soundSlot);
+		CF_PlayRandomSound(client, client, soundSlot);
 	}
 	else
 	{
@@ -966,11 +966,11 @@ void EndHeldAbility(int client, CF_AbilityType type, bool TriggerCallback, bool 
 			switch(type)
 			{
 				case CF_AbilityType_M2:
-					CF_PlayRandomSound(client, "", "sound_heldend_m2");
+					CF_PlayRandomSound(client, client, "sound_heldend_m2");
 				case CF_AbilityType_M3:
-					CF_PlayRandomSound(client, "", "sound_heldend_m3");
+					CF_PlayRandomSound(client, client, "sound_heldend_m3");
 				case CF_AbilityType_Reload:
-					CF_PlayRandomSound(client, "", "sound_heldend_reload");
+					CF_PlayRandomSound(client, client, "sound_heldend_reload");
 			}
 
 			SubtractStock(client, type);
@@ -1080,17 +1080,17 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 		if (type == CF_AbilityType_Ult)
 		{
 			CF_SetUltCharge(client, 0.0, true);
-			bool played = CF_PlayRandomSound(client, "", "sound_ultimate_activation");
+			bool played = CF_PlayRandomSound(client, client, "sound_ultimate_activation");
 			
 			if (!played)
 			{
-				played = CF_PlayRandomSound(client, "", "sound_ultimate_activation_self");
+				played = CF_PlayRandomSound(client, client, "sound_ultimate_activation_self");
 				
-				bool played2 = CF_PlayRandomSound(client, "", "sound_ultimate_activation_friendly");
+				bool played2 = CF_PlayRandomSound(client, client, "sound_ultimate_activation_friendly");
 				if (!played)
 					played = played2;
 					
-				played2 = CF_PlayRandomSound(client, "", "sound_ultimate_activation_hostile");
+				played2 = CF_PlayRandomSound(client, client, "sound_ultimate_activation_hostile");
 				if (!played)
 					played = played2;
 			}
@@ -1118,11 +1118,11 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 							
 							if (TF2_GetClientTeam(i) == TF2_GetClientTeam(client))
 							{
-								otherPlayed = CF_PlayRandomSound(i, "", "sound_ultimate_react_friendly");
+								otherPlayed = CF_PlayRandomSound(i, i, "sound_ultimate_react_friendly");
 							}
 							else
 							{
-								otherPlayed = CF_PlayRandomSound(i, "", "sound_ultimate_react_hostile");
+								otherPlayed = CF_PlayRandomSound(i, i, "sound_ultimate_react_hostile");
 							}
 							
 							if (otherPlayed)
@@ -1139,7 +1139,7 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 		}
 		else
 		{
-			CF_PlayRandomSound(client, "", soundSlot);
+			CF_PlayRandomSound(client, client, soundSlot);
 		}
 
 		if (type != CF_AbilityType_Ult && chara.b_UsingResources)
@@ -1340,7 +1340,7 @@ public Native_CF_SetUltCharge(Handle plugin, int numParams)
 
 		if (oldCharge < chara.f_UltChargeRequired && chara.f_UltCharge >= chara.f_UltChargeRequired)
 		{
-			CF_PlayRandomSound(client, "", "sound_ultimate_ready");
+			CF_PlayRandomSound(client, client, "sound_ultimate_ready");
 		}
 	}
 }
@@ -1362,13 +1362,13 @@ public void CFA_UltMessage(int client)
 	if (charge >= 1.0)
 	{
 		Format(message, sizeof(message), "%s{green}FULLY CHARGED{default}!", message);
-		CF_PlayRandomSound(client, "", "sound_ultimate_ready");
+		CF_PlayRandomSound(client, client, "sound_ultimate_ready");
 	}
 	else
 	{
 		Format(message, sizeof(message), "%s{yellow}%iPCNTG{default} charged!", message, RoundToFloor(100.0 * charge));
 		ReplaceString(message, sizeof(message), "PCNTG", "%%");
-		CF_PlayRandomSound(client, "", "sound_ultimate_not_ready_callout");
+		CF_PlayRandomSound(client, client, "sound_ultimate_not_ready_callout");
 	}
 
 	for (int i = 1; i <= MaxClients; i++)
@@ -1377,7 +1377,7 @@ public void CFA_UltMessage(int client)
 			CPrintToChat(i, message);
 	}
 
-	CF_PlayRandomSound(client, "", "sound_ultimate_ready");
+	CF_PlayRandomSound(client, client, "sound_ultimate_ready");
 }
 
 public any Native_CF_GetUltCharge(Handle plugin, int numParams)
@@ -1505,7 +1505,7 @@ public Native_CF_SetSpecialResource(Handle plugin, int numParams)
 				{
 					chara.f_ResourcesSinceLastGain -= chara.f_ResourcesToTriggerSound;
 					
-					CF_PlayRandomSound(client, "", "sound_resource_gained");
+					CF_PlayRandomSound(client, client, "sound_resource_gained");
 				}
 			}
 			

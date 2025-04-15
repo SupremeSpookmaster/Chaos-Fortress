@@ -794,6 +794,45 @@ methodmap CFCharacter __nullable__
 		this.i_NumSoundCues = 0;
 	}
 
+	public void DebugCues()
+	{
+		for (int i = 0; i < this.i_NumSoundCues; i++)
+		{
+			CFSoundCue cue = g_CharacterSoundCues[this.index][i];
+			if (cue.b_Exists)
+			{
+				char sndCue[255];
+				cue.GetCue(sndCue, 255);
+				CPrintToChat(this.i_Client, "{yellow}Found sound cue: {green}%s", sndCue);
+				cue.DebugSounds(this.i_Client);
+			}
+		}
+	}
+
+	public bool PlaySoundReplacement(char Sound[255])
+	{
+		StringToLower(Sound);
+
+		for (int i = 0; i < this.i_NumSoundCues; i++)
+		{
+			CFSoundCue cue = g_CharacterSoundCues[this.index][i];
+			if (cue.b_Exists)
+			{
+				char cueName[255], tempName[255];
+				cue.GetCue(cueName, 255);
+				Format(tempName, sizeof(tempName), "%s", cueName);
+				ReplaceString(tempName, sizeof(tempName), "sound_replace_", "");
+				
+				if (StrContains(Sound, tempName) != -1)
+				{
+					return this.PlayRandomSound(cueName);
+				}
+			}
+		}
+
+		return false;
+	}
+
 	public bool PlayRandomSound(char[] cue)
 	{
 		CFSound randSnd = this.GetRandomSound(cue);
@@ -1056,6 +1095,9 @@ public void CFC_StoreAbilities(int client, ConfigMap abilities)
 	ArrayList effects = GetCharacterFromClient(client).g_Effects;
 	if (effects != null)
 		effects.Clear();
+
+	if (abilities == null)
+		return;
 
 	char ab[255];
 	Format(ab, sizeof(ab), "ability_1");
@@ -1599,7 +1641,7 @@ public Action CFC_OpenMenu(int client, int args)
 			SDKHook(part, SDKHook_SetTransmit, CF_PreviewModelTransmit);
 		}
 		
-		CF_PlayRandomSound(client, s_CharacterConfigInMenu[client], "sound_selection_preview");
+		CF_PlayRandomSound(client, client, "sound_selection_preview");
 		
 		EmitSoundToClient(client, SOUND_CHARACTER_PREVIEW);
 	}
@@ -2224,9 +2266,14 @@ public void CF_DestroyAllBuildings(int client)
 	float scale = GetFloatFromCFGMap(map, "character.scale", 1.0);
 	
 	CFC_ApplyCharacter(client, speed, health, Classes[class], model, name, scale, weight, conf, archetype);
+
 	ConfigMap abilities = map.GetSection("character.abilities");
 	if (abilities != null)
 		CFC_StoreAbilities(client, abilities);
+
+	ConfigMap sounds = map.GetSection("character.sounds");
+	if (sounds != null)
+		CFS_CreateSounds(client, sounds);
 		
 	ConfigMap GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 	
@@ -2303,9 +2350,9 @@ public void CF_DestroyAllBuildings(int client)
  	
  	if (!StrEqual(conf, s_PreviousCharacter[client]))	//We are respawning as a new character, default to spawn_intro
  	{
- 		bool played = CF_PlayRandomSound(client, conf, "sound_spawn_intro");
+ 		bool played = CF_PlayRandomSound(client, client, "sound_spawn_intro");
  		if (!played)
- 			CF_PlayRandomSound(client, "", "sound_spawn_neutral");
+ 			CF_PlayRandomSound(client, client, "sound_spawn_neutral");
  		
  		CFA_ReduceUltCharge_CharacterSwitch(client);
  	}
@@ -2317,16 +2364,16 @@ public void CF_DestroyAllBuildings(int client)
  		{
  			case CF_Emotion_Angry:
  			{
- 				played = CF_PlayRandomSound(client, "", "sound_spawn_angry");
+ 				played = CF_PlayRandomSound(client, client, "sound_spawn_angry");
  			}
  			case CF_Emotion_Happy:
  			{
- 				played = CF_PlayRandomSound(client, "", "sound_spawn_happy");
+ 				played = CF_PlayRandomSound(client, client, "sound_spawn_happy");
  			}
  		}
  		
  		if (!played)
- 			CF_PlayRandomSound(client, "", "sound_spawn_neutral");
+ 			CF_PlayRandomSound(client, client, "sound_spawn_neutral");
  	}
  	
  	if (!StrEqual(message, ""))

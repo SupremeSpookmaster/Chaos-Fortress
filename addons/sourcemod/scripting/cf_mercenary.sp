@@ -116,7 +116,7 @@ void Sprint_End(int client, bool TimeLimit = false, bool resupply = false)
 		}
 	
 		CF_ApplyAbilityCooldown(client, cd, Sprint_Slot[client], true);
-		CF_PlayRandomSound(client, "", "sound_merc_sprint_end");
+		CF_PlayRandomSound(client, client, "sound_merc_sprint_end");
 	}
 
 	Sprint_RemoveAttributes(client, resupply);
@@ -156,7 +156,7 @@ public void Sprint_ApplyAttributes(int client)
 	float newSpeed = CF_GetCharacterSpeed(client);
 	Sprint_SpeedAdded[client] = newSpeed - speed;
 	
-	CF_PlayRandomSound(client, "", "sound_merc_sprint_start");
+	CF_PlayRandomSound(client, client, "sound_merc_sprint_start");
 }
 
 public Action Sprint_PreThink(int client)
@@ -312,7 +312,7 @@ public void Frag_Activate(int client)
 		vecVelocity[2] *= -1;
 		
 		TeleportEntity(grenade, pos, vecAngles, vecVelocity);
-		CF_PlayRandomSound(client, "", "sound_merc_grenade");
+		CF_PlayRandomSound(client, client, "sound_merc_grenade");
 	}
 }
 

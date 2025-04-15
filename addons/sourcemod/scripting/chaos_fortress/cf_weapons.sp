@@ -51,7 +51,7 @@ public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] classname,
 	
 	if (!StrEqual(s_WeaponFireSound[weapon], ""))
 	{
-		CF_PlayRandomSound(client, "", s_WeaponFireSound[weapon]);
+		CF_PlayRandomSound(client, client, s_WeaponFireSound[weapon]);
 	}
 	
 	DataPack pack = new DataPack();

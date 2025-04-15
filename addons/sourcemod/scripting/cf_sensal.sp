@@ -950,11 +950,11 @@ Action MassLaserTimer(Handle timer, DataPack pack)
 				}
 			}
 
-			CF_PlayRandomSound(attacker, "", "sound_masslaser");
+			CF_PlayRandomSound(attacker, attacker, "sound_masslaser");
 		}
 		else
 		{
-			CF_PlayRandomSound(attacker, "", "sound_masslaser_fail");
+			CF_PlayRandomSound(attacker, attacker, "sound_masslaser_fail");
 		}
 
 		CreateTimer(1.1, ForceUntaunt, userid, TIMER_FLAG_NO_MAPCHANGE);
@@ -1122,8 +1122,8 @@ Action PortalGateStartTimer(Handle timer, DataPack pack)
 				ParticleEffectAt(pos2, "hammer_bell_ring_shockwave", 1.0);
 			}
 
-			CF_PlayRandomSound(client, "", "sound_portalgate_1");
-			CF_PlayRandomSound(client, "", "sound_portalgate_2");
+			CF_PlayRandomSound(client, client, "sound_portalgate_1");
+			CF_PlayRandomSound(client, client, "sound_portalgate_2");
 		}
 	}
 

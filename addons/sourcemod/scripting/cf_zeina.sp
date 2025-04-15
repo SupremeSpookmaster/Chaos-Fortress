@@ -254,7 +254,7 @@ public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] classname,
 
 		//This is the correct weapon.
 		ZeinaSlashWeapon[client] = -1;
-		CF_PlayRandomSound(client, "", "sound_zeina_slash");
+		CF_PlayRandomSound(client, client, "sound_zeina_slash");
 		TF2_RemoveCondition(client, TFCond_CritOnDamage);
 		ZeinaInitiateSlash(client, ABILITY_SLASH);
 		DataPack pack2 = new DataPack();
@@ -674,7 +674,7 @@ void ZeinaDashActivate(int client, char abilityName[255])
 		return;
 	//No dash during fly.
 
-	CF_PlayRandomSound(client, "", "sound_zeina_dash");
+	CF_PlayRandomSound(client, client, "sound_zeina_dash");
 	float Dur_charge = CF_GetArgF(client, PluginName, abilityName, "duration_charge");
 	float Dur_Stop = CF_GetArgF(client, PluginName, abilityName, "duration_stop");
 
@@ -701,7 +701,7 @@ public Action ZeinaDashThink(int client)
 	if(gametime >= DashDuration[client])
 	{
 		SetEntityMoveType(client, MOVETYPE_WALK);
-		CF_PlayRandomSound(client, "", "sound_zeina_dash");
+		CF_PlayRandomSound(client, client, "sound_zeina_dash");
 		static float EntLoc[3];
 				
 		GetEntPropVector(client, Prop_Data, "m_vecAbsOrigin", EntLoc);
@@ -736,7 +736,7 @@ public Action ZeinaDashThinkStop(int client)
 
 	if(gametime >= DashDurationStop[client])
 	{
-		CF_PlayRandomSound(client, "", "sound_zeina_dash_stop");
+		CF_PlayRandomSound(client, client, "sound_zeina_dash_stop");
 		static float EntLoc[3];
 				
 		GetEntPropVector(client, Prop_Data, "m_vecAbsOrigin", EntLoc);
@@ -1314,7 +1314,7 @@ bool ZeinaWingsActivate(int client, char abilityName[255])
 		ParticleEffectAt(pos2, "utaunt_poweraura_blue_start", 1.0);
 	}
 
-	CF_PlayRandomSound(client, "", "sound_fly_activate_sound");
+	CF_PlayRandomSound(client, client, "sound_fly_activate_sound");
 
 	ZeinaFlightDuration[client] = GetGameTime() + CF_GetArgF(client, PluginName, abilityName, "flight_duration");
 	ZeinaFlightDurationExtend[client] = CF_GetArgF(client, PluginName, abilityName, "flight_duration_extend");
@@ -1537,7 +1537,7 @@ void ZeinaTryPickupAlly(int client)
 	float Angles[3];
 	GetClientEyeAngles(client, Angles);
 	GetAngleVectors(Angles, vecForward, NULL_VECTOR, NULL_VECTOR);
-	CF_PlayRandomSound(client, "", "sound_zeina_pickup_ally");
+	CF_PlayRandomSound(client, client, "sound_zeina_pickup_ally");
 	//Try pickupAlly
 	
 	float VectorForward = 500.0; //a really high number.

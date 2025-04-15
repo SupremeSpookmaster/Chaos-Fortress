@@ -370,12 +370,9 @@ public void Discard_Activate(int client, char abilityName[255])
 		SetEntityRenderColor(skull, TF2_GetClientTeam(client) == TFTeam_Red ? 255 : 0, 120, TF2_GetClientTeam(client) == TFTeam_Blue ? 255 : 0, 255);
 		SetEntityRenderFx(skull, RENDERFX_GLOWSHELL);
 		
-		char snd[255], conf[255];
+		char conf[255];
 		CF_GetPlayerConfig(client, conf, sizeof(conf));
-		if (CF_GetRandomSound(conf, "sound_discard_skull", snd, sizeof(snd)) != KeyValType_Null)
-		{
-			EmitSoundToAll(snd, skull, _, 110);
-		}
+		CF_PlayRandomSound(client, skull, "sound_discard_skull");
 		
 		CF_SimulateSpellbookCast(client, _, CF_Spell_MeteorShower);
 		CF_ForceViewmodelAnimation(client, "spell_fire");

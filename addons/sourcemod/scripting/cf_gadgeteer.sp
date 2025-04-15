@@ -928,7 +928,7 @@ enum struct CustomSentry
 			
 			int owner = GetClientOfUserId(this.owner);
 			if (IsValidMulti(owner))
-				CF_PlayRandomSound(owner, "", "sound_toolbox_drone_destroyed");
+				CF_PlayRandomSound(owner, owner, "sound_toolbox_drone_destroyed");
 		}
 		
 		this.exists = false;
@@ -3001,7 +3001,7 @@ void Gadgeteer_OnBuildingConstructed(Event event, const char[] name, bool dontBr
 	if (GetGameTime() <= f_AnnihilationBuildWindow[owner])
 	{
 		Annihilation_Build(owner, s_AnnihilationAbility[owner], entity);
-		CF_PlayRandomSound(owner, "", "sound_annihilation_teleporter_built");
+		CF_PlayRandomSound(owner, owner, "sound_annihilation_teleporter_built");
 		CF_SilenceCharacter(owner, 0.2);
 		Annihilation_DeleteTimer(owner);
 		return;
@@ -3026,7 +3026,7 @@ void Gadgeteer_OnBuildingConstructed(Event event, const char[] name, bool dontBr
 		Toss_ToolboxOwner[entity] = GetClientUserId(owner);
 		Toss_SpawnSupportDrone(entity, false, 0);
 		CF_GiveSpecialResource(owner, -cost);
-		CF_PlayRandomSound(owner, "", "sound_support_drone_built");
+		CF_PlayRandomSound(owner, owner, "sound_support_drone_built");
 		CF_SilenceCharacter(owner, 0.2);
 	}
 	else if (type == TFObject_Sentry && CF_HasAbility(owner, GADGETEER, BUDDY))
@@ -3044,7 +3044,7 @@ void Gadgeteer_OnBuildingConstructed(Event event, const char[] name, bool dontBr
 		Buddy_ReplaceSentry(entity, owner, BUDDY);
 
 		CF_GiveSpecialResource(owner, -cost);
-		CF_PlayRandomSound(owner, "", "sound_little_buddy_built");
+		CF_PlayRandomSound(owner, owner, "sound_little_buddy_built");
 		CF_SilenceCharacter(owner, 0.2);
 	}
 }
@@ -3217,7 +3217,7 @@ public void PNPC_OnPNPCDestroyed(int entity)
 			else
 			{
 				if (IsPlayerAlive(owner))
-					CF_PlayRandomSound(owner, "", "sound_support_drone_destroyed");
+					CF_PlayRandomSound(owner, owner, "sound_support_drone_destroyed");
 
 				PrintCenterText(owner, "Your Support Drone was destroyed!");
 			}
@@ -3246,7 +3246,7 @@ public void PNPC_OnPNPCDestroyed(int entity)
 			else
 			{
 				if (IsPlayerAlive(owner))
-					CF_PlayRandomSound(owner, "", "sound_little_buddy_destroyed");
+					CF_PlayRandomSound(owner, owner, "sound_little_buddy_destroyed");
 
 				PrintCenterText(owner, "Your Little Buddy was destroyed!");
 			}
@@ -3341,7 +3341,7 @@ public Action Annihilation_MissedChance(Handle timer, DataPack pack)
 
 	if (IsValidMulti(client))
 	{
-		CF_PlayRandomSound(client, "", "sound_annihilation_out_of_time");
+		CF_PlayRandomSound(client, client, "sound_annihilation_out_of_time");
 		Annihilation_GiveRefund(client);
 		StopSound(client, SNDCHAN_AUTO, SOUND_ANNIHILATION_BUILD_LOOP);
 		StopSound(client, SNDCHAN_AUTO, SOUND_ANNIHILATION_BUILD_LOOP_2);

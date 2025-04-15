@@ -793,7 +793,7 @@ public Action Delay_ActivateAbility(Handle delayed, DataPack pack)
 		return Plugin_Continue;
 		
 	CF_DoAbility(client, pl, ab);
-	CF_PlayRandomSound(client, "", snd);
+	CF_PlayRandomSound(client, client, snd);
 	
 	return Plugin_Continue;
 }
@@ -927,7 +927,7 @@ public void Weapon_Activate(int client, char abilityName[255])
 		CF_SetWeaponKillIcon(weapon, icon);
 		
 		if (deploySound[0])
-			CF_PlayRandomSound(client, "", deploySound);
+			CF_PlayRandomSound(client, client, deploySound);
 			
 		char conf[255], path[255];
 		CF_GetPlayerConfig(client, conf, sizeof(conf));
@@ -1079,7 +1079,7 @@ public Action Weapon_PreThink(int client)
 					char classname[255];
 					GetEntityClassname(wep, classname, sizeof(classname));
 					Format(classname, sizeof(classname), "sound_timed_weapon_removed_%s", classname);
-					CF_PlayRandomSound(client, "", classname);
+					CF_PlayRandomSound(client, client, classname);
 					
 					TF2_RemoveWeaponSlot(client, i);
 					RemoveEntity(wep);

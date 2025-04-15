@@ -401,7 +401,7 @@ public void Bomb_Activate(int client, char abilityName[255])
 	{
 		i_HeldBomb[client] = EntIndexToEntRef(bomb);
 		b_IsABomb[bomb] = true;
-		CF_PlayRandomSound(client, "", "sound_refined_bomb_prepare");
+		CF_PlayRandomSound(client, client, "sound_refined_bomb_prepare");
 		EmitSoundToClient(client, SOUND_BOMB_LOOP);
 		AttachParticleToEntity(bomb, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_REFINED_RED : PARTICLE_REFINED_BLUE, "", 6.0);
 	}
@@ -459,7 +459,7 @@ public void Bomb_Launch(int client, char abilityName[255], bool resupply)
 			Bomb_Particle[bomb] = EntIndexToEntRef(AttachParticleToEntity(bomb, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_REFINED_TRAIL_RED : PARTICLE_REFINED_TRAIL_BLUE, "", _, _, _, 5.0));
 			
 			RequestFrame(Bomb_Spin, EntIndexToEntRef(bomb));
-			CF_PlayRandomSound(client, "", "sound_refined_bomb_launch");
+			CF_PlayRandomSound(client, client, "sound_refined_bomb_launch");
 		}
 	}
 	
@@ -579,7 +579,7 @@ public void Shield_Activate(int client, char abilityName[255])
 		SDKHook(client, SDKHook_PreThink, Shield_PreThink);
 		f_ShieldBaseSpeed[client] = CF_GetCharacterSpeed(client);
 		CF_SetCharacterSpeed(client, CF_GetArgF(client, DEMOPAN, abilityName, "speed"));
-		CF_PlayRandomSound(client, "", "sound_medigun_shield_start");
+		CF_PlayRandomSound(client, client, "sound_medigun_shield_start");
 		
 		f_ShieldDMG[shield] = CF_GetArgF(client, DEMOPAN, abilityName, "damage");
 		f_ShieldKB[shield] = CF_GetArgF(client, DEMOPAN, abilityName, "knockback");
@@ -1005,7 +1005,7 @@ public void Shield_End(int client, char abilityName[255], bool resupply)
 		}
 		else
 		{
-			CF_PlayRandomSound(client, "", "sound_medigun_shield_end");
+			CF_PlayRandomSound(client, client, "sound_medigun_shield_end");
 			f_ShieldBlockCollision[shield] = GetGameTime() + 0.2;
 		}
 	}

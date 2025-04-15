@@ -164,7 +164,7 @@ public void Tracer_Activate(int client)
 	SDKHook(client, SDKHook_PreThink, Tracer_PreThink);
 	Tracer_NextBeam[client] = 0.0;
 
-	CF_PlayRandomSound(client, "", "sound_tracer_scope");
+	CF_PlayRandomSound(client, client, "sound_tracer_scope");
 }
 
 public void Tracer_Disable(int client)
@@ -173,7 +173,7 @@ public void Tracer_Disable(int client)
 	StopSound(client, SNDCHAN_AUTO, SOUND_TRACER_FULLCHARGE_LOOP);
 	TF2_RemoveCondition(client, TFCond_FocusBuff);
 	
-	CF_PlayRandomSound(client, "", "sound_tracer_unscope");
+	CF_PlayRandomSound(client, client, "sound_tracer_unscope");
 }
 
 public Action Tracer_PreThink(int client)
@@ -203,7 +203,7 @@ public Action Tracer_PreThink(int client)
 	{
 		Tracer_FullyCharged[client] = true;
 
-		CF_PlayRandomSound(client, "", "sound_tracer_fully_charged");
+		CF_PlayRandomSound(client, client, "sound_tracer_fully_charged");
 		TF2_AddCondition(client, TFCond_FocusBuff);
 		EmitSoundToClient(client, SOUND_TRACER_FULLCHARGE_LOOP, _, _, _, _, _, 80);
 	}
@@ -277,7 +277,7 @@ public void Thruster_Activate(int client, char abilityName[255])
 		
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, currentVel);
 	
-	CF_PlayRandomSound(client, "", "sound_thruster_activate");
+	CF_PlayRandomSound(client, client, "sound_thruster_activate");
 	CF_AttachParticle(client, PARTICLE_THRUSTER_ATTACHMENT, "root", _, 3.0);
 	SpawnParticle(pos, PARTICLE_THRUSTER_BLASTOFF, 3.0);
 }
@@ -302,7 +302,7 @@ public void Gravity_Toggle(int client, char abilityName[255])
 		Gravity_Wearable[client] = EntIndexToEntRef(CF_AttachWearable(client, view_as<int>(CF_ClassToken_Sniper), "tf_wearable", false, 0, 0, false, atts));
 		Gravity_Particle[client] = EntIndexToEntRef(CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_GRAVITY_RED : PARTICLE_GRAVITY_BLUE, "root"));
 
-		CF_PlayRandomSound(client, "", "sound_gravity_on");
+		CF_PlayRandomSound(client, client, "sound_gravity_on");
 		
 		SDKHook(client, SDKHook_PreThink, Gravity_PreThink);
 		Gravity_Active[client] = true;
@@ -338,7 +338,7 @@ public void Gravity_Disable(int client, bool playSound)
 	
 	if (playSound)
 	{
-		CF_PlayRandomSound(client, "", "sound_gravity_off");
+		CF_PlayRandomSound(client, client, "sound_gravity_off");
 	}
 }
 
@@ -542,7 +542,7 @@ public void VFX_Activate(int client, char abilityName[255])
 		
 		SpawnParticle(endPos, team == TFTeam_Red ? PARTICLE_SHOOT_RED : PARTICLE_SHOOT_BLUE, 2.0);
 
-		CF_PlayRandomSound(client, "", "sound_orbital_shoot_full");
+		CF_PlayRandomSound(client, client, "sound_orbital_shoot_full");
 		SpawnShaker(startPos, 12, 120, 3, 4, 4);
 	}
 }

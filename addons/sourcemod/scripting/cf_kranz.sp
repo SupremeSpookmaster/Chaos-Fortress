@@ -195,7 +195,7 @@ public void Obliterator_Activate(int client, char abilityName[255])
 	float ang[3];
 	GetClientEyeAngles(client, ang);
 	CF_FireGenericBullet(client, ang, damage, hsMult, spread, KRANZ, Obliterator_Hit, falloffStart, falloffEnd, falloffMax, pierce, grabEnemyTeam(client), _, _, (Obliterator_Team == TFTeam_Red ? PARTICLE_OBLITERATOR_TRACER_RED : PARTICLE_OBLITERATOR_TRACER_BLUE));
-	CF_PlayRandomSound(client, "", "sound_obliterator_fired");
+	CF_PlayRandomSound(client, client, "sound_obliterator_fired");
 }
 
 public void Obliterator_Hit(int attacker, int victim, float &baseDamage, bool &allowFalloff, bool &isHeadshot, int &hsEffect, bool &crit, float hitPos[3])
@@ -290,7 +290,7 @@ public void TF2_OnConditionRemoved(int client, TFCond condition)
 		{
 			EmitSoundToClient(client, SND_OBLITERATOR_EXPIRED);
 			StopSound(client, SNDCHAN_AUTO, SND_OBLITERATOR_LOOP);
-			CF_PlayRandomSound(client, "", "sound_obliterator_expired");
+			CF_PlayRandomSound(client, client, "sound_obliterator_expired");
 			f_UltEndTime[client] = GetGameTime() + 1.0;
 		}
 	}

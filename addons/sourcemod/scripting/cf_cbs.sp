@@ -114,7 +114,7 @@ public void Draw_Activate(int client, char abilityName[255])
 	CF_GetArgS(client, CBS, abilityName, "fullcharge_sound", s_DrawFullChargeSound[client], 255);
 	CF_GetArgS(client, CBS, abilityName, "start_sound", start_sound, sizeof(start_sound));
 	
-	CF_PlayRandomSound(client, "", start_sound);
+	CF_PlayRandomSound(client, client, start_sound);
 	
 	SetWeaponAttribsFromString(huntsman, attribs);
 	
@@ -158,7 +158,7 @@ public void Draw_FullChargeFX(int id)
 		EmitSoundToClient(client, SOUND_HEAVYDRAW_FULLCHARGE, _, _, _, _, _, 110);
 		EmitSoundToClient(client, SOUND_HEAVYDRAW_FULLCHARGE, _, _, _, _, _, 110);
 		EmitSoundToClient(client, SOUND_HEAVYDRAW_FULLCHARGE_LOOP, _, _, _, _, _, 80);
-		CF_PlayRandomSound(client, "", s_DrawFullChargeSound[client]);
+		CF_PlayRandomSound(client, client, s_DrawFullChargeSound[client]);
 		return;
 	}
 
@@ -181,7 +181,7 @@ public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255]
 		{
 			CreateTimer(0.2, Draw_RevertAtts, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
 			EmitSoundToClient(client, SOUND_ARROW_SHOOT);
-			CF_PlayRandomSound(client, "", s_DrawEndSound[client]);
+			CF_PlayRandomSound(client, client, s_DrawEndSound[client]);
 		}
 	}
 }
