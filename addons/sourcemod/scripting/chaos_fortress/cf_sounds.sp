@@ -16,6 +16,7 @@ int i_SoundChannel[2048] = { 7, ... };
 int i_SoundMinPitch[2048] = { 100, ... };
 int i_SoundMaxPitch[2048] = { 100, ... };
 int i_SoundTimes[2048] = { 1, ... };
+int i_SoundPlayMode[2048] = { 0, ... };
 
 bool b_SoundExists[2048] = { false, ... };
 bool b_SoundIsGlobal[2048] = { false, ... };
@@ -77,6 +78,12 @@ methodmap CFSound __nullable__
 		public set(int value) { i_SoundTimes[this.index] = value; }
 	}
 
+	property int i_PlayMode
+	{
+		public get() { return i_SoundPlayMode[this.index]; }
+		public set(int value) { i_SoundPlayMode[this.index] = value; }
+	}
+
 	property float f_Volume
 	{
 		public get() { return f_SoundVolume[this.index]; }
@@ -105,7 +112,53 @@ methodmap CFSound __nullable__
 
 	public bool Play(int source)
 	{
-		
+		char file[255];
+		this.GetFile(file, 255);
+
+		for (int plays = 0; plays < this.i_Times; plays++)
+		{
+			int level = this.i_Level;
+
+			if (IsValidClient(source))
+			{
+				level -= CF_GetDialogueReduction(source);
+
+				TFTeam targTeam = TFTeam_Unassigned;
+
+				switch(this.i_PlayMode)
+				{
+					case 0:	//Everyone
+					{
+						EmitSoundToAll(file, this.b_Global ? SOUND_FROM_PLAYER : source, CF_SndChans[this.i_Channel], this.i_Level, _, this.f_Volume, GetRandomInt(this.i_MinPitch, this.i_MaxPitch));
+					}
+					case 1:	//Self only
+					{
+						EmitSoundToClient(source, file, _, CF_SndChans[this.i_Channel], this.i_Level, _, this.f_Volume, GetRandomInt(this.i_MinPitch, this.i_MaxPitch));
+					}
+					case 2: //Allies only
+					{
+						targTeam = TF2_GetClientTeam(source);
+					}
+					case 3:	//Enemies only
+					{
+						targTeam = grabEnemyTeam(source);
+					}
+				}
+				
+				if (targTeam != TFTeam_Unassigned)
+				{
+					for (int i = 1; i <= MaxClients; i++)
+					{
+						if (IsValidMulti(i, false, _, true, targTeam) && i != source)
+						{
+							EmitSoundToClient(i, file, this.b_Global ? SOUND_FROM_PLAYER : source, CF_SndChans[this.i_Channel], this.i_Level, _, this.f_Volume, GetRandomInt(this.i_MinPitch, this.i_MaxPitch));
+						}
+					}
+				}
+			}
+			else
+				EmitSoundToAll(file, this.b_Global ? SOUND_FROM_PLAYER : source, CF_SndChans[this.i_Channel], this.i_Level, _, this.f_Volume, GetRandomInt(this.i_MinPitch, this.i_MaxPitch));
+		}
 	}
 
 	public void Destroy()
@@ -115,6 +168,7 @@ methodmap CFSound __nullable__
 		this.i_MinPitch = 100;
 		this.i_MaxPitch = 100;
 		this.i_Times = 1;
+		this.i_PlayMode = 0;
 
 		this.b_Global = false;
 
