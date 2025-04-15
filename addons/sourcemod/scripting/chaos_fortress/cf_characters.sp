@@ -425,6 +425,7 @@ public void DestroyAbility(int client, CF_AbilityType type)
 }
 
 int i_CharacterClient[MAXPLAYERS + 1];
+int i_CharacterNumSoundCues[MAXPLAYERS + 1];
 
 float f_CharacterSpeed[MAXPLAYERS + 1];
 float f_CharacterMaxHP[MAXPLAYERS + 1];
@@ -462,6 +463,7 @@ char s_CharacterResourceNamePlural[MAXPLAYERS + 1][255];
 
 TFClassType i_CharacterClass[MAXPLAYERS + 1];
 ArrayList g_CharacterEffects[MAXPLAYERS + 1] = { null, ... };
+CFSoundCue g_CharacterSoundCues[MAXPLAYERS + 1][2048];
 
 char s_CharacterModel[MAXPLAYERS + 1][255];
 char s_CharacterName[MAXPLAYERS + 1][255];
@@ -497,6 +499,12 @@ methodmap CFCharacter __nullable__
 	{
 		public get() { return GetClientOfUserId(i_CharacterClient[this.index]); }
 		public set(int value) { i_CharacterClient[this.index] = (IsValidClient(value) ? GetClientUserId(value) : -1); }
+	}
+
+	property int i_NumSoundCues
+	{
+		public get() { return i_CharacterNumSoundCues[this.index]; }
+		public set(int value) { i_CharacterNumSoundCues[this.index] = value; }
 	}
 
 	property bool b_Exists
@@ -768,6 +776,53 @@ methodmap CFCharacter __nullable__
 		strcopy(output, size, s_CharacterResourceNamePlural[this.index]);
 	}
 
+	public void AddSoundCue(CFSoundCue cue)
+	{
+		g_CharacterSoundCues[this.index][this.i_NumSoundCues] = cue;
+		this.i_NumSoundCues++;
+	}
+
+	public void ClearSoundCues()
+	{
+		for (int i = 0; i < this.i_NumSoundCues; i++)
+		{
+			CFSoundCue cue = g_CharacterSoundCues[this.index][i];
+			if (cue.b_Exists)
+				cue.Destroy();
+		}
+
+		this.i_NumSoundCues = 0;
+	}
+
+	public bool PlayRandomSound(char[] cue)
+	{
+		CFSound randSnd = this.GetRandomSound(cue);
+		if (randSnd == null)
+			return false;
+
+		return randSnd.Play(this.i_Client);
+	}
+
+	public CFSound GetRandomSound(char[] cue)
+	{
+		CFSoundCue sndCue = null;
+		for (int i = 0; i < this.i_NumSoundCues; i++)
+		{
+			char name[255];
+			g_CharacterSoundCues[this.index][i].GetCue(name, 255);
+			if (StrEqual(name, cue))
+			{
+				sndCue = g_CharacterSoundCues[this.index][i];
+				break;
+			}
+		}
+
+		if (sndCue == null)
+			return null;
+
+		return sndCue.GetRandomSound();
+	}
+
 	public void Destroy(bool fullClear = false)
 	{
 		if (this.g_Effects != null)
@@ -791,12 +846,12 @@ methodmap CFCharacter __nullable__
 		this.b_ResourceIsUlt = false;
 		this.b_ResourceIsPercentage = false;
 		this.b_ResourceIsMetal = false;
+
 		this.f_Speed = 0.0;
 		this.f_MaxHP = 0.0;
 		this.f_Scale = 0.0;
 		this.f_BaseSpeed = 0.0;
 		this.f_Weight = 0.0;
-
 		this.f_UltChargeOnRegen = 0.0;
 		this.f_UltChargeOnHurt = 0.0;
 		this.f_UltChargeOnDamage = 0.0;
@@ -815,12 +870,14 @@ methodmap CFCharacter __nullable__
 		this.f_ResourcesOnKill = 0.0;
 		this.f_ResourcesOnBuildingDamage = 0.0;
 		this.f_ResourcesOnDestruction = 0.0;
+
 		this.SetModel("");
 		this.SetName("");
 		this.SetConfigMapPath("");
 		this.SetResourceName("");
 		this.SetResourceNamePlural("");
 		this.SetArchetype("");
+		this.ClearSoundCues();
 
 		//This is used only for cases where we need to *completely* remove a client's character status, such as on map end or if the client disconnects.
 		//Otherwise, we preserve their current ult/resource stats so that we don't lose everything just because we died or switched our character.

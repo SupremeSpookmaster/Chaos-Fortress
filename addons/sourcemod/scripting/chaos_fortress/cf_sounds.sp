@@ -11,6 +11,196 @@ int CF_SndChans[10] = {
 	SNDCHAN_WEAPON
 };
 
+int i_SoundLevel[2048] = { 100, ... };
+int i_SoundChannel[2048] = { 7, ... };
+int i_SoundMinPitch[2048] = { 100, ... };
+int i_SoundMaxPitch[2048] = { 100, ... };
+int i_SoundTimes[2048] = { 1, ... };
+
+bool b_SoundExists[2048] = { false, ... };
+bool b_SoundIsGlobal[2048] = { false, ... };
+
+float f_SoundVolume[2049] = { 1.0, ... };
+float f_SoundChance[2048] = { 1.0, ... };
+
+char s_SoundFile[2048][255];
+
+methodmap CFSound __nullable__
+{
+	public CFSound()
+	{
+		for (int i = 0; i < 2048; i++)
+		{
+			if (!b_SoundExists[i])
+			{
+				b_SoundExists[i] = true;
+				return view_as<CFSound>(i);
+			}
+		}
+
+		CPrintToChatAll("{red}TOO MANY SOUNDS EXIST AT THE SAME TIME! SCREENSHOT THIS AND SEND TO A DEV!");
+		return view_as<CFSound>(-1);
+	}
+
+	property int index
+	{
+		public get() { return view_as<int>(this); }
+	}
+
+	property int i_Level
+	{
+		public get() { return i_SoundLevel[this.index]; }
+		public set(int value) { i_SoundLevel[this.index] = value; }
+	}
+
+	property int i_Channel
+	{
+		public get() { return i_SoundChannel[this.index]; }
+		public set(int value) { i_SoundChannel[this.index] = value; }
+	}
+
+	property int i_MinPitch
+	{
+		public get() { return i_SoundMinPitch[this.index]; }
+		public set(int value) { i_SoundMinPitch[this.index] = value; }
+	}
+
+	property int i_MaxPitch
+	{
+		public get() { return i_SoundMaxPitch[this.index]; }
+		public set(int value) { i_SoundMaxPitch[this.index] = value; }
+	}
+
+	property int i_Times
+	{
+		public get() { return i_SoundTimes[this.index]; }
+		public set(int value) { i_SoundTimes[this.index] = value; }
+	}
+
+	property float f_Volume
+	{
+		public get() { return f_SoundVolume[this.index]; }
+		public set(float value) { f_SoundVolume[this.index] = value; }
+	}
+
+	property float f_Chance
+	{
+		public get() { return f_SoundChance[this.index]; }
+		public set(float value) { f_SoundChance[this.index] = value; }
+	}
+
+	property bool b_Exists
+	{
+		public get() { return b_SoundExists[this.index]; }
+	}
+
+	property bool b_Global
+	{
+		public get() { return b_SoundIsGlobal[this.index]; }
+		public set(bool value) { b_SoundIsGlobal[this.index] = value; }
+	}
+
+	public void SetFile(char[] cue) { strcopy(s_SoundFile[this.index], 255, cue); }
+	public void GetFile(char[] output, int size) { strcopy(output, size, s_SoundFile[this.index]); }
+
+	public bool Play(int source)
+	{
+		
+	}
+
+	public void Destroy()
+	{
+		this.i_Level = 100;
+		this.i_Channel = 7;
+		this.i_MinPitch = 100;
+		this.i_MaxPitch = 100;
+		this.i_Times = 1;
+
+		this.b_Global = false;
+
+		this.f_Volume = 1.0;
+		this.f_Chance = 1.0;
+
+		this.SetFile("");
+
+		b_SoundExists[this.index] = false;
+	}
+}
+
+bool b_CueExists[2048] = { false, ... };
+
+int i_CueNumSounds[2048] = { 0, ... };
+
+char s_CueName[2048][255];
+
+CFSound g_CueSounds[2048][2048];
+
+methodmap CFSoundCue __nullable__
+{
+	public CFSoundCue()
+	{
+		for (int i = 0; i < 2048; i++)
+		{
+			if (!b_CueExists[i])
+			{
+				b_CueExists[i] = true;
+				return view_as<CFSoundCue>(i);
+			}
+		}
+
+		CPrintToChatAll("{red}TOO MANY SOUND CUES EXIST AT THE SAME TIME! SCREENSHOT THIS AND SEND TO A DEV!");
+		return view_as<CFSoundCue>(-1);
+	}
+
+	property int index
+	{
+		public get() { return view_as<int>(this); }
+	}
+
+	property bool b_Exists
+	{
+		public get() { return b_CueExists[this.index]; }
+	}
+
+	property int i_NumSounds
+	{
+		public get() { return i_CueNumSounds[this.index]; }
+		public set(int value) { i_CueNumSounds[this.index] = value; }
+	}
+
+	public void SetCue(char[] cue) { strcopy(s_CueName[this.index], 255, cue); }
+	public void GetCue(char[] output, int size) { strcopy(output, size, s_CueName[this.index]); }
+
+	public CFSound GetRandomSound()
+	{
+		if (this.i_NumSounds < 1)
+			return null;
+
+		return g_CueSounds[this.index][GetRandomInt(0, this.i_NumSounds - 1)];
+	}
+
+	public void AddSound(CFSound sound)
+	{
+		g_CueSounds[this.index][this.i_NumSounds] = sound;
+		this.i_NumSounds++;
+	}
+
+	public void ClearSounds()
+	{
+		for (int i = 0; i < this.i_NumSounds; i++)
+			g_CueSounds[this.index][i].Destroy();
+
+		this.i_NumSounds = 0;
+	}
+
+	public void Destroy()
+	{
+		b_CueExists[this.index] = false;
+		this.SetCue("");
+		this.ClearSounds();
+	}
+}
+
 GlobalForward g_SoundHook;
 
 float f_LastSoundHook[MAXPLAYERS + 1] = { 0.0, ... };
@@ -204,30 +394,6 @@ bool PlayRand(int source, char Config[255], char Sound[255])
 			times = GetIntFromCFGMap(section, "times", 1);
 				
 			CanPlay = GetRandomFloat(0.0, 1.0) <= chance;
-			
-			/*if (echoSection != null && CanPlay)
-			{
-				int numEchoes = GetIntFromCFGMap(echoSection, "times", 100);
-				float echoDelay = GetFloatFromCFGMap(echoSection, "delay", 0.33);
-				int levelReduction = GetIntFromCFGMap(echoSection, "level_reduction", 30);
-				float volumeReduction = GetFloatFromCFGMap(echoSection, "volume_reduction", 0.33);
-				
-				DataPack pack = new DataPack();
-				CreateDataTimer(echoDelay, Sound_Echo, pack, TIMER_FLAG_NO_MAPCHANGE);
-				WritePackCell(pack, playMode);
-				WritePackCell(pack, source);
-				WritePackCell(pack, level);
-				WritePackFloat(pack, volume);
-				WritePackCell(pack, channel);
-				WritePackCell(pack, global);
-				WritePackCell(pack, numEchoes);
-				WritePackFloat(pack, echoDelay);
-				WritePackCell(pack, levelReduction);
-				WritePackFloat(pack, volumeReduction);
-				WritePackCell(pack, minPitch);
-				WritePackCell(pack, maxPitch);
-				WritePackString(pack, snd);
-			}*/
 		}
 		else
 		{
