@@ -11,26 +11,30 @@ int CF_SndChans[10] = {
 	SNDCHAN_WEAPON
 };
 
-int i_SoundLevel[2048] = { 100, ... };
-int i_SoundChannel[2048] = { 7, ... };
-int i_SoundMinPitch[2048] = { 100, ... };
-int i_SoundMaxPitch[2048] = { 100, ... };
-int i_SoundTimes[2048] = { 1, ... };
-int i_SoundPlayMode[2048] = { 0, ... };
+//4096 is as high as I can go here before the compiler starts failing due to memory limitations.
+//Therefore, CF imposes a hard-cap of 4096 sounds existing at a time.
+//This comes out to a maximum of 170 sounds in use per character for a 24-player server, or 128 for a 32-player server.
+//Realistically, this limitation should only be a problem for 100-player servers, which I don't intend for CF to ever support.
+int i_SoundLevel[4096] = { 100, ... };
+int i_SoundChannel[4096] = { 7, ... };
+int i_SoundMinPitch[4096] = { 100, ... };
+int i_SoundMaxPitch[4096] = { 100, ... };
+int i_SoundTimes[4096] = { 1, ... };
+int i_SoundPlayMode[4096] = { 0, ... };
 
-bool b_SoundExists[2048] = { false, ... };
-bool b_SoundIsGlobal[2048] = { false, ... };
+bool b_SoundExists[4096] = { false, ... };
+bool b_SoundIsGlobal[4096] = { false, ... };
 
-float f_SoundVolume[2049] = { 1.0, ... };
-float f_SoundChance[2048] = { 1.0, ... };
+float f_SoundVolume[4096] = { 1.0, ... };
+float f_SoundChance[4096] = { 1.0, ... };
 
-char s_SoundFile[2048][255];
+char s_SoundFile[4096][255];
 
 methodmap CFSound __nullable__
 {
 	public CFSound()
 	{
-		for (int i = 0; i < 2048; i++)
+		for (int i = 0; i < 4096; i++)
 		{
 			if (!b_SoundExists[i])
 			{
@@ -195,19 +199,23 @@ methodmap CFSound __nullable__
 	}
 }
 
-bool b_CueExists[2048] = { false, ... };
+//4096 is as high as I can go here before the compiler starts failing due to memory limitations.
+//Therefore, CF imposes a hard-cap of 4096 sound cues existing at a time. Furthermore, each individual sound cue only supports up to 64 sounds.
+//This comes out to a maximum of 170 sound cues in use per character for a 24-player server, or 128 for a 32-player server.
+//Realistically, this limitation should only be a problem for 100-player servers, which I don't intend for CF to ever support.
+bool b_CueExists[4096] = { false, ... };
 
-int i_CueNumSounds[2048] = { 0, ... };
+int i_CueNumSounds[4096] = { 0, ... };
 
-char s_CueName[2048][255];
+char s_CueName[4096][255];
 
-CFSound g_CueSounds[2048][2048];
+CFSound g_CueSounds[4096][64];
 
 methodmap CFSoundCue __nullable__
 {
 	public CFSoundCue()
 	{
-		for (int i = 0; i < 2048; i++)
+		for (int i = 0; i < 4096; i++)
 		{
 			if (!b_CueExists[i])
 			{
@@ -249,6 +257,9 @@ methodmap CFSoundCue __nullable__
 
 	public void AddSound(CFSound sound)
 	{
+		if (this.i_NumSounds >= 64)
+			return;
+
 		g_CueSounds[this.index][this.i_NumSounds] = sound;
 		this.i_NumSounds++;
 	}

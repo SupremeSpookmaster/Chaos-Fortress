@@ -2400,8 +2400,8 @@ public void CF_DestroyAllBuildings(int client)
  	b_IsDead[client] = false;
  	s_PreviousCharacter[client] = conf;
  	
+	DeleteCfg(map);
  	DeleteCfg(GameRules);
- 	DeleteCfg(map);
  	
  	CFA_UpdateMadeCharacter(client);
 	CF_SetRespawnTime(client);
