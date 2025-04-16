@@ -2397,6 +2397,8 @@ public void CF_DestroyAllBuildings(int client)
 	CF_SetRespawnTime(client);
  	
  	b_FirstSpawn[client] = false;
+
+	RequestFrame(HookForDamage, GetClientUserId(client));
  	
  	if (callForward)
  	{
