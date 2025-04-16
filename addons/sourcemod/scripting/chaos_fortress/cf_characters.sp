@@ -2382,6 +2382,9 @@ public void CF_DestroyAllBuildings(int client)
  	
 	bool hasUlt = CFA_InitializeUltimate(client, map, IsNewCharacter);
 	bool hasAbilities = CFA_InitializeAbilities(client, map, IsNewCharacter);
+
+	DeleteCfg(map);
+ 	DeleteCfg(GameRules);
 		
 	CFA_ToggleHUD(client, hasUlt || hasAbilities);
  	CF_SetHUDColor(client, 255, 255, 255, 255);
@@ -2389,9 +2392,6 @@ public void CF_DestroyAllBuildings(int client)
  	b_CharacterApplied[client] = true;
  	b_IsDead[client] = false;
  	s_PreviousCharacter[client] = conf;
-
-	DeleteCfg(map);
- 	DeleteCfg(GameRules);
  	
  	CFA_UpdateMadeCharacter(client);
 	CF_SetRespawnTime(client);

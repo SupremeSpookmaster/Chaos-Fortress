@@ -8,8 +8,6 @@
 //#define USE_PREVIEWS
 //#define TESTING
 
-#include <handledebugger>
-
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
 //	- TODO: Rewrite the wiki.
 //		- May end up just scrapping the wiki. It adds way too much upkeep for next to no benefit.
