@@ -1046,15 +1046,14 @@ public void CFC_CreateEffect(int client, ConfigMap subsection, char abNum[255])
 
 public void CFC_CreateAbility(int client, ConfigMap subsection, CF_AbilityType type, bool NewChar)
 {
-	int slot = view_as<int>(type) + 1;
-
 	CFAbility ability = GetAbilityFromClient(client, type);
 	if (ability == null)
 	{
 		ability = new CFAbility();
 	}
 
-	ability.i_AbilitySlot = slot;
+	int slot = view_as<int>(type) + 1;
+	ability.i_AbilitySlot = GetIntFromCFGMap(subsection, "ability_slot", slot);
 	ability.i_Type = slot;
 	ability.i_Client = client;
 
