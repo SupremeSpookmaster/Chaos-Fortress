@@ -2181,6 +2181,9 @@ int i_StuckCheckUser = -1;
 
 stock bool CheckPlayerWouldGetStuck(int client, float scale)
 {
+	if (scale <= CF_GetCharacterScale(client))
+		return false;
+		
 	float mins[3] = { -24.5, -24.5, 0.0 }, maxs[3] = { 24.5,  24.5, 83.0}, pos[3];
 	
 	ScaleVector(mins, scale);
