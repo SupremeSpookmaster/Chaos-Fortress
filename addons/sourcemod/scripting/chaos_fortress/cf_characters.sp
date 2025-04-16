@@ -2235,6 +2235,9 @@ public void CF_DestroyAllBuildings(int client)
 		}
 	}
 	
+	if (!conf[0])
+		return;
+
 	ConfigMap map = new ConfigMap(conf);
 	if (map == null)
 		return;
@@ -2412,7 +2415,7 @@ public void CF_DestroyAllBuildings(int client)
  //Shortened is set to true if the character is located using ONLY their config name and not the full path.
  bool CF_CharacterExists(char conf[255], bool &shortened = false)
  {
- 	if (StrEqual(conf, ""))
+ 	if (!conf[0] || StrEqual(conf, ""))
  		return false;
  		
  	for (int i = 0; i < GetArraySize(CF_Characters_Configs); i++)

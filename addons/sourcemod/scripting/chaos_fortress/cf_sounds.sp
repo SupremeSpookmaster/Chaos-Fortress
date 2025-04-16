@@ -379,6 +379,9 @@ public void CFS_CreateSounds(int client, ConfigMap map)
 
 public bool CFS_CheckDoesSoundExist(char snd[255])
 {
+	if (!snd[0])
+		return false;
+		
 	char checkFile[255];
 	Format(checkFile, sizeof(checkFile), "sound/");
 
