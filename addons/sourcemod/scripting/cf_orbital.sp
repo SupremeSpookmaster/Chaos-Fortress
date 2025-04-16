@@ -687,6 +687,18 @@ public Action Strike_VFX(Handle vfx, DataPack pack)
 	return Plugin_Continue;
 }
 
+public Action CF_OnCalcAttackInterval(int client, int weapon, int slot, char classname[255], float &rate)
+{
+	if (Tracer_FullyCharged[client])
+	{
+		Tracer_FullyCharged[client] = false;
+		TF2_RemoveCondition(client, TFCond_FocusBuff);
+		StopSound(client, SNDCHAN_AUTO, SOUND_TRACER_FULLCHARGE_LOOP);
+	}
+
+	return Plugin_Continue;
+}
+
 bool b_OrbitalStrike;
 
 public Action Strike_DealDamage(Handle smackthoserats, DataPack pack)

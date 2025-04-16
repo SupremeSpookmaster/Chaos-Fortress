@@ -1850,9 +1850,7 @@ public CFEffect GetEffectFromAbility(int client, char[] plugin, char[] ability)
 		}
 	}
 
-	CFEffect failure = new CFEffect();
-	failure.Destroy();
-	return failure;
+	return null;
 }
 
 public CFEffect GetEffect(int client, int slot)
@@ -1878,7 +1876,7 @@ public Native_CF_GetArgI(Handle plugin, int numParams)
 	GetNativeString(4, argName, sizeof(argName));
 
 	CFEffect effect = GetEffectFromAbility(client, targetPlugin, targetAbility);
-	if (effect.b_Exists)
+	if (effect != null)
 		return effect.GetArgI(argName, defaultVal);
 	
 	return defaultVal;
@@ -1902,7 +1900,7 @@ public any Native_CF_GetArgF(Handle plugin, int numParams)
 	GetNativeString(4, argName, sizeof(argName));
 		
 	CFEffect effect = GetEffectFromAbility(client, targetPlugin, targetAbility);
-	if (effect.b_Exists)
+	if (effect != null)
 		return effect.GetArgF(argName, defaultVal);
 	
 	return defaultVal;
@@ -1921,7 +1919,7 @@ public any Native_CF_GetAbilitySlot(Handle plugin, int numParams)
 	GetNativeString(3, targetAbility, sizeof(targetAbility));
 
 	CFEffect effect = GetEffectFromAbility(client, targetPlugin, targetAbility);
-	if (effect.b_Exists)
+	if (effect != null)
 		return view_as<CF_AbilityType>(effect.i_AbilitySlot - 1);
 	
 	return CF_AbilityType_None;
@@ -1948,7 +1946,7 @@ public Native_CF_GetArgS(Handle plugin, int numParams)
 	GetNativeString(4, argName, sizeof(argName));
 
 	CFEffect effect = GetEffectFromAbility(client, targetPlugin, targetAbility);
-	if (effect.b_Exists)
+	if (effect != null)
 	{
 		char result[255];
 		effect.GetArgS(argName, result, 255, defaultValue);
@@ -1977,7 +1975,7 @@ public Native_CF_GetAbilityConfigMapPath(Handle plugin, int numParams)
 	GetNativeString(4, section, sizeof(section));
 
 	CFEffect effect = GetEffectFromAbility(client, targetPlugin, targetAbility);
-	if (effect.b_Exists)
+	if (effect != null)
 	{
 		char path[255], abIndex[255];
 		effect.GetAbilityIndex(abIndex, 255);

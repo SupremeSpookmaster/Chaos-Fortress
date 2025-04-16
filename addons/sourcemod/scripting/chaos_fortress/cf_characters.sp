@@ -397,14 +397,14 @@ public CFAbility GetAbilityFromClient(int client, CF_AbilityType type)
 	if (i_LastSlot[client][slot] > -1 && i_LastSlot[client][slot] < 2048)
 	{
 		CFAbility ab = g_Abilities[i_LastSlot[client][slot]];
-		if (ab != null && ab.b_Exists && ab.i_Client == client && ab.i_Type == slot)
+		if (ab != null && ab.b_Exists && ab.i_Client == client && ab.i_Type == slot && ab.index != -1)
 			return ab;
 	}
 
 	for (int i = 0; i < 2048; i++)
 	{
 		CFAbility ab = g_Abilities[i];
-		if (ab == null || !ab.b_Exists)
+		if (ab == null || !ab.b_Exists || ab.index == -1)
 			continue;
 
 		if (ab.i_Client == client && ab.i_Type == slot)
@@ -1023,6 +1023,8 @@ public void CFC_ApplyCharacter(int client, float speed, float maxHP, TFClassType
 public void CFC_CreateEffect(int client, ConfigMap subsection, char abNum[255])
 {
 	CFEffect effect = new CFEffect();
+	if (effect.index == -1)
+		return;
 
 	char plName[255], abName[255];
 	subsection.Get("plugin_name", plName, sizeof(plName));
@@ -1051,6 +1053,9 @@ public void CFC_CreateAbility(int client, ConfigMap subsection, CF_AbilityType t
 	{
 		ability = new CFAbility();
 	}
+
+	if (!ability.b_Exists)
+		return;
 
 	int slot = view_as<int>(type) + 1;
 	ability.i_AbilitySlot = GetIntFromCFGMap(subsection, "ability_slot", slot);
@@ -1093,7 +1098,16 @@ public void CFC_StoreAbilities(int client, ConfigMap abilities)
 {
 	ArrayList effects = GetCharacterFromClient(client).g_Effects;
 	if (effects != null)
+	{
+		for (int i = 0; i < GetArraySize(effects); i++)
+		{
+			CFEffect effect = GetArrayCell(effects, i);
+			if (effect.index != -1 && effect.b_Exists)
+				effect.Destroy();
+		}
+
 		effects.Clear();
+	}
 
 	if (abilities == null)
 		return;
