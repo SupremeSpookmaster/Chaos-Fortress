@@ -1114,9 +1114,9 @@ public void CFC_StoreAbilities(int client, ConfigMap abilities)
 }
 
 //Store configs and names in two separate arrays so we aren't reading every single character's config every single time someone opens the !characters menu:
-Handle CF_Characters_Configs;
-Handle CF_Characters_Names;
-Handle CF_CharacterParticles[MAXPLAYERS + 1] = { null, ... };
+ArrayList CF_Characters_Configs;
+ArrayList CF_Characters_Names;
+ArrayList CF_CharacterParticles[MAXPLAYERS + 1] = { null, ... };
 
 ConfigMap Characters;
 
@@ -2252,12 +2252,11 @@ public void CF_DestroyAllBuildings(int client)
 	CF_SetPlayerConfig(client, conf);
 	SetClientCookie(client, c_DesiredCharacter, conf);
 		
-	char model[255], name[255], arms[255], archetype[255]/*, animator[255]*/;
+	char model[255], name[255], arms[255], archetype[255];
 	map.Get("character.model", model, sizeof(model));
 	map.Get("character.name", name, sizeof(name));
 	map.Get("character.arms", arms, sizeof(arms));
 	map.Get("character.menu_display.role", archetype, sizeof(archetype));
-	//map.Get("character.animator_model", animator, sizeof(animator));
 	float speed = GetFloatFromCFGMap(map, "character.speed", 300.0);
 	float health = GetFloatFromCFGMap(map, "character.health", 250.0);
 	float weight = GetFloatFromCFGMap(map, "character.weight", 0.0);
@@ -2301,15 +2300,6 @@ public void CF_DestroyAllBuildings(int client)
 	{
 		SetVariantString(model);
 		AcceptEntityInput(client, "SetCustomModelWithClassAnimations");
-		
-		/*if (CheckFile(animator))
-		{
-			DataPack pack = new DataPack();
-			WritePackCell(pack, GetClientUserId(client));
-			WritePackString(pack, animator);
-			WritePackString(pack, model);
-			RequestFrame(CFA_ApplyAnimatorOnDelay, pack);
-		}*/
 	}
 	
 	CF_SetCharacterScale(client, scale, CF_StuckMethod_DelayResize, "");
@@ -2399,7 +2389,7 @@ public void CF_DestroyAllBuildings(int client)
  	b_CharacterApplied[client] = true;
  	b_IsDead[client] = false;
  	s_PreviousCharacter[client] = conf;
- 	
+
 	DeleteCfg(map);
  	DeleteCfg(GameRules);
  	
@@ -2415,7 +2405,7 @@ public void CF_DestroyAllBuildings(int client)
 	 	Call_PushCell(client);
 	 	
 	 	Call_Finish();
-	 }
+	}
  }
  
  //Shortened is set to true if the character is located using ONLY their config name and not the full path.
@@ -2523,7 +2513,7 @@ public void CF_DestroyAllBuildings(int client)
 		bool visible = GetBoolFromCFGMap(subsection, "visible", true);
 		int paint = GetIntFromCFGMap(subsection, "paint", -1);
 		int style = GetIntFromCFGMap(subsection, "style", 0);
-		//TODO: Maybe add support for wearable scale?
+		//TODO: Maybe add support for wearable scale and model override?
 		
 		CF_AttachWearable(client, index, classname, visible, paint, style, false, atts, 0.0);
 		

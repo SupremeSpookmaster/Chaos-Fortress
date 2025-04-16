@@ -261,7 +261,6 @@ public void PlayerReset(Event gEvent, const char[] sEvName, bool bDontBroadcast)
 	if (IsValidClient(client))
 	{
 		RequestFrame(HookForDamage, GetClientUserId(client));
-		//CF_MakeCharacter(client, false);
 		CF_MakeCharacter(client, _, _, _, "You became: %s");
 	}
 	
