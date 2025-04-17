@@ -903,7 +903,7 @@ public Action ZeinaBeaconThink(Handle timer, DataPack pack)
 		int r = 50;
 		int g = 50;
 		int b = 200;
-		if(SaveTeam == 2)
+		if(GetEntProp(Beacon, Prop_Send, "m_iTeamNum") == 2)
 		{
 			r = 200;
 			g = 0;
