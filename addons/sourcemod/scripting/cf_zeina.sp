@@ -878,12 +878,10 @@ public Action ZeinaBeaconThink(Handle timer, DataPack pack)
 	EntLocSave = EntLoc;
 	EntLoc[2] += 10.0;
 
-	int SaveTeam = GetEntProp(Beacon, Prop_Send, "m_iTeamNum");
-	SetEntProp(Beacon, Prop_Send, "m_iTeamNum", -5);
 	int Owner = GetEntPropEnt(Beacon, Prop_Send, "m_hOwnerEntity");
 	for (int i = 1; i < 2049; i++)
 	{
-		if (!IsValidAlly(i, Owner))
+		if (!IsValidAlly(Beacon, i))
 			continue;
 
 		float theirPos[3];
@@ -896,7 +894,6 @@ public Action ZeinaBeaconThink(Handle timer, DataPack pack)
 				ZeinaBeaconHadAlly[i] = GetGameTime() + 0.25;
 		}
 	}
-	SetEntProp(Beacon, Prop_Send, "m_iTeamNum", SaveTeam);
 
 	if(CooldownVisualAndSound < GetGameTime())
 	{
