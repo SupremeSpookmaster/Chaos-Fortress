@@ -25,6 +25,7 @@
 #define SELF_HEAL			"generic_self_heal"
 #define ATKSPEED			"generic_attackspeed"
 #define SENTRY_PROJECTILES	"generic_sentry_projectiles"
+#define NOJUMP				"generic_nojump"
 
 float Weapon_EndTime[2049] = { 0.0, ... };
 
@@ -192,6 +193,8 @@ public void OnMapStart()
 	for (int i = 0; i < sizeof(g_SPImpactSounds); i++) { PrecacheSound(g_SPImpactSounds[i]); }
 }
 
+bool b_NoJump[MAXPLAYERS + 1];
+
 public void CF_OnCharacterCreated(int client)
 {
 	Generic_DeleteTimers(client);
@@ -203,9 +206,23 @@ public void CF_OnCharacterCreated(int client)
 	if (CF_HasAbility(client, GENERIC, RESOURCE_VFX))
 		RVFX_Prepare(client);
 
+	b_NoJump[client] = CF_HasAbility(client, GENERIC, NOJUMP);
+	if (b_NoJump[client])
+		RequestFrame(NoJump_SetState, GetClientUserId(client));
+
 	b_SentryProjectiles[client] = CF_HasAbility(client, GENERIC, SENTRY_PROJECTILES);
 	if (b_SentryProjectiles[client])
 		SentryProjectiles_Prepare(client);
+}
+
+public void NoJump_SetState(int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client) || !b_NoJump[client])
+		return;
+
+	SetEntProp(client, Prop_Send, "m_bJumping", false);
+	RequestFrame(NoJump_SetState, id);
 }
 
 enum struct ResourceParticle
