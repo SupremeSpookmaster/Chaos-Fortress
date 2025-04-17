@@ -822,6 +822,12 @@ public void OnEntityDestroyed(int entity)
 
 public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], char console[255], int &custom, int deadRinger, int &critType, int &damagebits)
 {
+	if (IsValidClient(victim))
+	{
+		StopSound(victim, SNDCHAN_AUTO, SOUND_HEAVYDRAW_FULLCHARGE_LOOP);
+		StopSound(victim, SNDCHAN_AUTO, SOUND_HEAVYDRAW_LOOP);
+	}
+	
 	Action ReturnValue = Plugin_Continue;
 
 	if (IsValidEntity(inflictor) && b_IsHeavyDraw[inflictor])

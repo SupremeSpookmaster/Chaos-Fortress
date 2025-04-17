@@ -2220,8 +2220,8 @@ enum struct LittleBuddy
 
 	bool FindEnemy(float pos[3])
 	{
-		if (GetGameTime() < this.f_NextEnemyTime)
-			return this.enemyTarget > 0 && this.IsValidTarget(this.GetEnemyTarget(), true);
+		if (GetGameTime() < this.f_NextEnemyTime && this.IsValidTarget(this.GetEnemyTarget(), true))
+			return true;
 
 		currentBuddy = this.me.Index;
 		int targ = this.GetEnemyTarget();
@@ -4064,16 +4064,9 @@ public void Buddy_Think(int buddy)
 		npc.f_Speed = 0.0;
 	}
 
-	if (buddies[buddy].FindEnemy(pos))
+	if (buddies[buddy].FindEnemy(pos) && gt >= buddies[buddy].f_NextShot)
 	{
-		float enemyPos[3];
-		int target = buddies[buddy].GetEnemyTarget();
-		CF_WorldSpaceCenter(target, enemyPos);
-
-		if (gt >= buddies[buddy].f_NextShot)
-		{
-			buddies[buddy].Shoot();
-		}
+		buddies[buddy].Shoot();
 	}
 
 	if (gt >= buddies[buddy].f_NextScanSound && !buddies[buddy].b_HasEnemyTarget)
