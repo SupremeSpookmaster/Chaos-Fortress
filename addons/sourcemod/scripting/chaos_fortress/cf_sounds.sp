@@ -480,7 +480,8 @@ public Action NormalSoundHook(int clients[64],int &numClients,char strSound[PLAT
 					
 					f_LastSoundHook[entity] = GetGameTime() + 0.01;
 						
-					return (played ? Plugin_Handled : Plugin_Continue);
+					if (played)
+						return Plugin_Handled;
 				}
 				else
 				{
