@@ -3840,6 +3840,12 @@ public void Scrap_Hit(int attacker, int victim, float &baseDamage, bool &allowFa
 				
 			float current = float(view_as<PNPC>(victim).i_Health);
 			float maxHP = float(view_as<PNPC>(victim).i_MaxHealth);
+			bool isNPC = view_as<PNPC>(victim).b_Exists;
+			if (!isNPC)
+			{
+				current = float(GetEntProp(victim, Prop_Data, "m_iHealth"));
+				maxHP = float(TF2Util_GetEntityMaxHealth(victim));
+			}
 			
 			totalHealing = healPerScrap * healCost;
 			float afterHeals = current + totalHealing;
@@ -3848,7 +3854,11 @@ public void Scrap_Hit(int attacker, int victim, float &baseDamage, bool &allowFa
 				totalHealing -= (afterHeals - maxHP);
 			}
 			
-			view_as<PNPC>(victim).i_Health += RoundToFloor(totalHealing);
+			if (isNPC)
+				view_as<PNPC>(victim).i_Health += RoundToFloor(totalHealing);
+			else
+				SetEntProp(victim, Prop_Data, "m_iHealth", current + RoundToFloor(totalHealing));
+
 			float finalCost = totalHealing / healPerScrap;
 			
 			CF_GiveSpecialResource(attacker, -finalCost);
