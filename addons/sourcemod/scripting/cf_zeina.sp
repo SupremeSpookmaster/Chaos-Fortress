@@ -856,17 +856,6 @@ void ZeinaBeaconActivate(int client, char abilityName[255])
 	WritePackFloat(pack2, BlockPercentageSelf);
 }
 
-public void Beacon_OnScanHit(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
-{
-	if(IsValidAlly(inflictor, victim))
-	{
-		ZeinaBeaconApplying[victim] = GetGameTime() + 0.25;
-		ZeinaBeacon_CurrentProtectingIndex[victim] = EntIndexToEntRef(inflictor);
-		if(attacker != victim)
-			ZeinaBeaconHadAlly[victim] = GetGameTime() + 0.25;
-	}
-}
-
 public Action ZeinaBeaconThink(Handle timer, DataPack pack)
 {
 	ResetPack(pack);
@@ -892,7 +881,21 @@ public Action ZeinaBeaconThink(Handle timer, DataPack pack)
 	int SaveTeam = GetEntProp(Beacon, Prop_Send, "m_iTeamNum");
 	SetEntProp(Beacon, Prop_Send, "m_iTeamNum", -5);
 	int Owner = GetEntPropEnt(Beacon, Prop_Send, "m_hOwnerEntity");
-	CF_GenericAOEDamage(Owner, Beacon, Beacon, 0.0, 0, Radius, EntLoc, Radius, 1.0, _, false, _, _, _, PluginName, Beacon_OnScanHit);
+	for (int i = 1; i < 2049; i++)
+	{
+		if (!IsValidAlly(i, Owner))
+			continue;
+
+		float theirPos[3];
+		CF_WorldSpaceCenter(i, theirPos);
+		if (GetVectorDistance(EntLoc, theirPos) <= Radius)
+		{
+			ZeinaBeaconApplying[i] = GetGameTime() + 0.25;
+			ZeinaBeacon_CurrentProtectingIndex[i] = EntIndexToEntRef(Beacon);
+			if(Owner != i)
+				ZeinaBeaconHadAlly[i] = GetGameTime() + 0.25;
+		}
+	}
 	SetEntProp(Beacon, Prop_Send, "m_iTeamNum", SaveTeam);
 
 	if(CooldownVisualAndSound < GetGameTime())
