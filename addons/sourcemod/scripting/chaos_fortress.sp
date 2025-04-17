@@ -82,6 +82,7 @@ public void OnPluginStart()
 	RegAdminCmd("cf_reloadrules", CF_ReloadRules, ADMFLAG_KICK, "Chaos Fortress: Reloads the settings in game_rules.cfg.");
 	RegAdminCmd("cf_reloadcharacters", CF_ReloadCharacters, ADMFLAG_KICK, "Chaos Fortress: Reloads the character packs, as defined in characters.cfg.");
 	RegAdminCmd("cf_makecharacter", CF_ForceCharacter, ADMFLAG_KICK, "Chaos Fortress: Forces a client to become the specified character.");
+	RegAdminCmd("cf_giveult", CF_GiveUltCommand, ADMFLAG_SLAY, "Chaos Fortress: Gives a percentage of ult charge to the specified client(s).");
 	
 	CF_OnPluginStart();
 }
@@ -298,6 +299,41 @@ public Action CF_ReloadCharacters(int client, int args)
 		CF_LoadCharacters(client);
 	}	
 	
+	return Plugin_Continue;
+}
+
+public Action CF_GiveUltCommand(int client, int args)
+{
+	if (args != 2)
+	{
+		ReplyToCommand(client, "[Chaos Fortress] Usage: cf_giveult <target> <ult percentage> | EXAMPLE: cf_giveult john 80 will give John 80% ult.");
+		return Plugin_Continue;
+	}
+
+	char target[32], amtStr[32];
+	GetCmdArg(1, target, 32);
+	GetCmdArg(2, amtStr, 32);
+	float amt = StringToFloat(amtStr);
+
+	int targets[MAXPLAYERS];
+	char targName[MAX_TARGET_LENGTH];
+	bool tnml;
+
+	int targCount;
+	if ((targCount = ProcessTargetString(target, client, targets, MAXPLAYERS, 0, targName, sizeof(targName), tnml)) <= 0)
+	{
+		ReplyToTargetError(client, targCount);
+		return Plugin_Continue;
+	}
+
+	for (int i = 0; i < targCount; i++)
+	{
+		CF_GiveUltCharge(targets[i], amt, CF_ResourceType_Percentage, true);
+		char repl[255];
+		Format(repl, sizeof(repl), "[Chaos Fortress] Gave %i[PCNTG] ult charge to %N.", RoundToFloor(amt), targets[i]);
+		ReplyToCommand(client, repl);
+	}
+
 	return Plugin_Continue;
 }
 
