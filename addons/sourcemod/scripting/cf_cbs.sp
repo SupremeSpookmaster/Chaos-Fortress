@@ -84,6 +84,8 @@ bool b_BlastBolt = false;
 bool b_IsVolleyArrow[2049] = { false, ... };
 bool b_IsHeavyDraw[2049] = { false, ... };
 bool b_DrawActive[MAXPLAYERS + 1] = { false, ... };
+bool b_DrawAllowsFullCrit[MAXPLAYERS + 1] = { false, ... };
+bool b_HDArrow_FullCritOnHS[2049] = { false, ... };
 
 float f_DrawChargeStartTime[MAXPLAYERS + 1] = { 0.0, ... };
 float f_NextShootTime[MAXPLAYERS + 1] = { 0.0, ... };
@@ -113,6 +115,7 @@ public void Draw_Activate(int client, char abilityName[255])
 	CF_GetArgS(client, CBS, abilityName, "end_sound", s_DrawEndSound[client], 255);
 	CF_GetArgS(client, CBS, abilityName, "fullcharge_sound", s_DrawFullChargeSound[client], 255);
 	CF_GetArgS(client, CBS, abilityName, "start_sound", start_sound, sizeof(start_sound));
+	b_DrawAllowsFullCrit[client] = CF_GetArgI(client, CBS, abilityName, "fullcharge_fullcrit", 0) > 0;
 	
 	CF_PlayRandomSound(client, client, start_sound);
 	
@@ -273,7 +276,10 @@ public void Draw_DelayedArrowModification(int ref)
 	float duration_charged = GetGameTime() - f_DrawChargeStartTime[owner];
 	float requiredChargeTime = GetAttributeValue(huntsman, 318, 1.0);
 	if (duration_charged > requiredChargeTime)
+	{
 		duration_charged = requiredChargeTime;
+		b_HDArrow_FullCritOnHS[entity] = b_DrawAllowsFullCrit[owner] && (GetAttributeValue(huntsman, 869, 0.0) != 0.0);
+	}
 	
 	float finalVel = 1875.0 * (1.0 + ((duration_charged / requiredChargeTime) * 0.25)) * velAtt1 * velAtt2 * velAtt3;
 	for (int i = 0; i < 3; i++)
@@ -735,6 +741,30 @@ public void OnEntityCreated(int entity, const char[] classname)
 	}
 }
 
+public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
+{
+	if (!IsValidEntity(inflictor))
+		return Plugin_Continue;
+
+	if (b_HDArrow_FullCritOnHS[inflictor] && damagetype & DMG_CRIT != 0)
+	{
+		damagetype &= ~DMG_CRIT;
+
+		damage *= 2.22222222222 * GetTotalAttributeValue(victim, 62, 1.0) * GetTotalAttributeValue(victim, 63, 1.0);
+
+		if (IsValidClient(attacker))
+			PlayCritSound(attacker);
+		if (IsValidClient(victim))
+			PlayCritVictimSound(victim);
+
+		SpawnParticle(damagePosition, "crit_text", 2.0);
+
+		return Plugin_Changed;
+	}
+
+	return Plugin_Continue;
+}
+
 public Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int weapon)
 {
 	if (!IsValidMulti(attacker))
@@ -817,6 +847,7 @@ public void OnEntityDestroyed(int entity)
 		b_IsVolleyArrow[entity] = false;
 		i_VolleyOwner[entity] = -1;
 		b_IsHeavyDraw[entity] = false;
+		b_HDArrow_FullCritOnHS[entity] = false;
 	}
 }
 
@@ -827,7 +858,7 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 		StopSound(victim, SNDCHAN_AUTO, SOUND_HEAVYDRAW_FULLCHARGE_LOOP);
 		StopSound(victim, SNDCHAN_AUTO, SOUND_HEAVYDRAW_LOOP);
 	}
-	
+
 	Action ReturnValue = Plugin_Continue;
 
 	if (IsValidEntity(inflictor) && b_IsHeavyDraw[inflictor])

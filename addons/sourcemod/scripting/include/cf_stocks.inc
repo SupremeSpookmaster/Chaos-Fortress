@@ -37,6 +37,10 @@
 #define MINICRIT4	"player/crit_hit_mini4.wav"
 #define MINICRIT5	"player/crit_hit_mini5.wav"
 
+#define CRIT_VICTIM_1	"player/crit_received1.wav"
+#define CRIT_VICTIM_2	"player/crit_received2.wav"
+#define CRIT_VICTIM_3	"player/crit_received3.wav"
+
 //#define EF_NODRAW	32
 
 float OFF_THE_MAP[3] = {1182792704.0, 1182792704.0, -964690944.0};
@@ -2175,6 +2179,31 @@ public void RemoveAllInvuln(int client)
 	TF2_RemoveCondition(client, TFCond_DodgeChance);
 	TF2_RemoveCondition(client, TFCond_ObscuredSmoke);
 	SetEntProp(client, Prop_Data, "m_takedamage", 2, 1);
+}
+
+public void PlayCritVictimSound(int client)
+{
+	if (!IsValidClient(client))
+		return;
+		
+	switch(GetRandomInt(1, 3))
+	{
+		case 1:
+		{
+			PrecacheSound(CRIT_VICTIM_1);
+			EmitSoundToClient(client, CRIT_VICTIM_1);
+		}
+		case 2:
+		{
+			PrecacheSound(CRIT_VICTIM_2);
+			EmitSoundToClient(client, CRIT_VICTIM_2);
+		}
+		case 3:
+		{
+			PrecacheSound(CRIT_VICTIM_3);
+			EmitSoundToClient(client, CRIT_VICTIM_3);
+		}
+	}
 }
 
 int i_StuckCheckUser = -1;
