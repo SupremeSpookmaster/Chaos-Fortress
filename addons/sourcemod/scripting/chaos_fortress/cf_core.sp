@@ -19,8 +19,10 @@
 bool b_InSpawn[2049][5];
 
 float f_SpawnGrace = 3.0;
-float f_RespawnTimeRed = 9.0;
-float f_RespawnTimeBlue = 9.0;
+float f_RespawnTimeRed = 12.0;
+float f_RespawnTimeBlue = 12.0;
+float f_RespawnTimeRed_Payload = 12.0;
+float f_RespawnTimeBlue_Payload = 9.0;
 float f_GlobalKnockbackValue = 0.66;
 bool b_PreserveUlt = false;
 
@@ -42,6 +44,9 @@ ConVar g_WeaponDropLifespan;
 public void CF_SetRespawnTime(int client)
 {
 	float time = (TF2_GetClientTeam(client) == TFTeam_Red ? f_RespawnTimeRed : f_RespawnTimeBlue);
+	if (IsPayloadMap())
+		time = (TF2_GetClientTeam(client) == TFTeam_Red ? f_RespawnTimeRed_Payload : f_RespawnTimeBlue_Payload);
+
 	if (time >= 0.0)
 		TF2Util_SetPlayerRespawnTimeOverride(client, time);
 }
@@ -289,8 +294,10 @@ public void CF_SetGameRules(int admin)
 		b_DisplayRole = GetBoolFromCFGMap(subsection, "display_role", false);
 		b_PreserveUlt = GetBoolFromCFGMap(subsection, "preserve_ult", false);
 		f_SpawnGrace = GetFloatFromCFGMap(subsection, "spawn_grace", 3.0);
-		f_RespawnTimeRed = GetFloatFromCFGMap(subsection, "respawn_red", 9.0);
-		f_RespawnTimeBlue = GetFloatFromCFGMap(subsection, "respawn_blue", 9.0);
+		f_RespawnTimeRed = GetFloatFromCFGMap(subsection, "respawn_red", 12.0);
+		f_RespawnTimeBlue = GetFloatFromCFGMap(subsection, "respawn_blue", 12.0);
+		f_RespawnTimeRed_Payload = GetFloatFromCFGMap(subsection, "respawn_red_payload", 12.0);
+		f_RespawnTimeBlue_Payload = GetFloatFromCFGMap(subsection, "respawn_blue_payload", 9.0);
 		f_GlobalKnockbackValue = GetFloatFromCFGMap(subsection, "knockback_modifier", 0.0);
 		
 		float KillValue = GetFloatFromCFGMap(subsection, "value_kills", 1.0);

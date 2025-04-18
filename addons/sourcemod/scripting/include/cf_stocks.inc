@@ -528,6 +528,12 @@ stock void GetAngleToPoint(int ent, float TargetLoc[3], float DummyAngles[3], co
 	Output = ang;
 }
 
+stock bool IsPayloadMap()
+{
+	int observer_of_the_train = FindEntityByClassname(-1, "team_train_watcher");
+	return IsValidEntity(observer_of_the_train);
+}
+
 /**
  * Gets the angle pointing from point A to point B.
  * 
