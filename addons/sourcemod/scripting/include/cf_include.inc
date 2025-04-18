@@ -1962,6 +1962,7 @@ native void CF_GetAbilityTypeSlot(int client, CF_AbilityType type, int slot);
 
 /**
  * Forces the user to perform a specified taunt.
+ * Note that this is ONLY for taunts that can be equipped in TF2's taunt slots. If you want to force a weapon-specific taunt (such as Heavy eating his Sandvich), use CF_ForceWeaponTaunt.
  * 
  * @param client			The client to taunt.
  * @param tauntIndex		The index of the taunt. See items_game.txt.
@@ -1971,3 +1972,19 @@ native void CF_GetAbilityTypeSlot(int client, CF_AbilityType type, int slot);
  * @return	True if the taunt was successfully forced, false otherwise. Note that partner taunts can get cancelled early, in which case this will still return true.
  */
 native bool CF_ForceTaunt(int client, int tauntIndex, float playbackRate = 1.0, bool endCurrentTaunt = true);
+
+/**
+ * Forces the user to perform the taunt associated with the specified weapon.
+ * Note that this is ONLY for weapon taunts. If you want to force a "normal" taunt (such as the Schadenfreude), use CF_ForceTaunt.
+ * 
+ * @param client		The client to taunt.
+ * @param index			The index of the weapon with the desired taunt.
+ * @param classname		The classname of the weapon with the desired taunt.
+ * @param slot			The weapon slot of the weapon with the desired taunt.
+ * @param rate			Taunt playback rate.
+ * @param interrupt		If true: interrupt the client's current taunt, if they are in one.
+ * @param visible		If true: the weapon associated with this taunt will be visible.
+ * 
+ * @return	True if the taunt was successfully forced, false otherwise.
+ */
+native bool CF_ForceWeaponTaunt(int client, int index, char classname[255], int slot, float rate = 1.0, bool interrupt = true, bool visible = true);

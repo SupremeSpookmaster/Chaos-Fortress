@@ -121,6 +121,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_SetAbilityTypeSlot", Native_CF_SetAbilityTypeSlot);
 	CreateNative("CF_GetAbilityTypeSlot", Native_CF_GetAbilityTypeSlot);
 	CreateNative("CF_ForceTaunt", Native_CF_ForceTaunt);
+	CreateNative("CF_ForceWeaponTaunt", Native_CF_ForceWeaponTaunt);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -4244,6 +4245,8 @@ public int Native_CF_GetAbilityTypeSlot(Handle plugin, int numParams)
 }
 
 int i_TauntSpeedWearable[MAXPLAYERS + 1] = { -1, ... };
+int i_ForceTauntWeapon[MAXPLAYERS + 1] = { -1, ... };
+int i_ForceTauntSlot[MAXPLAYERS + 1] = { -1, ... };
 
 public any Native_CF_ForceTaunt(Handle plugin, int numParams)
 {
@@ -4301,14 +4304,81 @@ public any Native_CF_ForceTaunt(Handle plugin, int numParams)
 	return false;
 }
 
+public any Native_CF_ForceWeaponTaunt(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	int index = GetNativeCell(2);
+	char classname[255];
+	GetNativeString(3, classname, 255);
+	int slot = GetNativeCell(4);
+	float rate = GetNativeCell(5);
+	bool interrupt = GetNativeCell(6);
+	bool visible = GetNativeCell(7);
+
+	if (!IsValidMulti(client) || GetEntityFlags(client) & FL_INWATER != 0 || GetEntityFlags(client) & FL_ONGROUND == 0 || (!interrupt && (TF2_IsPlayerStunned(client) || TF2_IsPlayerInCondition(client, TFCond_Taunting))))
+		return false;
+
+	char atts[255];
+	Format(atts, sizeof(atts), "201 ; %f", rate);
+	int weapon = CF_SpawnWeapon(client, classname, index, 77, 7, slot, (slot < 2 ? 1 : 0), (slot < 2 ? 1 : 0), atts, _, visible, false)
+
+	if(weapon != -1)
+	{
+		int acWep = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+
+		for (int i = 0; i < 5; i++)
+		{
+			if (GetPlayerWeaponSlot(client, i) == acWep)
+			{
+				i_ForceTauntSlot[client] = i;
+				break;
+			}
+		}
+
+		TF2_RemoveCondition(client, TFCond_Taunting);
+
+		SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", weapon);
+		FakeClientCommand(client, "taunt");
+		i_ForceTauntWeapon[client] = EntIndexToEntRef(weapon);
+		return true;
+	}
+
+	return false;
+}
+
 public void TF2_OnConditionRemoved(int client, TFCond condition)
 {
-	if (condition == TFCond_Taunting && i_TauntSpeedWearable[client] != -1)
+	if (condition == TFCond_Taunting && (i_TauntSpeedWearable[client] != -1 || i_ForceTauntWeapon[client] != -1))
 	{
 		int ent = EntRefToEntIndex(i_TauntSpeedWearable[client]);
 		if (IsValidEntity(ent))
 			RemoveEntity(ent);
 
+		ent = EntRefToEntIndex(i_ForceTauntWeapon[client]);
+		if (IsValidEntity(ent))
+		{
+			int entity = GetEntPropEnt(ent, Prop_Send, "m_hExtraWearable");
+			if(entity != -1)
+				TF2_RemoveWearable(client, entity);
+
+			entity = GetEntPropEnt(ent, Prop_Send, "m_hExtraWearableViewModel");
+			if(entity != -1)
+				TF2_RemoveWearable(client, entity);
+
+			RemovePlayerItem(client, ent);
+			AcceptEntityInput(ent, "Kill");
+
+			if (IsPlayerAlive(client))
+			{
+				int weapon = GetPlayerWeaponSlot(client, i_ForceTauntSlot[client]);
+				if (IsValidEntity(weapon))
+				{
+					SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", weapon);
+				}
+			}
+		}
+
 		i_TauntSpeedWearable[client] = -1;
+		i_ForceTauntWeapon[client] = -1;
 	}
 }
