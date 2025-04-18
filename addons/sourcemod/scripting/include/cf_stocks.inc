@@ -508,6 +508,7 @@ public bool TraceEntityFilterPlayer_GAT(entity, contentsMask)
 	return entity > MaxClients;
 }
 
+//DEPRECATED!!!!!! USE GetAngleBetweenPoints
 stock void GetAngleToPoint(int ent, float TargetLoc[3], float DummyAngles[3], const float Output[3], float xOff = 0.0, float yOff = 0.0, float zOff = 0.0)
 {
 	float ang[3], pos[3], fVecFinal[3], fFinalPos[3];
@@ -525,6 +526,31 @@ stock void GetAngleToPoint(int ent, float TargetLoc[3], float DummyAngles[3], co
 	GetVectorAngles(fFinalPos, ang);
 
 	Output = ang;
+}
+
+/**
+ * Gets the angle pointing from point A to point B.
+ * 
+ * @param pointA		Start position.
+ * @param pointB		End position.
+ * @param output		Output vector.
+ * @param xOff			Optional X-axis offset for the start position.
+ * @param yOff			Optional Y-axis offset for the start position.
+ * @param zOff			Optional Z-axis offset for the start position.
+ * 
+ * @return		The angle from point A to point B, stored in the output vector.
+ */
+stock void GetAngleBetweenPoints(float pointA[3], float pointB[3], float output[3], float xOff = 0.0, float yOff = 0.0, float zOff = 0.0)
+{
+	float midPoint[3], pointACopy[3];
+	pointACopy = pointA;
+	pointACopy[0] += xOff;
+	pointACopy[1] += yOff;
+	pointACopy[2] += zOff;
+
+	SubtractVectors(pointB, pointACopy, midPoint);
+	NormalizeVector(midPoint, midPoint);
+	GetVectorAngles(midPoint, output);
 }
 
 stock void AddInFrontOf(float fVecOrigin[3], float fVecAngle[3], float fUnits, float fOutPut[3])
