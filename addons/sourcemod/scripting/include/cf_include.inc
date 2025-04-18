@@ -1959,3 +1959,15 @@ native void CF_SetAbilityTypeSlot(int client, CF_AbilityType type, int slot);
  * @return		The ability slot to be activated when the given ability type is used, or -1 if the client is invalid or does not have the given ability type.
  */
 native void CF_GetAbilityTypeSlot(int client, CF_AbilityType type, int slot);
+
+/**
+ * Forces the user to perform a specified taunt.
+ * 
+ * @param client			The client to taunt.
+ * @param tauntIndex		The index of the taunt. See items_game.txt.
+ * @param playbackRate		Taunt playback rate.
+ * @param endCurrentTaunt	Set to true to make the taunt be forced even if the client is already in a taunt.
+ * 
+ * @return	True if the taunt was successfully forced, false otherwise. Note that partner taunts can get cancelled early, in which case this will still return true.
+ */
+native bool CF_ForceTaunt(int client, int tauntIndex, float playbackRate = 1.0, bool endCurrentTaunt = true);

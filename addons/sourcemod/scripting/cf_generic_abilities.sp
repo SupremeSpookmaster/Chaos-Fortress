@@ -26,6 +26,7 @@
 #define ATKSPEED			"generic_attackspeed"
 #define SENTRY_PROJECTILES	"generic_sentry_projectiles"
 #define NOJUMP				"generic_nojump"
+#define FORCETAUNT			"generic_force_taunt"
 
 float Weapon_EndTime[2049] = { 0.0, ... };
 
@@ -521,6 +522,11 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	{
 		ATKSpeed_Activate(client, abilityName);
 	}
+
+	if (StrContains(abilityName, FORCETAUNT) != -1)
+	{
+		ForceTaunt_Activate(client, abilityName);
+	}
 }
 
 float ATKSpeed_Amt[MAXPLAYERS + 1][3];
@@ -531,6 +537,15 @@ public void ATKSpeed_Activate(int client, char abilityName[255])
 	ATKSpeed_Amt[client][1] = CF_GetArgF(client, GENERIC, abilityName, "secondary", 1.0);
 	ATKSpeed_Amt[client][2] = CF_GetArgF(client, GENERIC, abilityName, "melee", 1.0);
 	ATKSpeed_EndTime[client] = GetGameTime() + CF_GetArgF(client, GENERIC, abilityName, "duration");
+}
+
+public void ForceTaunt_Activate(int client, char abilityName[255])
+{
+	int index = CF_GetArgI(client, GENERIC, abilityName, "index");
+	float rate = CF_GetArgF(client, GENERIC, abilityName, "rate", 1.0);
+	bool interrupt = CF_GetArgI(client, GENERIC, abilityName, "interrupt", 1) > 0;
+
+	CF_ForceTaunt(client, index, rate, interrupt);
 }
 
 public Action CF_OnCalcAttackInterval(int client, int weapon, int slot, char classname[255], float &rate)

@@ -35,6 +35,7 @@ GlobalForward g_SentryFiredForward;
 
 Handle SDKStartLagCompensation;
 Handle SDKFinishLagCompensation;
+Handle SDKPlayTaunt;
 Address CStartLagCompensationManager;
 Address CEndLagCompensationManager;
 Address SDKGetCurrentCommand;
@@ -119,6 +120,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_TerminateHomingProjectile", Native_CF_TerminateHomingProjectile);
 	CreateNative("CF_SetAbilityTypeSlot", Native_CF_SetAbilityTypeSlot);
 	CreateNative("CF_GetAbilityTypeSlot", Native_CF_GetAbilityTypeSlot);
+	CreateNative("CF_ForceTaunt", Native_CF_ForceTaunt);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -199,6 +201,14 @@ public void CFA_MakeForwards()
 	SDKGetCurrentCommand = view_as<Address>(gd.GetOffset("GetCurrentCommand"));
 	if(SDKGetCurrentCommand == view_as<Address>(-1))
 		LogError("[Gamedata] Could not find GetCurrentCommand");
+
+	StartPrepSDKCall(SDKCall_Player);
+	PrepSDKCall_SetFromConf(gd, SDKConf_Signature, "CTFPlayer::PlayTauntSceneFromItem");
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
+	SDKPlayTaunt = EndPrepSDKCall();
+	if(SDKPlayTaunt == INVALID_HANDLE)
+		LogError("Could not find CTFPlayer::PlayTauntSceneFromItem.");
 	
 	delete gd;
 }
@@ -4231,4 +4241,74 @@ public int Native_CF_GetAbilityTypeSlot(Handle plugin, int numParams)
 		return ab.i_AbilitySlot;
 
 	return -1;
+}
+
+int i_TauntSpeedWearable[MAXPLAYERS + 1] = { -1, ... };
+
+public any Native_CF_ForceTaunt(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	int index = GetNativeCell(2);
+	float rate = GetNativeCell(3);
+	bool interrupt = GetNativeCell(4);
+
+	if (!IsValidMulti(client) || GetEntityFlags(client) & FL_INWATER != 0 || GetEntityFlags(client) & FL_ONGROUND == 0 || (!interrupt && (TF2_IsPlayerStunned(client) || TF2_IsPlayerInCondition(client, TFCond_Taunting))))
+		return false;
+
+	static Handle item;
+	if(item == INVALID_HANDLE)
+	{
+		item = TF2Items_CreateItem(OVERRIDE_ALL|PRESERVE_ATTRIBUTES|FORCE_GENERATION);
+		TF2Items_SetClassname(item, "tf_wearable_vm");
+		TF2Items_SetQuality(item, 6);
+		TF2Items_SetLevel(item, 1);
+		TF2Items_SetNumAttributes(item, 1);
+		TF2Items_SetAttribute(item, 0, 201, rate);
+	}
+
+	TF2Items_SetItemIndex(item, index);
+	int entity = TF2Items_GiveNamedItem(client, item);
+	if(entity != -1)
+	{
+		if (rate != 1.0)
+		{
+			char atts[255];
+			Format(atts, 255, "201 ; %f", rate);
+			i_TauntSpeedWearable[client] = EntIndexToEntRef(CF_AttachWearable(client, view_as<int>(CF_ClassToken_Engineer), "tf_wearable", false, 0, 0, _, atts));
+		}
+
+		TF2_RemoveCondition(client, TFCond_Taunting);
+			
+		static int offset;
+		if(!offset)
+			offset = GetEntSendPropOffs(entity, "m_Item", true);
+			
+		if(offset > 0)
+		{
+			Address address = GetEntityAddress(entity);
+			if(address != Address_Null)
+			{
+				address += view_as<Address>(offset);
+				SDKCall(SDKPlayTaunt, client, address);
+			}
+
+			AcceptEntityInput(entity, "Kill");
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+public void TF2_OnConditionRemoved(int client, TFCond condition)
+{
+	if (condition == TFCond_Taunting && i_TauntSpeedWearable[client] != -1)
+	{
+		int ent = EntRefToEntIndex(i_TauntSpeedWearable[client]);
+		if (IsValidEntity(ent))
+			RemoveEntity(ent);
+
+		i_TauntSpeedWearable[client] = -1;
+	}
 }

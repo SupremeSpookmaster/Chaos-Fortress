@@ -49,7 +49,6 @@ enum
 }
 
 char PluginName[255];
-Handle SDKPlayTaunt;
 ConVar FriendlyFire;
 int Shared_BEAM_Laser;
 int Shared_BEAM_Glow;
@@ -86,23 +85,6 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 public void OnPluginStart()
 {
 	FriendlyFire = FindConVar("mp_friendlyfire");
-	
-	GameData gameData = new GameData("tf2.tauntem");
-	if(!gameData)
-	{
-		LogError("Could not find gamedata/tf2.tauntem.txt");
-		return;
-	}
-
-	StartPrepSDKCall(SDKCall_Player);
-	PrepSDKCall_SetFromConf(gameData, SDKConf_Signature, "CTFPlayer::PlayTauntSceneFromItem");
-	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
-	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	SDKPlayTaunt = EndPrepSDKCall();
-	if(SDKPlayTaunt == INVALID_HANDLE)
-		LogError("Could not find CTFPlayer::PlayTauntSceneFromItem.");
-
-	delete gameData;
 }
 
 public void OnMapStart()
@@ -879,42 +861,7 @@ void DoMassLaser(int client, char abilityName[255])
 	TF2_AddCondition(client, TFCond_HalloweenKartNoTurn, delay + 1.1);
 	TF2_AddCondition(client, TFCond_MegaHeal, delay + 1.1);
 
-	if(SDKPlayTaunt)
-	{
-		static Handle item;
-		if(item == INVALID_HANDLE)
-		{
-			item = TF2Items_CreateItem(OVERRIDE_ALL|PRESERVE_ATTRIBUTES|FORCE_GENERATION);
-			TF2Items_SetClassname(item, "tf_wearable_vm");
-			TF2Items_SetQuality(item, 6);
-			TF2Items_SetLevel(item, 1);
-			TF2Items_SetNumAttributes(item, 1);
-			TF2Items_SetAttribute(item, 0, 2048, 0.0);
-		}
-
-		TF2Items_SetItemIndex(item, 31467);	//Fist bump is 31162, I have replaced it with Commending Clap because partner taunts can get cancelled
-		int entity = TF2Items_GiveNamedItem(client, item);
-		if(entity != -1)
-		{
-			TF2_RemoveCondition(client, TFCond_Taunting);
-			
-			static int offset;
-			if(!offset)
-				offset = GetEntSendPropOffs(entity, "m_Item", true);
-			
-			if(offset > 0)
-			{
-				Address address = GetEntityAddress(entity);
-				if(address != Address_Null)
-				{
-					address += view_as<Address>(offset);
-					SDKCall(SDKPlayTaunt, client, address);
-				}
-
-				AcceptEntityInput(entity, "Kill");
-			}
-		}
-	}
+	CF_ForceTaunt(client, 31467);
 }
 
 Action MassLaserTimer(Handle timer, DataPack pack)

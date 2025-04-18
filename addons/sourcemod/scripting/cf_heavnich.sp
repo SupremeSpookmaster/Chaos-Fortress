@@ -93,11 +93,11 @@ public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability
 	if (!StrEqual(plugin, HEAVNICH))
 		return Plugin_Continue;
 
-	if (StrContains(ability, CHOW) != -1 && GetClientButtons(client) & IN_ATTACK2 != 0)
+	/*if (StrContains(ability, CHOW) != -1 && GetClientButtons(client) & IN_ATTACK2 != 0)
 	{
 		result = false;
 		return Plugin_Changed;
-	}
+	}*/
 
 	if (!Rev_Active[client] || (Rev_EndTime[client] < GetGameTime() && !TF2_IsPlayerInCondition(client, TFCond_Slowed)))
 		return Plugin_Continue;
@@ -213,7 +213,7 @@ float f_Eating[MAXPLAYERS + 1] = { 0.0, ... };
 
 public void Chow_Activate(int client, char abilityName[255])
 {
-	CF_DoAbility(client, "cf_generic_abilities", "generic_weapon_sandvich");
+	//CF_DoAbility(client, "cf_generic_abilities", "generic_weapon_sandvich");
 	f_Eating[client] = GetGameTime() + 4.2;
 	
 	//Prevent knockback so you don't get knocked into the air, thus bugging the ability.
