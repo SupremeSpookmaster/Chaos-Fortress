@@ -1356,7 +1356,6 @@ public Native_CF_SetUltCharge(Handle plugin, int numParams)
 	}
 }
 
-//TODO: Sound cue: "sound_ultimate_not_ready_callout"
 public void CFA_UltMessage(int client)
 {
 	CFCharacter chara = GetCharacterFromClient(client);
