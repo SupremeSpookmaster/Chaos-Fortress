@@ -3398,6 +3398,7 @@ public void Annihilation_Build(int client, char abilityName[255], int building)
 	view_as<PNPC>(tele).f_HealthBarHeight = 60.0;
 	view_as<PNPC>(tele).b_IsABuilding = true;
 	view_as<PNPC>(tele).b_GibsForced = true;
+	view_as<PNPC>(tele).b_CanBeDisabled = false;
 	float mins[3], maxs[3];
 	mins[0] = -26.71;
 	mins[1] = -26.71;
@@ -3601,6 +3602,7 @@ public void Annihilation_TeleThink(int tele)
 				view_as<PNPC>(buster).AddGib(MODEL_TELE_GIB_4, "centre_attach2");
 				view_as<PNPC>(buster).f_HealthBarHeight = 60.0;
 				view_as<PNPC>(buster).b_IsABuilding = true;
+				view_as<PNPC>(buster).b_CanBeDisabled = false;
 
 				EmitSoundToAll(SOUND_BUSTER_LOOP, buster, _, _, _, _, 110);
 				AttachParticleToEntity(buster, team == TFTeam_Red ? PARTICLE_BUSTER_GLOW_RED : PARTICLE_BUSTER_GLOW_BLUE, "root", 4.0);

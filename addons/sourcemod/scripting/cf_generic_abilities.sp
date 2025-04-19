@@ -28,6 +28,7 @@
 #define NOJUMP				"generic_nojump"
 #define FORCETAUNT			"generic_force_taunt"
 #define FORCETAUNT_WEAPON	"generic_force_weapon_taunt"
+#define CLOAK_BLOCK			"generic_block_cloak"
 
 float Weapon_EndTime[2049] = { 0.0, ... };
 
@@ -196,6 +197,7 @@ public void OnMapStart()
 }
 
 bool b_NoJump[MAXPLAYERS + 1];
+bool Cloak_Active[MAXPLAYERS + 1];
 
 public void CF_OnCharacterCreated(int client)
 {
@@ -212,9 +214,60 @@ public void CF_OnCharacterCreated(int client)
 	if (b_NoJump[client])
 		RequestFrame(NoJump_SetState, GetClientUserId(client));
 
+	Cloak_Active[client] = CF_HasAbility(client, GENERIC, CLOAK_BLOCK);
+	if (Cloak_Active[client])
+		CloakBlock_Prepare(client);
+
 	b_SentryProjectiles[client] = CF_HasAbility(client, GENERIC, SENTRY_PROJECTILES);
 	if (b_SentryProjectiles[client])
 		SentryProjectiles_Prepare(client);
+}
+
+float Cloak_Duration[MAXPLAYERS + 1];
+
+float Cloak_EndTime[MAXPLAYERS + 1];
+bool Cloak_Blocks[MAXPLAYERS + 1][4];
+
+public void CloakBlock_Prepare(int client)
+{
+	Cloak_Duration[client] = CF_GetArgF(client, GENERIC, CLOAK_BLOCK, "duration");
+	Cloak_Blocks[client][0] = CF_GetArgI(client, GENERIC, CLOAK_BLOCK, "block_ult") != 0;
+	Cloak_Blocks[client][1] = CF_GetArgI(client, GENERIC, CLOAK_BLOCK, "block_m2") != 0;
+	Cloak_Blocks[client][2] = CF_GetArgI(client, GENERIC, CLOAK_BLOCK, "block_m3") != 0;
+	Cloak_Blocks[client][3] = CF_GetArgI(client, GENERIC, CLOAK_BLOCK, "block_reload") != 0;
+}
+
+public void TF2_OnConditionAdded(int client, TFCond cond)
+{
+	if (cond == TFCond_Taunting && b_BlockTaunt[client])
+	{
+		TF2_RemoveCondition(client, cond);
+	}
+}
+
+public void TF2_OnConditionRemoved(int client, TFCond condition)
+{
+	if (!Cloak_Active[client])
+		return;
+	
+	if (condition == TFCond_Cloaked)
+		Cloak_EndTime[client] = GetGameTime() + Cloak_Duration[client];
+}
+
+public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result)
+{
+	if (!Cloak_Active[client] || (Cloak_EndTime[client] < GetGameTime() && !TF2_IsPlayerInCondition(client, TFCond_Cloaked)))
+		return Plugin_Continue;
+		
+	int slot = view_as<int>(type);
+	
+	if (Cloak_Blocks[client][slot])
+	{
+		result = false;
+		return Plugin_Changed;
+	}
+	
+	return Plugin_Continue;
 }
 
 public void NoJump_SetState(int id)
@@ -1450,14 +1503,6 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 	}
 
 	return Plugin_Continue;
-}
-
-public void TF2_OnConditionAdded(int client, TFCond cond)
-{
-	if (cond == TFCond_Taunting && b_BlockTaunt[client])
-	{
-		TF2_RemoveCondition(client, cond);
-	}
 }
 
 float f_SPVel[2049][3];
