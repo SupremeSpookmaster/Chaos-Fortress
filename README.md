@@ -20,7 +20,7 @@ This game mode is currently incompatible with 64-bit servers. I am in the proces
   4. ***Chaos Fortress*** should now be updated on your server!
 
 ## *Prerequisites:*
-- **[SourceMod 1.12+](https://www.sourcemod.net/downloads.php)**
+- **[SourceMod 1.12+](https://www.sourcemod.net/downloads.php)** *(1.13+ Recommended)*
 - **[TF2Attributes 1.7.0+](https://github.com/FlaminSarge/tf2attributes)**
 - **[TF2Items](https://builds.limetech.io/?project=tf2items)**
 - **[TF2 Econ Data](https://github.com/nosoop/SM-TFEconData)**
