@@ -20,11 +20,11 @@ This game mode is currently incompatible with 64-bit servers. I am in the proces
   4. ***Chaos Fortress*** should now be updated on your server!
 
 ## *Prerequisites:*
-- **[SourceMod 1.13.7216+](https://www.sourcemod.net/downloads.php)**
+- **[SourceMod 1.12+](https://www.sourcemod.net/downloads.php)**
 - **[TF2Attributes 1.7.0+](https://github.com/FlaminSarge/tf2attributes)**
 - **[TF2Items](https://builds.limetech.io/?project=tf2items)**
 - **[TF2 Econ Data](https://github.com/nosoop/SM-TFEconData)**
-- **[TF2 Econ Dynamic](https://github.com/nosoop/SMExt-TFEconDynamic)**
+- **[TF2 Econ Dynamic](https://github.com/nosoop/SMExt-TFEconDynamic)** ***TODO: Thoroughly test CF without this installed***
 - **[TF2 Utils](https://github.com/nosoop/SM-TFUtils)**
 - **[CollisionHook](https://github.com/voided/CollisionHook)**
 - **[SteamWorks](https://users.alliedmods.net/~kyles/builds/SteamWorks/)**
