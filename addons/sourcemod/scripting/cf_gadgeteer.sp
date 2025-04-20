@@ -1,7 +1,6 @@
 #include <sdkhooks>
 #include <tf2_stocks>
 #include <cf_stocks>
-#include <math>
 #include <worldtext>
 #include <fakeparticles>
 #include <pnpc>
