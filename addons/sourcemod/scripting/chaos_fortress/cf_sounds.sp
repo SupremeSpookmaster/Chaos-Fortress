@@ -397,18 +397,6 @@ public bool CFS_CheckDoesSoundExist(char snd[255])
 
 GlobalForward g_SoundHook;
 
-float f_LastSoundHook[MAXPLAYERS + 1] = { 0.0, ... };
-float f_Silenced[MAXPLAYERS + 1] = { 0.0, ... };
-
-public void CFS_MapChange()
-{
-	for (int i = 0; i <= MaxClients; i++)
-	{
-		f_LastSoundHook[i] = 0.0;
-		f_Silenced[i] = 0.0;
-	}
-}
-
 public void CFS_OnPluginStart()
 {
 	g_SoundHook = new GlobalForward("CF_SoundHook", ET_Event, Param_String, Param_CellByRef, Param_CellByRef, Param_FloatByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);
@@ -448,7 +436,7 @@ public Action NormalSoundHook(int clients[64],int &numClients,char strSound[PLAT
 					return Plugin_Continue;
 
 				float gameTime = GetGameTime();
-				if (gameTime >= f_LastSoundHook[entity] && gameTime >= f_Silenced[entity])
+				if (gameTime >= chara.f_LastSoundHook && gameTime >= chara.f_SilenceEndTime)
 				{
 					if (IsCasting(entity) && StrContains(strSound, "sf13_spell_") != -1)
 						return Plugin_Handled;
@@ -478,7 +466,7 @@ public Action NormalSoundHook(int clients[64],int &numClients,char strSound[PLAT
 						played = chara.PlayRandomSound("sound_replace_all");
 					}
 					
-					f_LastSoundHook[entity] = GetGameTime() + 0.01;
+					chara.f_LastSoundHook = GetGameTime() + 0.01;
 						
 					if (played)
 						return Plugin_Handled;
@@ -546,6 +534,7 @@ public Native_CF_SilenceCharacter(Handle plugin, int numParams)
 	int client = GetNativeCell(1);
 	float duration = GetNativeCell(2);
 	
-	if (IsValidClient(client))
-		f_Silenced[client] = GetGameTime() + duration;
+	CFCharacter chara = GetCharacterFromClient(client);
+	if (chara != null)
+		chara.f_SilenceEndTime = GetGameTime() + duration;
 }

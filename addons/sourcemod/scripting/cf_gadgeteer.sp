@@ -3848,6 +3848,9 @@ public void Scrap_Hit(int attacker, int victim, float &baseDamage, bool &allowFa
 				current = float(GetEntProp(victim, Prop_Data, "m_iHealth"));
 				maxHP = float(TF2Util_GetEntityMaxHealth(victim));
 			}
+
+			if (current >= maxHP)
+				return;
 			
 			totalHealing = healPerScrap * healCost;
 			float afterHeals = current + totalHealing;
@@ -3859,7 +3862,7 @@ public void Scrap_Hit(int attacker, int victim, float &baseDamage, bool &allowFa
 			if (isNPC)
 				view_as<PNPC>(victim).i_Health += RoundToFloor(totalHealing);
 			else
-				SetEntProp(victim, Prop_Data, "m_iHealth", current + RoundToFloor(totalHealing));
+				SetEntProp(victim, Prop_Data, "m_iHealth", RoundToFloor(current) + RoundToFloor(totalHealing));
 
 			float finalCost = totalHealing / healPerScrap;
 			

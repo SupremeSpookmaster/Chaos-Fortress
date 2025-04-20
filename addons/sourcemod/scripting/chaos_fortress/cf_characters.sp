@@ -455,6 +455,8 @@ float f_CharacterResourcesOnBuildingDamage[MAXPLAYERS + 1];
 float f_CharacterResourcesOnDestruction[MAXPLAYERS + 1];
 float f_CharacterResourcesToTriggerSound[MAXPLAYERS + 1];
 float f_CharacterResourcesSinceLastGain[MAXPLAYERS + 1];
+float f_CharacterSilenceEndTime[MAXPLAYERS + 1];
+float f_CharacterLastSoundHook[MAXPLAYERS + 1];
 bool b_CharacterResourceIsUlt[MAXPLAYERS + 1];
 bool b_CharacterResourceIsPercentage[MAXPLAYERS + 1];
 bool b_CharacterResourceIsMetal[MAXPLAYERS + 1];
@@ -698,6 +700,18 @@ methodmap CFCharacter __nullable__
 		public set(float value) { f_CharacterResourcesSinceLastGain[this.index] = value; }
 	}
 
+	property float f_LastSoundHook
+	{
+		public get () { return f_CharacterLastSoundHook[this.index]; }
+		public set(float value) { f_CharacterLastSoundHook[this.index] = value; }
+	}
+
+	property float f_SilenceEndTime
+	{
+		public get () { return f_CharacterSilenceEndTime[this.index]; }
+		public set(float value) { f_CharacterSilenceEndTime[this.index] = value; }
+	}
+
 	property TFClassType i_Class
 	{
 		public get() { return i_CharacterClass[this.index]; }
@@ -909,6 +923,8 @@ methodmap CFCharacter __nullable__
 		this.f_ResourcesOnKill = 0.0;
 		this.f_ResourcesOnBuildingDamage = 0.0;
 		this.f_ResourcesOnDestruction = 0.0;
+		this.f_LastSoundHook = 0.0;
+		this.f_SilenceEndTime = 0.0;
 
 		this.SetModel("");
 		this.SetName("");
