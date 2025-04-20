@@ -431,7 +431,8 @@ enum struct SupportDroneStats
 	int owner;
 	int autoTarget;
 	int self;
-
+	int glow;
+	
 	bool isBuilding;
 	bool exists;
 	bool isPanicked;
@@ -474,7 +475,7 @@ enum struct SupportDroneStats
 		this.healRate_Self = other.healRate_Self;
 		this.minHealTime = other.minHealTime;
 		this.scanRadius = other.scanRadius;
-
+		
 		this.superchargeDuration = other.superchargeDuration;
 		this.superchargeBuildSpeed = other.superchargeBuildSpeed;
 		this.superchargeMovementSpeed = other.superchargeMovementSpeed;
@@ -2692,6 +2693,7 @@ public void Toss_SpawnSupportOnDelay(DataPack pack)
 		Toss_SupportStats[drone].isBuilding = true;
 		Toss_SupportStats[drone].lastBuildHealth = 1;
 		Toss_SupportStats[drone].owner = GetClientUserId(owner);
+		//Toss_SupportStats[drone].glow = EntIndexToEntRef(CreateEntityByName("tf_glow"));
 		Toss_SupportDrone[owner] = EntIndexToEntRef(drone);
 		Toss_IsSupportDrone[drone] = true;
 		Toss_SupportStats[drone].b_StayStill = false;
@@ -2928,7 +2930,7 @@ public void Support_Command(int client, char abilityName[255])
 		maxs[0] = -mins[0];
 		maxs[1] = -mins[1];
 		maxs[2] = -mins[2];
-
+		
 		CF_StartLagCompensation(client);
 		Command_User = client;
 		TR_TraceHullFilter(startPos, endPos, mins, maxs, MASK_SHOT, Command_OnlyPlayers, supportDrone);

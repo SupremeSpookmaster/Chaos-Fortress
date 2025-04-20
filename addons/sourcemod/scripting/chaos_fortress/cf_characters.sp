@@ -2246,7 +2246,7 @@ public void CF_DestroyAllBuildings(int client)
 	EndHeldAbility(client, CF_AbilityType_M2, true, true);
 	EndHeldAbility(client, CF_AbilityType_M3, true, true);
 	EndHeldAbility(client, CF_AbilityType_Reload, true, true);
-
+	
 	char conf[255];
 	GetClientCookie(client, c_DesiredCharacter, conf, sizeof(conf));
 	
@@ -2757,7 +2757,7 @@ public void CF_DestroyAllBuildings(int client)
  		return;
  	
  	int num = 0;
- 	while (Classes[num] != class)
+ 	while (num < sizeof(Classes) && Classes[num] != class)
  	{
  		num++;
  	}
@@ -2796,7 +2796,7 @@ public void CF_DestroyAllBuildings(int client)
  		return;
  	
  	int num = 0;
- 	while (Classes[num] != class)
+ 	while (num < sizeof(Classes) && Classes[num] != class)
  	{
  		num++;
  	}

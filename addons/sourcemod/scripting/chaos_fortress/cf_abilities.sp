@@ -387,7 +387,7 @@ public Action CFA_HUDTimer(Handle timer)
 	{
 		bool wouldBeStuck, tooPoor, CanUse;
 		float remCD;
-
+		
 		if (!CF_IsPlayerCharacter(client))
 			continue;
 
@@ -397,7 +397,7 @@ public Action CFA_HUDTimer(Handle timer)
 		CFCharacter chara = GetCharacterFromClient(client);
 		if (chara == null)
 			continue;
-
+		
 		bool showHUD = GetClientButtons(client) & IN_SCORE == 0 && b_UseHUD[client];
 		char HUDText[255];
 
@@ -441,7 +441,7 @@ public Action CFA_HUDTimer(Handle timer)
 				{
 					CF_GiveUltCharge(client, chara.f_UltChargeOnRegen/10.0, CF_ResourceType_Percentage);
 				}
-
+				
 				if (showHUD)
 				{
 					CanUse = CF_CanPlayerUseAbilitySlot(client, type, wouldBeStuck, tooPoor);
