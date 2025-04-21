@@ -1,9 +1,9 @@
 #include <sdkhooks>
 #include <tf2_stocks>
 #include <cf_stocks>
-#include <worldtext>
 #include <fakeparticles>
 #include <pnpc>
+#tryinclude <worldtext>
 
 #define GADGETEER		"cf_gadgeteer"
 #define TOSS			"gadgeteer_sentry_toss"
@@ -842,6 +842,7 @@ enum struct CustomSentry
 		char hpText[255];
 		Format(hpText, sizeof(hpText), "HP: %i", RoundToCeil(this.currentHealth));
 			
+		#if defined _worldtext_included_
 		int textEnt = EntRefToEntIndex(this.text);
 		if (!IsValidEntity(textEnt) || this.text == 0)
 		{
@@ -862,6 +863,7 @@ enum struct CustomSentry
 		g = RoundFloat(multiplier * 255.0);
 		b = RoundFloat(multiplier * 255.0);
 		WorldText_SetColor(textEnt, r, g, b);
+		#endif
 		
 		int client = GetClientOfUserId(this.owner);
 		int damageParticle = EntRefToEntIndex(this.damageEffect);
@@ -975,6 +977,7 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 		Scrap_Activate(client, abilityName);
 }
 
+#if defined _worldtext_included_
 //Prevents a point_worldtext entity from being seen by anyone other than its owner.
 public Action Text_Transmit(int entity, int client)
 {
@@ -986,6 +989,7 @@ public Action Text_Transmit(int entity, int client)
  		
 	return Plugin_Continue;
 }
+#endif
 
 //Fades the alpha of a given entity and removes it if the alpha falls below 1.
 public void Toss_FadeOutGib(int ref)
@@ -1699,6 +1703,7 @@ public Action Toss_ToolboxTouch(int prop, int other)
 			GetEntPropVector(other, Prop_Send, "m_vecOrigin", pos);
 			SpawnParticle(pos, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_SUPERCHARGE_IMPACT_RED : PARTICLE_SUPERCHARGE_IMPACT_BLUE);
 			
+			#if defined _worldtext_included_
 			GetEntPropVector(prop, Prop_Send, "m_vecOrigin", pos);
 			pos[2] += 20.0 * Toss_SentryStats[prop].scale;
 			int text = WorldText_Create(pos, NULL_VECTOR, "ULTRA-CHARGED!", 15.0);
@@ -1707,6 +1712,7 @@ public Action Toss_ToolboxTouch(int prop, int other)
 				WorldText_MimicHitNumbers(text, 2.0, 3.0, 0.5);
 				WorldText_SetRainbow(text, true);
 			}
+			#endif
 
 			RemoveEntity(other);
 			
@@ -1731,9 +1737,12 @@ public Action Toss_ToolboxDamaged(int prop, int &attacker, int &inflictor, float
 		float pos[3];
 		GetEntPropVector(prop, Prop_Send, "m_vecOrigin", pos);
 		pos[2] += 20.0 * Toss_SentryStats[prop].scale;
+
+		#if defined _worldtext_included_
 		int text = WorldText_Create(pos, NULL_VECTOR, "SUPERCHARGED!", 10.0);
 		if (IsValidEntity(text))
 			WorldText_MimicHitNumbers(text, 2.0, 3.0, 0.5);
+		#endif
 			
 		SpawnParticle(pos, TF2_GetClientTeam(owner) == TFTeam_Red ? PARTICLE_SUPERCHARGE_IMPACT_RED : PARTICLE_SUPERCHARGE_IMPACT_BLUE);
 		
@@ -1763,6 +1772,7 @@ public Action Drone_Damaged(int prop, int &attacker, int &inflictor, float &dama
 		GetEntPropVector(prop, Prop_Send, "m_vecOrigin", pos);
 		pos[2] += 20.0 * Toss_SentryStats[prop].scale;
 		
+		#if defined _worldtext_included_
 		char damageDealt[16];
 		Format(damageDealt, sizeof(damageDealt), "-%i", RoundToCeil(originalDamage));
 		int text = WorldText_Create(pos, NULL_VECTOR, damageDealt, 15.0, _, _, _, 255, 120, 120, 255);
@@ -1773,6 +1783,7 @@ public Action Drone_Damaged(int prop, int &attacker, int &inflictor, float &dama
 			
 			WorldText_MimicHitNumbers(text);
 		}
+		#endif
 	}
 	
 	Toss_SentryStats[prop].UpdateHP(-originalDamage);
@@ -2478,6 +2489,7 @@ public Action CF_OnPhysPropHitByProjectile(int prop, int entity, TFTeam propTeam
 	SpawnParticle(pos, propTeam == TFTeam_Red ? PARTICLE_TOSS_HEAL_RED : PARTICLE_TOSS_HEAL_BLUE, 3.0);
 	EmitSoundToClient(entityOwner, SOUND_TOSS_HEAL);
 		
+	#if defined _worldtext_included_
 	char amountHealed[16];
 	Format(amountHealed, sizeof(amountHealed), "+%i", RoundToCeil(totalHealing));
 	int text = WorldText_Create(pos, NULL_VECTOR, amountHealed, 15.0, _, _, _, 120, 255, 120, 255);
@@ -2488,6 +2500,7 @@ public Action CF_OnPhysPropHitByProjectile(int prop, int entity, TFTeam propTeam
 			
 		WorldText_MimicHitNumbers(text);
 	}
+	#endif
 	
 	return Plugin_Continue;
 }
@@ -3301,6 +3314,7 @@ public void PNPC_OnTouch(PNPC npc, int entity, char[] classname)
 	SpawnParticle(pos, npc.i_Team == TFTeam_Red ? PARTICLE_TOSS_HEAL_RED : PARTICLE_TOSS_HEAL_BLUE, 3.0);
 	EmitSoundToClient(entityOwner, SOUND_TOSS_HEAL);
 		
+	#if defined _worldtext_included_
 	char amountHealed[16];
 	Format(amountHealed, sizeof(amountHealed), "+%i", RoundToCeil(totalHealing));
 	int text = WorldText_Create(pos, NULL_VECTOR, amountHealed, 15.0, _, _, _, 120, 255, 120, 255);
@@ -3311,6 +3325,7 @@ public void PNPC_OnTouch(PNPC npc, int entity, char[] classname)
 			
 		WorldText_MimicHitNumbers(text);
 	}
+	#endif
 }
 
 public void Annihilation_Activate(int client, char abilityName[255])
@@ -3570,9 +3585,11 @@ public void Annihilation_TeleThink(int tele)
 			SpawnShaker(pos, 12, 200, 4, 4, 4);
 
 			pos[2] += 30.0;
+			#if defined _worldtext_included_
 			int text = WorldText_Create(pos, NULL_VECTOR, "Telefragged!", 22.5, _, _, _, 120, 255, 120, 255, true);
 			if (IsValidEntity(text))	
 				WorldText_MimicHitNumbers(text);
+			#endif
 		}
 		else
 		{
@@ -3885,6 +3902,7 @@ public void Scrap_Hit(int attacker, int victim, float &baseDamage, bool &allowFa
 		SpawnParticle(hitPos, TF2_GetClientTeam(attacker) == TFTeam_Red ? PARTICLE_TOSS_HEAL_RED : PARTICLE_TOSS_HEAL_BLUE, 3.0);
 		EmitSoundToClient(attacker, SOUND_TOSS_HEAL);
 			
+		#if defined _worldtext_included_
 		char amountHealed[16];
 		Format(amountHealed, sizeof(amountHealed), "+%i", RoundToCeil(totalHealing));
 		int text = WorldText_Create(hitPos, NULL_VECTOR, amountHealed, 15.0, _, _, _, 120, 255, 120, 255);
@@ -3895,6 +3913,7 @@ public void Scrap_Hit(int attacker, int victim, float &baseDamage, bool &allowFa
 				
 			WorldText_MimicHitNumbers(text);
 		}
+		#endif
 	}
 }
 
