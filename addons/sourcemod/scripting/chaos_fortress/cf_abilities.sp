@@ -172,7 +172,7 @@ public void CFA_MakeForwards()
 	//CBaseEntity::FireBullets
 	g_DHookSentryFireBullet = DHook_CreateVirtual(gd, "CBaseEntity::FireBullets");
 	g_DHookSentryFireBullet.AddParam(HookParamType_Int);
-
+	
 	//SetLocalOrigin
 	StartPrepSDKCall(SDKCall_Entity);
 	PrepSDKCall_SetFromConf(gd, SDKConf_Signature, "CBaseEntity::SetLocalOrigin");
@@ -566,9 +566,9 @@ public Action CFA_HUDTimer(Handle timer)
 			Call_PushCellRef(a);
 
 			Call_Finish();
-
+			
 			ReplaceString(HUDText, sizeof(HUDText), "[PERCENT]", "%%");
-			SetHudTextParams(-1.0, 0.8, 0.1, r, g, b, a);
+			SetHudTextParams(-1.0, 0.7, 0.1, r, g, b, a);
 			ShowSyncHudText(client, HudSync, HUDText);
 		}
 	}

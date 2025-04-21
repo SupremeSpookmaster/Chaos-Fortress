@@ -253,10 +253,10 @@ stock int SpawnWeapon_Special(int client, char[] name, int index, int level, int
 			EmitSoundToClient(client, "buttons/button9.wav");
 		}
 		
-		SetEntProp(entity, Prop_Send, "m_aBuildableObjectTypes", 1, _, 0);
-		SetEntProp(entity, Prop_Send, "m_aBuildableObjectTypes", 1, _, 1);
-		SetEntProp(entity, Prop_Send, "m_aBuildableObjectTypes", 1, _, 2);
-		SetEntProp(entity, Prop_Send, "m_aBuildableObjectTypes", 0, _, 3);
+		/*SetEntProp(entity, Prop_Send, "m_aBuildableObjectTypes", true, _, 0);
+		SetEntProp(entity, Prop_Send, "m_aBuildableObjectTypes", true, _, 1);
+		SetEntProp(entity, Prop_Send, "m_aBuildableObjectTypes", true, _, 2);
+		SetEntProp(entity, Prop_Send, "m_aBuildableObjectTypes", false, _, 3);*/
 	}
 	
 	SetEntProp(entity, Prop_Send, "m_iAccountID", GetSteamAccountID(client, false));

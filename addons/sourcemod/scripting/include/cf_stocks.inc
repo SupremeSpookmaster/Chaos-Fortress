@@ -624,6 +624,19 @@ stock int TF2_CreateGlow(int iEnt, int team)
 	return ent;
 }
 
+stock int SetEntityTransmitState(int entity, int newFlags)
+{
+    if (!IsValidEdict(entity))
+    {
+		return 0;
+	}
+    
+    int flags = GetEdictFlags(entity);
+    flags &= ~(FL_EDICT_ALWAYS | FL_EDICT_PVSCHECK | FL_EDICT_DONTSEND);
+    flags |= newFlags;
+    SetEdictFlags(entity, flags);
+    return flags;
+}
 
 stock int AttachWorldTextToEntity(int entity, char message[255], char point[255], float duration = 0.0, float xOff = 0.0, float yOff = 0.0, float zOff = 0.0)
 {
