@@ -64,6 +64,12 @@ public void OnPluginStart()
 	delete gamedata;
 }
 
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	MarkNativeAsOptional("PNPC_GetCustomMeleeAttributes");
+	return APLRes_Success;
+}
+
 public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
 {
 	if (!StrEqual(pluginName, CBS))
