@@ -59,20 +59,21 @@ Let's say you want to add or remove a character, or you have a handful of charac
 All configurable options specific to this game mode are described in and can be controlled in **[game_rules.cfg](addons/sourcemod/data/chaos_fortress/game_rules.cfg)**.
 
 ## *Programming Credits*
-Though I do consider myself to be a decent programmer, I have never made a game mode before. As such, I encountered a lot of hurdles during development which, try as I might, I couldn't get over with my existing skill set. For these, I turned to a handful of fellow developers for a helping hand. Without those who are listed here, this mod would be nowhere near my fairly lofty quality standards, and in some cases, would never have even been finished in the first place. Words cannot express my gratitude to these people.
+Having never tackled a game mode before, I encountered a lot of hurdles during the development of ***Chaos Fortress*** which, try as I might, I couldn't get over with my existing skill set. For these, I turned to a handful of fellow developers for a helping hand. Without those who are listed here, this mod may never have even been finished in the first place. Words cannot express my gratitude to these people.
 <details>
 
 <summary>Click to view programming credits.</summary>
 
-  - **[Artvin](https://github.com/artvin01)** and **[Batfoxkid](https://github.com/Batfoxkid)**, the creators of ***[TF2 Zombie Riot](https://github.com/artvin01/TF2-Zombie-Riot)***, which I borrowed code from at certain points; practically the entire NPC system was created by reverse-engineering Zombie Riot's NPC base.
+  - **[CookieCat](https://github.com/CookieCat45)**, who provided a LOT of help with quality-of-life changes, as well as several bug fixes, and help with server/console commands.
+  - **[Artvin](https://github.com/artvin01)** and **[Batfoxkid](https://github.com/Batfoxkid)**, the creators of ***[TF2 Zombie Riot](https://github.com/artvin01/TF2-Zombie-Riot)***, which I borrowed code from at certain points. Additionally, Batfoxkid created Sensal, and Artvin created Zeina.
+  - **[jDeivid](https://github.com/jDaivid)**, the creator of Herlven.
   - **[Zabaniya001, AKA Suza](https://github.com/Zabaniya001/Zabaniya001)**, for offering various tips and tricks, help regarding code cleanliness and performance, lots of help with unfamiliar coding territory.
-  - **[CookieCat](https://github.com/CookieCat45)**, for help with finding netprops when I was unable to find them myself.
   - **[Jakub/ficool2](https://github.com/ficool2)**, for consistently offering helpful advice on a range of topics.
-  - ...And of course, myself: **[Spookmaster](https://github.com/SupremeSpookmaster)** (Lead Dev, Game Mode Creator, All Default Characters)
+  - ...And of course, myself: **[Spookmaster](https://github.com/SupremeSpookmaster)** (Lead Dev, Game Mode Creator)
 </details>
 
 ## *Content Credits*
-No matter how good you are at programming, you're not going to get very far in game development if you don't have good assets. As I like to say: without a programmer, you don't have a game, but without the rest of the crew, you don't have a good game. As such, in making the default characters for Chaos Fortress, I made thorough use of TF2's long history of content mods to cover assets that couldn't be handled by the files available in base TF2. And so, just like with this game mode's programmers, I want to take a moment to give full credit to the original creators of all of the assets I repurposed for this project.
+Without a programmer, you don't have a game, but without the rest of the crew, you don't have a good game. As such, in making many of the default characters for Chaos Fortress, I made thorough use of TF2's long history of content mods to cover assets that couldn't be handled by the files available in base TF2. As such, I want to take a moment to give full credit to the original creators of all of the assets I repurposed for this project.
 <details>
 
 <summary>Click to view content credits.</summary>
@@ -88,4 +89,8 @@ No matter how good you are at programming, you're not going to get very far in g
  - **Badass** (Created the team-colored skins)
 ### Demopan
  - **[ichbinpwnzilla](https://www.reddit.com/r/tf2/comments/ensgh/the_new_face_of_tf2/)** (Character Creator)
+### Kranz
+ - **[Haau](https://gamebanana.com/members/2028132)** (Creator of **[The Kaiserfaust](https://gamebanana.com/mods/569690)**, a primary for the Sniper, which I removed the scope from to use for Kranz's primary)
+ - **[HairyPairy](https://gamebanana.com/members/1289258)** (Creator of the **[Nikolai Belinski as the Heavy](https://gamebanana.com/sounds/27837)** voice pack, which I used as the source of Kranz's voice)
+ - **Fred Tatasciore** (Voice actor for Nikolai Belinski, the source of Kranz's voice)
 </details>
