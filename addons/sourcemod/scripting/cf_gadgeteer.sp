@@ -219,6 +219,16 @@ public void OnPluginStart()
 	HookEvent("player_builtobject", Gadgeteer_OnBuildingConstructed);
 }
 
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	MarkNativeAsOptional("WorldText_Create");
+	MarkNativeAsOptional("WorldText_AttachToEntity");
+	MarkNativeAsOptional("WorldText_SetColor");
+	MarkNativeAsOptional("WorldText_MimicHitNumbers");
+	MarkNativeAsOptional("WorldText_SetRainbow");
+	return APLRes_Success;
+}
+
 public void OnMapStart()
 {
 	PrecacheModel(MODEL_TOSS);
