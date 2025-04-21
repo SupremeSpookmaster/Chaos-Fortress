@@ -80,7 +80,7 @@ public void OnPluginStart()
 	HookEvent("crossbow_heal", PlayerHealed_Crossbow);
 	
 	RegAdminCmd("cf_reload", CF_ReloadPlugin, ADMFLAG_ROOT, "Chaos Fortress: Reloads the entire plugin.");
-	RegAdminCmd("cf_rules", CF_ReloadRules, ADMFLAG_KICK, "Chaos Fortress: Reloads the settings in game_rules.cfg.");
+	RegAdminCmd("cf_reloadrules", CF_ReloadRules, ADMFLAG_KICK, "Chaos Fortress: Reloads the settings in game_rules.cfg.");
 	RegAdminCmd("cf_reloadcharacters", CF_ReloadCharacters, ADMFLAG_KICK, "Chaos Fortress: Reloads the character packs, as defined in characters.cfg.");
 	RegAdminCmd("cf_makecharacter", CF_ForceCharacter, ADMFLAG_KICK, "Chaos Fortress: Forces a client to become the specified character.");
 	RegAdminCmd("cf_giveult", CF_GiveUltCommand, ADMFLAG_SLAY, "Chaos Fortress: Gives a percentage of ult charge to the specified client(s).");
