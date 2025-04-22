@@ -4,7 +4,7 @@
 #include <cf_stocks>
 #include <cf_include>
 #include <tf2utils>
-#include <fakeparticles>
+#tryinclude <fakeparticles>
 
 #define MAXENTITIES	2048
 
@@ -58,6 +58,8 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	pos = FindCharInString(PluginName, '.', true);
 	if(pos != -1)
 		PluginName[pos] = '\0';
+
+	MarkNativeAsOptional("FPS_AttachFakeParticleToEntity");
 	
 	return APLRes_Success;
 }
@@ -319,9 +321,11 @@ Action OnShortCircuit(int entity)
 					}
 				}
 
+				#if defined _fps_included_
 				if(!CircuitBuffTimer[client])
 					CircuitBuffEntRef[client] = EntIndexToEntRef(FPS_AttachFakeParticleToEntity(client, "root", "models/fake_particles/chaos_fortress/player_aura.mdl", 0, "rotate", 0.75, _, team == 2 ? 255 : 180, 180, team == 2 ? 180 : 255, 0));
-				
+				#endif
+
 				delete CircuitBuffTimer[client];
 				CircuitBuffTimer[client] = CreateTimer(buff, Timer_CircuitBuff, client);
 			}
@@ -337,7 +341,9 @@ Action OnShortCircuit(int entity)
 			{
 				SDKUnhook(obj, SDKHook_OnTakeDamage, BuildingTakeDamage);
 				SDKHook(obj, SDKHook_OnTakeDamage, BuildingTakeDamage);
+				#if defined _fps_included_
 				CircuitBuffEntRef[obj] = EntIndexToEntRef(FPS_AttachFakeParticleToEntity(entity, "root", "models/fake_particles/chaos_fortress/player_aura.mdl", 0, "rotate", 0.75, _, team == 2 ? 255 : 180, 180, team == 2 ? 180 : 255, 0));
+				#endif
 			}
 			
 			delete CircuitBuffTimer[obj];
@@ -505,7 +511,9 @@ Action Timer_AmpThink(Handle timer, int ref)
 						if(!AmpBuffTimer[client])
 						{
 							ClientCommand(client, "playgamesound items/powerup_pickup_precision.wav");
+							#if defined _fps_included_
 							AmpBuffEntRef[client] = EntIndexToEntRef(FPS_AttachFakeParticleToEntity(client, "root", "models/fake_particles/chaos_fortress/player_aura.mdl", 2, "rotate", 0.75, _, team == 2 ? 255 : 180, 180, team == 2 ? 180 : 255, 0));
+							#endif
 						}
 						
 						delete AmpBuffTimer[client];

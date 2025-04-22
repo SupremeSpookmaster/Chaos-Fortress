@@ -1,9 +1,9 @@
 #include <sdkhooks>
 #include <tf2_stocks>
 #include <cf_stocks>
-#include <fakeparticles>
 #include <pnpc>
 #tryinclude <worldtext>
+#tryinclude <fakeparticles>
 
 #define GADGETEER		"cf_gadgeteer"
 #define TOSS			"gadgeteer_sentry_toss"
@@ -226,6 +226,13 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	MarkNativeAsOptional("WorldText_SetColor");
 	MarkNativeAsOptional("WorldText_MimicHitNumbers");
 	MarkNativeAsOptional("WorldText_SetRainbow");
+	MarkNativeAsOptional("FPS_SpawnFakeParticle");
+	MarkNativeAsOptional("FPS_CreateParticleBody");
+	MarkNativeAsOptional("ParticleBody.AddEntity");
+	MarkNativeAsOptional("ParticleBody.AddLight");
+	MarkNativeAsOptional("ParticleBody.Index.get");
+	MarkNativeAsOptional("ParticleBody.End_Time.set");
+
 	return APLRes_Success;
 }
 
@@ -1497,6 +1504,7 @@ public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor
 		return Plugin_Continue;
 		
 	bool DontApplyVFX = false;
+	#if defined _fps_included_
 	int current = EntRefToEntIndex(Icon_Mark[attacker])
 	if (IsValidEntity(current))
 	{
@@ -1513,6 +1521,9 @@ public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor
 			currentIcon.Logic_Plugin = null;
 		}
 	}
+	#else
+	DontApplyVFX = true;
+	#endif
 	
 	if (GetClientUserId(victim) != Toss_Marked[attacker] || GetGameTime() > Toss_MarkTime[attacker])
 	{
@@ -1523,6 +1534,7 @@ public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor
 	Toss_Marked[attacker] = GetClientUserId(victim);
 	Toss_MarkTime[attacker] = GetGameTime() + markTime;
 	
+	#if defined _fps_included_
 	if (!DontApplyVFX)
 	{
 		int r = 255;
@@ -1554,7 +1566,8 @@ public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor
 		Icon_Mark[attacker] = EntIndexToEntRef(PBody.Index);
 		SDKHook(PBody.Index, SDKHook_SetTransmit, Icon_Transmit);
 	}
-	
+	#endif
+
 	return Plugin_Continue;
 }
 
