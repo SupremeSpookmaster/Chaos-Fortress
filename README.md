@@ -29,7 +29,6 @@ All of these are required for ***Chaos Fortress*** to function.
 - **[CollisionHook](https://github.com/voided/CollisionHook)**
 - **[SteamWorks](https://users.alliedmods.net/~kyles/builds/SteamWorks/)**
 - **[TF2 Custom Attributes](https://forums.alliedmods.net/showthread.php?p=2703773)**
-- **[Fake Particle System](https://github.com/SupremeSpookmaster/Fake-Particle-System)** - Note that you will need to use the version of `data/fake_particle_system/fakeparticles.cfg` which comes packaged with ***Chaos Fortress***, and not the version included in the release build of the Fake Particle System. ***TODO: Use tryincludes and move to recommended.***
 - **[CBaseNPC](https://github.com/TF2-DMB/CBaseNPC)**
 
 ## *Recommended Plugins/Settings:*
@@ -41,6 +40,7 @@ None of these are required for ***Chaos Fortress*** to function, but are nonethe
 - **[Portable NPC System](https://github.com/SupremeSpookmaster/TF2-Portable-NPC-System)** - Required for Gadgeteer to function, but is otherwise unneeded. Disable Gadgeteer if you do not install this.
 - **[TF2 World Text Helper](https://github.com/SupremeSpookmaster/TF2-World-Text-Helper)** - Used by Gadgeteer for various damage/healing indicators, but is not required for him to function.
 - **[TF2 Move Speed Unlocker](https://forums.alliedmods.net/showthread.php?p=2659562)** - Allows characters to move above TF2's default 520 HU/s limit. ***TODO: Port all features to CF and remove this from prerequisites.***
+- **[Fake Particle System](https://github.com/SupremeSpookmaster/Fake-Particle-System)** - Used by some characters for VFX. Note that you will need to use the version of `data/fake_particle_system/fakeparticles.cfg` which comes packaged with ***Chaos Fortress***, and not the version included in the release build of the Fake Particle System.
 
 ## *Making Custom Characters*
 ***Chaos Fortress*** comes with a number of pre-made custom characters, but what if that's not enough? What if you want *more*? Don't worry, because Chaos Fortress has you covered: ***if you know how to make a Freak Fortress boss, you'll know how to make a Chaos Fortress character!*** And even if you don't, don't worry; it's not very difficult to figure out if you're experienced with SourceMod development. Most of my experience as a SourceMod developer comes from making Freak Fortress bosses, and I knew most of the developers who might take an interest in this game mode would be similar, so I was very careful to keep the development process for ***Chaos Fortress*** characters as close to that of ***Freak Fortress*** characters as possible.
