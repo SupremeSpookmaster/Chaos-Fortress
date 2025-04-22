@@ -33,7 +33,7 @@ All of these are required for ***Chaos Fortress*** to function.
 
 ## *Recommended Plugins/Settings:*
 None of these are required for ***Chaos Fortress*** to function, but are nonetheless highly recommended for the features they provide.
-- **Enable Halloween Mode** - Allows developers to make the most of CF's wearable system, by allowing Halloween-restricted items to be used regardless of the time of year. ***TODO: Make CF force this on map start.***
+- **[Halloween Cosmetic Enabler](https://github.com/Mikusch/HalloweenCosmeticEnabler)** - Allows Halloween cosmetics to be used year-round, therefore allowing Halloween-restricted wearables to be used by characters, without needing to force Halloween mode to be active. ***TODO: Ask Mikusch for permission to port this to CF. If granted: remove from prerequisites, add Mikusch to credits.***
 - **[TF2 Weaponmodel Override](https://github.com/Zabaniya001/TF2CA-weaponmodel_override)** - Used by some default characters for custom weapon models. ***TODO: Port all features to CF and remove this from prerequisites.***
 - **[Queue.inc](https://forums.alliedmods.net/showthread.php?t=319495)** - Not required to function, but *is* required to compile the plugin. ***TODO: Remove from Gadgeteer, Herlven, and Demopan, then remove from prerequisites.***
 - **[FF2Rewrite's version of cfgmap.inc](https://github.com/Batfoxkid/Freak-Fortress-2-Rewrite/blob/74584d3792ed35c34a09623ab2ea75bfffa82d5b/addons/sourcemod/scripting/include/cfgmap.inc)** - Not required to function, but *is* required to compile the plugin.
