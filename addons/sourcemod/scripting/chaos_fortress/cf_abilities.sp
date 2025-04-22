@@ -172,7 +172,7 @@ public void CFA_MakeForwards()
 	//CBaseEntity::FireBullets
 	g_DHookSentryFireBullet = DHook_CreateVirtual(gd, "CBaseEntity::FireBullets");
 	g_DHookSentryFireBullet.AddParam(HookParamType_Int);
-
+	
 	//SetLocalOrigin
 	StartPrepSDKCall(SDKCall_Entity);
 	PrepSDKCall_SetFromConf(gd, SDKConf_Signature, "CBaseEntity::SetLocalOrigin");
@@ -387,7 +387,7 @@ public Action CFA_HUDTimer(Handle timer)
 	{
 		bool wouldBeStuck, tooPoor, CanUse;
 		float remCD;
-
+		
 		if (!CF_IsPlayerCharacter(client))
 			continue;
 
@@ -397,7 +397,7 @@ public Action CFA_HUDTimer(Handle timer)
 		CFCharacter chara = GetCharacterFromClient(client);
 		if (chara == null)
 			continue;
-
+		
 		bool showHUD = GetClientButtons(client) & IN_SCORE == 0 && b_UseHUD[client];
 		char HUDText[255];
 
@@ -441,7 +441,7 @@ public Action CFA_HUDTimer(Handle timer)
 				{
 					CF_GiveUltCharge(client, chara.f_UltChargeOnRegen/10.0, CF_ResourceType_Percentage);
 				}
-
+				
 				if (showHUD)
 				{
 					CanUse = CF_CanPlayerUseAbilitySlot(client, type, wouldBeStuck, tooPoor);
@@ -566,9 +566,9 @@ public Action CFA_HUDTimer(Handle timer)
 			Call_PushCellRef(a);
 
 			Call_Finish();
-
+			
 			ReplaceString(HUDText, sizeof(HUDText), "[PERCENT]", "%%");
-			SetHudTextParams(-1.0, 0.8, 0.1, r, g, b, a);
+			SetHudTextParams(-1.0, 0.7, 0.1, r, g, b, a);
 			ShowSyncHudText(client, HudSync, HUDText);
 		}
 	}

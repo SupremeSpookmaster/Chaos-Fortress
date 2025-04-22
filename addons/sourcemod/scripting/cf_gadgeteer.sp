@@ -214,9 +214,29 @@ int Laser_Model = -1;
 int Lightning_Model = -1;
 int Glow_Model = -1;
 
+bool LateLoad;
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	LateLoad = late;
+	return APLRes_Success;
+}
+
 public void OnPluginStart()
 {
 	HookEvent("player_builtobject", Gadgeteer_OnBuildingConstructed);
+	if (LateLoad)
+	{
+		for (int i = 1; i <= MaxClients; i++)
+		{
+			if (IsClientInGame(i))
+				OnClientPutInServer(i);
+		}
+	}
+}
+
+public void OnClientPutInServer(int client)
+{
+	SDKHook(client, SDKHook_PreThink, GlowThink);
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -448,7 +468,9 @@ enum struct SupportDroneStats
 	int owner;
 	int autoTarget;
 	int self;
-
+	int glow;
+	int targetGlow;
+	
 	bool isBuilding;
 	bool exists;
 	bool isPanicked;
@@ -491,7 +513,7 @@ enum struct SupportDroneStats
 		this.healRate_Self = other.healRate_Self;
 		this.minHealTime = other.minHealTime;
 		this.scanRadius = other.scanRadius;
-
+		
 		this.superchargeDuration = other.superchargeDuration;
 		this.superchargeBuildSpeed = other.superchargeBuildSpeed;
 		this.superchargeMovementSpeed = other.superchargeMovementSpeed;
@@ -2174,8 +2196,10 @@ enum struct LittleBuddy
 	int owner;
 	int target;
 	int targetOverride;
+	int targetGlow;
 	int enemyTarget;
 	int i_Pistol;
+	int glow;
 
 	float f_NextTargetTime;
 	float f_MaxSpeed;
@@ -2201,11 +2225,11 @@ enum struct LittleBuddy
 	{
 		if (GetGameTime() < this.f_NextTargetTime)
 			return;
-
+		
 		int targ = this.GetTargetOverride();
 		if (!this.IsValidTarget(targ))
 			targ = CF_GetClosestTarget(pos, _, _, _, TF2_GetClientTeam(this.GetOwner()));
-
+		
 		if (this.IsValidTarget(targ))
 			this.SetTarget(targ);
 		else
@@ -2275,15 +2299,23 @@ enum struct LittleBuddy
 	{
 		if (targ != this.GetEnemyTarget() || !this.b_HasEnemyTarget)
 		{
-			EmitSoundToAll(SOUND_TOSS_TARGETWARNING, this.me.Index, _, 110);
-			EmitSoundToAll(g_LittleBuddyThreatSounds[GetRandomInt(0, sizeof(g_LittleBuddyThreatSounds) - 1)], this.me.Index, _, 110, _, _, 110);
-
+			int randIndex = GetRandomInt(0, sizeof(g_LittleBuddyThreatSounds) - 1);
+			for (int i = 1; i <= MaxClients; i++)
+			{
+				// I'm assuming that this is probably what was intended here
+				if (i != targ && IsClientInGame(i))
+				{
+					EmitSoundToClient(i, SOUND_TOSS_TARGETLOCKED, this.me.Index, _, 110);
+					EmitSoundToClient(i, g_LittleBuddyThreatSounds[randIndex], this.me.Index, _, 110, _, _, 110);
+				}
+			}
+			
 			if (IsValidClient(targ))
 			{
 				EmitSoundToClient(targ, SOUND_TOSS_TARGETWARNING);
 				EmitSoundToClient(targ, g_LittleBuddyThreatSounds[GetRandomInt(0, sizeof(g_LittleBuddyThreatSounds) - 1)]);
 			}
-
+			
 			StopSound(this.me.Index, SNDCHAN_AUTO, SOUND_DRONE_SCANNING);
 
 			this.b_HasEnemyTarget = true;
@@ -2316,11 +2348,18 @@ enum struct LittleBuddy
 		int target = this.GetEnemyTarget();
 		int pistol = this.GetPistol();
 		int client = this.GetOwner();
-
-		float startPos[3], endPos[3], ang[3];
+		float startPos[3], myPos[3], endPos[3], ang[3], targetAng[3];
 		GetEntityAttachment(pistol, LookupEntityAttachment(pistol, "muzzle"), startPos, ang);
+		
+		// Face the target when shooting
 		CF_WorldSpaceCenter(target, endPos);
-
+		CF_WorldSpaceCenter(this.me.Index, myPos);
+		CF_GetVectorAnglesTwoPoints(myPos, endPos, targetAng);
+		targetAng[0] = 0.0;
+		targetAng[2] = 0.0;
+		// This is apparently supposed to have interpolation, but it clearly doesn't. Oh well
+		this.me.SetLocalAngles(targetAng);
+		
 		littleBuddyKill = true;
 		littleBuddySentryMode = this.b_SentryMode;
 		SDKHooks_TakeDamage(target, this.me.Index, client, (this.b_SentryMode ? this.f_IdleDamage : this.f_Damage), DMG_BULLET|DMG_PREVENT_PHYSICS_FORCE);
@@ -2331,7 +2370,7 @@ enum struct LittleBuddy
 		SpawnParticle(startPos, PARTICLE_BUDDY_MUZZLE, 0.5);
 		EmitSoundToAll(SOUND_BUDDY_FIRE, this.me.Index);
 		this.me.AddGesture("ACT_MP_ATTACK_STAND_SECONDARY");
-
+		
 		this.f_NextShot = GetGameTime() + (this.b_SentryMode ? this.f_IdleRate : this.f_Rate);
 	}
 
@@ -2732,6 +2771,105 @@ public void Toss_SpawnSupportOnDelay(DataPack pack)
 		Toss_IsSupportDrone[drone] = true;
 		Toss_SupportStats[drone].b_StayStill = false;
 		EmitSoundToAll(SOUND_SUPPORT_BUILD_BEGIN, drone);
+		
+		Toss_SupportStats[drone].glow = EntIndexToEntRef(TF2_CreateGlow(drone, 2));
+		SetVariantColor({0, 255, 0, 255});
+		AcceptEntityInput(Toss_SupportStats[drone].glow, "SetGlowColor");
+		SetEntityTransmitState(Toss_SupportStats[drone].glow, FL_EDICT_FULLCHECK);
+		SetEntityOwner(Toss_SupportStats[drone].glow, drone);
+		SetEntityOwner(drone, owner);
+		SDKHook(Toss_SupportStats[drone].glow, SDKHook_SetTransmit, DroneGlowSetTransmit);
+	}
+}
+
+public Action DroneGlowSetTransmit(int entity, int client)
+{
+	// kill the glow if the drone or target don't exist
+	int drone = GetEntPropEnt(entity, Prop_Data, "m_hOwnerEntity");
+	if (drone == INVALID_ENT_REFERENCE)
+	{
+		RemoveEntity(entity);
+		return Plugin_Handled;
+	}
+	
+	int target = GetEntPropEnt(entity, Prop_Send, "m_hTarget");
+	if (!IsValidEntity(target))
+	{
+		RemoveEntity(entity);
+		return Plugin_Handled;
+	}
+	
+	// this is necessary for the glow to be hidden from other clients
+	SetEntityTransmitState(entity, FL_EDICT_FULLCHECK);
+	
+	// force glow target to transmit to ensure that the glow is not cut off by visleaves
+	SetEdictFlags(target, GetEdictFlags(target)|FL_EDICT_ALWAYS);
+	
+	int owner = GetEntPropEnt(drone, Prop_Data, "m_hOwnerEntity");
+	if (client != owner)
+	{
+		// only transmit the outline to the owner
+		return Plugin_Handled;
+	}
+	
+	return Plugin_Continue;
+}
+
+public void GlowThink(int client)
+{
+	// we don't really need to check this super often so save the performance
+	static float nextCheckTime[MAXPLAYERS+1];
+	if (GetTickedTime() < nextCheckTime[client])
+		return;
+	
+	nextCheckTime[client] = GetTickedTime()+0.5;
+	int buddy = EntRefToEntIndex(i_Buddy[client]);
+	int support = EntRefToEntIndex(Toss_SupportDrone[client]);
+	int supportTargetGlow = -1;
+	int buddyTargetGlow = -1;
+	bool doubleTarget;
+	if (IsValidEntity(buddy) && IsValidEntity(support))
+	{
+		int buddyTarget = GetClientOfUserId(buddies[buddy].targetOverride);
+		int supportTarget = GetClientOfUserId(Toss_SupportStats[support].targetOverride);
+		buddyTargetGlow = EntRefToEntIndex(buddies[buddy].targetGlow);
+		supportTargetGlow = EntRefToEntIndex(Toss_SupportStats[support].targetGlow);
+		if (IsValidClient(buddyTarget) && IsValidClient(supportTarget) && buddyTarget == supportTarget)
+		{
+			if (IsValidEntity(buddyTargetGlow) && IsValidEntity(supportTargetGlow))
+			{
+				doubleTarget = true;
+				static float nextGlowCycleTime[2049];
+				static bool glowState[2049];
+				if (GetTickedTime() >= nextGlowCycleTime[buddyTarget])
+				{
+					glowState[buddyTarget] = !glowState[buddyTarget];
+					nextGlowCycleTime[buddyTarget] = GetTickedTime()+1.0;
+				}
+				
+				// If both drones are targeting the same player, swap between the glow colors
+				if (glowState[buddyTarget])
+				{
+					AcceptEntityInput(buddyTargetGlow, "Disable");
+					AcceptEntityInput(supportTargetGlow, "Enable");
+				}
+				else
+				{
+					AcceptEntityInput(buddyTargetGlow, "Enable");
+					AcceptEntityInput(supportTargetGlow, "Disable");
+				}
+			}
+		}
+	}
+	
+	// make sure glows are enabled if no double target
+	if (!doubleTarget)
+	{
+		if (IsValidEntity(buddyTargetGlow))
+			AcceptEntityInput(buddyTargetGlow, "Enable");
+			
+		if (IsValidEntity(supportTargetGlow))
+			AcceptEntityInput(supportTargetGlow, "Enable");
 	}
 }
 
@@ -2964,7 +3102,7 @@ public void Support_Command(int client, char abilityName[255])
 		maxs[0] = -mins[0];
 		maxs[1] = -mins[1];
 		maxs[2] = -mins[2];
-
+		
 		CF_StartLagCompensation(client);
 		Command_User = client;
 		TR_TraceHullFilter(startPos, endPos, mins, maxs, MASK_SHOT, Command_OnlyPlayers, supportDrone);
@@ -2985,7 +3123,7 @@ public void Support_Command(int client, char abilityName[255])
 			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
 			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
 		}
-		else if (wasStill)
+		else if (wasStill && target == -1)
 		{
 			PrintCenterText(client, "Your Support Drone is now using auto-targeting!");
 			Toss_SupportStats[supportDrone].targetOverride = -1;
@@ -3000,7 +3138,21 @@ public void Support_Command(int client, char abilityName[255])
 		else
 		{
 			Toss_SupportStats[supportDrone].targetOverride = GetClientUserId(target);
-
+			int targetGlow = EntRefToEntIndex(Toss_SupportStats[supportDrone].targetGlow);
+			if (targetGlow > 0 && IsValidEntity(targetGlow))
+			{
+				RemoveEntity(targetGlow);
+			}
+			
+			targetGlow = EntIndexToEntRef(TF2_CreateGlow(target, 2));
+			SetVariantColor({0, 255, 0, 255});
+			AcceptEntityInput(targetGlow, "SetGlowColor");
+			SetEntityTransmitState(targetGlow, FL_EDICT_FULLCHECK);
+			SetEntityOwner(targetGlow, supportDrone);
+			SDKHook(targetGlow, SDKHook_SetTransmit, DroneGlowSetTransmit);
+			Toss_SupportStats[supportDrone].targetGlow = targetGlow;
+			SetParent(supportDrone, targetGlow); // set parent so the glow dies when the drone does
+			
 			float pos[3];
 			GetClientAbsOrigin(target, pos);
 			SpawnParticle(pos, PARTICLE_SUPPORT_COMMANDED, 2.0);
@@ -3012,6 +3164,16 @@ public void Support_Command(int client, char abilityName[255])
 			CF_GetCharacterName(target, charName, sizeof(charName));
 			PrintCenterText(client, "Your Support Drone is now following %s (%N)", charName, target);
 			PrintCenterText(target, "%N's Support Drone is now following you!", client);
+		}
+	}
+	
+	if (ang[0] <= -60.0 || Toss_SupportStats[supportDrone].b_StayStill 
+		|| GetClientOfUserId(Toss_SupportStats[supportDrone].targetOverride) == 0)
+	{
+		int targetGlow = EntRefToEntIndex(Toss_SupportStats[supportDrone].targetGlow);
+		if (targetGlow > 0 && IsValidEntity(targetGlow))
+		{
+			RemoveEntity(targetGlow);
 		}
 	}
 }
@@ -3107,7 +3269,7 @@ public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inf
 		int pitch = GetRandomInt(90, 110);
 		EmitSoundToAll(Drone_DamageSFX[chosen], npc.Index, _, _, _, _, pitch, -1);
 		EmitSoundToAll(Drone_DamageSFX[chosen], npc.Index, _, _, _, _, pitch, -1);
-
+		
 		ReturnValue = Plugin_Changed;
 	}
 
@@ -3116,7 +3278,7 @@ public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inf
 		EmitSoundToAll(g_LittleBuddyPainSounds[GetRandomInt(0, sizeof(g_LittleBuddyPainSounds) - 1)], npc.Index, _, _, _, _, GetRandomInt(110, 120));
 		buddies[npc.Index].f_NextPainSound = GetGameTime() + 0.2;
 	}
-
+	
 	return ReturnValue;
 }
 
@@ -3983,7 +4145,7 @@ public void Buddy_Spawn(DataPack pack)
 		return;
 
 	TFTeam team = TF2_GetClientTeam(client);
-
+	
 	int hp = CF_GetArgI(client, GADGETEER, abilityName, "health", 150);
 	float speed = CF_GetArgF(client, GADGETEER, abilityName, "speed", 400.0);
 	float bootTime = CF_GetArgF(client, GADGETEER, abilityName, "bootup_time", 4.0);
@@ -4022,7 +4184,15 @@ public void Buddy_Spawn(DataPack pack)
 	buddies[buddy.Index].f_IdleDamage = CF_GetArgF(client, GADGETEER, abilityName, "damage_idle", 10.0);
 	buddies[buddy.Index].f_IdleRate = CF_GetArgF(client, GADGETEER, abilityName, "rate_idle", 0.125);
 	buddies[buddy.Index].f_IdleRange = CF_GetArgF(client, GADGETEER, abilityName, "range_idle", 600.0);
-
+	
+	buddies[buddy.Index].glow = EntIndexToEntRef(TF2_CreateGlow(buddy.Index, 2));
+	SetVariantColor(view_as<int>({255, 255, 0, 255}));
+	AcceptEntityInput(buddies[buddy.Index].glow, "SetGlowColor");
+	SetEntityTransmitState(buddies[buddy.Index].glow, FL_EDICT_FULLCHECK);
+	SetEntityOwner(buddies[buddy.Index].glow, buddy.Index);
+	SetEntityOwner(buddy.Index, client);
+	SDKHook(buddies[buddy.Index].glow, SDKHook_SetTransmit, DroneGlowSetTransmit);
+	
 	if (buddies[buddy.Index].b_BootupSequence)
 	{
 		AttachParticleToEntity(buddy.Index, team == TFTeam_Red ? PARTICLE_BUDDY_BOOTUP_RED : PARTICLE_BUDDY_BOOTUP_BLUE, "head", bootTime);
@@ -4141,7 +4311,7 @@ public void Buddy_Command(int client, char abilityName[255])
 
 	float ang[3];
 	GetClientEyeAngles(client, ang);
-
+	
 	if (ang[0] <= -60.0)
 	{
 		buddies[buddy].b_SentryMode = false;
@@ -4198,7 +4368,7 @@ public void Buddy_Command(int client, char abilityName[255])
 			EmitSoundToClient(client, SOUND_SUPPORT_COMMANDED);
 			EmitSoundToAll(g_LittleBuddyCommandedSounds[GetRandomInt(0, sizeof(g_LittleBuddyCommandedSounds) - 1)], buddy, _, _, _, _, GetRandomInt(110, 120));
 		}
-		else if (wasSentry)
+		else if (wasSentry && !IsValidMulti(target))
 		{
 			PrintCenterText(client, "Your Little Buddy is now using auto-targeting!");
 			buddies[buddy].targetOverride = -1;
@@ -4214,7 +4384,21 @@ public void Buddy_Command(int client, char abilityName[255])
 		else
 		{
 			buddies[buddy].targetOverride = GetClientUserId(target);
-
+			int targetGlow = EntRefToEntIndex(buddies[buddy].targetGlow);
+			if (targetGlow > 0 && IsValidEntity(targetGlow))
+			{
+				RemoveEntity(targetGlow);
+			}
+			
+			targetGlow = EntIndexToEntRef(TF2_CreateGlow(target, 2));
+			SetVariantColor({255, 255, 0, 255});
+			AcceptEntityInput(targetGlow, "SetGlowColor");
+			SetEntityOwner(targetGlow, buddy);
+			SDKHook(targetGlow, SDKHook_SetTransmit, DroneGlowSetTransmit);
+			SetEntityTransmitState(targetGlow, FL_EDICT_FULLCHECK);
+			buddies[buddy].targetGlow = targetGlow;
+			SetParent(buddy, targetGlow); // set parent so the glow dies when the drone does
+			
 			float pos[3];
 			GetClientAbsOrigin(target, pos);
 			SpawnParticle(pos, PARTICLE_SUPPORT_COMMANDED, 2.0);
@@ -4227,6 +4411,15 @@ public void Buddy_Command(int client, char abilityName[255])
 			CF_GetCharacterName(target, charName, sizeof(charName));
 			PrintCenterText(client, "Your Little Buddy is now protecting %s (%N)", charName, target);
 			PrintCenterText(target, "%N's Little Buddy is now protecting you!", client);
+		}
+	}
+	
+	if (ang[0] <= -60.0 || buddies[buddy].b_SentryMode || GetClientOfUserId(buddies[buddy].targetOverride) == 0)
+	{
+		int targetGlow = EntRefToEntIndex(buddies[buddy].targetGlow);
+		if (targetGlow > 0 && IsValidEntity(targetGlow))
+		{
+			RemoveEntity(targetGlow);
 		}
 	}
 }

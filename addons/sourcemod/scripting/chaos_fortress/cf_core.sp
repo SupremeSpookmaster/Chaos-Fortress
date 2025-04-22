@@ -243,11 +243,11 @@ static char g_ArrowImpactSounds_Player[][] = {
  */
 public void CF_MapStart()
 {
-	CF_SetRoundState(0);
+	CF_LoadCharacters(-1);
 	
 	CF_SetGameRules(-1);
 	
-	CF_LoadCharacters(-1);
+	CF_SetRoundState(0);
 	
 	CFW_MapStart();
 	
@@ -261,7 +261,7 @@ public void CF_MapStart()
 
 	for (int i = 0; i < (sizeof(g_ArrowImpactSounds_World));   i++) { PrecacheSound(g_ArrowImpactSounds_World[i]);   }
 	for (int i = 0; i < (sizeof(g_ArrowImpactSounds_Player));   i++) { PrecacheSound(g_ArrowImpactSounds_Player[i]);   }
-
+		
 	CreateTimer(0.1, CFA_HUDTimer, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
 	CF_ReloadSubplugins();
 }

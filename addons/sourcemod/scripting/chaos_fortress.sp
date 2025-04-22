@@ -79,6 +79,7 @@ public void OnPluginStart()
 	HookEvent("player_healed", PlayerHealed);
 	HookEvent("crossbow_heal", PlayerHealed_Crossbow);
 	
+	RegAdminCmd("cf_reload", CF_ReloadPlugin, ADMFLAG_ROOT, "Chaos Fortress: Reloads the entire plugin.");
 	RegAdminCmd("cf_reloadrules", CF_ReloadRules, ADMFLAG_KICK, "Chaos Fortress: Reloads the settings in game_rules.cfg.");
 	RegAdminCmd("cf_reloadcharacters", CF_ReloadCharacters, ADMFLAG_KICK, "Chaos Fortress: Reloads the character packs, as defined in characters.cfg.");
 	RegAdminCmd("cf_makecharacter", CF_ForceCharacter, ADMFLAG_KICK, "Chaos Fortress: Forces a client to become the specified character.");
@@ -91,7 +92,7 @@ public void OnPluginStart()
 #define SND_RESPAWN				"mvm/mvm_revive.wav"
 #define SND_HINT				"buttons/button9.wav"
 
-public OnMapStart()
+public void OnMapStart()
 {
 	//GameRules_SetProp("m_iRoundState", RoundState_BetweenRounds);
 	CF_MapStart();
@@ -101,7 +102,7 @@ public OnMapStart()
 	PrecacheSound(SND_HINT);
 }
 
-public OnMapEnd()
+public void OnMapEnd()
 {
 	CFA_MapEnd();
 	CFC_MapEnd();
@@ -276,6 +277,13 @@ public void PlayerReset(Event gEvent, const char[] sEvName, bool bDontBroadcast)
 	#endif
 }
 
+public Action CF_ReloadPlugin(int client, int args)
+{
+	CReplyToCommand(client, "{indigo}[Chaos Fortress] {default}Reloading the plugin...");
+	InsertServerCommand("sm plugins reload chaos_fortress; mp_restartgame_immediate 1");
+	return Plugin_Handled;
+}
+
 public Action CF_ReloadRules(int client, int args)
 {	
 	if (IsValidClient(client))
@@ -285,19 +293,23 @@ public Action CF_ReloadRules(int client, int args)
 		CF_SetGameRules(client);
 	}	
 	
-	return Plugin_Continue;
+	return Plugin_Handled;
 }
 
 public Action CF_ReloadCharacters(int client, int args)
-{	
-	if (IsValidClient(client))
+{
+	CF_LoadCharacters(client);
+	if (client > 0)
 	{
 		CPrintToChat(client, "{indigo}[Chaos Fortress] {default}Reloaded data/chaos_fortress/characters.cfg. {olive}View the !characters menu{default} to see the updated character list.");
 		EmitSoundToClient(client, SND_ADMINCOMMAND);
-		CF_LoadCharacters(client);
-	}	
+	}
+	else
+	{
+		PrintToServer("[Chaos Fortress] Reloaded data/chaos_fortress/characters.cfg. View the !characters menu to see the updated character list.");
+	}
 	
-	return Plugin_Continue;
+	return Plugin_Handled;
 }
 
 public Action CF_GiveUltCommand(int client, int args)
@@ -332,7 +344,7 @@ public Action CF_GiveUltCommand(int client, int args)
 		ReplyToCommand(client, repl);
 	}
 
-	return Plugin_Continue;
+	return Plugin_Handled;
 }
 
 public Action CF_ForceCharacter(int client, int args)
@@ -340,7 +352,7 @@ public Action CF_ForceCharacter(int client, int args)
 	if (args < 2 || args > 32)
 	{
 		ReplyToCommand(client, "[Chaos Fortress] Usage: cf_makecharacter <client> <name of character's config> <optional message printed to client's screen>");
-		return Plugin_Continue;
+		return Plugin_Handled;
 	}
 		
 	char name[32], character[255], message[255];
@@ -371,7 +383,7 @@ public Action CF_ForceCharacter(int client, int args)
 	if (!CF_CharacterExists(character))
 	{
 		ReplyToCommand(client, "[Chaos Fortress] Failure: character config ''%s'' does not exist.", character);
-		return Plugin_Continue;
+		return Plugin_Handled;
 	}
 	
 	if (StrEqual(name, "@all"))
@@ -393,13 +405,13 @@ public Action CF_ForceCharacter(int client, int args)
 		if (!IsValidMulti(target) && IsValidClient(client))
 		{
 			ReplyToCommand(client, "[Chaos Fortress] Failure: the target must be alive and in-game.");
-			return Plugin_Continue;
+			return Plugin_Handled;
 		}
 		
 		CF_MakeClientCharacter(target, character, message);
 	}
 
-	return Plugin_Continue;
+	return Plugin_Handled;
 }
 
 public void CF_ForceCharacterOnGroup(char character[255], TFTeam group, char message[255])
