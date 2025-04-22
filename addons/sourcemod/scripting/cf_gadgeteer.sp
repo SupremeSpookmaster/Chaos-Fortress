@@ -218,6 +218,17 @@ bool LateLoad;
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
 	LateLoad = late;
+	MarkNativeAsOptional("WorldText_Create");
+	MarkNativeAsOptional("WorldText_AttachToEntity");
+	MarkNativeAsOptional("WorldText_SetColor");
+	MarkNativeAsOptional("WorldText_MimicHitNumbers");
+	MarkNativeAsOptional("WorldText_SetRainbow");
+	MarkNativeAsOptional("FPS_SpawnFakeParticle");
+	MarkNativeAsOptional("FPS_CreateParticleBody");
+	MarkNativeAsOptional("ParticleBody.AddEntity");
+	MarkNativeAsOptional("ParticleBody.AddLight");
+	MarkNativeAsOptional("ParticleBody.Index.get");
+	MarkNativeAsOptional("ParticleBody.End_Time.set");
 	return APLRes_Success;
 }
 
@@ -237,23 +248,6 @@ public void OnPluginStart()
 public void OnClientPutInServer(int client)
 {
 	SDKHook(client, SDKHook_PreThink, GlowThink);
-}
-
-public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
-{
-	MarkNativeAsOptional("WorldText_Create");
-	MarkNativeAsOptional("WorldText_AttachToEntity");
-	MarkNativeAsOptional("WorldText_SetColor");
-	MarkNativeAsOptional("WorldText_MimicHitNumbers");
-	MarkNativeAsOptional("WorldText_SetRainbow");
-	MarkNativeAsOptional("FPS_SpawnFakeParticle");
-	MarkNativeAsOptional("FPS_CreateParticleBody");
-	MarkNativeAsOptional("ParticleBody.AddEntity");
-	MarkNativeAsOptional("ParticleBody.AddLight");
-	MarkNativeAsOptional("ParticleBody.Index.get");
-	MarkNativeAsOptional("ParticleBody.End_Time.set");
-
-	return APLRes_Success;
 }
 
 public void OnMapStart()
