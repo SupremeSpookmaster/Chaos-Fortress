@@ -3,7 +3,7 @@
 #include <tf2_stocks>
 #include <cf_stocks>
 #include <tf_player_collisions>
-#include <fakeparticles>
+#tryinclude <fakeparticles>
 
 #define DOKMED			"cf_dokmed"
 #define COCAINUM		"dokmed_cocainum"
@@ -62,6 +62,15 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 {
 	MarkNativeAsOptional("PNPC_HealEntity");
 	MarkNativeAsOptional("PNPC.b_IsABuilding.get");
+	MarkNativeAsOptional("FPS_AttachFakeParticleToEntity");
+	MarkNativeAsOptional("ParticleSimulation.Index.get");
+	MarkNativeAsOptional("FPS_CreateParticleBody")
+	MarkNativeAsOptional("FPS_SpawnFakeParticle");
+	MarkNativeAsOptional("ParticleBody.AddEntity");
+	MarkNativeAsOptional("ParticleBody.AddTrail");
+	MarkNativeAsOptional("ParticleSimulation.AddParticleBody");
+	MarkNativeAsOptional("FPS_CreateParticleSimulation");
+
 	return APLRes_Success;
 }
 
@@ -219,6 +228,7 @@ public void Time_MakePSim(DataPack pack)
 	
 	if (gt >= next)
 	{
+		#if defined _fps_included_
 		ParticleSimulation PSim = FPS_CreateParticleSimulation(NULL_VECTOR, NULL_VECTOR, 0, 4.0, DOKMED, Time_PSimLogic, true);
 		GetClientAbsOrigin(client, pos);
 		TeleportEntity(PSim.Index, pos);
@@ -252,6 +262,7 @@ public void Time_MakePSim(DataPack pack)
 			PBody.AddTrail("materials/chaos_fortress/sprites/arrow.vmt", 0.5, 25.0 * scale, 5.0 * scale, color, 255, RENDER_TRANSALPHA, 3);
 			PSim.AddParticleBody(PBody);
 		}
+		#endif
 		
 		next = gt + 0.33;
 	}
@@ -1078,9 +1089,11 @@ public void Medigun_AttachParticles(int client, int target)
 		b = 255;
 	}
 	
+	#if defined _fps_included_
 	Medigun_SelfParticle[client] = EntIndexToEntRef(FPS_AttachFakeParticleToEntity(client, "root", "models/fake_particles/chaos_fortress/player_aura.mdl", skin, "rotate", 0.75, _, r, 180, b, 0));
 	Medigun_TargetParticle[client] = EntIndexToEntRef(FPS_AttachFakeParticleToEntity(target, "root", "models/fake_particles/chaos_fortress/player_aura.mdl", skin, "rotate", 0.75, _, r, 180, b, 0));
-	
+	#endif
+
 	RequestFrame(Medigun_FadeIn, Medigun_SelfParticle[client]);
 	RequestFrame(Medigun_FadeIn, Medigun_TargetParticle[client]);
 }
@@ -1212,10 +1225,12 @@ public void Time_Activate(int client, char abilityName[255])
 	
 	Time_Radius[client] = CF_GetArgF(client, DOKMED, abilityName, "effect_radius");
 	
+	#if defined _fps_included_
 	if (!IsValidEntity(Time_GetVFX(client)))
 	{
 		Time_MakeVFX(client);
 	}
+	#endif
 	
 	SDKUnhook(client, SDKHook_PreThink, Time_PreThink);
 	SDKHook(client, SDKHook_PreThink, Time_PreThink);
@@ -1225,6 +1240,7 @@ int Time_BreatheDirection[2049] = { -1, ... };
 
 public void Time_MakeVFX(int client)
 {
+	#if defined _fps_included_
 	int r;
 	int b;
 	if (TF2_GetClientTeam(client) == TFTeam_Red)
@@ -1239,12 +1255,11 @@ public void Time_MakeVFX(int client)
 	}
 	
 	float scale = (Time_Radius[client] * 2.0) / 51.948;
-	
 	Time_VFX[client] = EntIndexToEntRef(FPS_AttachFakeParticleToEntity(client, "root", "models/fake_particles/chaos_fortress/player_aura.mdl", 3, "rotate", 0.1, _, r, 180, b, 255, scale));
 	RequestFrame(Time_Breathe, Time_VFX[client]);
 	RequestFrame(Time_SpeedUp, Time_VFX[client]);
 	Time_BreatheDirection[EntRefToEntIndex(Time_VFX[client])] = -1;
-	
+
 	float pos[3];
 	GetClientAbsOrigin(client, pos);
 	float end = Time_EndTime[client];
@@ -1255,6 +1270,7 @@ public void Time_MakeVFX(int client)
 	WritePackFloatArray(pack, pos, 3);
 	WritePackFloat(pack, 0.0);
 	RequestFrame(Time_MakePSim, pack);
+	#endif
 }
 
 public void Time_ClearVFX(int client)
