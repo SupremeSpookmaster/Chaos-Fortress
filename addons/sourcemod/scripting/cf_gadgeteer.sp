@@ -4429,10 +4429,8 @@ public bool Buddy_CheckLOS(int ent)
 	return CF_HasLineOfSight(pos1, pos2, _, _, currentBuddy);
 }
 
-public bool PNPC_OnCheckMedigunCanAttach(PNPC npc, int client, int medigun)
+public void PNPC_OnCheckMedigunCanAttach(PNPC npc, int client, int medigun, bool &result)
 {
 	if (b_IsBuddy[npc.Index] || Annihilation_IsTele[npc.Index] || Toss_IsSupportDrone[npc.Index] || b_IsBuster[npc.Index])
-		return false;
-
-	return true;
+		result = false;
 }

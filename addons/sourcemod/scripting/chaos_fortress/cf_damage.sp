@@ -14,7 +14,7 @@ public void CFDMG_MakeForwards()
 	g_ResistanceDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Resistance", ET_Event, Param_Cell, Param_CellByRef, Param_CellByRef, Param_FloatByRef,
 											Param_CellByRef, Param_CellByRef, Param_Array, Param_Array, Param_CellByRef);
 	g_PostDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Post", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Float, Param_Cell);
-	g_AllowStabForward = new GlobalForward("CF_OnCheckCanBackstab", ET_Single, Param_Cell, Param_Cell, Param_CellByRef);
+	g_AllowStabForward = new GlobalForward("CF_OnCheckCanBackstab", ET_Ignore, Param_Cell, Param_Cell, Param_CellByRef, Param_CellByRef);
 	g_OnStab = new GlobalForward("CF_OnBackstab", ET_Ignore, Param_Cell, Param_Cell, Param_FloatByRef);
 }
 
@@ -25,7 +25,7 @@ public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inf
 	return CFDMG_OnNonPlayerDamaged(npc.Index, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, npc.b_IsABuilding);
 }
 
-public bool PNPC_OnMeleeHit(int attacker, int weapon, int target, float &damage, bool &crit, bool &canStab, bool &forceStab)
+public void PNPC_OnMeleeHit(int attacker, int weapon, int target, float &damage, bool &crit, bool &canStab, bool &forceStab, bool &result)
 {
 	canStab = false;
 	Call_StartForward(g_AllowStabForward);
@@ -33,13 +33,12 @@ public bool PNPC_OnMeleeHit(int attacker, int weapon, int target, float &damage,
 	Call_PushCell(attacker);
 	Call_PushCell(target);
 	Call_PushCellRef(forceStab);
+	Call_PushCellRef(canStab);
 
-	Call_Finish(canStab);
-
-	return true;
+	Call_Finish();
 }
 
-public bool PNPC_OnBackstab(int attacker, int victim, float &damage)
+public void PNPC_OnBackstab(int attacker, int victim, float &damage)
 {
 	Call_StartForward(g_OnStab);
 
@@ -48,8 +47,6 @@ public bool PNPC_OnBackstab(int attacker, int victim, float &damage)
 	Call_PushFloatRef(damage);
 
 	Call_Finish();
-
-	return true;
 }
 
 #endif

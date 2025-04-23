@@ -1543,19 +1543,19 @@ public void SentryProjectiles_Prepare(int client)
 	}
 }
 
-public bool CF_OnSentryFire(int sentry, int owner, int target, int level, float muzzlePos_1[3], float muzzleAng_1[3], float muzzlePos_2[3], float muzzleAng_2[3])
+public void CF_OnSentryFire(int sentry, int owner, int target, int level, float muzzlePos_1[3], float muzzleAng_1[3], float muzzlePos_2[3], float muzzleAng_2[3], bool &result)
 {
 	if (!IsValidClient(owner))
-		return true;
+		return;
 
 	if (!b_SentryProjectiles[owner])
-		return true;
+		return;
 
 	SentryProjectiles_Shoot(sentry, owner, target, level, muzzlePos_1, muzzleAng_1);
 	if (level > 1)
 		SentryProjectiles_Shoot(sentry, owner, target, level, muzzlePos_2, muzzleAng_2);
 
-	return false;
+	result = false;
 }
 
 public void SentryProjectiles_Shoot(int sentry, int owner, int target, int level, float pos[3], float ang[3])

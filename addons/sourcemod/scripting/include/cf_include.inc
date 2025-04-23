@@ -335,13 +335,13 @@ forward Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor
 /**
  * Only works if the Portable NPC System is installed, and its custom melee hitreg is enabled.
  * Called when the PNPCS custom melee hitreg detects a hit.
- * Return true to allow the attack to backstab, otherwise return false.
  * 
  * @param attacker		The client who initiated the melee attack.
  * @param victom		The client who was hit.
  * @param forceStab		Set to true to force the attack to be a backstab, *if* this forward returns true.
+ * @param result		If true: allow the backstab. Otherwise, the backstab is prevented.
  */
-forward bool CF_OnCheckCanBackstab(int attacker, int victim, bool &forceStab);
+forward void CF_OnCheckCanBackstab(int attacker, int victim, bool &forceStab, bool &result);
 
 /**
  * Only works if the Portable NPC System is installed, and its custom melee hitreg is enabled.
@@ -699,10 +699,9 @@ forward void CF_OnPushForceApplied(int client, float &multiplier, bool selfKB);
  * @param muzzleAng_1	The angles of the sentry's first barrel muzzle.
  * @param muzzlePos_2	The origin of the sentry's second barrel muzzle. This is equal to NULL_VECTOR if the sentry is level 1 or a mini-sentry.
  * @param muzzleAng_2	The angles of the sentry's second barrel muzzle. This is equal to NULL_VECTOR if the sentry is level 1 or a mini-sentry.
- * 
- * @return	True to allow the shot to go through, false to block it.
+ * @param result		If true: allow the shot to go through. Otherwise, block it.
  */
-forward bool CF_OnSentryFire(int sentry, int owner, int target, int level, float muzzlePos_1[3], float muzzleAng_1[3], float muzzlePos_2[3], float muzzleAng_2[3]);
+forward void CF_OnSentryFire(int sentry, int owner, int target, int level, float muzzlePos_1[3], float muzzleAng_1[3], float muzzlePos_2[3], float muzzleAng_2[3], bool &result);
 
   ///////////////////////////////////////
  ////////////// NATIVES: ///////////////

@@ -156,7 +156,7 @@ public void CFA_MakeForwards()
 	g_SimulatedSpellCast = new GlobalForward("CF_OnSimulatedSpellUsed", ET_Ignore, Param_Cell, Param_Cell);
 	g_ForcedVMAnimEnd = new GlobalForward("CF_OnForcedVMAnimEnd", ET_Ignore, Param_Cell, Param_String);
 	g_OnHUDDisplayed = new GlobalForward("CF_OnHUDDisplayed", ET_Ignore, Param_Cell, Param_String, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);
-	g_SentryFiredForward = new GlobalForward("CF_OnSentryFire", ET_Single, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Array, Param_Array, Param_Array, Param_Array);
+	g_SentryFiredForward = new GlobalForward("CF_OnSentryFire", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Array, Param_Array, Param_Array, Param_Array, Param_CellByRef);
 	
 	GameData gd = LoadGameConfigFile("chaos_fortress");
 	
@@ -276,12 +276,12 @@ public void CFA_OnEntityDestroyed(int entity)
 }
 
 #if defined _pnpc_included_
-public bool PNPC_OnPNPCProjectileExplode(int rocket, int owner, int launcher)
+public void PNPC_OnPNPCProjectileExplode(int rocket, int owner, int launcher, bool &result)
 {
 	if (!StrEqual(s_ProjectileLogicPlugin[rocket], "") && g_ProjectileLogic[rocket] != INVALID_FUNCTION)
-		return false;
+		result = false;
 
-	return true;
+	return;
 }
 #endif
 
@@ -4017,6 +4017,8 @@ MRESReturn SentryFired_Pre(int sentry, DHookParam hParams)
 		GetEntityAttachment(sentry, LookupEntityAttachment(sentry, "muzzle"), pos1, ang1);
 	}
 
+	bool result = true;
+
 	Call_StartForward(g_SentryFiredForward);
 
 	Call_PushCell(sentry);
@@ -4027,9 +4029,9 @@ MRESReturn SentryFired_Pre(int sentry, DHookParam hParams)
 	Call_PushArray(ang1, 3);
 	Call_PushArray(pos2, 3);
 	Call_PushArray(ang2, 3);
+	Call_PushCellRef(result);
 
-	bool result = true;
-	Call_Finish(result);
+	Call_Finish();
 	
 	return result ? MRES_Ignored : MRES_Supercede;
 }
