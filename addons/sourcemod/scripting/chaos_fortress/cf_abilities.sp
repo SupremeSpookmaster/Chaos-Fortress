@@ -85,7 +85,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_HealPlayer_WithAttributes", Native_CF_HealPlayer_WithAttributes);
 	CreateNative("CF_FireGenericRocket", Native_CF_FireGenericRocket);
 	CreateNative("CF_GenericAOEDamage", Native_CF_GenericAOEDamage);
-	CreateNative("CF_CreateHealthPickup", Native_CF_CreateHealthPickup);
+	CreateNative("CF_CreatePickup", Native_CF_CreatePickup);
 	CreateNative("CF_CreateShieldWall", Native_CF_CreateShieldWall);
 	CreateNative("CF_GetShieldWallHealth", Native_CF_GetShieldWallHealth);
 	CreateNative("CF_GetShieldWallMaxHealth", Native_CF_GetShieldWallMaxHealth);
@@ -2942,197 +2942,164 @@ public Native_CF_WorldSpaceCenter(Handle plugin, int numParams)
 	SetNativeArray(2, output, sizeof(output));
 }
 
-public Native_CF_CreateHealthPickup(Handle plugin, int numParams)
+public Native_CF_CreatePickup(Handle plugin, int numParams)
 {
 	int owner = GetNativeCell(1);
-	float amt = GetNativeCell(2);
-	float radius = GetNativeCell(3);
-	int mode = GetNativeCell(4);
-	float lifespan = GetNativeCell(5);
-	float pos[3];
-	GetNativeArray(6, pos, sizeof(pos));
-	char pluginName[255];
-	GetNativeString(7, pluginName, sizeof(pluginName));
-	Function filter = GetNativeFunction(8);
-	char model[255], sequence[255], sound[255], physModel[255];
-	GetNativeString(9, model, sizeof(model));
-	GetNativeString(10, sequence, sizeof(sequence));
-	float rate = GetNativeCell(11);
-	float scale = GetNativeCell(12);
+	float radius = GetNativeCell(2);
+	float lifespan = GetNativeCell(3);
+
+	char model[255], physModel[255], filterPlugin[255], pickupPlugin[255], sequence[255];
+	Function pickupFunction = GetNativeFunction(4);
+	GetNativeString(5, pickupPlugin, 255);
+
+	float pos[3], ang[3], vel[3];
+	GetNativeArray(6, pos, 3);
+	GetNativeArray(7, ang, 3);
+	GetNativeArray(8, vel, 3);
+
+	float scale = GetNativeCell(9);
+	
+	GetNativeString(10, model, 255);
+	GetNativeString(11, sequence, 255);
+	GetNativeString(12, physModel, 255);
+
 	int skin = GetNativeCell(13);
-	GetNativeString(14, sound, sizeof(sound));
-	float hpMult = GetNativeCell(15);
-	GetNativeString(16, physModel, sizeof(physModel));
-	float mass = GetNativeCell(17);
-	float inertia = GetNativeCell(18);
-	
-	int phys = CreateEntityByName("prop_physics_override");
+	Function filterFunction = GetNativeFunction(14);
+	GetNativeString(15, filterPlugin, 255);
+
+	int phys = SpawnPhysProp(owner, physModel, pos, ang, vel, _, _, _, _, _, _, true);
+	if (!IsValidEntity(phys))
+		return -1;
+
+	SetEntProp(phys, Prop_Send, "m_fEffects", 32);
+
 	int prop = CreateEntityByName("prop_dynamic_override");
-	if (IsValidEntity(phys) && IsValidEntity(prop))
+	if (!IsValidEntity(prop))
+		return -1;
+
+	SetEntPropEnt(prop, Prop_Data, "m_hOwnerEntity", owner);
+	SetEntityModel(prop, model);
+	char scalechar[16];
+	Format(scalechar, sizeof(scalechar), "%f", scale);
+	DispatchKeyValue(prop, "modelscale", scalechar);
+	DispatchKeyValue(prop, "StartDisabled", "false");
+					
+	DispatchSpawn(prop);
+					
+	AcceptEntityInput(prop, "Enable");
+	TeleportEntity(prop, pos, ang, NULL_VECTOR);
+		
+	DispatchKeyValue(prop, "spawnflags", "1");
+	SetVariantString("!activator");
+	AcceptEntityInput(prop, "SetParent", phys);
+		
+	SetVariantString(sequence);
+	AcceptEntityInput(prop, "SetAnimation");
+	DispatchKeyValueFloat(prop, "playbackrate", 1.0);
+	char skinchar[16];
+	Format(skinchar, sizeof(skinchar), "%i", skin);
+	DispatchKeyValue(prop, "skin", skinchar);
+
+	b_IsFakeHealthKit[phys] = true;
+
+	if (lifespan > 0.0)
 	{
-		DispatchKeyValue(phys, "targetname", "healthparent"); 
-		DispatchKeyValue(phys, "spawnflags", "2"); 
-		DispatchKeyValue(phys, "model", physModel);
-		DispatchKeyValueFloat(phys, "massScale", mass);
-		DispatchKeyValueFloat(phys, "intertiascale", inertia);
-				
-		DispatchSpawn(phys);
-				
-		ActivateEntity(phys);
-		
-		SetEntProp(phys, Prop_Data, "m_takedamage", 0, 1);
-		
-		if (IsValidClient(owner))
-		{
-			SetEntPropEnt(phys, Prop_Data, "m_hOwnerEntity", owner);
-			SetEntPropEnt(prop, Prop_Data, "m_hOwnerEntity", owner);
-		}
-			
-		SetEntProp(phys, Prop_Send, "m_fEffects", 32);
-		
-		SetEntityModel(prop, model);
-					
-		char scalechar[16];
-		Format(scalechar, sizeof(scalechar), "%f", scale);
-		DispatchKeyValue(prop, "modelscale", scalechar);
-		DispatchKeyValue(prop, "StartDisabled", "false");
-					
-		DispatchSpawn(prop);
-					
-		AcceptEntityInput(prop, "Enable");
-		
-		TeleportEntity(phys, pos, NULL_VECTOR, NULL_VECTOR);
-		TeleportEntity(prop, pos, NULL_VECTOR, NULL_VECTOR);
-		
-		DispatchKeyValue(prop, "spawnflags", "1");
-		SetVariantString("!activator");
-		AcceptEntityInput(prop, "SetParent", phys);
-		
-		SetVariantString(sequence);
-		AcceptEntityInput(prop, "SetAnimation");
-		DispatchKeyValueFloat(prop, "playbackrate", rate);
-		char skinchar[16];
-		Format(skinchar, sizeof(skinchar), "%i", skin);
-		DispatchKeyValue(prop, "skin", skinchar);
-		
-		if (lifespan > 0.0)
-		{
-			CreateTimer(lifespan, Timer_RemoveEntity, EntIndexToEntRef(prop), TIMER_FLAG_NO_MAPCHANGE);
-			CreateTimer(lifespan, Timer_RemoveEntity, EntIndexToEntRef(phys), TIMER_FLAG_NO_MAPCHANGE);
-		}
-		
-		b_IsFakeHealthKit[phys] = true;
-		
-		DataPack pack = new DataPack();
-		
-		WritePackCell(pack, IsValidClient(owner) ? GetClientUserId(owner) : -1);
-		WritePackCell(pack, EntIndexToEntRef(phys));
-		WritePackFloat(pack, amt);
-		WritePackFloat(pack, radius);
-		WritePackCell(pack, mode);
-		WritePackFunction(pack, filter);
-		WritePackString(pack, sound);
-		WritePackFloat(pack, hpMult);
-		WritePackString(pack, pluginName);
-		WritePackString(pack, "healthgained_red_large");
-		WritePackString(pack, "healthgained_blu_large");
-		
-		RequestFrame(FakeHealthKit_Think, pack);
-		
-		return phys;
+		CreateTimer(lifespan, Pickup_BeginFade, EntIndexToEntRef(phys), TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(lifespan, Pickup_BeginFade, EntIndexToEntRef(prop), TIMER_FLAG_NO_MAPCHANGE);
 	}
-	
-	return -1;
+
+	DataPack pack = new DataPack();
+	CreateDataTimer(0.1, Pickup_Scan, pack, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+	WritePackCell(pack, IsValidClient(owner) ? GetClientUserId(owner) : -1);
+	WritePackCell(pack, EntIndexToEntRef(phys));
+	WritePackFunction(pack, filterFunction);
+	WritePackString(pack, filterPlugin);
+	WritePackFunction(pack, pickupFunction);
+	WritePackString(pack, pickupPlugin);
+	WritePackFloat(pack, radius);
+
+	return phys;
 }
 
-public void FakeHealthKit_Think(DataPack pack)
+public Action Pickup_Scan(Handle timer, DataPack pack)
 {
 	ResetPack(pack);
-	
 	int owner = GetClientOfUserId(ReadPackCell(pack));
-	int kit = EntRefToEntIndex(ReadPackCell(pack));
-	float amt = ReadPackFloat(pack);
+	int pickup = EntRefToEntIndex(ReadPackCell(pack));
+	Function filterFunction = ReadPackFunction(pack);
+	char filterPlugin[255], pickupPlugin[255];
+	ReadPackString(pack, filterPlugin, 255);
+	Function pickupFunction = ReadPackFunction(pack);
+	ReadPackString(pack, pickupPlugin, 255);
 	float radius = ReadPackFloat(pack);
-	int mode = ReadPackCell(pack);
-	Function filter = ReadPackFunction(pack);
-	char snd[255], plugin[255], redPart[255], bluePart[255];
-	ReadPackString(pack, snd, sizeof(snd));
-	float hpMult = ReadPackFloat(pack);
-	ReadPackString(pack, plugin, sizeof(plugin));
-	ReadPackString(pack, redPart, sizeof(redPart));
-	ReadPackString(pack, bluePart, sizeof(bluePart));
 
-	if (!IsValidEntity(kit))
-	{
-		delete pack;
-		return;
-	}
-		
+	if (!IsValidEntity(pickup))
+		return Plugin_Stop;
+
 	float pos[3];
-	GetEntPropVector(kit, Prop_Send, "m_vecOrigin", pos);
-	
-	Handle FunctionPlugin = GetPluginHandle(plugin);
-	
-	for (int i = 1; i <= MaxClients; i++)
+	GetEntPropVector(pickup, Prop_Send, "m_vecOrigin", pos);
+
+	int closest = -1;
+	float closestDist = 999999.0;
+	for (int i = 1; i <= 2048; i++)
 	{
-		if (IsValidMulti(i))
+		if (!Entity_Can_Be_Shot(i) || i == pickup)
+			continue;
+
+		float theirPos[3];
+		if (IsValidClient(i))
+			GetClientAbsOrigin(i, theirPos);
+		else
+			GetEntPropVector(i, Prop_Send, "m_vecOrigin", theirPos);
+		
+		float dist = GetVectorDistance(pos, theirPos);
+		if (dist >= closestDist || dist > radius)
+			continue;
+
+		bool success = true;
+		if (!StrEqual(filterPlugin, "") && filterFunction != INVALID_FUNCTION)
 		{
-			float pos2[3];
-			GetClientAbsOrigin(i, pos2);
-			
-			bool result;
-			
-			if (FunctionPlugin == INVALID_HANDLE || filter == INVALID_FUNCTION)
-			{
-				result = true;
-			}
-			else
-			{
-				Call_StartFunction(FunctionPlugin, filter);
-				
-				Call_PushCell(kit);
-				Call_PushCell(owner);
-				Call_PushCell(i);
-				
-				Call_Finish(result);
-			}
-			
-			int maxHPCheck = RoundFloat(float(TF2Util_GetEntityMaxHealth(i)) * hpMult);
-			if (GetEntProp(i, Prop_Send, "m_iHealth") >= maxHPCheck)
-				result = false;
-			
-			if (GetVectorDistance(pos, pos2) <= radius && result)
-			{
-				float healing = amt;
-				
-				if (mode == 0)
-				{
-					float maxHP = float(TF2Util_GetEntityMaxHealth(i));
-					healing = amt * maxHP;
-				}
-				
-				CF_HealPlayer_WithAttributes(i, owner, RoundFloat(healing), hpMult);
-				EmitSoundToClient(i, snd, _, _, 120);
-				
-				delete pack;
-				
-				RemoveEntity(kit);
-				
-				if (TF2_GetClientTeam(i) == TFTeam_Red)
-				{
-					SpawnParticle(pos, redPart, 2.0);
-				}
-				else
-				{
-					SpawnParticle(pos, bluePart, 2.0);
-				}
-				
-				return;
-			}
+			Call_StartFunction(GetPluginHandle(filterPlugin), filterFunction);
+
+			Call_PushCell(owner);
+			Call_PushCell(pickup);
+			Call_PushCell(i);
+
+			Call_Finish(success);
+		}
+
+		if (success)
+		{
+			closest = i;
+			closestDist = dist;
 		}
 	}
-		
-	RequestFrame(FakeHealthKit_Think, pack);
+
+	if (IsValidEntity(closest))
+	{
+		Call_StartFunction(GetPluginHandle(pickupPlugin), pickupFunction);
+
+		Call_PushCell(owner);
+		Call_PushCell(pickup);
+		Call_PushCell(closest);
+
+		Call_Finish();
+
+		RemoveEntity(pickup);
+
+		return Plugin_Stop;
+	}
+
+	return Plugin_Continue;
+}
+
+public Action Pickup_BeginFade(Handle timer, int ref)
+{
+	int ent = EntRefToEntIndex(ref);
+	if (IsValidEntity(ent))
+		MakeEntityFadeOut(ent, 2);
+
+	return Plugin_Continue;
 }
 
 float Medigun_HealBucket[MAXPLAYERS + 1] = { 0.0, ... };
@@ -3220,7 +3187,7 @@ public Native_CF_IsValidTarget(Handle plugin, int numParams)
 	if (!Entity_Can_Be_Shot(entity))
 		return false;
 	
-	if (!StrEqual(pluginName, "") && filter != INVALID_FUNCTION)
+	if (!StrEqual(pluginName, "") || filter != INVALID_FUNCTION)
 	{
 		Handle FunctionPlugin = GetPluginHandle(pluginName);
 	

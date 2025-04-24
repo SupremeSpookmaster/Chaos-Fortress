@@ -602,6 +602,11 @@ public void OnEntityCreated(int entity, const char[] classname)
 		SDKHook(entity, SDKHook_TouchPost, PhysTouch);
 	}
 
+	if (StrContains(classname, "energy_ring") != -1)
+	{
+		SDKHook(entity, SDKHook_Touch, RingTouch);
+	}
+
 	if (StrContains(classname, "obj_sentrygun") != -1)
 		RequestFrame(SentrySpawned, EntIndexToEntRef(entity));
 }
@@ -638,6 +643,19 @@ public Native_CF_IsEntityInSpawn(Handle plugin, int numParams)
 	
 	return b_InSpawn[entity][team];
 } 
+
+public Action RingTouch(int ring, int entity)
+{
+	char classname[255];
+	GetEntityClassname(entity, classname, 255);
+	if (StrContains(classname, "prop_physics") != -1)
+	{
+		PhysTouch(entity, ring);
+		RemoveEntity(ring);
+	}
+	
+	return Plugin_Continue;
+}
 
 public Action PhysTouch(int prop, int entity)
 {
@@ -723,6 +741,10 @@ public float GetProjectileDamage(int entity, float defaultVal)
 		return GetEntPropFloat(entity, Prop_Send, "m_flDamage");
 	else if (StrEqual(classname, "tf_projectile_syringe"))
 		return GetEntDataFloat(entity, FindSendPropInfo("CTFProjectile_Syringe", "m_iDeflected") + 4);
+	else if (StrEqual(classname, "tf_projectile_energy_ring"))
+	{
+		return 90.0;
+	}
 	
 	return defaultVal;
 }

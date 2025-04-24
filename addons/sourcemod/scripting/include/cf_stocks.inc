@@ -2857,6 +2857,74 @@ stock void SetHitboxSize(int entity, const float mins[3], const float maxs[3])
 	SetEntPropVector(entity, Prop_Send, "m_vecSpecifiedSurroundingMaxsPreScaled", maxs);
 }
 
+/**
+ * Spawns a prop_physics_override.
+ * 
+ * @param owner				The client who owns this prop. If valid: sets m_hOwnerEntity, and also sets the prop's team to the client's team.
+ * @param model				The model to use. Must be a valid physics model.
+ * @param pos				Start position.
+ * @param ang				Start angles.
+ * @param vel				Start velocity.
+ * @param skin				The model's skin.
+ * @param health			The prop's HP.
+ * @param invincible		If true: sets m_takedamage to 0.
+ * @param scale				The prop's model scale.
+ * @param massScale			Mass scale value.
+ * @param intertiaScale		Intertia scale value.
+ * @param nonSolid			If true: sets the prop's collision group to 26 (solid to all but players).
+ * 
+ * @return	An int representing the phys prop's index, or -1 on failure.
+ */
+stock int SpawnPhysProp(int owner, char model[255], float pos[3], float ang[3] = NULL_VECTOR, float vel[3] = NULL_VECTOR, int skin = 0, float health = 0.0, bool invincible = true, float scale = 1.0, float massScale = 10.0, float inertiaScale = 10.0, bool nonSolid = false)
+{
+	int prop = CreateEntityByName("prop_physics_override");
+	if (IsValidEntity(prop))
+	{
+		DispatchKeyValue(prop, "targetname", "physprop"); 
+		DispatchKeyValue(prop, "spawnflags", "2"); 
+		DispatchKeyValue(prop, "model", model);
+		DispatchKeyValueFloat(prop, "massScale", massScale);
+		DispatchKeyValueFloat(prop, "intertiascale", inertiaScale);
+				
+		DispatchSpawn(prop);
+				
+		ActivateEntity(prop);
+
+		if (IsValidClient(owner))
+		{
+			SetEntPropEnt(prop, Prop_Data, "m_hOwnerEntity", owner);
+			SetEntProp(prop, Prop_Send, "m_iTeamNum", GetClientTeam(owner));
+		}
+		
+		char skinChar[16];
+		Format(skinChar, 16, "%i", skin);
+		DispatchKeyValue(prop, "skin", skinChar);
+
+		if (invincible)
+		{
+			SetEntProp(prop, Prop_Data, "m_takedamage", 0, 1);
+		}
+		else
+		{
+			char healthChar[16];
+			Format(healthChar, sizeof(healthChar), "%i", RoundFloat(health));
+			DispatchKeyValue(prop, "Health", healthChar);
+			SetEntityHealth(prop, RoundFloat(health));
+		}
+
+		SetEntPropFloat(prop, Prop_Send, "m_flModelScale", scale);
+
+		if (nonSolid)
+			SetEntityCollisionGroup(prop, 26);
+			
+		TeleportEntity(prop, pos, ang, vel);
+		return prop;
+	}
+
+	return -1;
+}
+
+//DEPRECATED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! USE SPAWNPHYSPROP!
 stock int SpawnPhysicsProp(char model[255], int owner, char skin[16], float health, bool invincible, float scale, float pos[3], float ang[3], float vel[3], float lifespan = 0.0)
 {
 	int prop = CreateEntityByName("prop_physics_multiplayer");
@@ -3333,8 +3401,7 @@ stock bool TF2_IsDamageProjectileWithoutImpactExplosion(int entity, char classna
 	GetEntityClassname(entity, classname, sizeof(classname));
 	
 	return (StrContains(classname, "tf_projectile") != -1 && StrContains(classname, "spell") == -1 && 
-	StrContains(classname, "jar") == -1 && StrContains(classname, "rocket") == -1 && StrContains(classname, "cleaver") == -1
-	&& StrContains(classname, "energy_ring") == -1);
+	StrContains(classname, "jar") == -1 && StrContains(classname, "rocket") == -1 && StrContains(classname, "cleaver") == -1);
 }
 
 //Returns true if the entity is capable of taking damage (prop_physics, base_boss, living player, buildings).

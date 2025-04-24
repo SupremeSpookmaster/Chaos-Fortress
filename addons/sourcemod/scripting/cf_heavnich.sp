@@ -28,6 +28,7 @@
 #define SOUND_MEGA_STEP_1			")mvm/giant_heavy/giant_heavy_step01.wav"
 #define SOUND_MEGA_STEP_2			")mvm/giant_heavy/giant_heavy_step02.wav"
 #define SOUND_MEGA_SHOTGUN			")mvm/giant_soldier/giant_soldier_rocket_shoot.wav.wav"
+#define SOUND_SANDVICH_HEAL			"items/smallmedkit1.wav"
 
 #define CATCH_SOUND_REV				"minigun_wind_up"
 #define CATCH_SOUND_UNREV			"minigun_wind_down"
@@ -51,6 +52,7 @@ public void OnMapStart()
 	PrecacheSound(SOUND_MEGA_STEP_1, true);
 	PrecacheSound(SOUND_MEGA_STEP_2, true);
 	PrecacheSound(SOUND_MEGA_SHOTGUN, true);
+	PrecacheSound(SOUND_SANDVICH_HEAL);
 	
 	PrecacheModel(MODEL_SANDVICH);
 }
@@ -144,6 +146,9 @@ public void Share_Activate(int client, char abilityName[255])
 	Share_TossSandvich(client, num, delay, velocity, lifespan, radius, amt, type, mult);
 }
 
+float f_ShareOverheal[2048] = { 0.0, ... };
+float f_ShareAmt[2048] = { 0.0, ... };
+
 public void Share_TossSandvich(int client, int num, float delay, float velocity, float lifespan, float radius, float amt, int type, float mult)
 {
 	if (!IsValidMulti(client))
@@ -152,16 +157,19 @@ public void Share_TossSandvich(int client, int num, float delay, float velocity,
 	float pos[3], ang[3], buffer[3], vel[3];
 	GetClientEyePosition(client, pos);
 	GetClientEyeAngles(client, ang);
-	
-	int sandvich = CF_CreateHealthPickup(client, amt, radius, type, lifespan, pos, HEAVNICH, Share_Filter, MODEL_SANDVICH, _, _, _, _, _, mult, MODEL_SANDVICH);
+	GetAngleVectors(ang, buffer, NULL_VECTOR, NULL_VECTOR);
+	vel[0] = buffer[0] * velocity;
+	vel[1] = buffer[1] * velocity;
+	vel[2] = buffer[2] * velocity;
+
+	int sandvich = CF_CreatePickup(client, radius, lifespan, Share_EatSandvich, HEAVNICH, pos, ang, vel, 1.0, MODEL_SANDVICH, "idle", MODEL_SANDVICH, _, Share_Filter, HEAVNICH);
 	if (IsValidEntity(sandvich))
 	{
-		GetAngleVectors(ang, buffer, NULL_VECTOR, NULL_VECTOR);
-		vel[0] = buffer[0] * velocity;
-		vel[1] = buffer[1] * velocity;
-		vel[2] = buffer[2] * velocity;
-		
-		TeleportEntity(sandvich, pos, NULL_VECTOR, vel);
+		DispatchKeyValueFloat(sandvich, "massScale", 0.02);
+		DispatchKeyValueFloat(sandvich, "intertiascale", 0.02);
+
+		f_ShareOverheal[sandvich] = mult;
+		f_ShareAmt[sandvich] = amt;
 	}
 	
 	num--;
@@ -201,12 +209,28 @@ public Action Share_TossAnotherOne(Handle sandviches, DataPack pack)
 	return Plugin_Continue;
 }
 
-public bool Share_Filter(int sandvich, int owner, int eater)
+public bool Share_Filter(int owner, int sandvich, int eater)
 {
+	if (!IsValidClient(eater))
+		return false;
+
 	if (!IsValidClient(owner))
 		return true;
 		
 	return (owner != eater || b_SandvichCanHealSelf[owner]);
+}
+
+public void Share_EatSandvich(int owner, int sandvich, int eater)
+{
+	float pos[3];
+	GetEntPropVector(sandvich, Prop_Send, "m_vecOrigin", pos);
+	SpawnParticle(pos, TF2_GetClientTeam(eater) == TFTeam_Red ? "healthgained_red_large_2" : "healthgained_blu_large_2");
+	EmitSoundToClient(eater, SOUND_SANDVICH_HEAL);
+
+	int maxHP = TF2Util_GetEntityMaxHealth(eater);
+	int amt = RoundFloat((float(maxHP)) * f_ShareAmt[sandvich]);
+
+	CF_HealPlayer(eater, owner, amt, f_ShareOverheal[sandvich]);
 }
 
 float f_Eating[MAXPLAYERS + 1] = { 0.0, ... };

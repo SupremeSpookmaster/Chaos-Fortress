@@ -1465,32 +1465,31 @@ native CF_HealPlayer_WithAttributes(int client, int healer, int amt, float hpMul
 native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit = false, bool collideWithAllies = false, char pluginName[255] = "", Function logic = INVALID_FUNCTION);
 
 /**
- * Creates a simulated health kit, with more customizable options than just creating an 'item_healthkit'.
- *
- * @param owner					The client who owns the health kit. Points for healing get awarded to this player if they are a valid client.
- * @param amt					The amount of healing provided to the client who picks the health kit up.
- * @param radius				Distance from the health kit at which the health kit will be picked up.
- * @param mode					Mode in which the health provided by this kit should be given. 0: percentage-based, all other values: flat value.
- * @param lifespan				Duration the health kit should be active. 0.0 or below: infinite.
- * @param pos					The position the health kit should be spawned at.
- * @param plugin				Name of the plugin which is calling this native. Only necessary if "filter" is used.
- * @param filter				Function used to determine who should be able to pick up the health kit. The function must return a bool value, with the first parameter being the health kit's entity index, the second parameter as its owner, and the third paremeter as the client attempting to pick up the health kit.
- * @param model					Optional model to be used for the health kit.
- * @param sequence				Optional animation sequence to be used for the health kit.
- * @param rate					Optional playback rate for the animation sequence.
- * @param scale					Optional model scale to be used for the health kit's model.
- * @param skin					Optional skin to set for the health kit's model.
- * @param sound					Optional sound to play when somebody picks up the health kit.
- * @param hpMult				Optional max HP multiplier provided by the health kit. IE, if this is 1.5, the health kit can heal the player who grabs it up to a maximum of 50% overheal.
- * @param physModel				Optional invisible model to be used for the health kit's physics. 
- * @param redParticle			Optional particle effect to spawn when this health kit is picked up by a red player.
- * @param blueParticle			Optional particle effect to spawn when this health kit is picked up by a blue player.
- * @param massScale				Optional amount to scale the mass of the health kit for the sake of physics simulations.
- * @param intertiaScale			Optional amount to scale the intertia of the health kit for the sake of physics simulations.
- *
- * @return	The entity index of the health kit, or -1 if it fails to spawn.
+ * Creates a pickup, with various parameters for custom effects.
+ * 
+ * @param owner				The client who owns the pickup. Does not need to be a valid client.
+ * @param radius			Radius in which the pickup will be picked up by entities which can pick it up.
+ * @param lifespan			Time until the pickup begins to fade out. Takes 2s to fade out fully.
+ * @param pickupFunction	Function to call when the pickup is picked up.
+ * 							Must take an int for the owner, the pickup itself, and the entity which picked it up.
+ * 							EX: public void MyPickupFunction(int owner, int pickup, int entity)
+ * @param pickupPlugin		Name of the plugin which contains the pickup function.
+ * @param pos				Starting position.
+ * @param ang				Starting angles.
+ * @param vel				Starting velocity.
+ * @param scale				Model scale.
+ * @param model				Visible model.
+ * @param sequence			Sequence for the visible model to play out.
+ * @param physModel			Invisible model used for handling this pickup's physics.
+ * @param skin				Skin to use for the visible model.
+ * @param filterFunction	Optional function to use to filter out entities which can use this pickup.
+ * 							Must take an int for the owner, the pickup itself, and the entity attempting to pick it up, and return a bool (false to prevent pickup, true to allow).
+ * 							EX: public bool MyFilterFunction(int owner, int pickup, int entity)
+ * @param filterPlugin		Name of the plugin which contains the filter function.
+ * 
+ * @return	The entity index of the physics prop used to handle this pickup's movement, -1 on failure.
  */
-native int CF_CreateHealthPickup(int owner, float amt, float radius, int mode, float lifespan, float pos[3], char plugin[255] = "", Function filter = INVALID_FUNCTION, char model[255] = "models/items/medkit_medium.mdl", char sequence[255] = "idle", float rate = 1.0, float scale = 1.0, int skin = 0, char sound[255] = "items/smallmedkit1.wav", float hpMult = 1.0, char physModel[255] = "models/items/medkit_medium.mdl", float massScale = 1.0, float inertiaScale = 1.0);
+native int CF_CreatePickup(int owner, float radius, float lifespan, Function pickupFunction, char pickupPlugin[255], float pos[3], float ang[3] = NULL_VECTOR, float vel[3] = NULL_VECTOR, float scale = 1.0, char model[255] = "models/items/medkit_medium.mdl", char sequence[255] = "idle", char physModel[255] = "models/items/medkit_medium.mdl", int skin = 0, Function filterFunction = INVALID_FUNCTION, char filterPlugin[255] = "");
 
 /**
  * Creates a simulated medigun shield by using a physics prop.
@@ -1738,7 +1737,7 @@ native bool CF_IsValidTarget(int entity, TFTeam team, char[] plugin = "", Functi
  * @param plugin			Name of the plugin which is calling this native. Only necessary if "filter" is used.
  * @param filter			Optional function for you to add your own extra requirements to. This function must take one int as a parameter, that being the entity's index, and return a bool.
  *
- * @return		True if the entity is both a valid entity and matches the given requirements, false otherwise.
+ * @return		The entity index of the closest entity matching the given parameters, or -1 on failure.
  */
 native int CF_GetClosestTarget(float pos[3], bool IncludeEntities = false, float &distance = 0.0, float maxDistance = 0.0, TFTeam team = TFTeam_Unassigned, char[] plugin = "", Function filter = INVALID_FUNCTION);
 
