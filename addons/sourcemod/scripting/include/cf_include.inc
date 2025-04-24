@@ -1478,7 +1478,7 @@ native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit = f
  * @param ang				Starting angles.
  * @param vel				Starting velocity.
  * @param scale				Model scale.
- * @param model				Visible model.
+ * @param model				Visible model. If this is left blank, the physics model is made visible instead.
  * @param sequence			Sequence for the visible model to play out.
  * @param physModel			Invisible model used for handling this pickup's physics.
  * @param skin				Skin to use for the visible model.

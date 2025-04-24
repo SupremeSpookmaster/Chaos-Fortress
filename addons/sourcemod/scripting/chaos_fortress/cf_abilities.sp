@@ -2971,42 +2971,45 @@ public Native_CF_CreatePickup(Handle plugin, int numParams)
 	if (!IsValidEntity(phys))
 		return -1;
 
-	SetEntProp(phys, Prop_Send, "m_fEffects", 32);
+	if (!StrEqual(model, ""))
+	{
+		int prop = CreateEntityByName("prop_dynamic_override");
+		if (!IsValidEntity(prop))
+			return -1;
 
-	int prop = CreateEntityByName("prop_dynamic_override");
-	if (!IsValidEntity(prop))
-		return -1;
+		SetEntPropEnt(prop, Prop_Data, "m_hOwnerEntity", owner);
+		SetEntityModel(prop, model);
+		char scalechar[16];
+		Format(scalechar, sizeof(scalechar), "%f", scale);
+		DispatchKeyValue(prop, "modelscale", scalechar);
+		DispatchKeyValue(prop, "StartDisabled", "false");
+						
+		DispatchSpawn(prop);
+						
+		AcceptEntityInput(prop, "Enable");
+		TeleportEntity(prop, pos, ang, NULL_VECTOR);
+			
+		DispatchKeyValue(prop, "spawnflags", "1");
+		SetVariantString("!activator");
+		AcceptEntityInput(prop, "SetParent", phys);
+			
+		SetVariantString(sequence);
+		AcceptEntityInput(prop, "SetAnimation");
+		DispatchKeyValueFloat(prop, "playbackrate", 1.0);
+		char skinchar[16];
+		Format(skinchar, sizeof(skinchar), "%i", skin);
+		DispatchKeyValue(prop, "skin", skinchar);
 
-	SetEntPropEnt(prop, Prop_Data, "m_hOwnerEntity", owner);
-	SetEntityModel(prop, model);
-	char scalechar[16];
-	Format(scalechar, sizeof(scalechar), "%f", scale);
-	DispatchKeyValue(prop, "modelscale", scalechar);
-	DispatchKeyValue(prop, "StartDisabled", "false");
-					
-	DispatchSpawn(prop);
-					
-	AcceptEntityInput(prop, "Enable");
-	TeleportEntity(prop, pos, ang, NULL_VECTOR);
-		
-	DispatchKeyValue(prop, "spawnflags", "1");
-	SetVariantString("!activator");
-	AcceptEntityInput(prop, "SetParent", phys);
-		
-	SetVariantString(sequence);
-	AcceptEntityInput(prop, "SetAnimation");
-	DispatchKeyValueFloat(prop, "playbackrate", 1.0);
-	char skinchar[16];
-	Format(skinchar, sizeof(skinchar), "%i", skin);
-	DispatchKeyValue(prop, "skin", skinchar);
+		SetEntProp(phys, Prop_Send, "m_fEffects", 32);
+
+		if (lifespan > 0.0)
+			CreateTimer(lifespan, Pickup_BeginFade, EntIndexToEntRef(prop), TIMER_FLAG_NO_MAPCHANGE);
+	}
 
 	b_IsFakeHealthKit[phys] = true;
 
 	if (lifespan > 0.0)
-	{
 		CreateTimer(lifespan, Pickup_BeginFade, EntIndexToEntRef(phys), TIMER_FLAG_NO_MAPCHANGE);
-		CreateTimer(lifespan, Pickup_BeginFade, EntIndexToEntRef(prop), TIMER_FLAG_NO_MAPCHANGE);
-	}
 
 	DataPack pack = new DataPack();
 	CreateDataTimer(0.1, Pickup_Scan, pack, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
