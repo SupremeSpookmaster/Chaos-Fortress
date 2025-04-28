@@ -934,6 +934,8 @@ methodmap CFCharacter __nullable__
 		this.SetArchetype("");
 		this.ClearSoundCues();
 
+		Conds_ClearAll(this.i_Client);
+
 		//This is used only for cases where we need to *completely* remove a client's character status, such as on map end or if the client disconnects.
 		//Otherwise, we preserve their current ult/resource stats so that we don't lose everything just because we died or switched our character.
 		if (fullClear)

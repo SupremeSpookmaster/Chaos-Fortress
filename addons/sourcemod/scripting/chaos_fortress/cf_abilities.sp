@@ -123,6 +123,8 @@ public void CFA_MakeNatives()
 	CreateNative("CF_ForceTaunt", Native_CF_ForceTaunt);
 	CreateNative("CF_ForceWeaponTaunt", Native_CF_ForceWeaponTaunt);
 	CreateNative("CF_GetSpecialResourceIsMetal", Native_CF_GetSpecialResourceIsMetal);
+	CreateNative("CF_AddCondition", Native_CF_AddCondition);
+	CreateNative("CF_RemoveCondition", Native_CF_RemoveCondition);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -4353,6 +4355,8 @@ public void TF2_OnConditionRemoved(int client, TFCond condition)
 		i_TauntSpeedWearable[client] = -1;
 		i_ForceTauntWeapon[client] = -1;
 	}
+
+	Cond_Remove(client, condition);
 }
 
 public any Native_CF_GetSpecialResourceIsMetal(Handle plugin, int numParams)
@@ -4387,4 +4391,114 @@ public void Native_CF_SetSpecialResourceIsMetal(Handle plugin, int numParams)
 		else
 			CF_SetSpecialResource(client, CF_GetSpecialResource(client));
 	}
+}
+
+float f_CondEndTime[MAXPLAYERS+1][255];
+int i_NumConds[MAXPLAYERS+1] = {0, ...};
+
+public void Native_CF_AddCondition(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	TFCond condition = GetNativeCell(2);
+	float duration = GetNativeCell(3);
+	int inflictor = GetNativeCell(4);
+	bool resetTimer = GetNativeCell(5);
+
+	if (!IsValidMulti(client))
+		return;
+
+	#undef TF2_AddCondition
+
+	int condNum = view_as<int>(condition);
+	float gt = GetGameTime();
+
+	if (duration == TFCondDuration_Infinite)
+	{
+		TF2_AddCondition(client, condition, duration, inflictor);
+
+		if (f_CondEndTime[client][condNum] > 0.0)
+		{
+			f_CondEndTime[client][condNum] = -1.0;
+			i_NumConds[client]--;
+		}
+	}
+	else
+	{
+		if (gt > f_CondEndTime[client][condNum] || resetTimer)
+		{
+			if (gt > f_CondEndTime[client][condNum])
+			{
+				TF2_AddCondition(client, condition, _, inflictor);
+				i_NumConds[client]++;
+			}
+
+			f_CondEndTime[client][condNum] = gt + duration;
+		}
+		else
+		{
+			f_CondEndTime[client][condNum] += duration;
+		}
+
+		RequestFrame(Conds_Check, GetClientUserId(client));
+	}
+
+	#define TF2_AddCondition TFCond_Redirect_Add
+}
+
+public void Conds_ClearAll(int client)
+{
+	if (!IsValidClient(client))
+		return;
+
+	for (int i = 0; i < 131; i++)
+	{
+		if (f_CondEndTime[client][i] <= 0.0)
+			continue;
+			
+		TF2_RemoveCondition(client, view_as<TFCond>(i));
+	}
+}
+
+public void Conds_Check(int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client))
+		return;
+
+	float gt = GetGameTime();
+	
+	for (int i = 0; i < 131; i++)
+	{
+		if (gt >= f_CondEndTime[client][i] && f_CondEndTime[client][i] > 0.0)
+		{
+			TF2_RemoveCondition(client, view_as<TFCond>(i));
+		}
+	}
+	
+	if (i_NumConds[client] < 1)
+		return;
+		
+	RequestFrame(Conds_Check, id);
+}
+
+public void Native_CF_RemoveCondition(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	TFCond condition = GetNativeCell(2);
+
+	#undef TF2_RemoveCondition
+	if (IsPlayerAlive(client))
+		TF2_RemoveCondition(client, condition);
+	#define TF2_RemoveCondition TFCond_Redirect_Remove
+
+	Cond_Remove(client, condition);
+}
+
+public void Cond_Remove(int client, TFCond condition)
+{
+	float endTime = f_CondEndTime[client][view_as<int>(condition)];
+	if (endTime > 0.0)
+		i_NumConds[client]--;
+		
+	f_CondEndTime[client][view_as<int>(condition)] = 0.0;
 }

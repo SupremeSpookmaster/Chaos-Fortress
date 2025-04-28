@@ -205,7 +205,6 @@ public void CF_OnCharacterCreated(int client)
 	b_WeaponForceFired[client] = false;
 	ATKSpeed_EndTime[client] = 0.0;
 	SetForceButtonState(client, false, IN_ATTACK);
-	Conds_ClearAll(client);
 
 	if (CF_HasAbility(client, GENERIC, RESOURCE_VFX))
 		RVFX_Prepare(client);
@@ -1251,75 +1250,15 @@ public void Conds_Activate(int client, char abilityName[255])
 	char conds[32][32];
 	int num = ExplodeString(condStr, ";", conds, 32, 32);
 	
-	float gt = GetGameTime();
-	
 	for(int i = 0; i < num; i += 2)
 	{
 		TFCond cond = view_as<TFCond>(StringToInt(conds[i]));
 		if(cond)
 		{
 			float duration = StringToFloat(conds[i + 1]);
-			int condNum = view_as<int>(cond);
-			
-			if (gt > f_CondEndTime[client][condNum] || reset)
-			{
-				if (gt > f_CondEndTime[client][condNum])
-				{
-					TF2_AddCondition(client, cond);
-					i_NumConds[client]++;
-				}
-
-				f_CondEndTime[client][condNum] = gt + duration;
-			}
-			else
-			{
-				f_CondEndTime[client][condNum] += duration;
-			}
+			CF_AddCondition(client, cond, duration, _, reset);
 		}
 	}
-	
-	RequestFrame(Conds_Check, GetClientUserId(client));
-}
-
-public void Conds_ClearAll(int client)
-{
-	if (!IsValidClient(client))
-		return;
-
-	for (int i = 0; i < 131; i++)
-	{
-		if (f_CondEndTime[client][i] <= 0.0)
-			continue;
-			
-		if (IsPlayerAlive(client))
-			TF2_RemoveCondition(client, view_as<TFCond>(i));
-
-		f_CondEndTime[client][i] = 0.0;
-	}
-}
-
-public void Conds_Check(int id)
-{
-	int client = GetClientOfUserId(id);
-	if (!IsValidMulti(client))
-		return;
-
-	float gt = GetGameTime();
-	
-	for (int i = 0; i < 131; i++)
-	{
-		if (gt >= f_CondEndTime[client][i] && f_CondEndTime[client][i] > 0.0)
-		{
-			TF2_RemoveCondition(client, view_as<TFCond>(i));
-			i_NumConds[client]--;
-			f_CondEndTime[client][i] = 0.0;
-		}
-	}
-	
-	if (i_NumConds[client] < 1)
-		return;
-		
-	RequestFrame(Conds_Check, id);
 }
 
 public void Cooldown_Activate(int client, char abilityName[255])
@@ -1398,7 +1337,6 @@ public void Wearable_Activate(int client, char abilityName[255])
 public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
 	Weapon_ClearAllOldWeapons(client);
-	Conds_ClearAll(client);
 	for (int i = 0; i < 4; i++)
 	{
 		Limit_NumUses[client][i] = 0;

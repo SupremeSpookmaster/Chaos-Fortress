@@ -15,6 +15,23 @@ stock void CF_TakeDamage(int entity = 0, int inflictor = 0, int attacker = 0, fl
 
 #define SDKHooks_TakeDamage CF_TakeDamage
 
+#define USE_TFCOND_REDIRECT
+#if defined USE_TFCOND_REDIRECT
+stock void TFCond_Redirect_Add(int client, TFCond condition, float duration = TFCondDuration_Infinite, int inflictor = 0)
+{
+	CF_AddCondition(client, condition, duration, inflictor);
+}
+
+#define TF2_AddCondition TFCond_Redirect_Add
+
+stock void TFCond_Redirect_Remove(int client, TFCond condition)
+{
+	CF_RemoveCondition(client, condition);
+}
+
+#define TF2_RemoveCondition TFCond_Redirect_Remove
+#endif
+
 enum //hitgroup_t
 {
 	HITGROUP_GENERIC,
@@ -2004,3 +2021,25 @@ native bool CF_ForceTaunt(int client, int tauntIndex, float playbackRate = 1.0, 
  * @return	True if the taunt was successfully forced, false otherwise.
  */
 native bool CF_ForceWeaponTaunt(int client, int index, char classname[255], int slot, float rate = 1.0, bool interrupt = true, bool visible = true);
+
+/**
+ * An improved version of TF2_AddCondition, which solves the issue of conditions ending early when added while already active.
+ * TF2_AddCondition reroutes to this automatically, with resetTimer set to false.
+ * 
+ * @param client		The client to apply the condition to.
+ * @param condition		The condition to add.
+ * @param duration		Cond duration.
+ * @param inflictor		The client responsible for adding the condition.
+ * @param resetTimer	If true: the condition's duration is reset. Otherwise, it is extended.
+ * 						This is only used if the condition is already active.
+ */
+native void CF_AddCondition(int client, TFCond condition, float duration = TFCondDuration_Infinite, int inflictor = 0, bool resetTimer = false);
+
+/**
+ * A version of TF2_RemoveCondition, modified for use with CF_AddCondition.
+ * TF2_RemoveCondition reroutes to this automatically.
+ * 
+ * @param client		The client to remove the condition from.
+ * @param condition		The condition to remove.
+ */
+native void CF_RemoveCondition(int client, TFCond condition);
