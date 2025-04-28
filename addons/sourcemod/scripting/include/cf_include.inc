@@ -1508,6 +1508,24 @@ native int CF_CreatePickup(int owner, float radius, float lifespan, Function pic
 native int CF_CreateShieldWall(int owner, char model[255], char skin[16], float scale, float health, float pos[3], float ang[3], float lifespan = 0.0);
 
 /**
+ * Checks if a client's special resource is their metal.
+ * 
+ * @param client		The client to check.
+ * 
+ * @return	True if the client's special resource is metal, false otherwise.
+ */
+native bool CF_GetSpecialResourceIsMetal(int client);
+
+/**
+ * Sets a client's special resource to be tied to their metal.
+ * 
+ * @param client			The client to set.
+ * @param value				If true: the client's special resource will be tied to their metal. Otherwise, it is independent.
+ * @param override_metal	If true, and the client's resource is tied to their metal: the client's metal is set to their current special resource. Otherwise, the client's special resource is set to their current metal.
+ */
+native void CF_SetSpecialResourceIsMetal(int client, bool value, bool override_metal);
+
+/**
  * Retrieves the remaining HP of a simulated medigun shield.
  *
  * @param shield					The shield.

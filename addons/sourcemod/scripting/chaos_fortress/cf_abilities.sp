@@ -122,6 +122,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_GetAbilityTypeSlot", Native_CF_GetAbilityTypeSlot);
 	CreateNative("CF_ForceTaunt", Native_CF_ForceTaunt);
 	CreateNative("CF_ForceWeaponTaunt", Native_CF_ForceWeaponTaunt);
+	CreateNative("CF_GetSpecialResourceIsMetal", Native_CF_GetSpecialResourceIsMetal);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -4351,5 +4352,39 @@ public void TF2_OnConditionRemoved(int client, TFCond condition)
 
 		i_TauntSpeedWearable[client] = -1;
 		i_ForceTauntWeapon[client] = -1;
+	}
+}
+
+public any Native_CF_GetSpecialResourceIsMetal(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	CFCharacter chara = GetCharacterFromClient(client);
+	if (chara == null)
+		return false;
+
+	if (!chara.b_UsingResources)
+		return false;
+
+	return chara.b_ResourceIsMetal;
+}
+
+public void Native_CF_SetSpecialResourceIsMetal(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	CFCharacter chara = GetCharacterFromClient(client);
+	if (chara == null)
+		return;
+
+	if (!chara.b_UsingResources)
+		return;
+
+	float current = CF_GetSpecialResource(client);
+	chara.b_ResourceIsMetal = GetNativeCell(2);
+	if (chara.b_ResourceIsMetal)
+	{
+		if (GetNativeCell(3))
+			CF_SetSpecialResource(client, current);
+		else
+			CF_SetSpecialResource(client, CF_GetSpecialResource(client));
 	}
 }
