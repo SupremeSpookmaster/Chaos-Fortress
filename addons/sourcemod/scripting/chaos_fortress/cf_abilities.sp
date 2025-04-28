@@ -123,6 +123,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_ForceTaunt", Native_CF_ForceTaunt);
 	CreateNative("CF_ForceWeaponTaunt", Native_CF_ForceWeaponTaunt);
 	CreateNative("CF_GetSpecialResourceIsMetal", Native_CF_GetSpecialResourceIsMetal);
+	CreateNative("CF_SetSpecialResourceIsMetal", Native_CF_SetSpecialResourceIsMetal);
 	CreateNative("CF_AddCondition", Native_CF_AddCondition);
 	CreateNative("CF_RemoveCondition", Native_CF_RemoveCondition);
 }
