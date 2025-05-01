@@ -194,14 +194,14 @@
 		"Offsets"
 		{
 			"CBaseEntity::WorldSpaceCenter"		
-			{
-				"linux"		"156"
-				"windows"	"155"
+			{		
+				"windows"	"156"		
+				"linux"		"157"
 			}
 			"CTFBaseRocket::Explode"
 			{
-				"linux"		"240"
-				"windows"	"239"
+				"linux"		"241"
+				"windows"	"240"
 			}
 			"GetCurrentCommand"
 			{
@@ -211,18 +211,14 @@
 			"CLagCompensationManager::FrameUpdatePostEntityThink_OFFSET"
 			{
 				"library"	"server"
-				"linux"		"16"
-				"windows"		"15"
-				"linux64"		"16"
-				"windows64"		"15"
+				"linux"			"16"
+				"windows"		"16"
 			}
 			"CTFPlayer::WantsLagCompensationOnEntity"
 			{
-				"library"	"server"
-				"linux"		"335"
+				"library"		"server"
+				"linux"			"336"
 				"windows"		"334"
-				"linux64"		"335"
-				"windows64"		"334"
 			}
 			"CBaseEntity::FireBullets"
 			{
