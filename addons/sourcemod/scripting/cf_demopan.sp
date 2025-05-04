@@ -1287,6 +1287,13 @@ public Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor,
 	{
 		currentCharge += TF2CustAttr_GetFloat(weapon, "kills while charging restore charge", 0.0);
 		f_WasCharging[attacker] = 0.0;
+
+		float healthAmt = TF2CustAttr_GetFloat(weapon, "kills while charging restore health percentage", 0.0);
+		if (healthAmt > 0.0)
+		{
+			float amt = float(TF2Util_GetEntityMaxHealth(attacker)) * healthAmt;
+			CF_HealPlayer(attacker, attacker, RoundFloat(amt), 1.5);
+		}
 	}
 
 	currentCharge += TF2CustAttr_GetFloat(weapon, "melee kills restore charge", 0.0);
