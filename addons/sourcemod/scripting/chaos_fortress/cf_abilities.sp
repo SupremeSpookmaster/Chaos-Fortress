@@ -3917,13 +3917,22 @@ void SDKCall_FinishLagCompensation(int client)
 	}
 }
 
+int OffsetLagCompStart_UserInfoReturn()
+{
+	//Get to CUserCmd				*m_pCurrentCommand;
+	static int ReturnInfo;
+	if(!ReturnInfo)
+		ReturnInfo = (FindSendPropInfo("CTFPlayer", "m_hViewModel") + 76);
+
+	return ReturnInfo;
+}
 void SDKCall_StartLagCompensation(int client)
 {
 	if(SDKStartLagCompensation && SDKFinishLagCompensation && SDKGetCurrentCommand != view_as<Address>(-1))
 	{
 		Address value = CStartLagCompensationManager;
 		if(value)
-			SDKCall(SDKStartLagCompensation, value, client, (GetEntityAddress(client) + view_as<Address>(3512)));
+			SDKCall(SDKStartLagCompensation, value, client, (GetEntityAddress(client) + view_as<Address>(OffsetLagCompStart_UserInfoReturn())));
 	}
 }
 
