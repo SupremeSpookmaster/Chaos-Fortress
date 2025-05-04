@@ -356,7 +356,7 @@ public void Bottle_Shatter(int bottle, int owner, int teamNum, int other, float 
 				
 					CF_ApplyTemporarySpeedChange(i, Flask_SpeedMode[bottle], Flask_SpeedAmt[bottle], Flask_SpeedDuration[bottle], Flask_SpeedMaxMode[bottle], Flask_SpeedMax[bottle], true);
 					
-					CF_HealPlayer_WithAttributes(i, owner, RoundFloat(Flask_HealInst[bottle]), Flask_HealOverheal[bottle]);
+					CF_HealPlayer(i, owner, RoundFloat(Flask_HealInst[bottle]), Flask_HealOverheal[bottle]);
 				}
 				else
 				{
@@ -369,7 +369,7 @@ public void Bottle_Shatter(int bottle, int owner, int teamNum, int other, float 
 				
 				CF_ApplyTemporarySpeedChange(i, Flask_SpeedMode[bottle], Flask_SpeedAmt[bottle], Flask_SpeedDuration[bottle], Flask_SpeedMaxMode[bottle], Flask_SpeedMax[bottle], true);
 					
-				CF_HealPlayer_WithAttributes(i, owner, RoundFloat(Flask_HealInst[bottle]), Flask_HealOverheal[bottle]);
+				CF_HealPlayer(i, owner, RoundFloat(Flask_HealInst[bottle]), Flask_HealOverheal[bottle]);
 				#endif
 				
 				if (Flask_HealDuration[bottle] > 0.0)
@@ -532,11 +532,11 @@ public void Flask_HealOverTime(DataPack pack)
 	{
 		#if defined _pnpc_included_
 		if (IsValidClient(target))
-			CF_HealPlayer_WithAttributes(target, healer, amt, overheal);
+			CF_HealPlayer(target, healer, amt, overheal);
 		else
 			PNPC_HealEntity(target, amt, overheal, healer);
 		#else
-		CF_HealPlayer_WithAttributes(target, healer, amt, overheal);
+		CF_HealPlayer(target, healer, amt, overheal);
 		#endif
 
 		nextHeal = gt + interval;
@@ -659,7 +659,7 @@ public void Surgery_Teleport(int client)
 				#if defined _pnpc_included_
 				if (IsValidClient(i))
 				{
-					CF_HealPlayer_WithAttributes(i, client, RoundFloat(Surgery_HealingAmt[client]), Surgery_HealingOverheal[client]);
+					CF_HealPlayer(i, client, RoundFloat(Surgery_HealingAmt[client]), Surgery_HealingOverheal[client]);
 					CF_AttachParticle(i, team == TFTeam_Red ? PARTICLE_HEALING_BURST_RED : PARTICLE_HEALING_BURST_BLUE, "root", _, 2.0);
 					EmitSoundToClient(i, SOUND_FLASK_HEAL);
 				}
@@ -669,7 +669,7 @@ public void Surgery_Teleport(int client)
 					SpawnParticle(pos, team == TFTeam_Red ? PARTICLE_HEALING_BURST_RED : PARTICLE_HEALING_BURST_BLUE, 2.0);
 				}
 				#else
-				CF_HealPlayer_WithAttributes(i, client, RoundFloat(Surgery_HealingAmt[client]), Surgery_HealingOverheal[client]);
+				CF_HealPlayer(i, client, RoundFloat(Surgery_HealingAmt[client]), Surgery_HealingOverheal[client]);
 				CF_AttachParticle(i, team == TFTeam_Red ? PARTICLE_HEALING_BURST_RED : PARTICLE_HEALING_BURST_BLUE, "root", _, 2.0);
 				EmitSoundToClient(i, SOUND_FLASK_HEAL);
 				#endif
@@ -878,7 +878,7 @@ public Action Medigun_PreThink(int client)
 			int heals = RoundToFloor(Medigun_HealBucket[client]);
 			float remainder = Medigun_HealBucket[client] - float(heals);
 			
-			CF_HealPlayer_WithAttributes(client, client, heals, Medigun_HealCap[client]);
+			CF_HealPlayer(client, client, heals, Medigun_HealCap[client]);
 			Medigun_HealBucket[client] = remainder;
 		}
 	}
@@ -1390,7 +1390,7 @@ public Action Time_PreThink(int client)
 					
 				if (Heal)
 				{
-					CF_HealPlayer_WithAttributes(i, client, Time_Healing[client], Time_HealingOverheal[client]);
+					CF_HealPlayer(i, client, Time_Healing[client], Time_HealingOverheal[client]);
 					CF_AttachParticle(i, team == TFTeam_Red ? PARTICLE_HEALING_BURST_RED : PARTICLE_HEALING_BURST_BLUE, "root", _, 2.0);
 				}
 			}

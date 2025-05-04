@@ -256,6 +256,7 @@ public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] classname,
 		ZeinaSlashWeapon[client] = -1;
 		CF_PlayRandomSound(client, client, "sound_zeina_slash");
 		TF2_RemoveCondition(client, TFCond_CritOnDamage);
+		TF2_RemoveCondition(client, TFCond_DefenseBuffNoCritBlock);
 		ZeinaInitiateSlash(client, ABILITY_SLASH);
 		DataPack pack2 = new DataPack();
 		CreateDataTimer(0.25, ZeinaSlashEndTimer, pack2, TIMER_FLAG_NO_MAPCHANGE);
@@ -329,6 +330,7 @@ public Action ZeinaSlashEndTimer(Handle timer, DataPack pack)
 	ZeinaSlashWeapon[client] = -1;
 	ZeinaAbilityEndSlash(client);
 	TF2_RemoveCondition(client, TFCond_CritOnDamage);
+	TF2_RemoveCondition(client, TFCond_DefenseBuffNoCritBlock);
 	int Weapon = EntRefToEntIndex(ReadPackCell(pack));
 	if(IsValidEntity(Weapon))
 		TF2Attrib_SetByDefIndex(Weapon, 1, 1.0);
@@ -371,6 +373,7 @@ public Action ZeinaSlashGiveCrit(Handle timer, DataPack pack)
 	float Duration = ReadPackFloat(pack);
 	//Grant crits now, anti abuse, as usual.
 	TF2_AddCondition(client, TFCond_CritOnDamage, Duration, client);
+	TF2_AddCondition(client, TFCond_DefenseBuffNoCritBlock, Duration, client);
 
 	return Plugin_Continue;
 }
