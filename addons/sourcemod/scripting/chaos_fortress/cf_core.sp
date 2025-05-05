@@ -650,7 +650,7 @@ public Action RingTouch(int ring, int entity)
 	GetEntityClassname(entity, classname, 255);
 	if (StrContains(classname, "prop_physics") != -1)
 	{
-		if (!GetEntProp(entity, Prop_Data, "m_takedamage"))
+		if (!GetEntProp(entity, Prop_Data, "m_takedamage") || (GetEntProp(ring, Prop_Send, "m_iTeamNum") == GetEntProp(entity, Prop_Send, "m_iTeamNum")))
 			return Plugin_Handled;
 
 		PhysTouch(entity, ring);
@@ -663,6 +663,9 @@ public Action RingTouch(int ring, int entity)
 public Action PhysTouch(int prop, int entity)
 {
 	if (!GetEntProp(prop, Prop_Data, "m_takedamage"))
+		return Plugin_Handled;
+
+	if (GetEntProp(prop, Prop_Send, "m_iTeamNum") == GetEntProp(entity, Prop_Send, "m_iTeamNum"))
 		return Plugin_Handled;
 
 	char classname[255];
