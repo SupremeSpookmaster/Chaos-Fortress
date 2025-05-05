@@ -28,14 +28,17 @@ public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inf
 public void PNPC_OnMeleeHit(int attacker, int weapon, int target, float &damage, bool &crit, bool &canStab, bool &forceStab, bool &result)
 {
 	canStab = false;
-	Call_StartForward(g_AllowStabForward);
+	if (!IsPhysProp(target))
+	{
+		Call_StartForward(g_AllowStabForward);
 
-	Call_PushCell(attacker);
-	Call_PushCell(target);
-	Call_PushCellRef(forceStab);
-	Call_PushCellRef(canStab);
+		Call_PushCell(attacker);
+		Call_PushCell(target);
+		Call_PushCellRef(forceStab);
+		Call_PushCellRef(canStab);
 
-	Call_Finish();
+		Call_Finish();
+	}
 }
 
 public void PNPC_OnBackstab(int attacker, int victim, float &damage)

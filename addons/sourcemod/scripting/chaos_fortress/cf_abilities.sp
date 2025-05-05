@@ -582,6 +582,8 @@ public Action CFA_HUDTimer(Handle timer)
 	return Plugin_Continue;
 }
 
+public bool IsPhysProp(int ent) { return b_IsPhysProp[ent]; }
+
 public void CFA_PlayerKilled(int attacker, int victim)
 {
 	if (CF_IsPlayerCharacter(attacker) && attacker != victim)
@@ -3213,8 +3215,16 @@ public Native_CF_IsValidTarget(Handle plugin, int numParams)
 			return false;
 	}
 
-	if (!Entity_Can_Be_Shot(entity))
-		return false;
+	if (b_IsPhysProp[entity])
+	{
+		if (!GetEntProp(entity, Prop_Data, "m_takedamage"))
+			return false;
+	}
+	else
+	{
+		if (!Entity_Can_Be_Shot(entity))
+			return false;
+	}
 	
 	if (!StrEqual(pluginName, "") || filter != INVALID_FUNCTION)
 	{
