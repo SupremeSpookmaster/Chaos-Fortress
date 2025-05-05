@@ -4105,10 +4105,17 @@ public void Scrap_Hit(int attacker, int victim, float &baseDamage, bool &allowFa
 
 public bool Scrap_CheckTarget(int target)
 {
-	if (IsABuilding(target, false) && CF_IsValidTarget(target, TF2_GetClientTeam(Scrap_User)))
-		return GetEntPropFloat(target, Prop_Send, "m_flPercentageConstructed") >= 1.0;
+	if (CF_IsValidTarget(target, TF2_GetClientTeam(Scrap_User)))
+	{
+		if (IsABuilding(target, false))
+			return GetEntPropFloat(target, Prop_Send, "m_flPercentageConstructed") >= 1.0;
+		else if (Toss_IsSupportDrone[target])
+			return !Toss_SupportStats[target].isBuilding;
 
-	return (CF_IsValidTarget(target, grabEnemyTeam(Scrap_User)) || IsABuilding(target));
+		return IsABuilding(target);
+	}
+
+	return CF_IsValidTarget(target, grabEnemyTeam(Scrap_User));
 }
 
 public void Buddy_ReplaceSentry(int sentry, int owner, char abilityName[255])
