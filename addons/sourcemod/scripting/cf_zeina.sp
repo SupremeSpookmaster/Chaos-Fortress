@@ -1301,6 +1301,8 @@ bool ZeinaWingsActivate(int client, char abilityName[255])
 	}
 	CF_ChangeAbilityTitle(client, CF_AbilityType_Reload, "Leash Ally (hold ->)");
 	CF_ApplyAbilityCooldown(client, 0.0, CF_AbilityType_Reload, true, false);
+	CF_SetAbilityTypeSlot(client, CF_AbilityType_Reload, -777);
+
 	ShieldEntRef[client] = EntIndexToEntRef(entity);
 	FlightModeWas[client] = true;
 
@@ -1389,7 +1391,8 @@ public Action ZeinaFlightThink(int client)
 		SvAccelerate_Client[client] = SvAccelerate_Client[0];
 		SDKUnhook(client, SDKHook_PreThink, ZeinaFlightThink);
 		
-		CF_ChangeAbilityTitle(client, CF_AbilityType_Reload, "Sub Wings");
+		CF_ChangeAbilityTitle(client, CF_AbilityType_Reload, "Sergeant's Beacon");
+		CF_SetAbilityTypeSlot(client, CF_AbilityType_Reload, 4);
 		CF_ApplyAbilityCooldown(client, 0.0, CF_AbilityType_Reload, true, false);
 		return Plugin_Stop;
 	}
@@ -1414,7 +1417,8 @@ public Action ZeinaFlightThink(int client)
 		SvAccelerate_Client[client] = SvAccelerate_Client[0];
 
 		TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.01);
-		CF_ChangeAbilityTitle(client, CF_AbilityType_Reload, "Sub Wings");
+		CF_ChangeAbilityTitle(client, CF_AbilityType_Reload, "Sergeant's Beacon");
+		CF_SetAbilityTypeSlot(client, CF_AbilityType_Reload, 4);
 		CF_ApplyAbilityCooldown(client, 0.0, CF_AbilityType_Reload, true, false);
 		return Plugin_Stop;
 	}
