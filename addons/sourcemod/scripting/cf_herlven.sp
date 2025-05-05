@@ -1431,6 +1431,7 @@ enum struct Generic_Laser_Trace
 			TR_GetEndPosition(Loc, trace);
 			delete trace;
 
+			CF_HasLineOfSight(startPoint, Loc, _, Loc, this.client);
 
 			if(Dist !=-1.0)
 			{

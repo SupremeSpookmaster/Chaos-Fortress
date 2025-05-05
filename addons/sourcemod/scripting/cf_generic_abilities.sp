@@ -29,6 +29,7 @@
 #define FORCETAUNT			"generic_force_taunt"
 #define FORCETAUNT_WEAPON	"generic_force_weapon_taunt"
 #define CLOAK_BLOCK			"generic_block_cloak"
+#define RESOURCES			"generic_give_resources"
 
 float Weapon_EndTime[2049] = { 0.0, ... };
 
@@ -591,6 +592,22 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	{
 		ForceTauntWeapon_Activate(client, abilityName);
 	}
+
+	if (StrContains(abilityName, RESOURCES) != -1)
+	{
+		Resources_Activate(client, abilityName);
+	}
+}
+
+public void Resources_Activate(int client, char abilityName[255])
+{
+	int type = CF_GetArgI(client, GENERIC, abilityName, "mode", 0);
+	if (type < 0)
+		type = 0;
+	if (type > 8)
+		type = 8;
+
+	CF_GiveSpecialResource(client, CF_GetArgF(client, GENERIC, abilityName, "amt"), view_as<CF_ResourceType>(type));
 }
 
 float ATKSpeed_Amt[MAXPLAYERS + 1][3];
