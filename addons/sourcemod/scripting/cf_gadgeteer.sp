@@ -4065,7 +4065,14 @@ public void Scrap_Hit(int attacker, int victim, float &baseDamage, bool &allowFa
 
 			if (!Toss_IsSupportDrone[victim] || !Toss_SupportStats[victim].isBuilding)
 			{
-				int owner = GetEntPropEnt(victim, Prop_Send, "m_hOwnerEntity");
+				TFObjectType objType = TF2_GetObjectType(victim);
+				int owner;
+
+				if (objType == TFObject_Dispenser || objType == TFObject_Sentry || objType == TFObject_Dispenser)
+					owner = GetEntPropEnt(victim, Prop_Send, "m_hBuilder");
+				else
+					owner = GetEntPropEnt(victim, Prop_Send, "m_hOwnerEntity");
+
 				if (owner != attacker && Toss_IsSupportDrone[victim])
 					owner = GetClientOfUserId(Toss_SupportStats[victim].owner);
 				if (owner != attacker && b_IsBuddy[victim])
@@ -4098,6 +4105,9 @@ public void Scrap_Hit(int attacker, int victim, float &baseDamage, bool &allowFa
 
 public bool Scrap_CheckTarget(int target)
 {
+	if (IsABuilding(target, false) && CF_IsValidTarget(target, TF2_GetClientTeam(Scrap_User)))
+		return GetEntPropFloat(target, Prop_Send, "m_flPercentageConstructed") >= 1.0;
+
 	return (CF_IsValidTarget(target, grabEnemyTeam(Scrap_User)) || IsABuilding(target));
 }
 
