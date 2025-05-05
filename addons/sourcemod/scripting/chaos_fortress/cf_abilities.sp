@@ -53,6 +53,7 @@ Handle g_HomingTimer[2049] = { null, ... };
 
 bool b_ProjectileCanCollideWithAllies[2049] = { false, ... };
 bool b_IsProjectile[2049] = { false, ... };
+bool b_IsPhysProp[2049] = { false, ... };
 
 CF_AbilityType i_HeldBlocked[MAXPLAYERS + 1] = { CF_AbilityType_None, ... };
 
@@ -270,6 +271,7 @@ public void CFA_OnEntityDestroyed(int entity)
 	b_IsFakeHealthKit[entity] = false;
 	b_IsMedigunShield[entity] = false;
 	b_IsProjectile[entity] = false;
+	b_IsPhysProp[entity] = false;
 	f_FakeMediShieldHP[entity] = 0.0;
 	f_FakeMediShieldMaxHP[entity] = 0.0;
 	b_ProjectileCanCollideWithAllies[entity] = false;
@@ -761,6 +763,7 @@ public void CFA_MapEnd()
 		b_ProjectileCanCollideWithAllies[i] = false;
 		i_GenericProjectileOwner[i] = -1;
 		b_IsProjectile[i] = false;
+		b_IsPhysProp[i] = false;
 		g_HomingTimer[i] = null;
 	}
 }
@@ -2423,6 +2426,24 @@ public Action CH_ShouldCollide(int ent1, int ent2, bool &result)
 			CallForward = false;
 		}
 	}
+
+	//Third test: don't allow projectiles to collide with each other:
+	if (b_IsProjectile[ent1] || b_IsProjectile[ent2])
+	{
+		if (b_IsProjectile[ent1] && b_IsProjectile[ent2])
+		{
+			result = false;
+			ReturnVal = Plugin_Changed;
+			CallForward = false;
+		}
+		//Fourth test: don't allow projectiles to collide with phys props which have m_takedamage disabled:
+		else if ((b_IsPhysProp[ent2] && !GetEntProp(ent2, Prop_Data, "m_takedamage")) || (b_IsPhysProp[ent1] && !GetEntProp(ent1, Prop_Data, "m_takedamage")))
+		{
+			result = false;
+			ReturnVal = Plugin_Changed;
+			CallForward = false;
+		}
+	}
 	
 	if (CallForward)
 	{
@@ -2477,14 +2498,15 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 
 	if (ent1 < 0 || ent1 > 2048 || ent2 < 0 || ent2 > 2048)
 		return Plugin_Continue;
-	
+
+	//First test: don't allow projectiles to collide with each other:
 	if (b_IsProjectile[ent1] && b_IsProjectile[ent2])
 	{
 		result = false;
 		ReturnVal = Plugin_Changed;
 		CallForward = false;
 	}
-	//First test: don't allow TF2 projectiles to collide with their owners or players who are on their owner's team:
+	//Second test: don't allow TF2 projectiles to collide with their owners or players who are on their owner's team:
 	else if (IsValidClient(GetClientOfUserId(i_GenericProjectileOwner[ent1])))
 	{
 		TFTeam team = view_as<TFTeam>(GetEntProp(ent1, Prop_Send, "m_iTeamNum"));
@@ -2508,7 +2530,7 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 		}
 	}
 	
-	//Second test: don't allow fake health kits to collide with ANYTHING except for world geometry.
+	//Third test: don't allow fake health kits to collide with ANYTHING except for world geometry.
 	if (b_IsFakeHealthKit[ent1] || b_IsFakeHealthKit[ent2])
 	{
 		bool block = ent1 != 0 && ent2 != 0;
@@ -2521,7 +2543,7 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 		}
 	}
 	
-	//Third test: only allow simulated medigun shields to collide with entities on the opposite team.
+	//Fourth test: only allow simulated medigun shields to collide with entities on the opposite team.
 	if (b_IsMedigunShield[ent1] || b_IsMedigunShield[ent2])
 	{
 		bool block = MediShield_Collision(ent1, ent2);
@@ -3329,6 +3351,11 @@ public void CFA_OnEntityCreated(int entity, const char[] classname)
 		SDKHook(entity, SDKHook_SpawnPost, GetOwner);
 		b_IsProjectile[entity] = true;
 		b_ProjectileCanCollideWithAllies[entity] = StrEqual(classname, "tf_projectile_healing_bolt") || StrEqual(classname, "tf_projectile_arrow");
+	}
+
+	if (StrContains(classname, "prop_physics") != -1)
+	{
+		b_IsPhysProp[entity] = true;
 	}
 	
 	if (StrContains(classname, "tf_projectile_spell") != -1)
