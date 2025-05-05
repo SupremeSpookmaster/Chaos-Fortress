@@ -222,8 +222,8 @@
 			}
 			"CBaseEntity::FireBullets"
 			{
-				"linux"		"118"
-				"windows"	"117"
+				"linux"		"119"
+				"windows"	"118"
 			}
 		}
 	}
