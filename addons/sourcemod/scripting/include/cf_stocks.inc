@@ -2876,7 +2876,7 @@ stock void SetHitboxSize(int entity, const float mins[3], const float maxs[3])
  */
 stock int SpawnPhysProp(int owner, char model[255], float pos[3], float ang[3] = NULL_VECTOR, float vel[3] = NULL_VECTOR, int skin = 0, float health = 0.0, bool invincible = true, float scale = 1.0, float massScale = 10.0, float inertiaScale = 10.0, bool nonSolid = false)
 {
-	int prop = CreateEntityByName("prop_physics_multiplayer");
+	int prop = CreateEntityByName("prop_physics_override");
 	if (IsValidEntity(prop))
 	{
 		DispatchKeyValue(prop, "targetname", "physprop"); 
@@ -3697,7 +3697,7 @@ stock bool IsABuilding(int entity, bool includeNPCs = true)
 	if (offset <= 0)
 		return false;
 
-	TFObjectType type = view_as<TFObjectType>(offset);
+	TFObjectType type = view_as<TFObjectType>(GetEntData(entity, offset));
 	return type == TFObject_Sentry || type == TFObject_Dispenser || type == TFObject_Teleporter;
 	#else
 	int offset = GetEntSendPropOffs(entity, "m_iObjectType");

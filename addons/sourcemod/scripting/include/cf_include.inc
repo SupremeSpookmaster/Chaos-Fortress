@@ -1771,10 +1771,11 @@ native bool CF_IsValidTarget(int entity, TFTeam team, char[] plugin = "", Functi
  * @param team				The team an entity must be on in order to be counted, or TFTeam_Unassigned to ignore teams.
  * @param plugin			Name of the plugin which is calling this native. Only necessary if "filter" is used.
  * @param filter			Optional function for you to add your own extra requirements to. This function must take one int as a parameter, that being the entity's index, and return a bool.
+ * @param absOrigin			If true: check distance using the target's abs origin (ground position), instead of their WorldSpaceCenter (center of mass).
  *
  * @return		The entity index of the closest entity matching the given parameters, or -1 on failure.
  */
-native int CF_GetClosestTarget(float pos[3], bool IncludeEntities = false, float &distance = 0.0, float maxDistance = 0.0, TFTeam team = TFTeam_Unassigned, char[] plugin = "", Function filter = INVALID_FUNCTION);
+native int CF_GetClosestTarget(float pos[3], bool IncludeEntities = false, float &distance = 0.0, float maxDistance = 0.0, TFTeam team = TFTeam_Unassigned, char[] plugin = "", Function filter = INVALID_FUNCTION, bool absOrigin = false);
 
 /**
  * Gives a client a spellbook and forces them to cast it.

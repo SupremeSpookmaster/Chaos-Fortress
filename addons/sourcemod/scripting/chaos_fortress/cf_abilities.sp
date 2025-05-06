@@ -3266,6 +3266,7 @@ public Native_CF_GetClosestTarget(Handle plugin, int numParams)
 	char pluginName[255];
 	GetNativeString(6, pluginName, sizeof(pluginName));
 	Function filter = GetNativeFunction(7);
+	bool useAbs = GetNativeCell(8);
 	
 	int closestEnt = -1;
 	
@@ -3275,7 +3276,15 @@ public Native_CF_GetClosestTarget(Handle plugin, int numParams)
 			continue;
 		
 		float otherPos[3];
-		CF_WorldSpaceCenter(i, otherPos);
+		if (useAbs)
+		{
+			if (IsValidClient(i))
+				GetClientAbsOrigin(i, otherPos);
+			else
+				GetEntPropVector(i, Prop_Data, "m_vecAbsOrigin", otherPos);
+		}
+		else
+			CF_WorldSpaceCenter(i, otherPos);
 		
 		float dist = GetVectorDistance(pos, otherPos);
 		
