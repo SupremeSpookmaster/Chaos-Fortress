@@ -1543,14 +1543,13 @@ stock int GetBuildingHealth(int entity)
 	if (!IsABuilding(entity, false))
 		return 0;
 
-	char classname[255];
-	GetEntityClassname(entity, classname, sizeof(classname));
+	TFObjectType type = TF2_GetObjectType(entity);
 
-	if (StrEqual(classname, "obj_sentrygun"))
+	if (type == TFObject_Sentry)
 		return GetEntData(entity, FindSendPropInfo("CObjectSentrygun", "m_iHealth"), 4);
-	else if (StrEqual(classname, "obj_dispenser"))
+	else if (type == TFObject_Dispenser)
 		return GetEntData(entity, FindSendPropInfo("CObjectDispenser", "m_iHealth"), 4);
-	else if (StrEqual(classname, "obj_teleporter"))
+	else if (type == TFObject_Teleporter)
 		return GetEntData(entity, FindSendPropInfo("CObjectTeleporter", "m_iHealth"), 4);
 
 	return 0;
@@ -3690,13 +3689,23 @@ stock bool IsABuilding(int entity, bool includeNPCs = true)
 	if (!IsValidEntity(entity))
 		return false;
 
-	char classname[255];
-	GetEntityClassname(entity, classname, sizeof(classname));
-
 	#if defined _pnpc_included_
-	return (includeNPCs && view_as<PNPC>(entity).b_IsABuilding) || StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_dispenser") || StrEqual(classname, "obj_teleporter");
+	if (includeNPCs && view_as<PNPC>(entity).b_IsABuilding)
+		return true;
+
+	int offset = GetEntSendPropOffs(entity, "m_iObjectType");
+	if (offset <= 0)
+		return false;
+
+	TFObjectType type = view_as<TFObjectType>(offset);
+	return type == TFObject_Sentry || type == TFObject_Dispenser || type == TFObject_Teleporter;
 	#else
-	return StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_dispenser") || StrEqual(classname, "obj_teleporter");
+	int offset = GetEntSendPropOffs(entity, "m_iObjectType");
+	if (offset <= 0)
+		return false;
+
+	TFObjectType type = view_as<TFObjectType>(offset);
+	return type == TFObject_Sentry || type == TFObject_Dispenser || type == TFObject_Teleporter;
 	#endif
 }
 
