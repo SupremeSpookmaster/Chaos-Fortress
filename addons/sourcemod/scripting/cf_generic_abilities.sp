@@ -184,17 +184,25 @@ char g_SPImpactSounds[][] = {
 	"physics/surfaces/sand_impact_bullet2.wav",
 	"physics/surfaces/sand_impact_bullet3.wav",
 	"physics/surfaces/sand_impact_bullet4.wav"
-}
+};
+
+char g_SPBlastSounds[][] = {
+	")weapons/explode1.wav",
+	")weapons/explode2.wav",
+	")weapons/explode3.wav"
+};
 
 #define PARTICLE_SENTRY_PROJECTILE_RED		"raygun_projectile_red"
 #define PARTICLE_SENTRY_PROJECTILE_BLUE		"raygun_projectile_blue"
 #define PARTICLE_SENTRY_PROJECTILE_IMPACT	"impact_concrete_child_puff"
+#define PARTICLE_SENTRY_PROJECTILE_EXPLODE	"ExplosionCore_MidAir"
 
 public void OnMapStart()
 {
 	PrecacheModel(MODEL_SENTRY_PROJECTILE);
 
 	for (int i = 0; i < sizeof(g_SPImpactSounds); i++) { PrecacheSound(g_SPImpactSounds[i]); }
+	for (int i = 0; i < sizeof(g_SPBlastSounds); i++) { PrecacheSound(g_SPBlastSounds[i]); }
 }
 
 bool b_NoJump[MAXPLAYERS + 1];
@@ -1471,6 +1479,9 @@ float f_SPLifespan[2049][3];
 float f_SPDMG[2049][3];
 float f_SPHAmt[2049][3];
 float f_SPHAng[2049][3];
+float f_SPRadius[2049][3];
+float f_SPFalloffStart[2049][3];
+float f_SPFalloffMax[2049][3];
 
 int i_SPLevel[2049] = { -1, ... };
 int i_SPSentry[2049] = { -1, ... };
@@ -1495,6 +1506,15 @@ public void SentryProjectiles_Prepare(int client)
 
 		Format(argName, sizeof(argName), "homing_angle_%i", i + 1);
 		f_SPHAng[client][i] = CF_GetArgF(client, GENERIC, SENTRY_PROJECTILES, argName, 60.0);
+
+		Format(argName, sizeof(argName), "blast_radius_%i", i + 1);
+		f_SPRadius[client][i] = CF_GetArgF(client, GENERIC, SENTRY_PROJECTILES, argName, 0.0);
+
+		Format(argName, sizeof(argName), "blast_falloff_start_%i", i + 1);
+		f_SPFalloffStart[client][i] = CF_GetArgF(client, GENERIC, SENTRY_PROJECTILES, argName, 0.0);
+
+		Format(argName, sizeof(argName), "blast_falloff_max_%i", i + 1);
+		f_SPFalloffMax[client][i] = CF_GetArgF(client, GENERIC, SENTRY_PROJECTILES, argName, 0.0);
 	}
 }
 
@@ -1517,7 +1537,12 @@ public void SentryProjectiles_Shoot(int sentry, int owner, int target, int level
 {
 	TFTeam team = TF2_GetClientTeam(owner);
 
-	int projectile = CF_FireGenericRocket(owner, 0.0, f_SPVel[owner][level - 1], _, false, GENERIC, SentryProjectiles_Impact);
+	int projectile;
+	if (f_SPRadius[owner][level - 1] > 0.0)
+		projectile = CF_FireGenericRocket(owner, 0.0, f_SPVel[owner][level - 1], _, false, GENERIC, SentryProjectiles_Impact_Explode);
+	else
+		projectile = CF_FireGenericRocket(owner, 0.0, f_SPVel[owner][level - 1], _, false, GENERIC, SentryProjectiles_Impact);
+
 	if (IsValidEntity(projectile))
 	{
 		SetEntityModel(projectile, MODEL_SENTRY_PROJECTILE);
@@ -1554,6 +1579,21 @@ public MRESReturn SentryProjectiles_Impact(int projectile, int owner, int teamNu
 		SDKHooks_TakeDamage(other, IsValidEntity(sentry) ? sentry : projectile, owner, f_SPDMG[owner][i_SPLevel[projectile]], DMG_BULLET, _, _, pos);
 		SPKillType = -1;
 	}
+
+	RemoveEntity(projectile);
+	return MRES_Supercede;
+}
+
+public MRESReturn SentryProjectiles_Impact_Explode(int projectile, int owner, int teamNum, int other, float pos[3])
+{
+	int sentry = EntRefToEntIndex(i_SPSentry[projectile]);
+	
+	EmitSoundToAll(g_SPBlastSounds[GetRandomInt(0, sizeof(g_SPBlastSounds) - 1)], projectile, _, _, _, _, GetRandomInt(90, 110));
+	SpawnParticle(pos, PARTICLE_SENTRY_PROJECTILE_EXPLODE, 0.2);
+
+	SPKillType = i_SPLevel[projectile];
+	CF_GenericAOEDamage(owner, IsValidEntity(sentry) ? sentry : projectile, 0, f_SPDMG[owner][i_SPLevel[projectile]], DMG_BLAST|DMG_PREVENT_PHYSICS_FORCE, f_SPRadius[owner][i_SPLevel[projectile]], pos, f_SPFalloffStart[owner][i_SPLevel[projectile]], f_SPFalloffMax[owner][i_SPLevel[projectile]]);
+	SPKillType = -1;
 
 	RemoveEntity(projectile);
 	return MRES_Supercede;
