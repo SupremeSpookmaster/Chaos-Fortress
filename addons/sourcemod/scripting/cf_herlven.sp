@@ -1294,6 +1294,11 @@ stock void Offset_Vector(float BEAM_BeamOffset[3], float Angles[3], float Result
 //the attacker must be valid, same for enemy, otherwise why?
 stock int Check_Line_Of_Sight(int attacker, int enemy, float Override_Start[3] = {0.0,0.0,0.0}, float Override_End[3] =  {0.0,0.0,0.0})
 {
+	char classname[255];
+	GetEntityClassname(enemy, classname, sizeof(classname));
+	if (StrContains(classname, "prop_physics") != -1)
+		return -1;
+		
 	Generic_Laser_Trace Laser;
 	Laser.client = (attacker <= MaxClients ? attacker : -1); //-1 will block lag comp.
 	float pos_npc[3];

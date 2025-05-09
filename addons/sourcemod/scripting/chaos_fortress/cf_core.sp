@@ -38,7 +38,6 @@ GlobalForward g_OnPushForce;
 public ConfigMap GameRules;
 
 ConVar g_WeaponDropLifespan;
-ConVar cheats;
 
 #define GAME_DESCRIPTION	"Chaos Fortress: Open Beta"
 
@@ -69,7 +68,12 @@ public void CF_MakeNatives()
 	CreateNative("CF_IsEntityInSpawn", Native_CF_IsEntityInSpawn);
 }
 
-public void CF_DisableDroppedWeapons() { ServerCommand("sm_cvar tf_dropped_weapon_lifetime 0"); }
+public void CF_DisableDroppedWeapons() 
+{
+	g_WeaponDropLifespan = FindConVar("tf_dropped_weapon_lifetime");
+	g_WeaponDropLifespan.Flags &= ~FCVAR_CHEAT;
+	g_WeaponDropLifespan.SetInt(0);
+}
 
 /**
  * Creates all of Chaos Fortress forwards.
