@@ -1509,7 +1509,7 @@ native CF_FireGenericRocket(int client, float dmg, float velocity, bool crit = f
 native int CF_CreatePickup(int owner, float radius, float lifespan, Function pickupFunction, char pickupPlugin[255], float pos[3], float ang[3] = NULL_VECTOR, float vel[3] = NULL_VECTOR, float scale = 1.0, char model[255] = "models/items/medkit_medium.mdl", char sequence[255] = "idle", char physModel[255] = "models/items/medkit_medium.mdl", int skin = 0, Function filterFunction = INVALID_FUNCTION, char filterPlugin[255] = "");
 
 /**
- * Creates a simulated medigun shield by using a physics prop.
+ * Creates a prop_physics_multiplayer which can only be damaged by enemies, can be shot through by allies, and calls "CF_OnFakeMediShieldDamaged" when hurt.
  *
  * @param owner					The client who owns the medigun shield.
  * @param model					The model to be used for the medigun shield. THIS MODEL MUST HAVE WORKING PHYSICS!
