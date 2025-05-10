@@ -2758,6 +2758,8 @@ public void Toss_SpawnSupportOnDelay(DataPack pack)
 		view_as<PNPC>(drone).AddGib(MODEL_SUPPORT_GIB_5, "laser_bone");
 		view_as<PNPC>(drone).f_HealthBarHeight = 60.0;
 		view_as<PNPC>(drone).b_IsABuilding = true;
+		view_as<PNPC>(drone).b_CanBeDisabled = true;
+		view_as<PNPC>(drone).b_StopThinkingWhenDisabled = true;
 		Toss_SupportStats[drone].isBuilding = true;
 		Toss_SupportStats[drone].lastBuildHealth = 1;
 		Toss_SupportStats[drone].owner = GetClientUserId(owner);
@@ -4180,6 +4182,8 @@ public void Buddy_Spawn(DataPack pack)
 
 	buddy.f_HealthBarHeight = 60.0;
 	buddy.b_IsABuilding = true;
+	buddy.b_CanBeDisabled = true;
+	buddy.b_StopThinkingWhenDisabled = true;
 	buddy.SetFlinchSequence("ACT_MP_GESTURE_FLINCH_CHEST");
 
 	buddies[buddy.Index].f_NextTargetTime = 0.0;

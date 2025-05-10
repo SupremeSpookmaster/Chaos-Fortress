@@ -2439,7 +2439,7 @@ public Action CH_ShouldCollide(int ent1, int ent2, bool &result)
 			CallForward = false;
 		}
 		//Fourth test: don't allow projectiles to collide with phys props which have m_takedamage disabled:
-		else if ((b_IsPhysProp[ent2] && !GetEntProp(ent2, Prop_Data, "m_takedamage")) || (b_IsPhysProp[ent1] && !GetEntProp(ent1, Prop_Data, "m_takedamage")))
+		else if ((b_IsPhysProp[ent2] && !b_IsMedigunShield[ent2] && !GetEntProp(ent2, Prop_Data, "m_takedamage")) || (b_IsPhysProp[ent1] && !b_IsMedigunShield[ent1] && !GetEntProp(ent1, Prop_Data, "m_takedamage")))
 		{
 			result = false;
 			ReturnVal = Plugin_Changed;
@@ -2617,6 +2617,7 @@ public Native_CF_CreateShieldWall(Handle plugin, int numParams)
 		b_IsMedigunShield[prop] = true;
 		SetEntityGravity(prop, 0.0);
 		
+		SetEntProp(prop, Prop_Data, "m_takedamage", 2);
 		SDKHook(prop, SDKHook_OnTakeDamage, Shield_OnTakeDamage);
 		SDKHook(prop, SDKHook_Touch, Shield_OnTouch);
 		
@@ -2657,6 +2658,7 @@ public Action Shield_OnTakeDamage(int prop, int &attacker, int &inflictor, float
 	}
 	
 	f_FakeMediShieldHP[prop] -= damage;
+	CPrintToChatAll("Medi shield took %.2f damage, now has %.2f HP", damage, f_FakeMediShieldHP[prop]);
 	if (f_FakeMediShieldHP[prop] < 0.0)
 	{
 		RemoveEntity(prop);

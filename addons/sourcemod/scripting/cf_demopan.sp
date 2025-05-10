@@ -526,6 +526,7 @@ int Flash_MainDecay = 6;
 int Flash_SecondaryDecay = 4;
 int Flash_AlphaDecay = 4;
 
+//bookmark
 public void Shield_Activate(int client, char abilityName[255])
 {
 	float hp = CF_GetArgF(client, DEMOPAN, abilityName, "health");
@@ -994,6 +995,7 @@ public Action Shield_PreThink(int client)
 	return Plugin_Continue;
 }
 
+//bookmark
 public void Shield_End(int client, char abilityName[255], bool resupply)
 {
 	int shield = EntRefToEntIndex(i_Shield[client]);
