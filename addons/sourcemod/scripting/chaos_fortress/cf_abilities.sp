@@ -2585,7 +2585,7 @@ public Native_CF_CreateShieldWall(Handle plugin, int numParams)
 	GetNativeArray(7, ang, sizeof(ang));
 	float lifespan = GetNativeCell(8);
 	
-	int prop = CreateEntityByName("prop_physics_multiplayer");
+	int prop = CreateEntityByName("prop_physics_override");
 	if (IsValidEntity(prop))
 	{
 		DispatchKeyValue(prop, "targetname", "shield"); 
@@ -2610,9 +2610,7 @@ public Native_CF_CreateShieldWall(Handle plugin, int numParams)
 		f_FakeMediShieldHP[prop] = health;
 		f_FakeMediShieldMaxHP[prop] = health;
 		
-		char scalechar[16];
-		Format(scalechar, sizeof(scalechar), "%f", scale);
-		DispatchKeyValue(prop, "modelscale", scalechar);
+		SetEntPropFloat(prop, Prop_Send, "m_flModelScale", scale);
 		
 		b_IsMedigunShield[prop] = true;
 		SetEntityGravity(prop, 0.0);
@@ -2676,8 +2674,8 @@ bool MediShield_Collision(int ent1, int ent2)
 		return false;
 		
 	//Block collision if a medigun shield is colliding with the world.
-	if (b_IsMedigunShield[ent1] && ent2 == 0 || b_IsMedigunShield[ent2] && ent1 == 0)
-		return true;
+	//if (b_IsMedigunShield[ent1] && ent2 == 0 || b_IsMedigunShield[ent2] && ent1 == 0)
+	//	return true;
 		
 	int team1 = GetEntProp(ent1, Prop_Send, "m_iTeamNum");
 	int team2 = GetEntProp(ent2, Prop_Send, "m_iTeamNum");
