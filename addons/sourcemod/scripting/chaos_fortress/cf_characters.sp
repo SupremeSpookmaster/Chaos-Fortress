@@ -2258,28 +2258,30 @@ public void CF_DestroyAllBuildings(int client)
 	
 	if (CF_CharacterExists(ForcedCharacter))
 		conf = ForcedCharacter;
-
-	char originalConf[255];
-	originalConf = conf;
-
-	int limit = CF_GetCharacterLimit(conf);
-	bool blocked = CF_GetNumPlayers(conf, client) >= limit && limit > 0;
-	if (blocked)
+	else
 	{
-		for (int i = 0; i < GetArraySize(CF_Characters_Configs) && blocked; i++)
-		{
-			GetArrayString(CF_Characters_Configs, i, conf, sizeof(conf));
-			limit = CF_GetCharacterLimit(conf);
-			blocked = CF_GetNumPlayers(conf, client) >= limit && limit > 0;
-			if (!blocked)
-			{
-				CPrintToChat(client, "{indigo}[Chaos Fortress]{default} Your chosen character was overridden due to the character limit ({yellow}%i{default}).", CF_GetCharacterLimit(originalConf));
-			}
-		}
+		char originalConf[255];
+		originalConf = conf;
 
-		//This should only return true if *all* characters are at cap. If this happens: don't force-swap them.
+		int limit = CF_GetCharacterLimit(conf);
+		bool blocked = CF_GetNumPlayers(conf, client) >= limit && limit > 0;
 		if (blocked)
-			conf = originalConf;
+		{
+			for (int i = 0; i < GetArraySize(CF_Characters_Configs) && blocked; i++)
+			{
+				GetArrayString(CF_Characters_Configs, i, conf, sizeof(conf));
+				limit = CF_GetCharacterLimit(conf);
+				blocked = CF_GetNumPlayers(conf, client) >= limit && limit > 0;
+				if (!blocked)
+				{
+					CPrintToChat(client, "{indigo}[Chaos Fortress]{default} Your chosen character was overridden due to the character limit ({yellow}%i{default}).", CF_GetCharacterLimit(originalConf));
+				}
+			}
+
+			//This should only return true if *all* characters are at cap. If this happens: don't force-swap them.
+			if (blocked)
+				conf = originalConf;
+		}
 	}
 		
 	if (!CF_CharacterExists(conf) || (IsFakeClient(client) && StrEqual(ForcedCharacter, "")))
