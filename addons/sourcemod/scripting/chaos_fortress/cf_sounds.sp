@@ -468,8 +468,12 @@ public Action NormalSoundHook(int clients[64],int &numClients,char strSound[PLAT
 					
 					chara.f_LastSoundHook = GetGameTime() + 0.01;
 						
-					if (played)
-						return Plugin_Handled;
+					if (!played)
+					{
+						EmitSoundToAll(strSound, entity, channel, level, flags, volume, pitch);
+					}
+
+					return Plugin_Handled;
 				}
 				else
 				{
