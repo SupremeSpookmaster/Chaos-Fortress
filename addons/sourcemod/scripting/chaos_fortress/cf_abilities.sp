@@ -1203,7 +1203,7 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 	if (ab.b_Blocked)
 		return false;
 
-	if (ab.b_RequireGrounded && GetEntityFlags(client) & FL_ONGROUND == 0)
+	if (ab.b_RequireGrounded && (GetEntityFlags(client) & FL_ONGROUND == 0 || GetEntityFlags(client) & FL_INWATER != 0))
 		return false;
 
 	if (ab.i_Stocks < 1 && UsingStocks)

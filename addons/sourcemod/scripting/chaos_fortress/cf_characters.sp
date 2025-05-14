@@ -1389,7 +1389,11 @@ public int CF_GetNumPlayers(char conf[255], int client)
 			continue;
 
 		char myConf[255];
-		CF_GetPlayerConfig(i, myConf, 255);
+		if (!IsPlayerAlive(i))
+			GetClientCookie(i, c_DesiredCharacter, myConf, sizeof(myConf));
+		else
+			CF_GetPlayerConfig(i, myConf, 255);
+			
 		if (StrEqual(conf, myConf))
 			num++;
 	}
@@ -2254,8 +2258,31 @@ public void CF_DestroyAllBuildings(int client)
 	
 	if (CF_CharacterExists(ForcedCharacter))
 		conf = ForcedCharacter;
+
+	char originalConf[255];
+	originalConf = conf;
+
+	int limit = CF_GetCharacterLimit(conf);
+	bool blocked = CF_GetNumPlayers(conf, client) >= limit && limit > 0;
+	if (blocked)
+	{
+		for (int i = 0; i < GetArraySize(CF_Characters_Configs) && blocked; i++)
+		{
+			GetArrayString(CF_Characters_Configs, i, conf, sizeof(conf));
+			limit = CF_GetCharacterLimit(conf);
+			blocked = CF_GetNumPlayers(conf, client) >= limit && limit > 0;
+			if (!blocked)
+			{
+				CPrintToChat(client, "{indigo}[Chaos Fortress]{default} Your chosen character was overridden due to the character limit ({yellow}%i{default}).", CF_GetCharacterLimit(originalConf));
+			}
+		}
+
+		//This should only return true if *all* characters are at cap. If this happens: don't force-swap them.
+		if (blocked)
+			conf = originalConf;
+	}
 		
-	if (!CF_CharacterExists(conf) || IsFakeClient(client))
+	if (!CF_CharacterExists(conf) || (IsFakeClient(client) && StrEqual(ForcedCharacter, "")))
 	{
 		if (!CF_CharacterExists(s_DefaultCharacter) || IsFakeClient(client))	//Choose a random character if the default character does not exist, or the client is a bot
 		{
