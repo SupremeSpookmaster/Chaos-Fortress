@@ -3704,7 +3704,7 @@ stock bool IsABuilding(int entity, bool includeNPCs = true)
 	if (offset <= 0)
 		return false;
 
-	TFObjectType type = view_as<TFObjectType>(offset);
+	TFObjectType type = view_as<TFObjectType>(GetEntData(entity, offset));
 	return type == TFObject_Sentry || type == TFObject_Dispenser || type == TFObject_Teleporter;
 	#endif
 }
