@@ -210,6 +210,8 @@ static char g_LittleBuddyGibs[][] = {
 	"models/player/gibs/gibs_gear5.mdl",
 };
 
+int i_GlowOwner[2048] = { -1, ... };
+
 int Laser_Model = -1;
 int Lightning_Model = -1;
 int Glow_Model = -1;
@@ -2429,6 +2431,7 @@ public void OnEntityDestroyed(int entity)
 		b_IsBuster[entity] = false;
 		TeleStats[entity].owner = -1;
 		f_NextTargetTime[entity] = 0.0;
+		i_GlowOwner[entity] = -1;
 
 		for (int i = 0; i <= MaxClients; i++)
 		{
@@ -2768,14 +2771,26 @@ public void Toss_SpawnSupportOnDelay(DataPack pack)
 		Toss_SupportStats[drone].b_StayStill = false;
 		EmitSoundToAll(SOUND_SUPPORT_BUILD_BEGIN, drone);
 		
-		/*Toss_SupportStats[drone].glow = EntIndexToEntRef(TF2_CreateGlow(drone, 2));
+		Toss_SupportStats[drone].glow = EntIndexToEntRef(TF2_CreateGlow(drone, 2));
 		SetVariantColor({0, 255, 0, 255});
 		AcceptEntityInput(Toss_SupportStats[drone].glow, "SetGlowColor");
 		SetEntityTransmitState(Toss_SupportStats[drone].glow, FL_EDICT_FULLCHECK);
 		SetEntityOwner(Toss_SupportStats[drone].glow, drone);
 		SetEntityOwner(drone, owner);
-		SDKHook(Toss_SupportStats[drone].glow, SDKHook_SetTransmit, DroneGlowSetTransmit);*/
+		SDKHook(EntRefToEntIndex(Toss_SupportStats[drone].glow), SDKHook_SetTransmit, DroneGlowSetTransmit);
 	}
+}
+
+public Action DroneTargetOutline(int entity, int client)
+{
+	int owner = GetClientOfUserId(i_GlowOwner[entity]);
+	if (!IsValidClient(owner))
+	{
+		RemoveEntity(entity);
+		return Plugin_Handled;
+	}
+
+	return (client == owner ? Plugin_Continue : Plugin_Handled);
 }
 
 public Action DroneGlowSetTransmit(int entity, int client)
@@ -3134,20 +3149,22 @@ public void Support_Command(int client, char abilityName[255])
 		else
 		{
 			Toss_SupportStats[supportDrone].targetOverride = GetClientUserId(target);
-			/*int targetGlow = EntRefToEntIndex(Toss_SupportStats[supportDrone].targetGlow);
+			int targetGlow = EntRefToEntIndex(Toss_SupportStats[supportDrone].targetGlow);
 			if (targetGlow > 0 && IsValidEntity(targetGlow))
 			{
 				RemoveEntity(targetGlow);
 			}
 			
-			targetGlow = EntIndexToEntRef(TF2_CreateGlow(target, 2));
+			/*targetGlow = EntIndexToEntRef(TF2_CreateGlow(target, 2));
+			int glowIdx = EntRefToEntIndex(targetGlow);
 			SetVariantColor({0, 255, 0, 255});
-			AcceptEntityInput(targetGlow, "SetGlowColor");
-			SetEntityTransmitState(targetGlow, FL_EDICT_FULLCHECK);
-			SetEntityOwner(targetGlow, supportDrone);
-			SDKHook(targetGlow, SDKHook_SetTransmit, DroneGlowSetTransmit);
+			AcceptEntityInput(glowIdx, "SetGlowColor");
+			SetEntityTransmitState(glowIdx, FL_EDICT_FULLCHECK);
+			SetEntityOwner(glowIdx, supportDrone);
+			i_GlowOwner[glowIdx] = GetClientUserId(client);
+			SDKHook(glowIdx, SDKHook_SetTransmit, DroneTargetOutline);
 			Toss_SupportStats[supportDrone].targetGlow = targetGlow;
-			SetParent(supportDrone, targetGlow); // set parent so the glow dies when the drone does*/
+			SetParent(supportDrone, glowIdx); // set parent so the glow dies when the drone does*/
 			
 			float pos[3];
 			GetClientAbsOrigin(target, pos);
@@ -4200,13 +4217,13 @@ public void Buddy_Spawn(DataPack pack)
 	buddies[buddy.Index].f_IdleRate = CF_GetArgF(client, GADGETEER, abilityName, "rate_idle", 0.125);
 	buddies[buddy.Index].f_IdleRange = CF_GetArgF(client, GADGETEER, abilityName, "range_idle", 600.0);
 	
-	/*buddies[buddy.Index].glow = EntIndexToEntRef(TF2_CreateGlow(buddy.Index, 2));
+	buddies[buddy.Index].glow = EntIndexToEntRef(TF2_CreateGlow(buddy.Index, 2));
 	SetVariantColor(view_as<int>({255, 255, 0, 255}));
 	AcceptEntityInput(buddies[buddy.Index].glow, "SetGlowColor");
 	SetEntityTransmitState(buddies[buddy.Index].glow, FL_EDICT_FULLCHECK);
 	SetEntityOwner(buddies[buddy.Index].glow, buddy.Index);
 	SetEntityOwner(buddy.Index, client);
-	SDKHook(buddies[buddy.Index].glow, SDKHook_SetTransmit, DroneGlowSetTransmit);*/
+	SDKHook(EntRefToEntIndex(buddies[buddy.Index].glow), SDKHook_SetTransmit, DroneGlowSetTransmit);
 	
 	if (buddies[buddy.Index].b_BootupSequence)
 	{
@@ -4399,20 +4416,21 @@ public void Buddy_Command(int client, char abilityName[255])
 		else
 		{
 			buddies[buddy].targetOverride = GetClientUserId(target);
-			/*int targetGlow = EntRefToEntIndex(buddies[buddy].targetGlow);
+			int targetGlow = EntRefToEntIndex(buddies[buddy].targetGlow);
 			if (targetGlow > 0 && IsValidEntity(targetGlow))
 			{
 				RemoveEntity(targetGlow);
 			}
 			
-			targetGlow = EntIndexToEntRef(TF2_CreateGlow(target, 2));
+			/*targetGlow = EntIndexToEntRef(TF2_CreateGlow(target, 2));
+			int glowIdx = EntRefToEntIndex(targetGlow);
 			SetVariantColor({255, 255, 0, 255});
-			AcceptEntityInput(targetGlow, "SetGlowColor");
-			SetEntityOwner(targetGlow, buddy);
-			SDKHook(targetGlow, SDKHook_SetTransmit, DroneGlowSetTransmit);
-			SetEntityTransmitState(targetGlow, FL_EDICT_FULLCHECK);
+			AcceptEntityInput(glowIdx, "SetGlowColor");
+			i_GlowOwner[glowIdx] = GetClientUserId(client);
+			SDKHook(glowIdx, SDKHook_SetTransmit, DroneTargetOutline);
+			SetEntityTransmitState(glowIdx, FL_EDICT_FULLCHECK);
 			buddies[buddy].targetGlow = targetGlow;
-			SetParent(buddy, targetGlow); // set parent so the glow dies when the drone does*/
+			SetParent(buddy, glowIdx); // set parent so the glow dies when the drone does*/
 			
 			float pos[3];
 			GetClientAbsOrigin(target, pos);
