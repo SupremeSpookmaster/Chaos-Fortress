@@ -1383,9 +1383,9 @@ public void CFC_OnEntityDestroyed(int entity)
 public int CF_GetNumPlayers(char conf[255], int client)
 {
 	int num = 0;
-	for (int i = 0; i <= MaxClients; i++)
+	for (int i = 1; i <= MaxClients; i++)
 	{
-		if (i == client || IsValidMulti(i, false, _, true, grabEnemyTeam(client)))
+		if (!IsValidClient(i) || !IsClientInGame(i) || i == client || IsValidMulti(i, false, _, true, grabEnemyTeam(client)))
 			continue;
 
 		char myConf[255];
