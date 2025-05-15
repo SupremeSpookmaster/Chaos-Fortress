@@ -2694,6 +2694,68 @@ stock int SpawnPropDynamic(char model[255], float pos[3], float ang[3], int skin
 	return prop;
 }
 
+//Makes an entity gradually grow/shrink from its current scale to the target scale, over the span of "time" seconds.
+//If "remove" is true, the entity is removed upon reaching targetScale.
+stock void MakeEntityGraduallyResize(int entity, float targetScale, float time, bool remove)
+{
+	float currentScale = GetEntPropFloat(entity, Prop_Send, "m_flModelScale");
+	float diff = fabs(targetScale - currentScale);
+	float amtPerSecond = diff / time;
+	float amtPerFrame = amtPerSecond / 63.0;
+
+	DataPack pack = new DataPack();
+	WritePackCell(pack, EntIndexToEntRef(entity));
+	WritePackFloat(pack, amtPerFrame);
+	WritePackFloat(pack, targetScale);
+	WritePackCell(pack, remove);
+	RequestFrame(ExpandOrShrink, pack);
+}
+
+stock void ExpandOrShrink(DataPack pack)
+{
+	ResetPack(pack);
+	int entity = EntRefToEntIndex(ReadPackCell(pack));
+	float amt = ReadPackFloat(pack);
+	float target = ReadPackFloat(pack);
+	bool remove = ReadPackCell(pack);
+
+	if (!IsValidEntity(entity))
+	{
+		delete pack;
+		return;
+	}
+
+	bool targetReached = false;
+	float currentScale = GetEntPropFloat(entity, Prop_Send, "m_flModelScale");
+	if (currentScale < target)
+	{
+		currentScale += amt;
+		targetReached = currentScale >= target;
+	}
+	else
+	{
+		currentScale -= amt;
+		targetReached = currentScale <= target;
+	}
+
+	if (targetReached)
+	{
+		currentScale = target;
+	}
+
+	SetEntPropFloat(entity, Prop_Send, "m_flModelScale", currentScale);
+	if (targetReached)
+	{
+		if (remove)
+			RemoveEntity(entity);
+
+		delete pack;
+		return;
+	}
+
+	RequestFrame(ExpandOrShrink, pack);
+}
+
 stock void MakeEntityFadeOut(int entity, int rate, bool remove = true)
 {
 	SetEntityRenderMode(entity, RENDER_TRANSALPHA);

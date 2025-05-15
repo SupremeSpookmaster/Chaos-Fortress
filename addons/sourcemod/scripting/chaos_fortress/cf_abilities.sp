@@ -2656,7 +2656,6 @@ public Action Shield_OnTakeDamage(int prop, int &attacker, int &inflictor, float
 	}
 	
 	f_FakeMediShieldHP[prop] -= damage;
-	CPrintToChatAll("Medi shield took %.2f damage, now has %.2f HP", damage, f_FakeMediShieldHP[prop]);
 	if (f_FakeMediShieldHP[prop] < 0.0)
 	{
 		RemoveEntity(prop);
@@ -2672,6 +2671,10 @@ bool MediShield_Collision(int ent1, int ent2)
 	//Neither entity is a medigun shield, don't modify collision.
 	if (!b_IsMedigunShield[ent1] && !b_IsMedigunShield[ent2])
 		return false;
+
+	//One of the entities is a medigun shield, but it has m_takedamage set to 0, so prevent collision entirely.
+	if ((b_IsMedigunShield[ent1] && !GetEntProp(ent1, Prop_Data, "m_takedamage")) || (b_IsMedigunShield[ent2] && !GetEntProp(ent2, Prop_Data, "m_takedamage")))
+		return true;
 		
 	//Block collision if a medigun shield is colliding with the world.
 	//if (b_IsMedigunShield[ent1] && ent2 == 0 || b_IsMedigunShield[ent2] && ent1 == 0)

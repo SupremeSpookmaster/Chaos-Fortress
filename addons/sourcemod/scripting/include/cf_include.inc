@@ -1521,6 +1521,7 @@ native int CF_CreatePickup(int owner, float radius, float lifespan, Function pic
  * @param lifespan				How long should the medigun shield be active? (0.0 or below: infinite)
  *
  * @return	The entity index of the medigun shield, or -1 if it fails to spawn.
+ * @NOTE - Setting the shield wall's "m_takedamage" property to 0 can be done to make it intangible, disabling the shield without removing it. If you do this, set it back to 2 when you are done.
  */
 native int CF_CreateShieldWall(int owner, char model[255], char skin[16], float scale, float health, float pos[3], float ang[3], float lifespan = 0.0);
 
