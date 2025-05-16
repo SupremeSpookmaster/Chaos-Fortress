@@ -3076,6 +3076,12 @@ public void Support_Command(int client, char abilityName[255])
 		EmitSoundToClient(client, NOPE);
 		return;
 	}
+	if (view_as<PNPC>(supportDrone).b_Disabled)
+	{
+		PrintCenterText(client, "Your Support Drone is disabled!");
+		EmitSoundToClient(client, NOPE);
+		return;
+	}
 
 	float ang[3];
 	GetClientEyeAngles(client, ang);
@@ -4336,6 +4342,12 @@ public void Buddy_Command(int client, char abilityName[255])
 	if (!IsValidEntity(buddy))
 	{
 		PrintCenterText(client, "You don't have an active Little Buddy!");
+		EmitSoundToClient(client, NOPE);
+		return;
+	}
+	if (view_as<PNPC>(buddy).b_Disabled)
+	{
+		PrintCenterText(client, "Your Little Buddy is disabled!");
 		EmitSoundToClient(client, NOPE);
 		return;
 	}
