@@ -2091,7 +2091,7 @@ stock void SpawnBeam_Vectors(float StartLoc[3], float EndLoc[3], float beamTimin
 	}
 }
 
-stock void SpawnBeam(float StartLoc[3], float EndLoc[3], float beamTiming, int r, int g, int b, int a, int modelIndex, int haloIndex = 0, float width=2.0, float endwidth=2.0, int fadelength=1, float amp=0.0, int target = -1)
+stock void SpawnBeam(float StartLoc[3], float EndLoc[3], float beamTiming, int r, int g, int b, int a, int modelIndex, int haloIndex = 0, float width=2.0, float endwidth=2.0, int fadelength=1, float amp=0.0, int target = -1, int speed = 0)
 {
 	int color[4];
 	color[0] = r;
@@ -2099,7 +2099,7 @@ stock void SpawnBeam(float StartLoc[3], float EndLoc[3], float beamTiming, int r
 	color[2] = b;
 	color[3] = a;
 	
-	TE_SetupBeamPoints(StartLoc, EndLoc, modelIndex, haloIndex, 0, 0, beamTiming, width, endwidth, fadelength, amp, color, 0);
+	TE_SetupBeamPoints(StartLoc, EndLoc, modelIndex, haloIndex, 0, 0, beamTiming, width, endwidth, fadelength, amp, color, speed);
 	
 	if (!IsValidClient(target))
 	{
