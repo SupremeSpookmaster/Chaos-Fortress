@@ -11,6 +11,12 @@ int BEAM_Combine_Red;
 int Glow_Sprite_Red;
 int Glow_Sprite_Blue;
 
+#define PARTICLE_SHOTGUN_TRACER_RED		"bullet_scattergun_tracer01_red"
+#define PARTICLE_SHOTGUN_TRACER_BLUE		"bullet_scattergun_tracer01_blue"
+
+#define TELE_EXIT_LOOP_SOUND	"mvm/mvm_mothership_loop.wav"
+#define TELE_EXIT_TELE_SOUND	"mvm/mvm_robo_stun.wav"
+
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
 	MarkNativeAsOptional("PNPC_IsNPC");
@@ -128,6 +134,7 @@ stock void ResetToZero2(any[][] array, int length1, int length2)
 static int Generic_Laser_BEAM_HitDetected[MAXENTITIES];
 static int i_beacon_owner[MAXENTITIES];
 static float fl_jumppad_falldamge_invlun[MAXTF2PLAYERS];
+static bool TPInitiated[MAXTF2PLAYERS];
 
 static const char DeathRayPassiveSounds[][] =
 {
@@ -147,6 +154,10 @@ static const char WidowCritSound[][] =
 public void OnMapStart()
 {
 	PrecacheModel(BEACON_BASE_MODEL, true);
+	PrecacheSound(TELE_EXIT_LOOP_SOUND, true);
+	PrecacheSound(TELE_EXIT_TELE_SOUND, true);
+
+	Zero(TPInitiated);
 
 	for(int i; i < sizeof(DeathRayPassiveSounds); i++)
 	{
@@ -525,8 +536,171 @@ public bool Can_I_SeeTarget_Deathray(int enemy)
 {
 	return (enemy == Check_Line_Of_Sight(i_DeathRayUser, enemy, fl_DeathRayStart) && !IsPlayerInvis(enemy));
 }
+enum struct SuperShotgunData
+{
+	float damage_front;
+	float damage_behind;
+	float damage_multi;
 
+	float falloffstart;
+	float falloffmax;
+	float maxdist;
+	float metalgainonhit;
+
+	float metal_tally;
+
+}
+static SuperShotgunData ShotgunData;
+/*
+	"Damage Bonus Max"			""
+	"Damage Bonus Min"			""
+
+	"KnockBack Max"				""
+	"KnockBack Min"				""
+
+	"Shotgun Lockout"			"0.75"
+
+	"Base Damage"				""
+	"Base Damage Behind"		""
+
+	"FallOffStart"				""
+	"FallOffMax"				""
+	"MaxFallOffDist"			""
+	"Metal Gain Back Ratio"		""
+
+	"Pellets Fired Amt"			""
+	"Pellets Pierce Amt"		""
+	"Shotgun Spread"			""
+*/
 static void SuperShotgun_Activate(int client, char abilityName[255])
+{
+	float Dmg_Bonus_Max = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Damage Bonus Max");
+	float Dmg_Bonus_Min = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Damage Bonus Min");
+
+	float KB_Max = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "KnockBack Max");
+	float KB_Min = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "KnockBack Min");
+
+	int weapon = GetPlayerWeaponSlot(client, 0);
+
+	float Ratio = CF_GetSpecialResource(client) / CF_GetMaxSpecialResource(client);
+
+	float PushForce = -1.0 * (KB_Min + (KB_Max - KB_Min) * Ratio);
+
+	SetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack", GetGameTime()+CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Shotgun Lockout"));
+
+	SendClientFlying(client, Ratio, PushForce);
+	EmitSuperShotgunEffects(client, Ratio);
+
+	CF_SetSpecialResource(client, 0.0);	//nuke all metal!
+
+	ShotgunData.damage_front = 	CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Base Damage");
+	ShotgunData.damage_behind = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Base Damage Behind");
+	ShotgunData.damage_multi = 	Dmg_Bonus_Min + (Dmg_Bonus_Max - Dmg_Bonus_Min) * Ratio;
+	ShotgunData.falloffstart = 	CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "FallOffStart");
+	ShotgunData.falloffmax 	=	CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "FallOffMax");//0.9;
+	ShotgunData.maxdist 	=	CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "MaxFallOffDist");//0.9;
+	ShotgunData.metalgainonhit=	CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Metal Gain Back Ratio");//0.9;
+	ShotgunData.metal_tally = 0.0;
+
+	int BulletsFired = 	CF_GetArgI(client, THIS_PLUGIN_NAME, abilityName, "Pellets Fired Amt");
+
+	int PierceAmt = 	CF_GetArgI(client, THIS_PLUGIN_NAME, abilityName, "Pellets Pierce Amt");
+
+	float BulletSpread = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Shotgun Spread");
+
+	float ang[3];
+	GetClientEyeAngles(client, ang);
+
+	TFTeam Team = TF2_GetClientTeam(client);
+
+	for (int i = 0; i < BulletsFired; i++)
+		CF_FireGenericBullet(client, ang, 0.0, 1.0, BulletSpread, THIS_PLUGIN_NAME, SuperShotGunOnHit, 69420.0, 0.0, 0.0, PierceAmt, grabEnemyTeam(client), _, _, (Team == TFTeam_Red ? PARTICLE_SHOTGUN_TRACER_RED : PARTICLE_SHOTGUN_TRACER_BLUE));
+
+	float Add_Metal = ShotgunData.metal_tally;
+
+	if(Add_Metal > CF_GetMaxSpecialResource(client))
+		Add_Metal = CF_GetMaxSpecialResource(client);
+
+	CF_SetSpecialResource(client, Add_Metal);
+
+
+}
+public void SuperShotGunOnHit(int attacker, int victim, float &baseDamage, bool &allowFalloff, bool &isHeadshot, int &hsEffect, bool &crit, float hitPos[3])
+{
+	isHeadshot = false;
+	hsEffect = false;
+
+	bool behind = IsBehindAndFacingTarget(attacker, victim);
+
+	float StartLoc[3]; GetClientEyePosition(attacker, StartLoc);
+
+	float DistRatio = CalculateFallOff(StartLoc, hitPos, ShotgunData.falloffstart, ShotgunData.falloffmax, ShotgunData.maxdist);
+
+	baseDamage = DistRatio * (behind ? ShotgunData.damage_behind : ShotgunData.damage_front) * ShotgunData.damage_multi;
+
+	ShotgunData.metal_tally += baseDamage*ShotgunData.metalgainonhit;
+}
+/**
+ * Automatically sets up and calls CF_DoBulletTrace and CF_TraceShot, then deals damage to every enemy it hits.
+ * This is automatically lag-compensated, and also automatically checks for line-of-sight.
+ * 
+ * @param client		The client to fire the bullet.
+ * @param ang			The angle of the shot.
+ * @param damage		Base damage.
+ * @param hsMult		Headshot damage multiplier.
+ * @param spread		Random spread.
+ * @param hitPlugin		Name of the plugin containing the optional function to call on a hit.
+ * @param hitFunction	Optional function to call on a hit. Must take an int for the attacker, an int for the victim, a float by reference for damage, a bool by reference for falloff, a bool by reference for headshot, an int by reference for headshot effects, a bool by reference for crits, and a vector for hit position.
+ * 						Example: void MyHeadshotCallback(int attacker, int victim, float &baseDamage, bool &allowFalloff, bool &isHeadshot, int &hsEffect, bool &crit, float hitPos[3])
+ * 						baseDamage can be changed to modify the damage dealt before falloff is calculated.
+ * 						Setting allowFalloff to false will block damage falloff from being calculated.
+ * 						isHeadshot can be modified to force or prevent a headshot.
+ * 						hsEffect is used for particle/sound effects on headshots. If <= 0, no effects are displayed. If set to 1, mini-crit effects are used. If >= 2, full crit effects are used.
+ * 						crit can be set to true to force the attack to crit, or to prevent a crit. Forcing a crit will force hsEffect to 2.
+ * @param falloffStart	Range at which damage falloff begins.
+ * @param falloffEnd	Range at which damage falloff becomes its strongest.
+ * @param falloffMax	Maximum percentage of damage to subtract based on falloff, IE 0.3 = 30% reduced damage.
+ * @param pierce		The maximum number of enemies pierced by this attack.
+ * @param team			Optional team to check for, using CF_IsValidTarget. Targets who are considered invalid by CF_IsValidTarget are ignored by this native.
+ * @param plugin		Plugin name of the optional filter function, using CF_IsValidTarget. Only necessary if "filter" is used.
+ * @param filter		Function name of the optional filter function, using CF_IsValidTarget. This function must take one int as a parameter, that being the entity's index, and must return a bool (true to count as valid, false otherwise).
+ * @param particle		Bullet tracer particle to use. Must be a multi-point particle.
+ */
+static void SendClientFlying(int client, float Ratio, float PushForce)
+{
+	float anglesB[3];
+	float velocity[3];
+	GetClientEyeAngles(client, anglesB);
+	GetAngleVectors(anglesB, velocity, NULL_VECTOR, NULL_VECTOR);
+	float knockback = PushForce;
+	
+	ScaleVector(velocity, knockback);
+	if ((GetEntityFlags(client) & FL_ONGROUND) != 0 || GetEntProp(client, Prop_Send, "m_nWaterLevel") >= 1)
+		velocity[2] = fmax(velocity[2], 300.0*Ratio);
+	else
+		velocity[2] += 100.0*Ratio; // a little boost to alleviate arcing issues
+		
+	float newVel[3];
+	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", newVel);
+
+	AddVectors(velocity, newVel, velocity);
+	
+	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, velocity);
+}
+static void EmitSuperShotgunEffects(int client, float Ratio)
+{
+	float ShakeRatio = Ratio+0.25;
+	if(ShakeRatio > 1.3)
+		ShakeRatio = 1.3;
+	Client_Shake(client, 0, 30.0 * ShakeRatio, 20.0 * ShakeRatio, 0.4 * ShakeRatio);
+
+	EmitSoundToAll("beams/beamstart5.wav", client, SNDCHAN_STATIC, 80, _, (Ratio > 0.8 ? 0.8 : Ratio), 45);
+
+	EmitSoundToClient(client, WidowCritSound[GetURandomInt() % sizeof(WidowCritSound)], _, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, 1.0, GetRandomInt(80, 125));
+}
+
+/*	
+//OLD VERSION:
 {
 	float Dmg_Bonus_Max = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Damage Bonus Max");
 	float Dmg_Bonus_Min = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Damage Bonus Min");
@@ -542,30 +716,7 @@ static void SuperShotgun_Activate(int client, char abilityName[255])
 
 	SetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack", GetGameTime()+0.75);
 
-	float anglesB[3];
-	float velocity[3];
-	GetClientEyeAngles(client, anglesB);
-	GetAngleVectors(anglesB, velocity, NULL_VECTOR, NULL_VECTOR);
-	float knockback = PushForce;
 	
-	ScaleVector(velocity, knockback);
-	if ((GetEntityFlags(client) & FL_ONGROUND) != 0 || GetEntProp(client, Prop_Send, "m_nWaterLevel") >= 1)
-		velocity[2] = fmax(velocity[2], 300.0*Ratio);
-	else
-		velocity[2] += 100.0*Ratio; // a little boost to alleviate arcing issues
-		
-	float newVel[3];
-	
-	newVel[0] = GetEntPropFloat(client, Prop_Send, "m_vecVelocity[0]");
-	newVel[1] = GetEntPropFloat(client, Prop_Send, "m_vecVelocity[1]");
-	newVel[2] = GetEntPropFloat(client, Prop_Send, "m_vecVelocity[2]");
-					
-	for (int i = 0; i < 3; i++)
-	{
-		velocity[i] += newVel[i];
-	}
-	
-	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, velocity);
 	
 	float ShakeRatio = Ratio+0.25;
 	if(ShakeRatio > 1.3)
@@ -681,6 +832,7 @@ static void SuperShotgun_Activate(int client, char abilityName[255])
 
 	delete Victims;
 }
+*/
 
 enum struct PadData
 {
@@ -692,6 +844,7 @@ enum struct PadData
 	bool AllowEnemy;
 }
 static PadData structPadData[MAXENTITIES];
+static bool b_IsAExitWithSound[MAXENTITIES];
 void OnBuildObject(Event event, const char[] name, bool dontBroadcast)
 {
 	int entity = event.GetInt("index");
@@ -772,7 +925,18 @@ void OnBuildObject(Event event, const char[] name, bool dontBroadcast)
 			CreateDataTimer(1.0, Timer_KeepTeleMaxHealth, pack, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);		//no need to update constantly.
 			pack.WriteCell(EntIndexToEntRef(entity));
 			pack.WriteCell(CF_GetArgI(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Teleporter Exit Health"));
-		
+
+			SDKHook(entity, SDKHook_Touch, ExitTeleOnTouch);
+
+			float Volume = CF_GetArgF(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Teleporter Exit Volume");
+			if(Volume > 1.0)
+				Volume = 0.25;
+
+			if(Volume > 0.0)
+			{
+				b_IsAExitWithSound[entity] = true;
+				EmitSoundToAll(TELE_EXIT_LOOP_SOUND, entity, SNDCHAN_AUTO, _, _, Volume);
+			}
 		}
 	}
 }
@@ -784,6 +948,12 @@ public void OnEntityDestroyed(int entity)
 		if(IsValidEntity(Particle) && Particle != 0)
 			RemoveEntity(Particle);
 		structPadData[entity].Particle = INVALID_ENT_REFERENCE;
+
+		if(b_IsAExitWithSound[entity])
+		{
+			b_IsAExitWithSound[entity] = false;
+			StopSound(entity, SNDCHAN_AUTO, TELE_EXIT_LOOP_SOUND);
+		}
 	}
 }
 // Taken from Engi Pads but changed.
@@ -907,13 +1077,140 @@ static Action Timer_HandlePadEffects(Handle timer, int Ref)
 				return Plugin_Continue;
 
 			float Loc[3]; GetAbsOrigin_main(entity, Loc);
-			Loc[2] += 2.0;
-			structPadData[entity].Particle = EntIndexToEntRef(ParticleEffectAt(Loc, "utaunt_portalswirl_purple_parent", 0.0));
+			//Loc[2] += 2.0;
+			int owner = GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
+			if(IsValidClient(owner))
+				structPadData[entity].Particle = EntIndexToEntRef(ParticleEffectAt(Loc, (TF2_GetClientTeam(owner) == TFTeam_Red ? "teleporter_red_entrance"	: "teleporter_blue_entrance"), 0.0));
 		}
 		return Plugin_Continue;
 	}
 
 	return Plugin_Stop;
+}
+
+///Eureka Effect teleport detection
+public void TF2_OnConditionAdded(int client, TFCond condition)
+{
+	if(!IsValidClient(client) || !IsPlayerAlive(client))
+		return;
+	
+	if(!CF_HasAbility(client, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS))
+		return;
+
+	int activeWeapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+
+	if(!IsValidEntity(activeWeapon))
+		return;
+
+	ProcessEurekaEffectCondAdded(client, condition);
+}
+
+public void TF2_OnConditionRemoved(int client, TFCond condition)
+{
+	if(!IsValidClient(client) || !IsPlayerAlive(client))
+		return;
+	
+	if(!CF_HasAbility(client, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS))
+		return;
+
+	int weapon = GetPlayerWeaponSlot(client, 2);
+
+	if(!IsValidEntity(weapon))
+		return;
+
+	ProcessEurekaEffectCondRemoved(client, condition);
+
+}
+
+static void ProcessEurekaEffectCondAdded(int client, TFCond condition)
+{
+	char classname[64];
+	GetEntityNetClass(client, classname, sizeof(classname));
+
+	int offset = GetEntData(client, FindSendPropInfo(classname, "m_flKartNextAvailableBoost") + 8, 1);
+
+	if(condition == TFCond_Taunting && offset) // We check for eureka teleport cond here because it doesnt always stay when taunt ends
+	{
+		TPInitiated[client] = true; // Client is in the process of teleporting, we will check for this when taunt runs out
+	}
+}
+static float fl_allow_exit_touch[MAXTF2PLAYERS];
+static void ProcessEurekaEffectCondRemoved(int client, TFCond condition)
+{
+	if(!TPInitiated[client])
+		return;
+
+	if(condition != TFCond_Taunting)
+		return;
+
+	// Taunt finished and client was in the process of teleporting?
+	TPInitiated[client] = false;
+
+	fl_allow_exit_touch[client] = GetGameTime() + 0.25;
+}
+
+
+static void ExitTeleOnTouch(int entity, int other)
+{
+	if(!IsValidEntity(entity))
+	{
+		SDKUnhook(entity, SDKHook_Touch, ExitTeleOnTouch);
+		return;
+	}
+
+	//is not a client, abort.
+	if(!IsValidClient(other))
+		return;
+	
+	////are we being sapped, got hit by cowmangler m2, are carried, or being built? if so, don't do anything
+	//if(GetEntProp(entity, Prop_Send, "m_bHasSapper") || GetEntProp(entity, Prop_Send, "m_bPlasmaDisable") || GetEntProp(entity, Prop_Send, "m_bCarried") || GetEntPropFloat(entity, Prop_Send, "m_flPercentageConstructed")<1.0)
+	//	return;
+
+
+	int owner = GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
+	if(owner != other)
+		return;
+	//only allow the owner of the tele exit to get in
+
+	if(fl_allow_exit_touch[owner] < GetGameTime())
+	{
+		return;
+	}
+
+	fl_allow_exit_touch[owner] = 0.0;
+	//CPrintToChatAll("owner of tele has touched tele after teleporting");
+
+	float Volume = CF_GetArgF(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Teleporter Exit Volume On Teleport");
+	if(Volume > 1.0)
+		Volume = 0.25;
+
+	if(Volume > 0.0)
+	{
+		EmitSoundToAll(TELE_EXIT_TELE_SOUND, entity, SNDCHAN_AUTO, _, _, Volume, 254);
+	}
+	float Loc[3]; GetAbsOrigin_main(entity, Loc);
+	Loc[2] += 2.0;
+	float ParticleTime = CF_GetArgF(owner, THIS_PLUGIN_NAME, CUSTOM_TELEPORTERS, "Teleporter Exit Particle Life");
+	
+
+	TFTeam team = TF2_GetClientTeam(owner);
+	char particles[6][255];
+	particles[0] = team == TFTeam_Red ? "teleporter_red_entrance"		: "teleporter_blue_entrance";
+	particles[1] = team == TFTeam_Red ? "teleporter_red_charged_level2"	: "teleporter_blue_charged_level2";
+	particles[2] = team == TFTeam_Red ? "teleporter_red_charged_level3"	: "teleporter_blue_charged_level3";
+	particles[3] = team == TFTeam_Red ? "teleporter_red_entrance_level3": "teleporter_blue_entrance_level3";
+	particles[4] = team == TFTeam_Red ? "teleporter_red_charged"		: "teleporter_blue_charged";
+	particles[5] = team == TFTeam_Red ? "teleporter_red_charged_wisps"	: "teleporter_blue_charged_wisps";
+
+	TF2_AddCondition(owner, TFCond_TeleportedGlow, ParticleTime*1.25);
+
+	if(ParticleTime <= 0.0)
+		return;
+		
+	for(int i=0 ; i < 6 ; i++)
+	{
+		ParticleEffectAt(Loc, particles[i], ParticleTime);
+	}
 }
 
 
@@ -923,6 +1220,7 @@ static Action Timer_HandlePadEffects(Handle timer, int Ref)
 //read the passive ability's variables and apply them in here.
 public void CF_OnCharacterCreated(int client)
 {
+	TPInitiated[client] = false;
 }
 
 //When a player's character is removed (typically when they die or leave the match), this forward is called.
@@ -1588,6 +1886,9 @@ stock float CalculateFallOff(float StartLoc[3], float EndLoc[3], float falloffst
 	//FF2Dbg("Input damage: %f", Damage);
 	if (dist > falloffstart)
 	{
+		if(dist > maxDist)
+			return falloffmax;
+
 		float diff = dist - falloffstart;
 		float rad = maxDist - falloffstart;
 		
@@ -1696,7 +1997,7 @@ stock void VectorRotate(float inPoint[3], float angles[3], float outPoint[3])
 stock float ClampBeamWidth(float w) { return w > 128.0 ? 128.0 : w; }
 stock int GetR(int c) { return abs((c>>16)&0xff); }
 stock int GetG(int c) { return abs((c>>8 )&0xff); }
-stock int GetB(int c) { return abs((c    )&0xff); }
+stock int GetB(int c) { return abs((c	)&0xff); }
 stock int abs(int x) { return x < 0 ? -x : x; }
 // if the distance between two points is greater than max distance allowed
 // fills result with a new destination point that lines on the line between src and dst
