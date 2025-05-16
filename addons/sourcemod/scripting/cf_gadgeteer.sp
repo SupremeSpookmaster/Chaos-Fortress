@@ -4084,10 +4084,9 @@ public void Scrap_Hit(int attacker, int victim, float &baseDamage, bool &allowFa
 
 			if (!Toss_IsSupportDrone[victim] || !Toss_SupportStats[victim].isBuilding)
 			{
-				TFObjectType objType = TF2_GetObjectType(victim);
 				int owner;
 
-				if (objType == TFObject_Dispenser || objType == TFObject_Sentry || objType == TFObject_Dispenser)
+				if (IsABuilding(victim, false))
 					owner = GetEntPropEnt(victim, Prop_Send, "m_hBuilder");
 				else
 					owner = GetEntPropEnt(victim, Prop_Send, "m_hOwnerEntity");
