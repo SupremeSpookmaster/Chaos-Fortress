@@ -1208,7 +1208,7 @@ void SensalInitiateLaserAttack(int entity, float VectorTarget[3], float VectorSt
 	TE_SendToAll(0.0);
 
 	DataPack pack;
-	CreateDataTimer(0.8, SensalInitiateLaserAttack_DamagePart, pack, TIMER_FLAG_NO_MAPCHANGE);
+	CreateDataTimer(0.5, SensalInitiateLaserAttack_DamagePart, pack, TIMER_FLAG_NO_MAPCHANGE);
 	pack.WriteCell(EntIndexToEntRef(entity));
 	pack.WriteFloat(VectorTarget[0]);
 	pack.WriteFloat(VectorTarget[1]);
