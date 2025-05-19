@@ -874,9 +874,9 @@ Action MassLaserTimer(Handle timer, DataPack pack)
 
 	if(attacker && IsPlayerAlive(attacker))
 	{
-		int length = victims.Length;
-		if(length)
+		if(victims != null && GetArraySize(victims) > 0)
 		{
+			int length = victims.Length;
 			float pos1[3], pos2[3];
 
 			int index = LookupEntityAttachment(attacker, "effect_hand_r");
@@ -907,7 +907,9 @@ Action MassLaserTimer(Handle timer, DataPack pack)
 		CreateTimer(1.1, ForceUntaunt, userid, TIMER_FLAG_NO_MAPCHANGE);
 	}
 
-	delete victims;
+	if (victims != null)
+		delete victims;
+		
 	MassLaser_HitList[slot] = null;
 	return Plugin_Continue;
 }
