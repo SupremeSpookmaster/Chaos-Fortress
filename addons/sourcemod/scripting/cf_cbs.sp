@@ -409,7 +409,7 @@ public void Explosive_DelayedArrowModification(int ref)
 	if (!Draw_IsAHuntsman(huntsman))
 		return;
 	
-	float dmgMult = GetAttributeValue(huntsman, 2, 1.0);
+	float dmgMult = GetAttributeValue(huntsman, 2, 1.0) * GetAttributeValue(huntsman, 488, 1.0);
 	float radMult = GetAttributeValue(huntsman, 99, 1.0);
 	float falloffMult = GetAttributeValue(huntsman, 118, 1.0);
 	
