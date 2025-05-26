@@ -3673,6 +3673,7 @@ public any Native_CF_DoBulletTrace(Handle plugin, int numParams)
 	BulletTrace_Team = GetNativeCell(5);
 	GetNativeString(6, BulletTrace_Plugin, sizeof(BulletTrace_Plugin));
 	BulletTrace_Filter = GetNativeFunction(7);
+	bool hulls = GetNativeCell(9);
 
 	delete BulletTrace_Hits;
 	BulletTrace_Hits = new ArrayList();
@@ -3697,12 +3698,13 @@ public any Native_CF_DoBulletTrace(Handle plugin, int numParams)
 		{
 			int vic = GetArrayCell(returnVal, i);
 			TR_TraceRayFilter(startPos, endPos, MASK_SHOT, RayType_EndPoint, CF_OnlyHitTarget, vic);
-			if (TR_GetFraction() >= 1.0/*TR_GetHitBoxIndex() == 0 && TR_GetHitGroup() != HITGROUP_GENERIC && TR_GetHitGroup() != HITGROUP_HEAD*/)
+			if (TR_GetFraction() >= 1.0)
 			{
 				//bool hs;
 				//CF_TraceShot(client, vic, startPos, endPos, hs, false);
 				//if (!hs)
 				//{
+				if (!hulls)
 					RemoveFromArray(returnVal, i);
 				//}
 			}
@@ -3714,7 +3716,7 @@ public any Native_CF_DoBulletTrace(Handle plugin, int numParams)
 				RemoveFromArray(returnVal, GetArraySize(returnVal) - 1);
 
 			int vic = GetArrayCell(returnVal, GetArraySize(returnVal) - 1);
-			CF_TraceShot(client, vic, startPos, endPos, _, false, hitPos);
+			CF_TraceShot(client, vic, startPos, endPos, _, false, hitPos, hulls);
 		}
 	}
 
@@ -3742,6 +3744,7 @@ public any Native_CF_TraceShot(Handle plugin, int numParams)
 	GetNativeArray(4, endPos, sizeof(endPos));
 	hitPos = endPos;
 	bool doLagComp = GetNativeCell(6);
+	bool hull = GetNativeCell(8);
 
 	if (!IsValidEntity(target) || target < 0 || target > 2048)
 		return 0;
@@ -3755,7 +3758,7 @@ public any Native_CF_TraceShot(Handle plugin, int numParams)
 		CF_EndLagCompensation(client);
 
 	bool hs = false;
-	if (TR_GetFraction(trace) < 1.0)
+	if (TR_GetFraction(trace) < 1.0 || hull)
 	{
 		target = TR_GetEntityIndex(trace);
 		if (target > 0)
@@ -3795,6 +3798,7 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 	GetNativeString(13, checkPlugin, sizeof(checkPlugin));
 	Function checkFunction = GetNativeFunction(14);
 	GetNativeString(15, particle, sizeof(particle));
+	bool hull = GetNativeCell(16);
 
 	float startPos[3], endPos[3], shootPos[3], hitPos[3], shootAng[3];
 	GetClientAbsOrigin(client, startPos);
@@ -3815,7 +3819,7 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 		UTIL_ImpactTrace(client, eyePos, DMG_BULLET);
 	}
 
-	ArrayList victims = CF_DoBulletTrace(client, startPos, endPos, pierce, checkTeam, checkPlugin, checkFunction, hitPos);
+	ArrayList victims = CF_DoBulletTrace(client, startPos, endPos, pierce, checkTeam, checkPlugin, checkFunction, hitPos, hull);
 	SpawnParticle_ControlPoints(shootPos, hitPos, particle, 2.0);
 
 	bool crit = (TF2_IsPlayerInCondition(client, TFCond_CritCanteen) || TF2_IsPlayerInCondition(client, TFCond_CritMmmph) || TF2_IsPlayerInCondition(client, TFCond_CritOnDamage) || TF2_IsPlayerInCondition(client, TFCond_CritOnFirstBlood) || 

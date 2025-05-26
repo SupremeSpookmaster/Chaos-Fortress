@@ -4028,7 +4028,7 @@ public void Scrap_Activate(int client, char abilityName[255])
 
 	Scrap_User = client;
 	for (int i = 0; i < numBullets; i++)
-		CF_FireGenericBullet(client, ang, damage, hsMult, spread, GADGETEER, Scrap_Hit, falloffStart, falloffEnd, falloffMax, pierce, TFTeam_Unassigned, GADGETEER, Scrap_CheckTarget, (TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_SCRAP_TRACER_RED : PARTICLE_SCRAP_TRACER_BLUE));
+		CF_FireGenericBullet(client, ang, damage, hsMult, spread, GADGETEER, Scrap_Hit, falloffStart, falloffEnd, falloffMax, pierce, TFTeam_Unassigned, GADGETEER, Scrap_CheckTarget, (TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_SCRAP_TRACER_RED : PARTICLE_SCRAP_TRACER_BLUE), false);
 }
 
 public void Scrap_Hit(int attacker, int victim, float &baseDamage, bool &allowFalloff, bool &isHeadshot, int &hsEffect, bool &crit, float hitPos[3])

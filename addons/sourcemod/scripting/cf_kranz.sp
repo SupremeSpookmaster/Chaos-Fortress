@@ -194,7 +194,7 @@ public void Obliterator_Activate(int client, char abilityName[255])
 
 	float ang[3];
 	GetClientEyeAngles(client, ang);
-	CF_FireGenericBullet(client, ang, damage, hsMult, spread, KRANZ, Obliterator_Hit, falloffStart, falloffEnd, falloffMax, pierce, grabEnemyTeam(client), _, _, (Obliterator_Team == TFTeam_Red ? PARTICLE_OBLITERATOR_TRACER_RED : PARTICLE_OBLITERATOR_TRACER_BLUE));
+	CF_FireGenericBullet(client, ang, damage, hsMult, spread, KRANZ, Obliterator_Hit, falloffStart, falloffEnd, falloffMax, pierce, grabEnemyTeam(client), _, _, (Obliterator_Team == TFTeam_Red ? PARTICLE_OBLITERATOR_TRACER_RED : PARTICLE_OBLITERATOR_TRACER_BLUE), true);
 	CF_PlayRandomSound(client, client, "sound_obliterator_fired");
 }
 

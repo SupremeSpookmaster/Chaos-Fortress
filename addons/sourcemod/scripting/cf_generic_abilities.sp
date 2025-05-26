@@ -480,12 +480,6 @@ public void OnPluginStart()
 {
 }
 
-public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
-{
-	MarkNativeAsOptional("PNPC_GetCustomMeleeAttributes");
-	return APLRes_Success;
-}
-
 public void OnMapEnd()
 {
 	for (int i = 0; i < 2049; i++)

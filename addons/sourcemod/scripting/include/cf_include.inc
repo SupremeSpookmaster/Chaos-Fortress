@@ -1889,10 +1889,11 @@ native void CF_DoAbilitySlot(int client, int slot);
  * @param plugin			Plugin name of the optional filter function, using CF_IsValidTarget. Only necessary if "filter" is used.
  * @param filter			Function name of the optional filter function, using CF_IsValidTarget. This function must take one int as a parameter, that being the entity's index, and must return a bool (true to count as valid, false otherwise).
  * @param hitPos			Optional output vector to store the end position of the trace, if it reaches the maximum number of penetrations and hits another target.
+ * @param use_hull			If true: use collision hulls instead of hitboxes.
  * 
  * @return	An ArrayList of all of the entities who were hit by this trace, sorted by distance from the starting position.
  */
-native ArrayList CF_DoBulletTrace(int client, float startPos[3], float endPos[3], int numPenetrations = 0, TFTeam team, char[] plugin = "", Function filter = INVALID_FUNCTION, float hitPos[3] = NULL_VECTOR);
+native ArrayList CF_DoBulletTrace(int client, float startPos[3], float endPos[3], int numPenetrations = 0, TFTeam team, char[] plugin = "", Function filter = INVALID_FUNCTION, float hitPos[3] = NULL_VECTOR, bool use_hull = false);
 
 /**
  * Performs a trace ray from startPos to endPos, and checks to see if the trace goes through the target.
@@ -1905,10 +1906,11 @@ native ArrayList CF_DoBulletTrace(int client, float startPos[3], float endPos[3]
  * @param headshot	This gets set to true if this trace goes through the target's head.
  * @param doLagComp	If set to false: lag compensation is skipped.
  * @param hitPos	Optional output vector to store the position at which the trace and the target intersect, if they hit.
+ * @param use_hull	If true: use collision hulls instead of hitboxes.
  * 
  * @return	True if the trace headshots the target, false otherwise.
  */
-native void CF_TraceShot(int user, int target, float startPos[3], float endPos[3], bool &headshot = false, bool doLagComp = true, float hitPos[3] = NULL_VECTOR);
+native void CF_TraceShot(int user, int target, float startPos[3], float endPos[3], bool &headshot = false, bool doLagComp = true, float hitPos[3] = NULL_VECTOR, bool use_hull = false);
 
 /**
  * Automatically sets up and calls CF_DoBulletTrace and CF_TraceShot, then deals damage to every enemy it hits.
@@ -1935,8 +1937,9 @@ native void CF_TraceShot(int user, int target, float startPos[3], float endPos[3
  * @param plugin		Plugin name of the optional filter function, using CF_IsValidTarget. Only necessary if "filter" is used.
  * @param filter		Function name of the optional filter function, using CF_IsValidTarget. This function must take one int as a parameter, that being the entity's index, and must return a bool (true to count as valid, false otherwise).
  * @param particle		Bullet tracer particle to use. Must be a multi-point particle.
+ * @param use_hull		If true: use collision hulls instead of hitboxes, thus making the shot easier to hit.
  */
-native void CF_FireGenericBullet(int client, float ang[3], float damage, float hsMult = 1.0, float spread = 0.0, char[] hitPlugin = "", Function hitFunction = INVALID_FUNCTION, float falloffStart = 0.0, float falloffEnd = 0.0, float falloffMax = 0.0, int pierce = 0, TFTeam team, char[] plugin = "", Function filter = INVALID_FUNCTION, char[] particle = "bullet_shotgun_tracer01_red");
+native void CF_FireGenericBullet(int client, float ang[3], float damage, float hsMult = 1.0, float spread = 0.0, char[] hitPlugin = "", Function hitFunction = INVALID_FUNCTION, float falloffStart = 0.0, float falloffEnd = 0.0, float falloffMax = 0.0, int pierce = 0, TFTeam team, char[] plugin = "", Function filter = INVALID_FUNCTION, char[] particle = "bullet_shotgun_tracer01_red", bool use_hull = false);
 
 /**
  * Checks if there is an uninterrupted line of sight between the starting and ending positions.

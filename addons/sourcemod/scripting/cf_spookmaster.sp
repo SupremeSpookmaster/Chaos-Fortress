@@ -86,7 +86,7 @@ public void NecroBolt_Activate(int client, char abilityName[255])
 	GetClientEyeAngles(client, ang);
 
 	b_NecroBolt = true;
-	CF_FireGenericBullet(client, ang, damage, hsMult, spread, SPOOKMASTER, NecroBolt_Hit, falloffStart, falloffEnd, falloffMax, pierce, grabEnemyTeam(client), _, _, "");
+	CF_FireGenericBullet(client, ang, damage, hsMult, spread, SPOOKMASTER, NecroBolt_Hit, falloffStart, falloffEnd, falloffMax, pierce, grabEnemyTeam(client), _, _, "", true);
 	b_NecroBolt = false;
 
 	float startPos[3], endPos[3], shootPos[3], hitPos[3], shootAng[3];

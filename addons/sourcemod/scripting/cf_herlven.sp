@@ -614,7 +614,7 @@ static void SuperShotgun_Activate(int client, char abilityName[255])
 	TFTeam Team = TF2_GetClientTeam(client);
 
 	for (int i = 0; i < BulletsFired; i++)
-		CF_FireGenericBullet(client, ang, 0.0, 1.0, BulletSpread, THIS_PLUGIN_NAME, SuperShotGunOnHit, 69420.0, 0.0, 0.0, PierceAmt, grabEnemyTeam(client), _, _, (Team == TFTeam_Red ? PARTICLE_SHOTGUN_TRACER_RED : PARTICLE_SHOTGUN_TRACER_BLUE));
+		CF_FireGenericBullet(client, ang, 0.0, 1.0, BulletSpread, THIS_PLUGIN_NAME, SuperShotGunOnHit, 69420.0, 0.0, 0.0, PierceAmt, grabEnemyTeam(client), _, _, (Team == TFTeam_Red ? PARTICLE_SHOTGUN_TRACER_RED : PARTICLE_SHOTGUN_TRACER_BLUE), true);
 
 	float Add_Metal = ShotgunData.metal_tally;
 

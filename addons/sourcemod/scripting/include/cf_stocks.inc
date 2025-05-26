@@ -1584,14 +1584,7 @@ stock void GetAttribStringFromWeapon(int weapon, char output[255])
 	if (!IsValidEntity(weapon))
 		return;
 		
-	#if defined _pnpc_included_
 	float range = 1.0, bounds = 1.0;
-	int owner = GetEntPropEnt(weapon, Prop_Send, "m_hOwnerEntity");
-	if (IsValidClient(owner))
-	{
-		PNPC_GetCustomMeleeAttributes(owner, range, bounds);
-	}
-	#endif
 
 	int indices[20];
 	TF2Attrib_ListDefIndices(weapon, indices, sizeof(indices));

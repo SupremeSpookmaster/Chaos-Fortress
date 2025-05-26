@@ -64,12 +64,6 @@ public void OnPluginStart()
 	delete gamedata;
 }
 
-public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
-{
-	MarkNativeAsOptional("PNPC_GetCustomMeleeAttributes");
-	return APLRes_Success;
-}
-
 public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
 {
 	if (!StrEqual(pluginName, CBS))
@@ -409,7 +403,19 @@ public void Explosive_DelayedArrowModification(int ref)
 	if (!Draw_IsAHuntsman(huntsman))
 		return;
 	
-	float dmgMult = GetAttributeValue(huntsman, 2, 1.0) * GetAttributeValue(huntsman, 488, 1.0);
+	float blastBonus = GetAttributeValue(huntsman, 488, 0.0);
+	if (blastBonus != 0.0 && b_DrawActive[owner])
+	{
+		float duration_charged = GetGameTime() - f_DrawChargeStartTime[owner];
+		float requiredChargeTime = GetAttributeValue(huntsman, 318, 1.0);
+		float mult = (duration_charged / requiredChargeTime);
+		if (mult > 1.0)
+			mult = 1.0;
+
+		blastBonus *= mult;
+	}
+
+	float dmgMult = GetAttributeValue(huntsman, 2, 1.0) + blastBonus;
 	float radMult = GetAttributeValue(huntsman, 99, 1.0);
 	float falloffMult = GetAttributeValue(huntsman, 118, 1.0);
 	
