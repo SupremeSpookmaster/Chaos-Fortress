@@ -3983,3 +3983,109 @@ stock void FloatToDouble(float flValue, int dblVal[2]) {
 	dblVal[1] = (sign << 31) | (expdbl_2 << 20) | (mantissa >> 3);
 }
 
+/**
+ * Creates two info_targets, one for the root and one for the end, then draws an env_beam between them.
+ * 
+ * @param startEnt		The entity to which the root of the env_beam should be parented. If not a valid entity: do not parent to anything.
+ * @param endEnt		The entity to which the end of the env_beam should be parented. If not a valid entity: do not parent to anything.
+ * @param startPos		The origin of the beginning of the env_beam.
+ * @param endPos		The origin of the end of the env_beam.
+ * @param startPoint	If startEnt is a valid entity: attach the root of the env_beam to this attachment point. If this is used, "startPos" is used as an offset.
+ * @param endPoint		If endEnt is a valid entity: attach the end of the env_beam to this attachment point. If this is used, "endPos" is used as an offset.
+ * @param startOutput	If you pass a variable to this parameter, it will be changed to the entity index of the info_target used for the root of the env_beam.
+ * @param endOutput		If you pass a variable to this parameter, it will be changed to the entity index of the info_target used for the end of the env_beam.
+ * @param r				RGBA "R" value (0-255).
+ * @param g				RGBA "G" value (0-255).
+ * @param b				RGBA "B" value (0-255).
+ * @param a				RGBA "A" value (0-255).
+ * @param model			Sprite to use.
+ * @param width			Width of the env_beam at its start.
+ * @param endWidth		Width of the env_beam at its end.
+ * @param fadelength	No idea.
+ * @param amplitude		The "strength" of the env_beam. Higher values cause the beam to sporadically shake with higher fluctuations. 0.0 means the beam does not shake at all.
+ * @param speed			Scroll speed of the env_beam's sprite.
+ * @param duration		Time until the beam automatically expires. <= 0.0: infinite.
+ * 
+ * @return	The entity index of the env_beam, or -1 on failure. If either of the info_targets fail to be created, the env_beam itself will still be returned, but it will not be connected to anything.
+ */
+stock int CreateEnvBeam(int startEnt, int endEnt, float startPos[3], float endPos[3], char[] startPoint = "", char[] endPoint = "", int &startOutput = -1, int &endOutput = -1, int r = 255, int g = 255, int b = 255, int a = 255, char[] model = "sprites/laserbeam.vmt", float width = 2.0, float endWidth = 2.0, float fadelength = 1.0, float amplitude = 0.0, float speed = 0.0, float duration = 0.0)
+{
+	int beam = CreateEntityByName("env_beam");
+	if (!IsValidEntity(beam))
+		return -1;
+
+	SetEntityModel(beam, model);
+
+	char color[32];
+	Format(color, sizeof(color), "%i %i %i", r, g, b);
+	DispatchKeyValue(beam, "rendercolor", color);
+
+	char alpha[8];
+	Format(alpha, sizeof(alpha), "%i", a);
+	DispatchKeyValue(beam, "renderamt", alpha);
+
+	DispatchKeyValue(beam, "life", "0");
+
+	DispatchSpawn(beam);
+
+	int root = CreateEntityByName("info_target");
+	int end = CreateEntityByName("info_target");
+
+	if (!IsValidEntity(root) || !IsValidEntity(end))
+	{
+		if (IsValidEntity(root))
+			RemoveEntity(root);
+		if (IsValidEntity(end))
+			RemoveEntity(end);
+
+		return beam;
+	}
+
+	DispatchSpawn(root);
+	DispatchSpawn(end);
+	SetEntityMoveType(root, MOVETYPE_NOCLIP);
+	SetEntityMoveType(end, MOVETYPE_NOCLIP);
+
+	TeleportEntity(root, startPos);
+	TeleportEntity(end, endPos);
+
+	if (IsValidEntity(startEnt))
+		SetParent(startEnt, root, startPoint, startPos);
+	if (IsValidEntity(endEnt))
+		SetParent(endEnt, end, endPoint, endPos);
+
+	SetEntPropEnt(beam, Prop_Send, "m_hAttachEntity", EntIndexToEntRef(root));
+	SetEntPropEnt(beam, Prop_Send, "m_hAttachEntity", EntIndexToEntRef(end), 1);
+
+	SetEntProp(beam, Prop_Send, "m_nNumBeamEnts", 2);
+	SetEntProp(beam, Prop_Send, "m_nBeamType", 2);
+
+	SetEntPropFloat(beam, Prop_Data, "m_fWidth", width);
+	SetEntPropFloat(beam, Prop_Data, "m_fEndWidth", endWidth);
+
+	SetEntPropFloat(beam, Prop_Data, "m_fAmplitude", amplitude);
+
+	SetEntPropFloat(beam, Prop_Data, "m_fSpeed", speed);
+	SetEntPropFloat(beam, Prop_Data, "m_fFadeLength", fadelength);
+
+	//SetVariantFloat(32.0);
+	//AcceptEntityInput(beam, "Amplitude");
+	AcceptEntityInput(beam, "TurnOn");
+
+	SetVariantInt(0);
+	AcceptEntityInput(beam, "TouchType");
+
+	SetVariantString("0");
+	AcceptEntityInput(beam, "damage");
+
+	if (duration > 0.0)
+	{
+		CreateTimer(duration, Timer_RemoveEntity, EntIndexToEntRef(beam), TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(duration, Timer_RemoveEntity, EntIndexToEntRef(root), TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(duration, Timer_RemoveEntity, EntIndexToEntRef(end), TIMER_FLAG_NO_MAPCHANGE);
+	}
+
+	startOutput = root;
+	endOutput = end;
+	return beam;
+}
