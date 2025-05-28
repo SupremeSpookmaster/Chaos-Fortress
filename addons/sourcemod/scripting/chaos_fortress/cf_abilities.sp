@@ -3746,25 +3746,13 @@ public any Native_CF_DoBulletTrace(Handle plugin, int numParams)
 		returnVal = SortListByDistance(startPos, BulletTrace_Hits);
 		delete BulletTrace_Hits;
 
-		/*for (int i = 0; i < GetArraySize(returnVal); i++)
-		{
-			int vic = GetArrayCell(returnVal, i);
-			TR_TraceRayFilter(dbtHits[vic].startPos, dbtHits[vic].endPos, MASK_SHOT, RayType_EndPoint, CF_OnlyHitTarget, vic);
-			if (TR_GetFraction() >= 1.0)
-			{
-				CPrintToChatAll("Removed for frac");
-				RemoveFromArray(returnVal, i);
-				SpawnParticle_ControlPoints(dbtHits[vic].startPos, dbtHits[vic].endPos, "sniper_dxhr_rail_red", 0.5);
-			}
-		}*/
-
 		if (GetArraySize(returnVal) >= maxPen + 1)
 		{
 			while (GetArraySize(returnVal) > maxPen + 1)
 				RemoveFromArray(returnVal, GetArraySize(returnVal) - 1);
 
 			int vic = GetArrayCell(returnVal, GetArraySize(returnVal) - 1);
-			CF_TraceShot(client, vic, dbtHits[vic].startPos, dbtHits[vic].endPos, _, false, hitPos, width);
+			CF_TraceShot(client, vic, dbtHits[vic].startPos, dbtHits[vic].endPos, _, false, hitPos);
 		}
 	}
 
@@ -3778,8 +3766,6 @@ public any Native_CF_DoBulletTrace(Handle plugin, int numParams)
 ArrayList dbt_CurrentScan = null;
 public void DBT_DoTrace(float startPos[3], float endPos[3], bool CanHeadshot)
 {
-	SpawnParticle_ControlPoints(startPos, endPos, "sniper_dxhr_rail_red", 0.5);
-
 	dbt_CurrentScan = CreateArray(255);
 	TR_TraceRayFilter(startPos, endPos, MASK_SHOT, RayType_EndPoint, CF_BulletFilter);
 	if (GetArraySize(dbt_CurrentScan) > 0)

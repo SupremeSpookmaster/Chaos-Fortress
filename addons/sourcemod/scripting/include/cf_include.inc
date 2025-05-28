@@ -1907,11 +1907,10 @@ native ArrayList CF_DoBulletTrace(int client, float startPos[3], float endPos[3]
  * @param headshot	This gets set to true if this trace goes through the target's head.
  * @param doLagComp	If set to false: lag compensation is skipped.
  * @param hitPos	Optional output vector to store the position at which the trace and the target intersect, if they hit.
- * @param width		Hitbox width of the trace. If <= 0.0: use a ray, otherwise use a hull with the specified width.
  * 
  * @return	True if the trace headshots the target, false otherwise.
  */
-native void CF_TraceShot(int user, int target, float startPos[3], float endPos[3], bool &headshot = false, bool doLagComp = true, float hitPos[3] = NULL_VECTOR, float width = 0.0);
+native void CF_TraceShot(int user, int target, float startPos[3], float endPos[3], bool &headshot = false, bool doLagComp = true, float hitPos[3] = NULL_VECTOR);
 
 /**
  * Automatically sets up and calls CF_DoBulletTrace and CF_TraceShot, then deals damage to every enemy it hits.
