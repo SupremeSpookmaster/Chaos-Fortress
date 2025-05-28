@@ -83,10 +83,11 @@ public void PrimaryFire_Activate(int client, char abilityName[255])
 	float falloffMax = CF_GetArgF(client, KRANZ, abilityName, "falloff_max");
 	int pierce = CF_GetArgI(client, KRANZ, abilityName, "pierce");
 	float spread = CF_GetArgF(client, KRANZ, abilityName, "spread");
+	float width = CF_GetArgF(client, KRANZ, abilityName, "width", 5.0);
 
 	float ang[3];
 	GetClientEyeAngles(client, ang);
-	CF_FireGenericBullet(client, ang, damage, hsMult, spread, KRANZ, PrimaryFire_Hit, falloffStart, falloffEnd, falloffMax, pierce, grabEnemyTeam(client));
+	CF_FireGenericBullet(client, ang, damage, hsMult, spread, KRANZ, PrimaryFire_Hit, falloffStart, falloffEnd, falloffMax, pierce, grabEnemyTeam(client), _, _, _, width);
 }
 
 public void PrimaryFire_Hit(int attacker, int victim, float &baseDamage, bool &allowFalloff, bool &isHeadshot, int &hsEffect, bool &crit, float hitPos[3])
@@ -117,6 +118,7 @@ public void Solver_Activate(int client, char abilityName[255])
 	float spread = CF_GetArgF(client, KRANZ, abilityName, "spread");
 	Solver_KB = CF_GetArgF(client, KRANZ, abilityName, "target_kb");
 	float selfKB = CF_GetArgF(client, KRANZ, abilityName, "self_kb");
+	float width = CF_GetArgF(client, KRANZ, abilityName, "width", 5.0);
 
 	DoMuzzleParticle(client, PARTICLE_SOLVER_MUZZLE);
 
@@ -124,7 +126,7 @@ public void Solver_Activate(int client, char abilityName[255])
 	GetClientEyeAngles(client, ang);
 
 	for (int i = 0; i < numBullets; i++)
-		CF_FireGenericBullet(client, ang, damage, hsMult, spread, KRANZ, Solver_Hit, falloffStart, falloffEnd, falloffMax, pierce, grabEnemyTeam(client));
+		CF_FireGenericBullet(client, ang, damage, hsMult, spread, KRANZ, Solver_Hit, falloffStart, falloffEnd, falloffMax, pierce, grabEnemyTeam(client), _, _, _, width);
 
 	Solver_KBAng = ang;
 	if (Solver_KBAng[0] > -15.0)
@@ -183,6 +185,7 @@ public void Obliterator_Activate(int client, char abilityName[255])
 	float falloffMax = CF_GetArgF(client, KRANZ, abilityName, "falloff_max");
 	int pierce = CF_GetArgI(client, KRANZ, abilityName, "pierce");
 	float spread = CF_GetArgF(client, KRANZ, abilityName, "spread");
+	float width = CF_GetArgF(client, KRANZ, abilityName, "width", 5.0);
 	Obliterator_Radius = CF_GetArgF(client, KRANZ, abilityName, "blast_radius");
 	Obliterator_FalloffStart = CF_GetArgF(client, KRANZ, abilityName, "blast_falloff_start");
 	Obliterator_FalloffMax = CF_GetArgF(client, KRANZ, abilityName, "blast_falloff_max");
@@ -194,7 +197,7 @@ public void Obliterator_Activate(int client, char abilityName[255])
 
 	float ang[3];
 	GetClientEyeAngles(client, ang);
-	CF_FireGenericBullet(client, ang, damage, hsMult, spread, KRANZ, Obliterator_Hit, falloffStart, falloffEnd, falloffMax, pierce, grabEnemyTeam(client), _, _, (Obliterator_Team == TFTeam_Red ? PARTICLE_OBLITERATOR_TRACER_RED : PARTICLE_OBLITERATOR_TRACER_BLUE), true);
+	CF_FireGenericBullet(client, ang, damage, hsMult, spread, KRANZ, Obliterator_Hit, falloffStart, falloffEnd, falloffMax, pierce, grabEnemyTeam(client), _, _, (Obliterator_Team == TFTeam_Red ? PARTICLE_OBLITERATOR_TRACER_RED : PARTICLE_OBLITERATOR_TRACER_BLUE), width);
 	CF_PlayRandomSound(client, client, "sound_obliterator_fired");
 }
 

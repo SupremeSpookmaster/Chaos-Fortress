@@ -3982,3 +3982,4 @@ stock void FloatToDouble(float flValue, int dblVal[2]) {
 	dblVal[0] = (mantissa << 29);
 	dblVal[1] = (sign << 31) | (expdbl_2 << 20) | (mantissa >> 3);
 }
+

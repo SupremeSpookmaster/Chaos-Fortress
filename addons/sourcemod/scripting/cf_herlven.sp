@@ -607,6 +607,7 @@ static void SuperShotgun_Activate(int client, char abilityName[255])
 	int PierceAmt = 	CF_GetArgI(client, THIS_PLUGIN_NAME, abilityName, "Pellets Pierce Amt");
 
 	float BulletSpread = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Shotgun Spread");
+	float width = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Hitbox Width");
 
 	float ang[3];
 	GetClientEyeAngles(client, ang);
@@ -614,7 +615,7 @@ static void SuperShotgun_Activate(int client, char abilityName[255])
 	TFTeam Team = TF2_GetClientTeam(client);
 
 	for (int i = 0; i < BulletsFired; i++)
-		CF_FireGenericBullet(client, ang, 0.0, 1.0, BulletSpread, THIS_PLUGIN_NAME, SuperShotGunOnHit, 69420.0, 0.0, 0.0, PierceAmt, grabEnemyTeam(client), _, _, (Team == TFTeam_Red ? PARTICLE_SHOTGUN_TRACER_RED : PARTICLE_SHOTGUN_TRACER_BLUE), true);
+		CF_FireGenericBullet(client, ang, 0.0, 1.0, BulletSpread, THIS_PLUGIN_NAME, SuperShotGunOnHit, 69420.0, 0.0, 0.0, PierceAmt, grabEnemyTeam(client), _, _, (Team == TFTeam_Red ? PARTICLE_SHOTGUN_TRACER_RED : PARTICLE_SHOTGUN_TRACER_BLUE), width);
 
 	float Add_Metal = ShotgunData.metal_tally;
 
