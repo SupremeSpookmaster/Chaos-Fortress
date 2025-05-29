@@ -4008,7 +4008,7 @@ stock void FloatToDouble(float flValue, int dblVal[2]) {
  * 
  * @return	The entity index of the env_beam, or -1 on failure. If either of the info_targets fail to be created, the env_beam itself will still be returned, but it will not be connected to anything.
  */
-stock int CreateEnvBeam(int startEnt, int endEnt, float startPos[3], float endPos[3], char[] startPoint = "", char[] endPoint = "", int &startOutput = -1, int &endOutput = -1, int r = 255, int g = 255, int b = 255, int a = 255, char[] model = "sprites/laserbeam.vmt", float width = 2.0, float endWidth = 2.0, float fadelength = 1.0, float amplitude = 0.0, float speed = 0.0, float duration = 0.0)
+stock int CreateEnvBeam(int startEnt, int endEnt, float startPos[3] = NULL_VECTOR, float endPos[3] = NULL_VECTOR, char[] startPoint = "", char[] endPoint = "", int &startOutput = -1, int &endOutput = -1, int r = 255, int g = 255, int b = 255, int a = 255, char[] model = "sprites/laserbeam.vmt", float width = 2.0, float endWidth = 2.0, float fadelength = 1.0, float amplitude = 0.0, float speed = 0.0, float duration = 0.0)
 {
 	int beam = CreateEntityByName("env_beam");
 	if (!IsValidEntity(beam))
@@ -4027,6 +4027,8 @@ stock int CreateEnvBeam(int startEnt, int endEnt, float startPos[3], float endPo
 	DispatchKeyValue(beam, "life", "0");
 
 	DispatchSpawn(beam);
+
+	SetEntityRenderMode(beam, RENDER_TRANSALPHA);
 
 	int root = CreateEntityByName("info_target");
 	int end = CreateEntityByName("info_target");

@@ -1203,7 +1203,7 @@ bool CF_CanPlayerUseAbilitySlot(int client, CF_AbilityType type, bool &BlockedBy
 	if (ab.b_Blocked)
 		return false;
 
-	if (ab.b_RequireGrounded && (GetEntityFlags(client) & FL_ONGROUND == 0 || GetEntityFlags(client) & FL_INWATER != 0))
+	if (ab.b_RequireGrounded && (GetEntityFlags(client) & FL_ONGROUND == 0 || GetEntProp(client, Prop_Send, "m_nWaterLevel") >= 1))
 		return false;
 
 	if (ab.i_Stocks < 1 && UsingStocks)
@@ -4359,7 +4359,7 @@ public any Native_CF_ForceTaunt(Handle plugin, int numParams)
 	float rate = GetNativeCell(3);
 	bool interrupt = GetNativeCell(4);
 
-	if (!IsValidMulti(client) || GetEntityFlags(client) & FL_INWATER != 0 || GetEntityFlags(client) & FL_ONGROUND == 0 || (!interrupt && (TF2_IsPlayerStunned(client) || TF2_IsPlayerInCondition(client, TFCond_Taunting))))
+	if (!IsValidMulti(client) || GetEntProp(client, Prop_Send, "m_nWaterLevel") >= 1 || GetEntityFlags(client) & FL_ONGROUND == 0 || (!interrupt && (TF2_IsPlayerStunned(client) || TF2_IsPlayerInCondition(client, TFCond_Taunting))))
 		return false;
 
 	static Handle item;
@@ -4419,7 +4419,7 @@ public any Native_CF_ForceWeaponTaunt(Handle plugin, int numParams)
 	bool interrupt = GetNativeCell(6);
 	bool visible = GetNativeCell(7);
 
-	if (!IsValidMulti(client) || GetEntityFlags(client) & FL_INWATER != 0 || GetEntityFlags(client) & FL_ONGROUND == 0 || (!interrupt && (TF2_IsPlayerStunned(client) || TF2_IsPlayerInCondition(client, TFCond_Taunting))))
+	if (!IsValidMulti(client) || GetEntProp(client, Prop_Send, "m_nWaterLevel") >= 1 || GetEntityFlags(client) & FL_ONGROUND == 0 || (!interrupt && (TF2_IsPlayerStunned(client) || TF2_IsPlayerInCondition(client, TFCond_Taunting))))
 		return false;
 
 	char atts[255];
