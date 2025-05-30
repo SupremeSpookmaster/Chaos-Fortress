@@ -1179,6 +1179,7 @@ char s_PreviousCharacter[MAXPLAYERS+1][255];
 char s_DefaultCharacter[255];
 
 Handle c_DesiredCharacter;
+Handle c_DontNeedHelp;
 
 //Queue CF_CharacterParticles[MAXPLAYERS + 1];
 
@@ -1250,7 +1251,8 @@ public void CFC_MakeForwards()
 	RegConsoleCmd("c", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
 	
 	c_DesiredCharacter = RegClientCookie("DesiredCharacter", "The character this player has chosen to spawn as. If blank: reverts to the default character.", CookieAccess_Private);
-	
+	c_DontNeedHelp = RegClientCookie("HelpViewed", "Used for showing new players the !cf_help prompt.", CookieAccess_Private);
+
 	#if defined USE_PREVIEWS
 	PrecacheModel(MODEL_PREVIEW_DOORS);
 	PrecacheModel(MODEL_PREVIEW_STAGE);
@@ -2235,6 +2237,11 @@ public void CF_DestroyAllBuildings(int client)
 	DestroyAllBuildings(client, "obj_teleporter", false);
 }
 
+public void CFC_NoLongerNeedsHelp(int client)
+{
+	SetClientCookie(client, c_DontNeedHelp, "1");
+}
+
 /**
  * Turns a player into their selected Chaos Fortress character, or the default specified in game_rules if they haven't chosen.
  *
@@ -2254,8 +2261,12 @@ public void CF_DestroyAllBuildings(int client)
 	EndHeldAbility(client, CF_AbilityType_Reload, true, true);
 	CFA_DisableHeldBlock(client);
 	
-	char conf[255];
+	char conf[255], doesntNeedHelp[16];
 	GetClientCookie(client, c_DesiredCharacter, conf, sizeof(conf));
+	GetClientCookie(client, c_DontNeedHelp, doesntNeedHelp, 16);
+
+	if (StringToInt(doesntNeedHelp) != 1)
+		CPrintToChat(client, "{indigo}[Chaos Fortress]{default} Welcome to {unusual}Chaos Fortress{default}! To learn more, type {yellow}/cf_help{default}. This message will repeat every time you respawn until you have viewed the help menu.");
 	
 	if (CF_CharacterExists(ForcedCharacter))
 		conf = ForcedCharacter;

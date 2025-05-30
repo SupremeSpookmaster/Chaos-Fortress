@@ -272,6 +272,10 @@ public void CF_MapStart()
 	CF_ReloadSubplugins();
 }
 
+char HelpMenu_Title[255];
+ArrayList HelpMenu_Buttons;
+ArrayList HelpMenu_Messages[255] = { null, ... };
+
 /**
  * Sets the game rules for Chaos Fortress by reading game_rules.cfg.
  *
@@ -397,6 +401,65 @@ public void CF_SetGameRules(int admin)
 	}
 	else
 		PrintToServer("Failed to find chat messages!");
+
+	subsection = GameRules.GetSection("game_rules.help_menu");
+	if (subsection != null)
+	{
+		RegConsoleCmd("cfhelp", CFC_OpenHelpMenu, "Opens the Chaos Fortress help menu.");
+		RegConsoleCmd("cf_help", CFC_OpenHelpMenu, "Opens the Chaos Fortress help menu.");
+
+		if (HelpMenu_Buttons != null)
+		{
+			delete HelpMenu_Buttons;
+			HelpMenu_Buttons = null;
+		}
+
+		HelpMenu_Buttons = CreateArray(255);
+
+		for (int i = 0; i < 255; i++)
+		{
+			if (HelpMenu_Messages[i] != null)
+			{
+				delete HelpMenu_Messages[i];
+				HelpMenu_Messages[i] = null;
+			}
+		}
+
+		subsection.Get("title", HelpMenu_Title, 255);
+
+		StringMapSnapshot snap = subsection.Snapshot();
+		int button = 0;
+		for (int j = snap.Length - 1; j >= 0; j--)
+		{
+			char key[255], originalKey[255];
+			snap.GetKey(j, key, 255);
+			originalKey = key;
+
+			ReplaceString(key, sizeof(key), ".", "\\.");
+			if (subsection.GetKeyValType(key) != KeyValType_Section)
+				continue;
+
+			PushArrayString(HelpMenu_Buttons, originalKey);
+			ConfigMap helpSection = subsection.GetSection(key);
+
+			char entry[8], message[255];
+			entry = "1";
+			int i = 1;
+			while (helpSection.Get(entry, message, 255) > 0)
+			{
+				if (HelpMenu_Messages[button] == null)
+					HelpMenu_Messages[button] = CreateArray(255);
+
+				PushArrayString(HelpMenu_Messages[button], message);
+
+				i++;
+				Format(entry, sizeof(entry), "%i", i);
+			}
+
+			button++;
+		}
+		delete snap;
+	}
 	
 	DeleteCfg(GameRules);
 	
@@ -893,4 +956,48 @@ public MRESReturn OnApplyPushFromDamagePost(int iClient, DHookParam hParams)
 	}
 
     return MRES_Ignored;
+}
+
+public Action CFC_OpenHelpMenu(int client, int args)
+{
+	if (!IsValidClient(client))
+		return Plugin_Continue;
+		
+	Menu menu = new Menu(CFC_HelpMenu);
+	menu.SetTitle(HelpMenu_Title);
+	
+	for (int i = 0; i < GetArraySize(HelpMenu_Buttons); i++)
+	{
+		char name[255];
+		GetArrayString(HelpMenu_Buttons, i, name, 255);
+		menu.AddItem("Help Page", name);
+	}
+
+	menu.Display(client, MENU_TIME_FOREVER);
+
+	CFC_NoLongerNeedsHelp(client);
+
+	return Plugin_Continue;
+}
+
+public CFC_HelpMenu(Menu menu, MenuAction action, int client, int param)
+{	
+	if (!IsValidClient(client))
+		return;
+	
+	if (action == MenuAction_Select)
+	{
+		CPrintToChat(client, "{orange}////////////////////////////////////////////////////////");
+		for (int i = 0; i < GetArraySize(HelpMenu_Messages[param]); i++)
+		{
+			char message[255];
+			GetArrayString(HelpMenu_Messages[param], i, message, 255);
+			CPrintToChat(client, message);
+			if (i < GetArraySize(HelpMenu_Messages[param]) - 1)
+				CPrintToChat(client, " ");
+		}
+		CPrintToChat(client, "{orange}////////////////////////////////////////////////////////");
+
+		CFC_OpenHelpMenu(client, 0);
+	}
 }
