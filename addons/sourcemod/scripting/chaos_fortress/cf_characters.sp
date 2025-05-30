@@ -2406,6 +2406,7 @@ public void CFC_NoLongerNeedsHelp(int client)
 	EndHeldAbility(client, CF_AbilityType_M3, true, true);
 	EndHeldAbility(client, CF_AbilityType_Reload, true, true);
 	CFA_DisableHeldBlock(client);
+	CF_RemoveAllSpeedModifiers(client);
 	
 	char conf[255], doesntNeedHelp[16];
 	GetClientCookie(client, c_DesiredCharacter, conf, sizeof(conf));
@@ -2999,7 +3000,7 @@ public void CFC_NoLongerNeedsHelp(int client)
 	{
 		CF_SpeedModifier mod = g_SpeedModifiers[i];
 		if (!mod.b_Exists)
-			break;
+			continue;
 
 		if (mod.i_Client == client)
 		{
@@ -3167,8 +3168,23 @@ public void CFC_NoLongerNeedsHelp(int client)
 
  	CFC_DeleteParticles(client, true);
  	CFA_RemoveAnimator(client);
+
+	CF_RemoveAllSpeedModifiers(client);
  }
  
+public void CF_RemoveAllSpeedModifiers(int client)
+{
+	for (int i = 0; i < 2048; i++)
+	{
+		CF_SpeedModifier mod = g_SpeedModifiers[i];
+		if (!mod.b_Exists)
+			continue;
+
+		if (mod.i_Client == client)
+			mod.Destroy();
+	}
+}
+
  public Native_CF_GetPlayerConfig(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
