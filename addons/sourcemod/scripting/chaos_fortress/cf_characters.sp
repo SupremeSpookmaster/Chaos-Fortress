@@ -4,6 +4,82 @@
 
 #define SOUND_CHARACTER_PREVIEW	"ui/quest_status_tick_advanced_pda.wav"
 
+#define SOUND_SPEED_APPLY		"weapons/discipline_device_power_up.wav"
+#define SOUND_SPEED_REMOVE		"weapons/discipline_device_power_down.wav"
+
+//Store configs and names in two separate arrays so we aren't reading every single character's config every single time someone opens the !characters menu:
+ArrayList CF_Characters_Configs;
+ArrayList CF_Characters_Names;
+ArrayList CF_CharacterParticles[MAXPLAYERS + 1] = { null, ... };
+
+ConfigMap Characters;
+
+#if defined USE_PREVIEWS
+int i_CFPreviewModel[MAXPLAYERS + 1] = { -1, ... };
+int i_PreviewOwner[2049] = { -1, ... };
+int i_CFPreviewProp[MAXPLAYERS + 1] = { -1, ... };
+int i_CFPreviewWeapon[MAXPLAYERS + 1] = { -1, ... };
+float f_CFPreviewRotation[MAXPLAYERS + 1] = { 0.0, ... };
+bool b_SpawnPreviewParticleNextFrame[MAXPLAYERS + 1] = { false, ... };
+#endif
+
+int i_CharacterParticleOwner[2049] = { -1, ... };
+int i_DialogueReduction[MAXPLAYERS + 1] = { 0, ... };
+int i_DetailedDescPage[MAXPLAYERS + 1] = { -1, ... };
+
+bool b_DisplayRole = true;
+bool b_CharacterApplied[MAXPLAYERS + 1] = { false, ... }; //Whether or not the client's character has been applied to them already. If true: skip MakeCharacter for that client. Set to false automatically on death, round end, disconnect, and if the player changes their character selection.
+bool b_ReadingLore[MAXPLAYERS + 1] = { false, ... };
+bool b_IsDead[MAXPLAYERS + 1] = { false, ... };
+bool b_CharacterParticlePreserved[2049] = { false, ... };
+bool b_WearableIsPreserved[2049] = { false, ... };
+bool b_FirstSpawn[MAXPLAYERS + 1] = { true, ... };
+
+char s_CharacterConfig[MAXPLAYERS+1][255];	//The config currently used for this player's character. If empty: that player is not a character.
+char s_CharacterConfigInMenu[MAXPLAYERS+1][255];	//The config currently used this player's info menu.
+char s_PreviousCharacter[MAXPLAYERS+1][255];
+//char s_DesiredCharacterConfig[MAXPLAYERS+1][255];	//The config of the character this player will become next time they spawn.
+char s_DefaultCharacter[255];
+
+Handle c_DesiredCharacter;
+Handle c_DontNeedHelp;
+
+//Queue CF_CharacterParticles[MAXPLAYERS + 1];
+
+GlobalForward g_OnCharacterCreated;
+GlobalForward g_OnCharacterRemoved;
+
+public void CFC_MakeForwards()
+{
+	CF_Characters_Configs = CreateArray(255);
+	CF_Characters_Names = CreateArray(255);
+	
+	RegConsoleCmd("characters", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
+	RegConsoleCmd("character", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
+	RegConsoleCmd("setcharacter", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
+	RegConsoleCmd("changecharacter", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
+	RegConsoleCmd("ch", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
+	RegConsoleCmd("cha", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
+	RegConsoleCmd("char", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
+	RegConsoleCmd("c", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
+	
+	c_DesiredCharacter = RegClientCookie("DesiredCharacter", "The character this player has chosen to spawn as. If blank: reverts to the default character.", CookieAccess_Private);
+	c_DontNeedHelp = RegClientCookie("HelpViewed", "Used for showing new players the !cf_help prompt.", CookieAccess_Private);
+
+	#if defined USE_PREVIEWS
+	PrecacheModel(MODEL_PREVIEW_DOORS);
+	PrecacheModel(MODEL_PREVIEW_STAGE);
+	PrecacheModel(MODEL_PREVIEW_UNKNOWN);
+	PrecacheSound(SOUND_CHARACTER_PREVIEW);
+	#endif
+	
+	g_OnCharacterCreated = new GlobalForward("CF_OnCharacterCreated", ET_Ignore, Param_Cell);
+	g_OnCharacterRemoved = new GlobalForward("CF_OnCharacterRemoved", ET_Ignore, Param_Cell, Param_Cell);
+
+	PrecacheSound(SOUND_SPEED_APPLY);
+	PrecacheSound(SOUND_SPEED_REMOVE);
+}
+
 public const char s_PreviewParticles[][] =
 {
 	"drg_wrenchmotron_teleport",
@@ -423,6 +499,131 @@ public void DestroyAbility(int client, CF_AbilityType type)
 	if (ab != null)
 		ab.Destroy();
 }
+
+CF_SpeedModifier g_SpeedModifiers[2048];
+
+bool b_SpeedModifierExists[2048] = { false, ... };
+bool b_SpeedModifierSounds[2048] = { false, ... };
+
+float f_SpeedModifierAmt[2048] = { 0.0, ... };
+float f_SpeedModifierMax[2048] = { 0.0, ... };
+float f_SpeedModifierMin[2048] = { 0.0, ... };
+
+int i_SpeedModifierClient[2048] = { -1, ... };
+
+public any Native_CF_SpeedModifier_Constructor(Handle plugin, int numParams)
+{
+	int slot = 0;
+	while (b_SpeedModifierExists[slot] && slot < 2048)
+		slot++;
+	
+	if (slot >= 2048)
+		return view_as<CF_SpeedModifier>(-1);
+
+	b_SpeedModifierExists[slot] = true;
+
+	CF_SpeedModifier mod = view_as<CF_SpeedModifier>(slot);
+	int client = GetNativeCell(1);
+	mod.i_Client = client;
+	mod.f_Modifier = GetNativeCell(2);
+	mod.f_Max = GetNativeCell(3);
+	mod.f_Min = GetNativeCell(4);
+	mod.b_Sounds = GetNativeCell(5);
+
+	if (IsValidMulti(client))
+		CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
+
+	return mod;
+}
+
+public void Native_CF_SpeedModifier_Destructor(Handle plugin, int numParams)
+{
+	CF_SpeedModifier mod = view_as<CF_SpeedModifier>(GetNativeCell(1));
+	b_SpeedModifierExists[mod.Index] = false;
+	int client = mod.i_Client;
+	mod.i_Client = -1;
+
+	if (IsValidMulti(client))
+		CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
+}
+
+public int Native_CF_SpeedModifier_GetIndex(Handle plugin, int numParams)
+{
+	return GetNativeCell(1);
+}
+
+public int Native_CF_SpeedModifier_GetExists(Handle plugin, int numParams)
+{
+	return b_SpeedModifierExists[GetNativeCell(1)];
+}
+
+public int Native_CF_SpeedModifier_GetClient(Handle plugin, int numParams)
+{
+	int slot = GetNativeCell(1);
+	return GetClientOfUserId(i_SpeedModifierClient[slot]);
+}
+
+public void Native_CF_SpeedModifier_SetClient(Handle plugin, int numParams)
+{
+	int slot = GetNativeCell(1);
+	int client = GetNativeCell(2);
+
+	CF_SpeedModifier mod = view_as<CF_SpeedModifier>(slot);
+	int current = mod.i_Client;
+	if (mod.b_Sounds)
+	{
+		if (IsValidClient(current))
+		{
+			EmitSoundToClient(current, SOUND_SPEED_REMOVE);
+		}
+
+		if (IsValidClient(client))
+		{
+			EmitSoundToClient(client, SOUND_SPEED_APPLY);
+		}
+	}
+
+	if (IsValidMulti(client))
+	{
+		i_SpeedModifierClient[slot] = GetClientUserId(client);
+		CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
+	}
+	else
+		i_SpeedModifierClient[slot] = -1;
+
+	if (IsValidMulti(current))
+		CF_UpdateCharacterSpeed(current, TF2_GetPlayerClass(client));
+}
+
+public any Native_CF_SpeedModifier_GetModifier(Handle plugin, int numParams) { return f_SpeedModifierAmt[GetNativeCell(1)]; }
+public void Native_CF_SpeedModifier_SetModifier(Handle plugin, int numParams)
+{ 
+	f_SpeedModifierAmt[GetNativeCell(1)] = GetNativeCell(2);
+	int client = view_as<CF_SpeedModifier>(GetNativeCell(1)).i_Client;
+	if (IsValidMulti(client))
+		CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
+}
+
+public any Native_CF_SpeedModifier_GetMax(Handle plugin, int numParams) { return f_SpeedModifierMax[GetNativeCell(1)]; }
+public void Native_CF_SpeedModifier_SetMax(Handle plugin, int numParams)
+{ 
+	f_SpeedModifierMax[GetNativeCell(1)] = GetNativeCell(2); 
+	int client = view_as<CF_SpeedModifier>(GetNativeCell(1)).i_Client;
+	if (IsValidMulti(client))
+		CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
+}
+
+public any Native_CF_SpeedModifier_GetMin(Handle plugin, int numParams) { return f_SpeedModifierMin[GetNativeCell(1)]; }
+public void Native_CF_SpeedModifier_SetMin(Handle plugin, int numParams) 
+{ 
+	f_SpeedModifierMin[GetNativeCell(1)] = GetNativeCell(2);
+	int client = view_as<CF_SpeedModifier>(GetNativeCell(1)).i_Client;
+	if (IsValidMulti(client))
+		CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
+}
+
+public any Native_CF_SpeedModifier_GetSounds(Handle plugin, int numParams) { return b_SpeedModifierSounds[GetNativeCell(1)]; }
+public void Native_CF_SpeedModifier_SetSounds(Handle plugin, int numParams) { b_SpeedModifierSounds[GetNativeCell(1)] = GetNativeCell(2); }
 
 int i_CharacterClient[MAXPLAYERS + 1];
 int i_CharacterNumSoundCues[MAXPLAYERS + 1];
@@ -1144,45 +1345,6 @@ public void CFC_StoreAbilities(int client, ConfigMap abilities)
 	}
 }
 
-//Store configs and names in two separate arrays so we aren't reading every single character's config every single time someone opens the !characters menu:
-ArrayList CF_Characters_Configs;
-ArrayList CF_Characters_Names;
-ArrayList CF_CharacterParticles[MAXPLAYERS + 1] = { null, ... };
-
-ConfigMap Characters;
-
-#if defined USE_PREVIEWS
-int i_CFPreviewModel[MAXPLAYERS + 1] = { -1, ... };
-int i_PreviewOwner[2049] = { -1, ... };
-int i_CFPreviewProp[MAXPLAYERS + 1] = { -1, ... };
-int i_CFPreviewWeapon[MAXPLAYERS + 1] = { -1, ... };
-float f_CFPreviewRotation[MAXPLAYERS + 1] = { 0.0, ... };
-bool b_SpawnPreviewParticleNextFrame[MAXPLAYERS + 1] = { false, ... };
-#endif
-
-int i_CharacterParticleOwner[2049] = { -1, ... };
-int i_DialogueReduction[MAXPLAYERS + 1] = { 0, ... };
-int i_DetailedDescPage[MAXPLAYERS + 1] = { -1, ... };
-
-bool b_DisplayRole = true;
-bool b_CharacterApplied[MAXPLAYERS + 1] = { false, ... }; //Whether or not the client's character has been applied to them already. If true: skip MakeCharacter for that client. Set to false automatically on death, round end, disconnect, and if the player changes their character selection.
-bool b_ReadingLore[MAXPLAYERS + 1] = { false, ... };
-bool b_IsDead[MAXPLAYERS + 1] = { false, ... };
-bool b_CharacterParticlePreserved[2049] = { false, ... };
-bool b_WearableIsPreserved[2049] = { false, ... };
-bool b_FirstSpawn[MAXPLAYERS + 1] = { true, ... };
-
-char s_CharacterConfig[MAXPLAYERS+1][255];	//The config currently used for this player's character. If empty: that player is not a character.
-char s_CharacterConfigInMenu[MAXPLAYERS+1][255];	//The config currently used this player's info menu.
-char s_PreviousCharacter[MAXPLAYERS+1][255];
-//char s_DesiredCharacterConfig[MAXPLAYERS+1][255];	//The config of the character this player will become next time they spawn.
-char s_DefaultCharacter[255];
-
-Handle c_DesiredCharacter;
-Handle c_DontNeedHelp;
-
-//Queue CF_CharacterParticles[MAXPLAYERS + 1];
-
 public void CFC_Disconnect(int client)
 {
 	b_FirstSpawn[client] = true;
@@ -1231,37 +1393,21 @@ public void CFC_MakeNatives()
 	CreateNative("CF_GetCharacterBaseSpeed", Native_CF_GetCharacterBaseSpeed);
 	
 	CreateNative("CF_MakeClientCharacter", Native_CF_MakeClientCharacter);
-}
 
-GlobalForward g_OnCharacterCreated;
-GlobalForward g_OnCharacterRemoved;
-
-public void CFC_MakeForwards()
-{
-	CF_Characters_Configs = CreateArray(255);
-	CF_Characters_Names = CreateArray(255);
-	
-	RegConsoleCmd("characters", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
-	RegConsoleCmd("character", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
-	RegConsoleCmd("setcharacter", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
-	RegConsoleCmd("changecharacter", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
-	RegConsoleCmd("ch", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
-	RegConsoleCmd("cha", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
-	RegConsoleCmd("char", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
-	RegConsoleCmd("c", CFC_OpenMenu, "Opens the Chaos Fortress character selection menu.");
-	
-	c_DesiredCharacter = RegClientCookie("DesiredCharacter", "The character this player has chosen to spawn as. If blank: reverts to the default character.", CookieAccess_Private);
-	c_DontNeedHelp = RegClientCookie("HelpViewed", "Used for showing new players the !cf_help prompt.", CookieAccess_Private);
-
-	#if defined USE_PREVIEWS
-	PrecacheModel(MODEL_PREVIEW_DOORS);
-	PrecacheModel(MODEL_PREVIEW_STAGE);
-	PrecacheModel(MODEL_PREVIEW_UNKNOWN);
-	PrecacheSound(SOUND_CHARACTER_PREVIEW);
-	#endif
-	
-	g_OnCharacterCreated = new GlobalForward("CF_OnCharacterCreated", ET_Ignore, Param_Cell);
-	g_OnCharacterRemoved = new GlobalForward("CF_OnCharacterRemoved", ET_Ignore, Param_Cell, Param_Cell);
+	CreateNative("CF_SpeedModifier.CF_SpeedModifier", Native_CF_SpeedModifier_Constructor);
+	CreateNative("CF_SpeedModifier.Destroy", Native_CF_SpeedModifier_Destructor);
+	CreateNative("CF_SpeedModifier.Index.get", Native_CF_SpeedModifier_GetIndex);
+	CreateNative("CF_SpeedModifier.b_Exists.get", Native_CF_SpeedModifier_GetExists);
+	CreateNative("CF_SpeedModifier.i_Client.get", Native_CF_SpeedModifier_GetClient);
+	CreateNative("CF_SpeedModifier.i_Client.set", Native_CF_SpeedModifier_SetClient);
+	CreateNative("CF_SpeedModifier.f_Modifier.get", Native_CF_SpeedModifier_GetModifier);
+	CreateNative("CF_SpeedModifier.f_Modifier.set", Native_CF_SpeedModifier_SetModifier);
+	CreateNative("CF_SpeedModifier.f_Max.get", Native_CF_SpeedModifier_GetMax);
+	CreateNative("CF_SpeedModifier.f_Max.set", Native_CF_SpeedModifier_SetMax);
+	CreateNative("CF_SpeedModifier.f_Min.get", Native_CF_SpeedModifier_GetMin);
+	CreateNative("CF_SpeedModifier.f_Min.set", Native_CF_SpeedModifier_SetMin);
+	CreateNative("CF_SpeedModifier.b_Sounds.get", Native_CF_SpeedModifier_GetSounds);
+	CreateNative("CF_SpeedModifier.b_Sounds.set", Native_CF_SpeedModifier_SetSounds);
 }
 
 public void CFC_OnEntityDestroyed(int entity)
@@ -2848,6 +2994,30 @@ public void CFC_NoLongerNeedsHelp(int client)
  		return;
  		
  	float targSpd = GetCharacterFromClient(client).f_Speed;
+
+	for (int i = 0; i < 2048; i++)
+	{
+		CF_SpeedModifier mod = g_SpeedModifiers[i];
+		if (!mod.b_Exists)
+			break;
+
+		if (mod.i_Client == client)
+		{
+			if (mod.f_Modifier > 0.0 && (targSpd < mod.f_Max || mod.f_Max < 0.0))
+			{
+				targSpd += mod.f_Modifier;
+				if (mod.f_Max >= 0.0 && targSpd > mod.f_Max)
+					targSpd = mod.f_Max;
+			}
+			else if (mod.f_Modifier < 0.0 && (targSpd > mod.f_Min || mod.f_Min < 0.0))
+			{
+				targSpd += mod.f_Modifier;
+				if (mod.f_Min >= 0.0 && targSpd < mod.f_Min)
+					targSpd = mod.f_Min;
+			}
+		}
+	}
+
  	float baseSpd = f_ClassBaseSpeed[num];
  	float speed = targSpd / baseSpd;
  	

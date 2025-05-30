@@ -130,6 +130,67 @@ enum CF_SpellIndex
 	CF_Spell_Skeletons
 };
 
+methodmap CF_SpeedModifier __nullable__
+{
+	/**
+	 * Generates a CF_SpeedModifier based on the given parameters.
+	 * 
+	 * @param client		The client to apply this speed modifier to.
+	 * @param modifier		The amount by which to modify the client's movement speed.
+	 * @param max			Maximum movement speed applied by this modifier. < 0.0: no max.
+	 * @param min			Minimum movement speed applied by this modifier. < 0.0: no min.
+	 * @param sounds		If true: play the Disciplinary Action's speed boost sound effects when this speed modifier is added/removed.
+	 * 
+	 * @return		A CF_SpeedModifier, applied to the client.
+	 */
+	public native CF_SpeedModifier(int client, float modifier, float max = -1.0, float min = -1.0, bool sounds = true);
+
+	/**
+	 * Removes this speed modifier.
+	 */
+	public native void Destroy();
+
+	property int Index
+	{
+		public native get();
+	}
+
+	property bool b_Exists
+	{
+		public native get();
+	}
+
+	property int i_Client
+	{
+		public native get();
+		public native set(int value);
+	}
+
+	property float f_Modifier
+	{
+		public native get();
+		public native set(float value);
+	}
+
+	property float f_Max
+	{
+		public native get();
+		public native set(float value);
+	}
+
+	property float f_Min
+	{
+		public native get();
+		public native set(float value);
+	}
+
+	property bool b_Sounds
+	{
+		public native get();
+		public native set(bool value);
+	}
+}
+
 //TODO: This will need to be expanded upon to include things like medigun shields
 stock bool CF_DefaultTrace(entity, contentsMask)
 {

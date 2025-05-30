@@ -316,9 +316,6 @@ Handle HudSync;
 #define HEAL_DEFAULT		"items/smallmedkit1.wav"
 #define HEAL_DEFAULT_MODEL	"models/items/medkit_medium.mdl"
 
-#define SOUND_SPEED_APPLY		"weapons/discipline_device_power_up.wav"
-#define SOUND_SPEED_REMOVE		"weapons/discipline_device_power_down.wav"
-
 #define PARTICLE_CRIT		"crit_text"
 #define PARTICLE_MINICRIT	"minicrit_text"
 
@@ -351,9 +348,6 @@ public void CFA_MapStart()
 	PrecacheSound(NOPE);
 	PrecacheSound(HEAL_DEFAULT);
 	PrecacheModel(HEAL_DEFAULT_MODEL);
-	
-	PrecacheSound(SOUND_SPEED_APPLY);
-	PrecacheSound(SOUND_SPEED_REMOVE);
 	
 	int entity = FindEntityByClassname(MaxClients + 1, "tf_player_manager");
 	if(IsValidEntity(entity))
