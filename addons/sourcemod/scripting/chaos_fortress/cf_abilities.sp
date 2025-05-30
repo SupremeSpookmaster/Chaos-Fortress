@@ -57,6 +57,8 @@ bool b_IsPhysProp[2049] = { false, ... };
 
 CF_AbilityType i_HeldBlocked[MAXPLAYERS + 1] = { CF_AbilityType_None, ... };
 
+public void CFA_DisableHeldBlock(int client) { i_HeldBlocked[client] = CF_AbilityType_None; }
+
 public void CFA_MakeNatives()
 {
 	CreateNative("CF_GiveUltCharge", Native_CF_GiveUltCharge);

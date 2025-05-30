@@ -2252,6 +2252,7 @@ public void CF_DestroyAllBuildings(int client)
 	EndHeldAbility(client, CF_AbilityType_M2, true, true);
 	EndHeldAbility(client, CF_AbilityType_M3, true, true);
 	EndHeldAbility(client, CF_AbilityType_Reload, true, true);
+	CFA_DisableHeldBlock(client);
 	
 	char conf[255];
 	GetClientCookie(client, c_DesiredCharacter, conf, sizeof(conf));
