@@ -824,8 +824,10 @@ enum eTakeDamageInfo {
 
 bool b_NextKBIgnoresWeight[MAXPLAYERS + 1] = { false, ... };
 float f_KnockbackModifier[MAXPLAYERS + 1] = { 0.0, ... };
+int i_KBWeapon[MAXPLAYERS + 1] = { -1, ... };
 
 void CF_IgnoreNextKB(int client) { b_NextKBIgnoresWeight[client] = true; }
+void CF_SetKBWeapon(int client, int weapon) { i_KBWeapon[client] = weapon; }
 
 //Thank you Suza/Zabaniya!
 //Some mild edits made by me for added customization.
@@ -850,6 +852,11 @@ public MRESReturn OnApplyPushFromDamagePre(int iClient, DHookParam hParams)
 			modifier = 0.0;
 		else
 			modifier = f_GlobalKnockbackValue * weightMod;
+	}
+
+	if (IsValidEntity(i_KBWeapon[iClient]))
+	{
+		modifier *= TF2CustAttr_GetFloat(i_KBWeapon[iClient], "chaos fortress knockback multiplier", 1.0);
 	}
 
 	Call_StartForward(g_OnPushForce);

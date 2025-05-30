@@ -161,6 +161,8 @@ public void CFDMG_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor
 
 	if (victim == attacker)
 		CF_IgnoreNextKB(victim);
+
+	CF_SetKBWeapon(victim, weapon);
 }
 
 int i_LastWeaponDamagedBy[MAXPLAYERS + 1] = { -1, ... };

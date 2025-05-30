@@ -3776,7 +3776,7 @@ public void DBT_DoTrace(float startPos[3], float endPos[3], bool CanHeadshot)
 
 			TR_TraceRayFilter(startPos, endPos, MASK_SHOT, RayType_EndPoint, CF_OnlyHitTarget, cell);
 
-			if (TR_GetFraction() < 1.0 && TR_DidHit() && (TR_GetHitBoxIndex() || (CanHeadshot && TR_GetHitGroup() == HITGROUP_HEAD)))
+			if (TR_GetFraction() < 1.0 && TR_DidHit() && (!IsValidClient(cell) || (TR_GetHitBoxIndex() || (CanHeadshot && TR_GetHitGroup() == HITGROUP_HEAD))))
 			{
 				dbtHits[cell].endPos = endPos;
 				dbtHits[cell].startPos = startPos;
