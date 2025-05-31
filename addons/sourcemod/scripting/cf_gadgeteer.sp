@@ -544,7 +544,7 @@ enum struct SupportDroneStats
 		
 		//Check 1: Have we commanded the Support Drone to target a specific player, and if we have, is that player still valid?
 		int target = GetClientOfUserId(this.targetOverride);
-		if (IsValidMulti(target, true, true, true, TF2_GetClientTeam(owner)))
+		if (IsValidMulti(target, true, true, true, TF2_GetClientTeam(owner)) && !IsPlayerInvis(target))
 			return target;
 		else
 			this.targetOverride = -1;
@@ -552,7 +552,7 @@ enum struct SupportDroneStats
 		//Check 2: We have not commanded the Support Drone to target a specific player, check to see if we have a valid target already chosen.
 		//If we do, make sure we haven't reached the minimum healing duration yet.
 		target = GetClientOfUserId(this.autoTarget);
-		if (IsValidMulti(target, true, true, true, TF2_GetClientTeam(owner)) && GetGameTime() < this.findNewTargetTime)
+		if (IsValidMulti(target, true, true, true, TF2_GetClientTeam(owner)) && GetGameTime() < this.findNewTargetTime && !IsPlayerInvis(target))
 			return target;
 
 		//Check 3: We either do not have a target, or have surpassed the minimum healing duration on our current target.
@@ -563,7 +563,7 @@ enum struct SupportDroneStats
 		ArrayList allies = new ArrayList(255);
 		for (int i = 0; i <= MaxClients; i++)
 		{
-			if (IsValidMulti(i, true, true, true, TF2_GetClientTeam(owner)))
+			if (IsValidMulti(i, true, true, true, TF2_GetClientTeam(owner)) && !IsPlayerInvis(i))
 			{
 				float otherPos[3];
 				GetClientAbsOrigin(i, otherPos);
@@ -2224,7 +2224,7 @@ enum struct LittleBuddy
 		
 		int targ = this.GetTargetOverride();
 		if (!this.IsValidTarget(targ))
-			targ = CF_GetClosestTarget(pos, _, _, _, TF2_GetClientTeam(this.GetOwner()));
+			targ = CF_GetClosestTarget(pos, _, _, _, TF2_GetClientTeam(this.GetOwner()), GADGETEER, Buddy_CheckLOS);
 		
 		if (this.IsValidTarget(targ))
 			this.SetTarget(targ);

@@ -16,6 +16,9 @@ int Glow_Sprite_Blue;
 
 #define TELE_EXIT_LOOP_SOUND	"mvm/mvm_mothership_loop.wav"
 #define TELE_EXIT_TELE_SOUND	"mvm/mvm_robo_stun.wav"
+#define NOPE					"replay/record_fail.wav"
+
+float Buckshot_MinMetal = 150.0;
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
@@ -156,6 +159,7 @@ public void OnMapStart()
 	PrecacheModel(BEACON_BASE_MODEL, true);
 	PrecacheSound(TELE_EXIT_LOOP_SOUND, true);
 	PrecacheSound(TELE_EXIT_TELE_SOUND, true);
+	PrecacheSound(NOPE);
 
 	Zero(TPInitiated);
 
@@ -574,6 +578,13 @@ static SuperShotgunData ShotgunData;
 */
 static void SuperShotgun_Activate(int client, char abilityName[255])
 {
+	if (CF_GetSpecialResource(client) < Buckshot_MinMetal)
+	{
+		PrintCenterText(client, "Must have at least %i Metal!", RoundFloat(Buckshot_MinMetal));
+		EmitSoundToClient(client, NOPE);
+		return;
+	}
+
 	float Dmg_Bonus_Max = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Damage Bonus Max");
 	float Dmg_Bonus_Min = CF_GetArgF(client, THIS_PLUGIN_NAME, abilityName, "Damage Bonus Min");
 

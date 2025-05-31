@@ -584,8 +584,7 @@ public void CFA_PlayerKilled(int attacker, int victim)
 {
 	if (CF_IsPlayerCharacter(attacker) && attacker != victim)
 	{
-		CF_GiveSpecialResource(attacker, 1.0, CF_ResourceType_Kill);
-		CF_GiveUltCharge(attacker, 1.0, CF_ResourceType_Kill);
+		RequestFrame(CFA_GiveKillCharge, GetClientUserId(attacker));
 		
 		CF_PlayRandomSound(attacker, attacker, "sound_kill");
 	}
@@ -599,6 +598,16 @@ public void CFA_PlayerKilled(int attacker, int victim)
 
 	if (played)
 		CF_SilenceCharacter(victim, 0.2);
+}
+
+public void CFA_GiveKillCharge(int id)
+{
+	int attacker = GetClientOfUserId(id);
+	if (!IsValidClient(attacker))
+		return;
+
+	CF_GiveSpecialResource(attacker, 1.0, CF_ResourceType_Kill);
+	CF_GiveUltCharge(attacker, 1.0, CF_ResourceType_Kill);
 }
 
 public bool CFA_InitializeUltimate(int client, ConfigMap map, bool IsNewCharacter)
