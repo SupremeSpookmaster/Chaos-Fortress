@@ -135,7 +135,6 @@ public void Sprint_RemoveAttributes(int client, bool resupply)
 	
 	if (!resupply && Sprint_SpeedMod[client].b_Exists)
 	{
-		CPrintToChatAll("Destroying %N's mod", client);
 		Sprint_SpeedMod[client].Destroy();
 	}
 }
@@ -216,7 +215,6 @@ public void CF_OnCharacterCreated(int client)
 
 	if (Sprint_SpeedMod[client].b_Exists)
 	{
-		CPrintToChatAll("Destroying %N's mod", client);
 		Sprint_SpeedMod[client].Destroy();
 	}
 }
