@@ -500,8 +500,6 @@ public void DestroyAbility(int client, CF_AbilityType type)
 		ab.Destroy();
 }
 
-CF_SpeedModifier g_SpeedModifiers[2048];
-
 bool b_SpeedModifierExists[2048] = { false, ... };
 bool b_SpeedModifierSounds[2048] = { false, ... };
 
@@ -513,25 +511,30 @@ int i_SpeedModifierClient[2048] = { -1, ... };
 
 public any Native_CF_SpeedModifier_Constructor(Handle plugin, int numParams)
 {
-	int slot = 0;
-	while (b_SpeedModifierExists[slot] && slot < 2048)
-		slot++;
+	int slot = -1;
+	for (int i = 0; i < 2048; i++)
+	{
+		if (!b_SpeedModifierExists[i])
+		{
+			slot = i;
+			break;
+		}
+	}
 	
-	if (slot >= 2048)
+	if (slot < 0)
 		return view_as<CF_SpeedModifier>(-1);
 
 	b_SpeedModifierExists[slot] = true;
 
 	CF_SpeedModifier mod = view_as<CF_SpeedModifier>(slot);
 	int client = GetNativeCell(1);
-	mod.i_Client = client;
 	mod.f_Modifier = GetNativeCell(2);
 	mod.f_Max = GetNativeCell(3);
 	mod.f_Min = GetNativeCell(4);
 	mod.b_Sounds = GetNativeCell(5);
+	mod.i_Client = client;
 
-	if (IsValidMulti(client))
-		CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
+	CPrintToChatAll("Speed mod created at slot %i with client %N", slot, client);
 
 	return mod;
 }
@@ -542,6 +545,8 @@ public void Native_CF_SpeedModifier_Destructor(Handle plugin, int numParams)
 	b_SpeedModifierExists[mod.Index] = false;
 	int client = mod.i_Client;
 	mod.i_Client = -1;
+
+	CPrintToChatAll("Speed mod destroyed at slot %i, removed from client %N", mod.Index, client);
 
 	if (IsValidMulti(client))
 		CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
@@ -589,10 +594,14 @@ public void Native_CF_SpeedModifier_SetClient(Handle plugin, int numParams)
 		CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
 	}
 	else
+	{
 		i_SpeedModifierClient[slot] = -1;
+	}
 
 	if (IsValidMulti(current))
-		CF_UpdateCharacterSpeed(current, TF2_GetPlayerClass(client));
+	{
+		CF_UpdateCharacterSpeed(current, TF2_GetPlayerClass(current));
+	}
 }
 
 public any Native_CF_SpeedModifier_GetModifier(Handle plugin, int numParams) { return f_SpeedModifierAmt[GetNativeCell(1)]; }
@@ -2406,7 +2415,6 @@ public void CFC_NoLongerNeedsHelp(int client)
 	EndHeldAbility(client, CF_AbilityType_M3, true, true);
 	EndHeldAbility(client, CF_AbilityType_Reload, true, true);
 	CFA_DisableHeldBlock(client);
-	CF_RemoveAllSpeedModifiers(client);
 	
 	char conf[255], doesntNeedHelp[16];
 	GetClientCookie(client, c_DesiredCharacter, conf, sizeof(conf));
@@ -2995,10 +3003,11 @@ public void CFC_NoLongerNeedsHelp(int client)
  		return;
  		
  	float targSpd = GetCharacterFromClient(client).f_Speed;
+	CPrintToChat(client, "Base speed: %.2f", targSpd);
 
 	for (int i = 0; i < 2048; i++)
 	{
-		CF_SpeedModifier mod = g_SpeedModifiers[i];
+		CF_SpeedModifier mod = view_as<CF_SpeedModifier>(i);
 		if (!mod.b_Exists)
 			continue;
 
@@ -3019,6 +3028,8 @@ public void CFC_NoLongerNeedsHelp(int client)
 		}
 	}
 
+	CPrintToChat(client, "Final speed: %.2f", targSpd);
+
  	float baseSpd = f_ClassBaseSpeed[num];
  	float speed = targSpd / baseSpd;
  	
@@ -3033,6 +3044,8 @@ public void CFC_NoLongerNeedsHelp(int client)
 	{
 		TF2Attrib_SetByDefIndex(client, 107, speed);
 	}
+
+	TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.00001);
  }
  
  public void CF_GiveMaxHP(DataPack pack)
@@ -3169,14 +3182,15 @@ public void CFC_NoLongerNeedsHelp(int client)
  	CFC_DeleteParticles(client, true);
  	CFA_RemoveAnimator(client);
 
-	CF_RemoveAllSpeedModifiers(client);
+	if (reason == CF_CRR_DISCONNECT || reason == CF_CRR_ROUNDSTATE_CHANGED || reason == CF_CRR_DEATH)
+		CF_RemoveAllSpeedModifiers(client);
  }
  
 public void CF_RemoveAllSpeedModifiers(int client)
 {
 	for (int i = 0; i < 2048; i++)
 	{
-		CF_SpeedModifier mod = g_SpeedModifiers[i];
+		CF_SpeedModifier mod = view_as<CF_SpeedModifier>(i);
 		if (!mod.b_Exists)
 			continue;
 

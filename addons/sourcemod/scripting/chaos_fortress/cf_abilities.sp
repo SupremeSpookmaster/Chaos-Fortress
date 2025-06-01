@@ -2867,7 +2867,7 @@ public any Native_CF_GetShieldWallMaxHealth(Handle plugin, int numParams)
 	return f_FakeMediShieldMaxHP[shield];
 }
 
-public Native_CF_ApplyTemporarySpeedChange(Handle plugin, int numParams)
+public any Native_CF_ApplyTemporarySpeedChange(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
 	int mode = GetNativeCell(2);
@@ -2877,53 +2877,60 @@ public Native_CF_ApplyTemporarySpeedChange(Handle plugin, int numParams)
 	float maxSpeed = GetNativeCell(6);
 	bool sound = GetNativeCell(7);
 	
-	if (!CF_IsPlayerCharacter(client))
-		return;
-		
 	float baseSpeed = CF_GetCharacterBaseSpeed(client);
 	float currentSpeed = CF_GetCharacterSpeed(client);
+	float targetAmt, targetMax = -1.0;
 
-	float targetSpeed;
 	switch (mode)
 	{
 		case 1:
-			targetSpeed = currentSpeed + ((baseSpeed * amt) - baseSpeed);
+			targetAmt = ((baseSpeed * amt) - baseSpeed);
 		case 2:
-			targetSpeed = currentSpeed * amt;
+			targetAmt = (currentSpeed * amt) - currentSpeed;
 		default:
-			targetSpeed = currentSpeed + amt;
+			targetAmt = amt;
 	}
 		
 	if (maxMode != 0)
 	{
-		float targetMax = maxSpeed;
+		targetMax = maxSpeed;
 		if (maxMode == 1)
 			targetMax *= baseSpeed;
+	}
+	
+	CF_SpeedModifier modifier = new CF_SpeedModifier(client, targetAmt, targetMax, -1.0, sound);
 
-		//We only cap targetSpeed if it is faster than the user's current speed, because that means this speed change is meant to be a buff.
-		//We don't want buffs to slow people down just because they already have a stronger buff active.
-		if (targetSpeed > targetMax && targetSpeed > currentSpeed)
-			targetSpeed = targetMax;
-	}
-	
-	float speedGained = targetSpeed - currentSpeed;
-	if (speedGained != 0.0)
+	if (duration > 0.0)
 	{
-		CF_SetCharacterSpeed(client, targetSpeed);
-		
-		if (duration > 0.0)
-		{
-			DataPack pack = new DataPack();
-			WritePackCell(pack, GetClientUserId(client));
-			WritePackFloat(pack, speedGained);
-			WritePackFloat(pack, GetGameTime() + duration);
-			WritePackCell(pack, sound);
-			RequestFrame(TempSpeed_Check, pack);
-		}
+		DataPack pack = new DataPack();
+		RequestFrame(CFA_DeleteSpeedModifier, pack);
+		WritePackCell(pack, modifier.Index);
+		WritePackFloat(pack, GetGameTime() + duration);
 	}
-	
-	if (sound)
-		EmitSoundToClient(client, SOUND_SPEED_APPLY);
+
+	return modifier;
+}
+
+public void CFA_DeleteSpeedModifier(DataPack pack)
+{
+	ResetPack(pack);
+	CF_SpeedModifier mod = ReadPackCell(pack);
+	float endTime = ReadPackFloat(pack);
+
+	if (!mod.b_Exists)
+	{
+		delete pack;
+		return;
+	}
+
+	if (GetGameTime() >= endTime)
+	{
+		mod.Destroy();
+		delete pack;
+		return;
+	}
+
+	RequestFrame(CFA_DeleteSpeedModifier, pack);
 }
 
 public void TempSpeed_Check(DataPack pack)

@@ -150,40 +150,48 @@ methodmap CF_SpeedModifier __nullable__
 	 */
 	public native void Destroy();
 
+	//Don't touch this.
 	property int Index
 	{
 		public native get();
 	}
 
+	//If this is true, it means the speed modifier is valid.
+	//Typically, it's a good idea to check for this before deleting it.
 	property bool b_Exists
 	{
 		public native get();
 	}
 
+	//The client this modifier is applied to.
 	property int i_Client
 	{
 		public native get();
 		public native set(int value);
 	}
 
+	//The amount by which i_Client's movement speed is modified by this speed change.
 	property float f_Modifier
 	{
 		public native get();
 		public native set(float value);
 	}
 
+	//The ceiling to which this speed modifier can increase the client's speed.
 	property float f_Max
 	{
 		public native get();
 		public native set(float value);
 	}
 
+	//The floor to which this speed modifier can decrease the client's speed.
 	property float f_Min
 	{
 		public native get();
 		public native set(float value);
 	}
 
+	//If true: this speed modifier plays Disciplinary Action whip sounds to its client when it is applied/removed.
 	property bool b_Sounds
 	{
 		public native get();
@@ -1663,9 +1671,13 @@ native void CF_GenericAOEDamage(int attacker, int inflictor, int weapon, float d
  *							0: Do not check for a max movement speed.
  *							1: If the user's movement speed would become higher than their base speed multiplied by maxSpeed, cap their speed at the product of that operation.
  *							All Other Values: If the user's movement speed would become higher than maxSpeed, cap their speed at maxSpeed.
+ * @param maxSpeed			The coefficient to be used to determine the upper bound of this speed modifier, in accordance with the specified maxMode.
  * @param sounds			If true: plays the speed boost sound effects of the Disciplinary Action when the speed change begins and when it ends.
+ * 
+ * @return		A CF_SpeedModifier for the given speed boost. You may call CF_SpeedModifier.Destroy() on this speed modifier to remove it.
+ * 				See the CF_SpeedModifier methodmap in this include file for more info.
  */
-native CF_ApplyTemporarySpeedChange(int client, int mode, float amt, float duration, int maxMode, float maxSpeed, bool sounds = true);
+native CF_SpeedModifier CF_ApplyTemporarySpeedChange(int client, int mode, float amt, float duration, int maxMode, float maxSpeed, bool sounds = true);
 
 /**
  * Retrieves the client's base movement speed, before any external modifiers.

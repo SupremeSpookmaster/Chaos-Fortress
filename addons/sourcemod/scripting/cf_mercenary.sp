@@ -50,7 +50,8 @@ float Sprint_CD[MAXPLAYERS + 1] = { 0.0, ... };
 float Sprint_MinCD[MAXPLAYERS + 1] = { 0.0, ... };
 float Sprint_MaxCD[MAXPLAYERS + 1] = { 0.0, ... };
 float Sprint_Potency[MAXPLAYERS + 1] = { 0.0, ... };
-float Sprint_SpeedAdded[MAXPLAYERS + 1] = { 0.0, ... };
+
+CF_SpeedModifier Sprint_SpeedMod[MAXPLAYERS + 1] = { null, ... };
 
 int Sprint_Particle[MAXPLAYERS + 1] = { -1, ... };
 
@@ -132,12 +133,10 @@ public void Sprint_RemoveAttributes(int client, bool resupply)
 		Sprint_Particle[client] = -1;
 	}
 	
-	if (!resupply)
+	if (!resupply && Sprint_SpeedMod[client].b_Exists)
 	{
-		float speed = CF_GetCharacterSpeed(client);
-		speed -= Sprint_SpeedAdded[client];
-		CF_SetCharacterSpeed(client, speed);
-		Sprint_SpeedAdded[client] = 0.0;
+		CPrintToChatAll("Destroying %N's mod", client);
+		Sprint_SpeedMod[client].Destroy();
 	}
 }
 
@@ -151,10 +150,7 @@ public void Sprint_ApplyAttributes(int client)
 		Sprint_Particle[client] = EntIndexToEntRef(particle);
 	}
 	
-	float speed = CF_GetCharacterSpeed(client);
-	CF_ApplyTemporarySpeedChange(client, 1, Sprint_Potency[client], 0.0, 0, 9999.0, false);
-	float newSpeed = CF_GetCharacterSpeed(client);
-	Sprint_SpeedAdded[client] = newSpeed - speed;
+	Sprint_SpeedMod[client] = CF_ApplyTemporarySpeedChange(client, 1, Sprint_Potency[client], 0.0, 0, 9999.0, false);
 	
 	CF_PlayRandomSound(client, client, "sound_merc_sprint_start");
 }
@@ -217,7 +213,12 @@ public Action Frag_BlockWeaponSwitch(int client, int weapon)
 public void CF_OnCharacterCreated(int client)
 {
 	Frag_NoJarate(client);
-	Sprint_SpeedAdded[client] = 0.0;
+
+	if (Sprint_SpeedMod[client].b_Exists)
+	{
+		CPrintToChatAll("Destroying %N's mod", client);
+		Sprint_SpeedMod[client].Destroy();
+	}
 }
 
 public void Frag_NoJarate(int client)
