@@ -135,15 +135,16 @@ methodmap CF_SpeedModifier __nullable__
 	/**
 	 * Generates a CF_SpeedModifier based on the given parameters.
 	 * 
-	 * @param client		The client to apply this speed modifier to.
-	 * @param modifier		The amount by which to modify the client's movement speed.
-	 * @param max			Maximum movement speed applied by this modifier. < 0.0: no max.
-	 * @param min			Minimum movement speed applied by this modifier. < 0.0: no min.
-	 * @param sounds		If true: play the Disciplinary Action's speed boost sound effects when this speed modifier is added/removed.
+	 * @param client					The client to apply this speed modifier to.
+	 * @param modifier					The amount by which to modify the client's movement speed.
+	 * @param max						Maximum movement speed applied by this modifier. < 0.0: no max.
+	 * @param min						Minimum movement speed applied by this modifier. < 0.0: no min.
+	 * @param sounds					If true: play the Disciplinary Action's speed boost sound effects when this speed modifier is added/removed.
+	 * @param autoRemoveOnResupply		If true: this speed modifier is automatically removed if the user resupplies. This DOES NOT allow it to persist through character swaps, only through resupplying.
 	 * 
 	 * @return		A CF_SpeedModifier, applied to the client.
 	 */
-	public native CF_SpeedModifier(int client, float modifier, float max = -1.0, float min = -1.0, bool sounds = true);
+	public native CF_SpeedModifier(int client, float modifier, float max = -1.0, float min = -1.0, bool sounds = true, bool autoRemoveOnResupply = true);
 
 	/**
 	 * Removes this speed modifier.
@@ -161,6 +162,14 @@ methodmap CF_SpeedModifier __nullable__
 	property bool b_Exists
 	{
 		public native get();
+	}
+
+	//If this is true, using a resupply locker will remove this speed modifier automatically.
+	//Note that a client touching a resupply locker to change their character will still remove this speed modifier.
+	property bool b_AutoRemoveOnResupply
+	{
+		public native get();
+		public native set(bool value);
 	}
 
 	//The client this modifier is applied to.

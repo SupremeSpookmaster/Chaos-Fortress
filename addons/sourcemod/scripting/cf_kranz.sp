@@ -308,6 +308,8 @@ float Rush_MinSpeed[MAXPLAYERS + 1] = { 0.0, ... };
 float Rush_HitboxScale[MAXPLAYERS + 1] = { 0.0, ... };
 bool Rush_Active[MAXPLAYERS + 1] = { false, ... };
 
+CF_SpeedModifier Rush_SpeedModifier[MAXPLAYERS + 1];
+
 Handle Rush_Timer[MAXPLAYERS + 1] = { null, ... };
 
 public void Rush_Activate(int client, char abilityName[255])
@@ -323,7 +325,7 @@ public void Rush_Activate(int client, char abilityName[255])
 		Rush_MinSpeed[client] = CF_GetArgF(client, KRANZ, abilityName, "damage_min");
 		Rush_HitboxScale[client] = CF_GetArgF(client, KRANZ, abilityName, "hitbox_scale", 3.0);
 
-		CF_ApplyTemporarySpeedChange(client, 0, Rush_Speed[client], 0.0, 0, 9999.0);
+		Rush_SpeedModifier[client] = CF_ApplyTemporarySpeedChange(client, 0, Rush_Speed[client], 0.0, 0, 9999.0);
 		
 		Rush_Active[client] = true;
 		RequestFrame(Rush_CheckBump, GetClientUserId(client));
@@ -386,7 +388,12 @@ public void Rush_CheckBump(int id)
 				b_RushIn = true;
 				SDKHooks_TakeDamage(other, client, client, damage, DMG_CLUB);
 				b_RushIn = false;
-				CF_ApplyTemporarySpeedChange(client, 0, -Rush_Speed[client], 0.0, 0, 9999.0, false);
+				
+				if (Rush_SpeedModifier[client].b_Exists)
+				{
+					Rush_SpeedModifier[client].Destroy();
+				}
+
 				EmitSoundToClient(client, SND_RUSH_END);
 				Rush_DeleteTimer(client);
 				return;
@@ -407,7 +414,11 @@ public Action Rush_End(Handle timer, DataPack pack)
 
 	if (IsValidMulti(client))
 	{
-		CF_ApplyTemporarySpeedChange(client, 0, -Rush_Speed[client], 0.0, 0, 9999.0, false);
+		if (Rush_SpeedModifier[client].b_Exists)
+		{
+			Rush_SpeedModifier[client].Destroy();
+		}
+
 		EmitSoundToClient(client, SND_RUSH_END);
 		Rush_Active[client] = false;
 	}

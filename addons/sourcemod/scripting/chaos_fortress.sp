@@ -340,8 +340,9 @@ public Action CF_GiveUltCommand(int client, int args)
 	{
 		CF_GiveUltCharge(targets[i], amt, CF_ResourceType_Percentage, true);
 		char repl[255];
-		Format(repl, sizeof(repl), "[Chaos Fortress] Gave %i[PCNTG] ult charge to %N.", RoundToFloor(amt), targets[i]);
-		ReplyToCommand(client, repl);
+		Format(repl, sizeof(repl), "{indigo}[Chaos Fortress]{default} Gave {yellow}%i[PCNTG]{default} ult charge to {%s}%N{default}.", RoundToFloor(amt), TF2_GetClientTeam(targets[i]) == TFTeam_Red ? "red" : "blue", targets[i]);
+		ReplaceString(repl, sizeof(repl), "[PCNTG]", "%%");
+		CPrintToChat(client, repl);
 	}
 
 	return Plugin_Handled;

@@ -809,8 +809,9 @@ float Medigun_Coefficient[MAXPLAYERS + 1][3];
 float Medigun_SelfHeal[MAXPLAYERS + 1] = { 0.0, ... };
 float Medigun_HealBucket[MAXPLAYERS + 1] = { 0.0, ... };
 float Medigun_HealCap[MAXPLAYERS + 1] = { 0.0, ... };
-float Medigun_SpeedAdded[MAXPLAYERS + 1] = { 0.0, ... };
-float Medigun_TargetSpeedAdded[MAXPLAYERS + 1] = { 0.0, ... };
+
+CF_SpeedModifier Medigun_SpeedModifier[MAXPLAYERS + 1];
+CF_SpeedModifier Medigun_TargetSpeedModifier[MAXPLAYERS + 1];
 
 int Medigun_Target[MAXPLAYERS + 1] = { -1, ... };
 int Medigun_SelfParticle[MAXPLAYERS + 1] = { -1, ... };
@@ -928,18 +929,14 @@ public void Medigun_ApplySpeedBonus(int client, int target)
 		
 	Medigun_RemoveSpeedBonus(client, target);
 	
-	if (IsPlayerAlive(client))
+	if (IsPlayerAlive(client) && !Medigun_SpeedModifier[client].b_Exists)
 	{
-		float current = CF_GetCharacterSpeed(client);
-		CF_ApplyTemporarySpeedChange(client, 1, 1.0 + Medigun_Coefficient[client][0], 0.0, 0, 9999.0, false);
-		Medigun_SpeedAdded[client] = CF_GetCharacterSpeed(client) - current;
+		Medigun_SpeedModifier[client] = CF_ApplyTemporarySpeedChange(client, 1, 1.0 + Medigun_Coefficient[client][0], 0.0, 0, 9999.0, true);
 	}
 	
-	if (IsValidMulti(target))
+	if (IsValidMulti(target) && !Medigun_TargetSpeedModifier[client].b_Exists)
 	{
-		float current = CF_GetCharacterSpeed(target);
-		CF_ApplyTemporarySpeedChange(target, 1, 1.0 + Medigun_Coefficient[client][0], 0.0, 0, 9999.0, false);
-		Medigun_TargetSpeedAdded[client] = CF_GetCharacterSpeed(target) - current;
+		Medigun_TargetSpeedModifier[client] = CF_ApplyTemporarySpeedChange(target, 1, 1.0 + Medigun_Coefficient[client][0], 0.0, 0, 9999.0, true);
 	}
 }
 
@@ -948,16 +945,14 @@ public void Medigun_RemoveSpeedBonus(int client, int target)
 	if (!IsValidClient(client))
 		return;
 		
-	if (IsPlayerAlive(client) && Medigun_SpeedAdded[client] != 0.0)
+	if (IsPlayerAlive(client) && Medigun_SpeedModifier[client].b_Exists)
 	{
-		CF_ApplyTemporarySpeedChange(client, 3, -Medigun_SpeedAdded[client], 0.0, 0, 9999.0, false);
-		Medigun_SpeedAdded[client] = 0.0;
+		Medigun_SpeedModifier[client].Destroy();
 	}
 	
-	if (IsValidMulti(target) && Medigun_TargetSpeedAdded[client] != 0.0)
+	if (IsValidMulti(target) && Medigun_TargetSpeedModifier[client].b_Exists)
 	{
-		CF_ApplyTemporarySpeedChange(target, 3, -Medigun_TargetSpeedAdded[client], 0.0, 0, 9999.0, false);
-		Medigun_TargetSpeedAdded[client] = 0.0;
+		Medigun_TargetSpeedModifier[client].Destroy();
 	}
 }
 
@@ -1191,7 +1186,7 @@ float Time_SpeedAmt[MAXPLAYERS + 1] = { 0.0, ... };
 float Time_SpeedMax[MAXPLAYERS + 1] = { 0.0, ... };
 float Time_Haste[MAXPLAYERS + 1] = { 0.0, ... };
 float Time_Radius[MAXPLAYERS + 1] = { 0.0, ... };
-float Time_SpeedAdded[MAXPLAYERS + 1][MAXPLAYERS + 1];
+CF_SpeedModifier Time_SpeedModifier[MAXPLAYERS + 1][MAXPLAYERS + 1];
 
 int Time_Healing[MAXPLAYERS + 1] = { 0, ... };
 int Time_SpeedMode[MAXPLAYERS + 1] = { 0, ... };
@@ -1202,8 +1197,6 @@ int Time_Particle[MAXPLAYERS + 1][MAXPLAYERS + 1];
 bool Time_Buffed[MAXPLAYERS + 1][MAXPLAYERS + 1];
 
 Handle Time_Buffers[MAXPLAYERS + 1] = { null, ... };
-
-//TODO: High Time's aura is going to need its own model, reusing player_aura doesn't work because the bar at the bottom blocks vision...
 
 public void Time_Activate(int client, char abilityName[255])
 {
@@ -1421,10 +1414,8 @@ public void Time_ApplyBuffs(int client, int target)
 {
 	Time_Buffed[client][target] = true;
 	
-	float speed = CF_GetCharacterSpeed(target);
-	CF_ApplyTemporarySpeedChange(target, Time_SpeedMode[client], Time_SpeedAmt[client], 0.0, Time_SpeedMaxMode[client], Time_SpeedMax[client], false);
-	float newSpeed = CF_GetCharacterSpeed(target);
-	Time_SpeedAdded[client][target] = newSpeed - speed;
+	if (!Time_SpeedModifier[client][target].b_Exists)
+		Time_SpeedModifier[client][target] = CF_ApplyTemporarySpeedChange(target, Time_SpeedMode[client], Time_SpeedAmt[client], 0.0, Time_SpeedMaxMode[client], Time_SpeedMax[client], false);
 	
 	Time_Particle[client][target] = EntIndexToEntRef(CF_AttachParticle(target, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_HEALING_AURA_RED : PARTICLE_HEALING_AURA_BLUE, "root"));
 	
@@ -1440,12 +1431,9 @@ public void Time_ClearBuffs(int client, int target)
 {
 	Time_Buffed[client][target] = false;
 			
-	if (Time_SpeedAdded[client][target] != 0.0)
+	if (Time_SpeedModifier[client][target].b_Exists)
 	{
-		float speed = CF_GetCharacterSpeed(target);
-		speed -= Time_SpeedAdded[client][target];
-		CF_SetCharacterSpeed(target, speed);
-		Time_SpeedAdded[client][target] = 0.0;
+		Time_SpeedModifier[client][target].Destroy();
 	}
 	
 	int particle = EntRefToEntIndex(Time_Particle[client][target]);

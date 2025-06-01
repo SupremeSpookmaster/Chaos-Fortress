@@ -202,7 +202,6 @@ public void Harvester_DeleteParticles(int client)
 
 int Absorb_Uses[MAXPLAYERS + 1] = { 0, ... };
 float Absorb_Health[MAXPLAYERS + 1] = { 0.0, ... };
-float Absorb_Speed[MAXPLAYERS + 1] = { 0.0, ... };
 float Absorb_Heal[MAXPLAYERS + 1] = { 0.0, ... };
 float Absorb_Swing[MAXPLAYERS + 1] = { 0.0, ... };
 float Absorb_Melee[MAXPLAYERS + 1] = { 0.0, ... };
@@ -219,8 +218,8 @@ public void Absorb_Activate(int client, char abilityName[255])
 	Absorb_Health[client] = bonusHP + currentHP;
 	
 	float bonusSpeed = CF_GetArgF(client, SPOOKMASTER, abilityName, "speed_bonus");
-	float currentSpeed = GetAttributeValue(client, 107, 0.0);
-	Absorb_Speed[client] = bonusSpeed + currentSpeed;
+	CF_SpeedModifier mod = CF_ApplyTemporarySpeedChange(client, 1, 1.0 + bonusSpeed, 0.0, 0, 0.0, false);
+	mod.b_AutoRemoveOnResupply = false;
 	
 	Absorb_Heal[client] = CF_GetArgF(client, SPOOKMASTER, abilityName, "heal");
 	
@@ -259,8 +258,6 @@ void Absorb_DestroyEyeParticles(int client)
 void Absorb_SetStats(int client, float NumTimes = 0.0)
 {
 	TF2Attrib_SetByDefIndex(client, 26, Absorb_Health[client]);
-	TF2Attrib_SetByDefIndex(client, 107, Absorb_Speed[client]);
-	TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.001);
 	
 	DataPack pack = new DataPack();
 	RequestFrame(Absorb_HealOnDelay, pack);

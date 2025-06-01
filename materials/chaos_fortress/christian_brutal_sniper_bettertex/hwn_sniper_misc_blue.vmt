@@ -1,6 +1,6 @@
 "VertexlitGeneric"
 {
-	"$baseTexture" "chaos_fortress/christian_brutal_sniper/hwn_sniper_misc_blue"	
+	"$baseTexture" "chaos_fortress/christian_brutal_sniper_bettertex/hwn_sniper_misc_blue2"	
 	"$detailscale" "5"
 	"$detailblendfactor" .01
 	"$detailblendmode" 6

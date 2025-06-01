@@ -150,7 +150,6 @@ int i_HPToSet[MAXPLAYERS + 1] = { 0, ... };
 char s_OldModel[MAXPLAYERS + 1][255];
 
 float f_ModelEndTime[MAXPLAYERS + 1] = { 0.0, ... };
-float f_OldSpeed[MAXPLAYERS + 1] = { 0.0, ... };
 float f_SpeedEndTime[MAXPLAYERS + 1] = { 0.0, ... };
 float f_HealthEndTime[MAXPLAYERS + 1] = { 0.0, ... };
 float f_OldMaxHP[MAXPLAYERS + 1] = { 0.0, ... };
@@ -786,10 +785,6 @@ public Action Health_Revert(Handle revert, DataPack pack)
 public void Speed_Activate(int client, char abilityName[255])
 {
 	float speed = CF_GetArgF(client, GENERIC, abilityName, "speed");
-	
-	if (GetGameTime() >= f_SpeedEndTime[client] + 0.1)
-		f_OldSpeed[client] = CF_GetCharacterSpeed(client);
-		
 	CF_SetCharacterSpeed(client, speed);
 	
 	float duration = CF_GetArgF(client, GENERIC, abilityName, "duration");
@@ -816,7 +811,7 @@ public Action Speed_Revert(Handle revert, DataPack pack)
 	if (GetGameTime() < f_SpeedEndTime[client])
 		return Plugin_Continue;
 		
-	CF_SetCharacterSpeed(client, f_OldSpeed[client]);
+	CF_SetCharacterSpeed(client, CF_GetCharacterBaseSpeed(client));
 	
 	return Plugin_Continue;
 }

@@ -51,7 +51,7 @@ float Sprint_MinCD[MAXPLAYERS + 1] = { 0.0, ... };
 float Sprint_MaxCD[MAXPLAYERS + 1] = { 0.0, ... };
 float Sprint_Potency[MAXPLAYERS + 1] = { 0.0, ... };
 
-CF_SpeedModifier Sprint_SpeedMod[MAXPLAYERS + 1] = { null, ... };
+CF_SpeedModifier Sprint_SpeedMod[MAXPLAYERS + 1];
 
 int Sprint_Particle[MAXPLAYERS + 1] = { -1, ... };
 
