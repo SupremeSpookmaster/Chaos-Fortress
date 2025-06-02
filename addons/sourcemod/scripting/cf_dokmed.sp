@@ -849,17 +849,33 @@ public void Medigun_Check(int client)
 public Action Medigun_PreThink(int client)
 {
 	if (!IsPlayerHoldingWeapon(client, 1))
+	{
+		Medigun_Detach(client, Medigun_GetTarget(client));
 		return Plugin_Continue;
+	}
 	
 	int medigun = GetPlayerWeaponSlot(client, 1);
-	if (!IsValidEntity(medigun))
+	int acWep = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+	if (!IsValidEntity(acWep))
+	{
+		Medigun_Detach(client, Medigun_GetTarget(client));
 		return Plugin_Continue;
-		
+	}
 	char classname[255];
+	GetEntityClassname(acWep, classname, sizeof(classname));
+	if (!IsValidEntity(medigun) || acWep != medigun || StrContains(classname, "medigun") == -1)
+	{
+		Medigun_Detach(client, Medigun_GetTarget(client));
+		return Plugin_Continue;
+	}
+		
 	GetEntityClassname(medigun, classname, sizeof(classname));
 	
 	if (StrContains(classname, "medigun") == -1)
+	{
+		Medigun_Detach(client, Medigun_GetTarget(client));
 		return Plugin_Continue;
+	}
 	
 	if (Medigun_BlockUber[client])
 		SetEntPropFloat(medigun, Prop_Send, "m_flChargeLevel", 0.0);

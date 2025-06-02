@@ -3983,6 +3983,12 @@ stock void FloatToDouble(float flValue, int dblVal[2]) {
 	dblVal[1] = (sign << 31) | (expdbl_2 << 20) | (mantissa >> 3);
 }
 
+//Forces the client's speed to update
+stock void ForceSpeedUpdate(int client)
+{
+    ClientCommand(client, "cyoa_pda_open");
+}
+
 /**
  * Creates two info_targets, one for the root and one for the end, then draws an env_beam between them.
  * 

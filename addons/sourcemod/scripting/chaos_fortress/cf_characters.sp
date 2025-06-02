@@ -3091,7 +3091,7 @@ public void CFC_NoLongerNeedsHelp(int client)
 		TF2Attrib_SetByDefIndex(client, 107, speed);
 	}
 
-	TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.00001);
+	ForceSpeedUpdate(client);
  }
  
  public void CF_GiveMaxHP(DataPack pack)
@@ -3539,7 +3539,7 @@ public any Native_CF_SetCharacterSpeed(Handle plugin, int numParams)
 	{
 		GetCharacterFromClient(client).f_Speed = NewSpeed;
 		CF_UpdateCharacterSpeed(client, TF2_GetPlayerClass(client));
-		TF2_AddCondition(client, TFCond_SpeedBuffAlly, 0.0001);
+		ForceSpeedUpdate(client);
 	}
 	
 	return 0.0;
