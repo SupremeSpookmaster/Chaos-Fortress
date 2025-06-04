@@ -325,6 +325,17 @@ public void CF_SetGameRules(int admin)
 			PrintToConsole(admin, "Ult Charge Retained On Character Switch: %.2f", f_ChargeRetain);
 			PrintToConsole(admin, "Display Role: %i", view_as<int>(b_DisplayRole));
 		}
+
+		bool allowCrits = GetBoolFromCFGMap(subsection, "allow_random_crits", false);
+		bool allowRandomSpread = GetBoolFromCFGMap(subsection, "allow_random_bullet_spread", false);
+
+		ConVar g_RandomCrits = FindConVar("tf_weapon_criticals");
+		g_RandomCrits.Flags &= ~FCVAR_CHEAT;
+		g_RandomCrits.SetBool(allowCrits);
+
+		ConVar g_FixedSpread = FindConVar("tf_use_fixed_weaponspreads");
+		g_FixedSpread.Flags &= ~FCVAR_CHEAT;
+		g_FixedSpread.SetBool(!allowRandomSpread);
 		
 		#if defined DEBUG_GAMERULES
 		PrintToServer("\nNow reading general_rules...");
