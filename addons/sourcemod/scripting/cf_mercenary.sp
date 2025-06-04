@@ -312,6 +312,7 @@ public void Frag_Activate(int client)
 		
 		TeleportEntity(grenade, pos, vecAngles, vecVelocity);
 		CF_PlayRandomSound(client, client, "sound_merc_grenade");
+		CF_ForceGesture(client);
 	}
 }
 

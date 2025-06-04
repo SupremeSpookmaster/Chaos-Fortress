@@ -373,6 +373,7 @@ void ScytheThrow(int client, char abilityName[255])
 
 	int target = GetClientAimTarget(client);
 	FireScythe(client, abilityName, target);
+	CF_ForceGesture(client);
 }
 
 int FireScythe(int client, char abilityName[255], int target, const float overridePos[3] = {})

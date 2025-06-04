@@ -2130,3 +2130,11 @@ native void CF_AddCondition(int client, TFCond condition, float duration = TFCon
  * @param condition		The condition to remove.
  */
 native void CF_RemoveCondition(int client, TFCond condition);
+
+/**
+ * Forces a client to play a specified third-person gesture.
+ * 
+ * @param client		The client to force the gesture on.
+ * @param gesture		The gesture to force.
+ */
+native void CF_ForceGesture(int client, char[] gesture = "ACT_MP_THROW");

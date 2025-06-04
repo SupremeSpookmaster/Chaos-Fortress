@@ -116,6 +116,8 @@ public void NecroBolt_Activate(int client, char abilityName[255])
 	SpawnBeam_Vectors(shootPos, hitPos, 0.4, 20, 255, 20, 255, PrecacheModel("materials/sprites/glow02.vmt"), 2.0, 2.0, _, 0.0);
 	SpawnBeam_Vectors(shootPos, hitPos, 0.4, 20, 255, 120, 180, PrecacheModel("materials/sprites/lgtning.vmt"), 4.0, 4.0, _, 2.5);
 	SpawnBeam_Vectors(shootPos, hitPos, 0.4, 20, 255, 120, 80, PrecacheModel("materials/sprites/lgtning.vmt"), 2.0, 2.0, _, 5.0);
+
+	CF_ForceGesture(client, "ACT_MP_GESTURE_VC_FINGERPOINT_MELEE");
 }
 
 public void NecroBolt_Hit(int attacker, int victim, float &baseDamage, bool &allowFalloff, bool &isHeadshot, int &hsEffect, bool &crit, float hitPos[3])
@@ -239,6 +241,7 @@ public void Absorb_Activate(int client, char abilityName[255])
 
 	Absorb_SetStats(client);
 	Absorb_Uses[client]++;
+	CF_ForceGesture(client, "ACT_MP_GESTURE_VC_FISTPUMP_MELEE");
 }
 
 void Absorb_DestroyEyeParticles(int client)
@@ -375,6 +378,8 @@ public void Discard_Activate(int client, char abilityName[255])
 		CF_SimulateSpellbookCast(client, _, CF_Spell_MeteorShower);
 		CF_ForceViewmodelAnimation(client, "spell_fire");
 		Discard_VMAnim[client] = true;
+
+		CF_ForceGesture(client);
 	}
 }
 

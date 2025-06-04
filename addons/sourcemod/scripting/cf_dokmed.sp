@@ -185,6 +185,7 @@ public void Cocainum_Activate(int client, char abilityName[255])
 		CF_PlayRandomSound(client, client, "sound_cocainum_toss");
 		CF_ForceViewmodelAnimation(client, "spell_fire");
 		Cocainum_VMAnim[client] = true;
+		CF_ForceGesture(client);
 	}
 }
 

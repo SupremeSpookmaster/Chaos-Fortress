@@ -144,6 +144,7 @@ public void Share_Activate(int client, char abilityName[255])
 	float mult = CF_GetArgF(client, HEAVNICH, abilityName, "heal_mult");
 	
 	Share_TossSandvich(client, num, delay, velocity, lifespan, radius, amt, type, mult);
+	CF_ForceGesture(client);
 }
 
 float f_ShareOverheal[2048] = { 0.0, ... };

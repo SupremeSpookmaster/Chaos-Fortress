@@ -129,6 +129,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_SetSpecialResourceIsMetal", Native_CF_SetSpecialResourceIsMetal);
 	CreateNative("CF_AddCondition", Native_CF_AddCondition);
 	CreateNative("CF_RemoveCondition", Native_CF_RemoveCondition);
+	CreateNative("CF_ForceGesture", Native_CF_ForceGesture);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -4643,4 +4644,28 @@ public void Cond_Remove(int client, TFCond condition)
 		i_NumConds[client]--;
 		
 	f_CondEndTime[client][view_as<int>(condition)] = 0.0;
+}
+
+//Special thanks to CookieCat for showing me how to do this:
+public void Native_CF_ForceGesture(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	char gesture[255];
+	GetNativeString(2, gesture, 255);
+
+	ConVar g_cvSvCheats = FindConVar("sv_cheats");
+	bool wasCheatsEnabled = g_cvSvCheats.BoolValue;
+    if (!wasCheatsEnabled)
+    {
+        g_cvSvCheats.Flags &= ~FCVAR_NOTIFY;
+        g_cvSvCheats.SetBool(true);
+    }
+    
+    ClientCommand(client, "mp_playgesture %s", gesture);
+    
+    if (!wasCheatsEnabled)
+    {
+        g_cvSvCheats.SetBool(false);
+        g_cvSvCheats.Flags |= FCVAR_NOTIFY;
+    }
 }
