@@ -30,6 +30,7 @@
 #define FORCETAUNT_WEAPON	"generic_force_weapon_taunt"
 #define CLOAK_BLOCK			"generic_block_cloak"
 #define RESOURCES			"generic_give_resources"
+#define BULLET				"generic_bullets"
 
 float Weapon_EndTime[2049] = { 0.0, ... };
 
@@ -598,6 +599,50 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	{
 		Resources_Activate(client, abilityName);
 	}
+
+	if (StrContains(abilityName, BULLET) != -1)
+	{
+		Bullet_Activate(client, abilityName);
+	}
+}
+
+bool PrimaryFire_HSFalloff = false;
+int PrimaryFire_HSEffect = 1;
+
+public void Bullet_Activate(int client, char abilityName[255])
+{
+	float damage = CF_GetArgF(client, GENERIC, abilityName, "damage");
+	int numBullets = CF_GetArgI(client, GENERIC, abilityName, "bullets");
+	float hsMult = CF_GetArgF(client, GENERIC, abilityName, "hs_mult");
+	PrimaryFire_HSEffect = CF_GetArgI(client, GENERIC, abilityName, "hs_fx");
+	PrimaryFire_HSFalloff = CF_GetArgI(client, GENERIC, abilityName, "hs_falloff") > 0;
+	float falloffStart = CF_GetArgF(client, GENERIC, abilityName, "falloff_start");
+	float falloffEnd = CF_GetArgF(client, GENERIC, abilityName, "falloff_end");
+	float falloffMax = CF_GetArgF(client, GENERIC, abilityName, "falloff_max");
+	int pierce = CF_GetArgI(client, GENERIC, abilityName, "pierce");
+	float spread = CF_GetArgF(client, GENERIC, abilityName, "spread");
+	float width = CF_GetArgF(client, GENERIC, abilityName, "width", 0.0);
+	char tracer[255];
+	if (TF2_GetClientTeam(client) == TFTeam_Red)
+		CF_GetArgS(client, GENERIC, abilityName, "tracer_red", tracer, 255, "bullet_pistol_tracer01_red");
+	if (TF2_GetClientTeam(client) == TFTeam_Red)
+		CF_GetArgS(client, GENERIC, abilityName, "tracer_blue", tracer, 255, "bullet_pistol_tracer01_blue");
+
+	float ang[3];
+	GetClientEyeAngles(client, ang);
+
+	for (int i = 0; i < numBullets; i++)
+		CF_FireGenericBullet(client, ang, damage, hsMult, spread, GENERIC, Bullet_Hit, falloffStart, falloffEnd, falloffMax, pierce, grabEnemyTeam(client), _, _, tracer, width);
+}
+
+public void Bullet_Hit(int attacker, int victim, float &baseDamage, bool &allowFalloff, bool &isHeadshot, int &hsEffect, bool &crit, float hitPos[3])
+{
+	if (isHeadshot)
+	{
+		allowFalloff = PrimaryFire_HSFalloff;
+	}
+
+	hsEffect = PrimaryFire_HSEffect;
 }
 
 public void Resources_Activate(int client, char abilityName[255])

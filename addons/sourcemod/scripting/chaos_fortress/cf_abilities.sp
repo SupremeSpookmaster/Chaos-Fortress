@@ -3900,7 +3900,7 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 	}
 
 	ArrayList victims = CF_DoBulletTrace(client, startPos, endPos, pierce, checkTeam, checkPlugin, checkFunction, hitPos, width);
-	SpawnParticle_ControlPoints(shootPos, hitPos, particle, 2.0);
+	SpawnParticle_ControlPoints(shootPos, hitPos, particle, 0.1);
 
 	bool crit = (TF2_IsPlayerInCondition(client, TFCond_CritCanteen) || TF2_IsPlayerInCondition(client, TFCond_CritMmmph) || TF2_IsPlayerInCondition(client, TFCond_CritOnDamage) || TF2_IsPlayerInCondition(client, TFCond_CritOnFirstBlood) || 
 	TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture) || TF2_IsPlayerInCondition(client, TFCond_CritOnKill) || TF2_IsPlayerInCondition(client, TFCond_CritOnWin) || TF2_IsPlayerInCondition(client, TFCond_CritRuneTemp) ||
