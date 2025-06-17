@@ -3161,22 +3161,24 @@ public void CFC_NoLongerNeedsHelp(int client)
  	if ((!IgnoreQuickFix && TF2_IsPlayerInCondition(client, TFCond_MegaHeal)) || (!IgnoreInvuln && IsInvuln(client)))
  		return;
  		
+	float forceToUse = force;
+
  	if (!IgnoreWeight)
  	{
- 		force *= 1.0 - (CF_GetCharacterWeight(client));
- 		if (force <= 0.0)
+ 		forceToUse *= 1.0 - (CF_GetCharacterWeight(client));
+ 		if (forceToUse <= 0.0)
  			return;
  	}
  	
  	float buffer[3], vel[3];
  	GetAngleVectors(angles, buffer, NULL_VECTOR, NULL_VECTOR);
  	for (int i = 0; i < 3; i++)
- 		vel[i] = buffer[i] * force;
+ 		vel[i] = buffer[i] * forceToUse;
 
-	if (GetEntityFlags(client) & FL_ONGROUND != 0)
-	{
-		vel[2] += 200.0;
-	}
+	if ((GetEntityFlags(client) & FL_ONGROUND) != 0 || GetEntProp(client, Prop_Send, "m_nWaterLevel") >= 1)
+		vel[2] = fmax(force, force * (IgnoreWeight ? 1.0 : 1.0 - ClampFloat(CF_GetCharacterWeight(client), -9999999.9, 1.0)));
+	else
+		vel[2] += 50.0; // a little boost to alleviate arcing issues
  		
  	if (OverrideCurrentVelocity)
  		TeleportEntity(client, _, _, vel);

@@ -39,8 +39,6 @@ public void CFW_MakeForwards()
 
 public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] classname, bool &result)
 {
-	char classname[255];
-	GetEntityClassname(weapon, classname, 255);
 	if ((StrContains(classname, "minigun") != -1) && (GetClientButtons(client) & IN_ATTACK == 0 || GetGameTime() < GetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack")))
 		return Plugin_Continue;
 
