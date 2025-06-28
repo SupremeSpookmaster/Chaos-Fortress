@@ -742,7 +742,7 @@ public Action RingTouch(int ring, int entity)
 
 public Action PhysTouch(int prop, int entity)
 {
-	if (!GetEntProp(prop, Prop_Data, "m_takedamage"))
+	if (GetEntProp(prop, Prop_Data, "m_takedamage") == 0)
 		return Plugin_Handled;
 
 	if (GetEntProp(prop, Prop_Send, "m_iTeamNum") == GetEntProp(entity, Prop_Send, "m_iTeamNum"))

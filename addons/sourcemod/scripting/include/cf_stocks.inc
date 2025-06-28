@@ -3479,6 +3479,59 @@ stock float CF_GetLinearVelocity(float vecVelocity[3])
 	return SquareRoot((vecVelocity[0] * vecVelocity[0]) + (vecVelocity[1] * vecVelocity[1]) + (vecVelocity[2] * vecVelocity[2]));
 }
 
+stock void ClipToGround(float vecHull[3], float StepHeight = 300.0, float vecorigin[3], float mins[3] = NULL_VECTOR)
+{
+	float originalPostionTrace[3];
+	float startPostionTrace[3];
+	float endPostionTrace[3];
+	endPostionTrace = vecorigin;
+	startPostionTrace = vecorigin;
+	originalPostionTrace = vecorigin;
+	startPostionTrace[2] += StepHeight;
+	endPostionTrace[2] -= 5000.0;
+
+	float vecHullMins[3];
+	if (Vector_Is_Null(mins))
+	{
+		vecHullMins = vecHull;
+
+		vecHullMins[0] *= -1.0;
+		vecHullMins[1] *= -1.0;
+		vecHullMins[2] *= -1.0;
+	}
+	else
+		vecHullMins = mins;
+
+	Handle trace;
+	trace = TR_TraceHullFilterEx( startPostionTrace, endPostionTrace, vecHullMins, vecHull, MASK_PLAYERSOLID,HitOnlyWorld, 0);
+	if ( TR_GetFraction(trace) < 1.0)
+	{
+		// This is the point on the actual surface (the hull could have hit space)
+		TR_GetEndPosition(vecorigin, trace);	
+	}
+	vecorigin[0] = originalPostionTrace[0];
+	vecorigin[1] = originalPostionTrace[1];
+
+	float VecCalc = (vecorigin[2] - startPostionTrace[2]);
+	if(VecCalc > (StepHeight - (vecHull[2] + 2.0)) || VecCalc > (StepHeight - (vecHull[2] + 2.0)) ) //This means it was inside something, in this case, we take the normal non traced position.
+	{
+		vecorigin[2] = originalPostionTrace[2];
+	}
+
+	delete trace;
+	//if it doesnt hit anything, then it just does buisness as usual
+}
+
+public bool HitOnlyWorld(int entity, int contentsMask, any iExclude)
+{
+	if(entity == 0)
+	{
+		return true;
+	}	
+	
+	return false;
+}
+
 stock void CF_GetVectorAnglesTwoPoints(const float startPos[3], const float endPos[3], float angles[3])
 {
 	static float tmpVec[3];
