@@ -59,6 +59,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	MarkNativeAsOptional("PNPC.i_Health.set");
 	MarkNativeAsOptional("PNPC_IsNPC");
 	MarkNativeAsOptional("PNPC_Explosion");
+	MarkNativeAsOptional("PNPC_SetMeleePriority");
 	CF_MakeNatives();
 	return APLRes_Success;
 }

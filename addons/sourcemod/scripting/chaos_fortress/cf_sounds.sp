@@ -131,7 +131,11 @@ methodmap CFSound __nullable__
 		char file[255];
 		this.GetFile(file, 255);
 
-		for (int plays = 0; plays < this.i_Times; plays++)
+		int times = 1 + this.i_Times;
+		if (IsValidClient(source))
+			times += CFC_GetTooQuietIncrement(source);
+
+		for (int plays = 0; plays < times; plays++)
 		{
 			int level = this.i_Level;
 
@@ -352,7 +356,7 @@ public void CFS_CreateSounds(int client, ConfigMap map)
 
 						sound.b_Global = GetBoolFromCFGMap(sndSec, "global", false);
 				
-						sound.i_Channel = GetIntFromCFGMap(sndSec, "channel", 7);
+						sound.i_Channel = GetIntFromCFGMap(sndSec, "channel", CFC_GetDefaultChannel(client));
 						sound.i_Level = GetIntFromCFGMap(sndSec, "level", 100);
 						sound.i_PlayMode = GetIntFromCFGMap(sndSec, "source", 0);
 						sound.i_MinPitch = GetIntFromCFGMap(sndSec, "pitch_min", 100);

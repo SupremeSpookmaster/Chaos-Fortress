@@ -25,6 +25,8 @@ bool b_SpawnPreviewParticleNextFrame[MAXPLAYERS + 1] = { false, ... };
 
 int i_CharacterParticleOwner[2049] = { -1, ... };
 int i_DialogueReduction[MAXPLAYERS + 1] = { 0, ... };
+int i_Repetitions[MAXPLAYERS + 1] = { 0, ... };
+int i_DefaultChannel[MAXPLAYERS + 1] = { 0, ... };
 int i_DetailedDescPage[MAXPLAYERS + 1] = { -1, ... };
 
 bool b_DisplayRole = true;
@@ -716,7 +718,7 @@ methodmap CFCharacter __nullable__
 {
 	public CFCharacter()
 	{
-		for (int i = 1; i <= MaxClients; i++)
+		for (int i = 1; i <= MAXPLAYERS; i++)
 		{
 			if (!b_CharacterExists[i])
 			{
@@ -2537,6 +2539,8 @@ public void CFC_NoLongerNeedsHelp(int client)
 	float weight = GetFloatFromCFGMap(map, "character.weight", 0.0);
 	int class = GetIntFromCFGMap(map, "character.class", 1) - 1;
 	i_DialogueReduction[client] = GetIntFromCFGMap(map, "character.be_quiet", 1);
+	i_Repetitions[client] = GetIntFromCFGMap(map, "character.repeat_lines", 0);
+	i_DefaultChannel[client] = GetIntFromCFGMap(map, "character.default_channel", 7);
 	float scale = GetFloatFromCFGMap(map, "character.scale", 1.0);
 	
 	CFC_ApplyCharacter(client, speed, health, Classes[class], model, name, scale, weight, conf, archetype);
@@ -3176,7 +3180,7 @@ public void CFC_NoLongerNeedsHelp(int client)
  		vel[i] = buffer[i] * forceToUse;
 
 	if ((GetEntityFlags(client) & FL_ONGROUND) != 0 || GetEntProp(client, Prop_Send, "m_nWaterLevel") >= 1)
-		vel[2] = fmax(force, force * (IgnoreWeight ? 1.0 : 1.0 - ClampFloat(CF_GetCharacterWeight(client), -9999999.9, 1.0)));
+		vel[2] = fmax(vel[2], 310.0);
 	else
 		vel[2] += 50.0; // a little boost to alleviate arcing issues
  		
@@ -3714,4 +3718,20 @@ public int CF_GetDialogueReduction(int client)
 		return 0;
 		
 	return i_DialogueReduction[client];
+}
+
+public int CFC_GetTooQuietIncrement(int client)
+{
+	if (!CF_IsPlayerCharacter(client))
+		return 0;
+		
+	return i_Repetitions[client];
+}
+
+public int CFC_GetDefaultChannel(int client)
+{
+	if (!CF_IsPlayerCharacter(client))
+		return 7;
+		
+	return i_DefaultChannel[client];
 }

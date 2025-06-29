@@ -2636,6 +2636,10 @@ public Native_CF_CreateShieldWall(Handle plugin, int numParams)
 		{
 			f_NextShieldCollisionForward[prop][i] = 0.0;
 		}
+
+		#if defined _pnpc_included_
+		PNPC_SetMeleePriority(prop, 1);
+		#endif
 	}
 	
 	return prop;
