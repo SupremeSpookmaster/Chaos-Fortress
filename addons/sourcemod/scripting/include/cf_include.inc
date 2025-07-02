@@ -2138,3 +2138,12 @@ native void CF_RemoveCondition(int client, TFCond condition);
  * @param gesture		The gesture to force.
  */
 native void CF_ForceGesture(int client, char[] gesture = "ACT_MP_THROW");
+
+/**
+ * Makes an entity block line-of-sight traces for custom sources. This includes things like explosions and penetrating attacks.
+ * Note that certain entities ignore this, and will either always block or always not block LOS.
+ * 
+ * @param entity		The entity to set LOS block status.
+ * @param status		True to make this entity block LOS traces, false otherwise.
+ */
+native void CF_SetEntityBlocksLOS(int entity, bool status);

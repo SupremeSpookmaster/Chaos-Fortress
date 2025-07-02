@@ -41,6 +41,7 @@ Address CEndLagCompensationManager;
 Address SDKGetCurrentCommand;
 
 int i_GenericProjectileOwner[2049] = { -1, ... };
+bool b_EntityBlocksLOS[2049] = { false, ... };
 int i_HealingDone[MAXPLAYERS + 1] = { 0, ... };
 int i_HUDR[MAXPLAYERS + 1] = { 255, ... };
 int i_HUDG[MAXPLAYERS + 1] = { 255, ... };
@@ -130,6 +131,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_AddCondition", Native_CF_AddCondition);
 	CreateNative("CF_RemoveCondition", Native_CF_RemoveCondition);
 	CreateNative("CF_ForceGesture", Native_CF_ForceGesture);
+	CreateNative("CF_SetEntityBlocksLOS", Native_CF_SetEntityBlocksLOS);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -2261,6 +2263,9 @@ public MRESReturn GenericProjectile_Explode(int rocket)
 int entityBeingTraced = -1;
 public bool CF_AOETrace(entity, contentsmask)
 {
+	if (b_EntityBlocksLOS[entity] && entity != entityBeingTraced)
+		return true;
+
 	if (!CF_DefaultTrace(entity, contentsmask))
 		return false;
 		
@@ -2637,8 +2642,9 @@ public Native_CF_CreateShieldWall(Handle plugin, int numParams)
 			f_NextShieldCollisionForward[prop][i] = 0.0;
 		}
 
+		CF_SetEntityBlocksLOS(prop, true);
 		#if defined _pnpc_included_
-		PNPC_SetMeleePriority(prop, 1);
+		PNPC_SetMeleePriority(prop, 2);
 		#endif
 	}
 	
@@ -3385,6 +3391,8 @@ public Action DeleteSimulatedSpellbook(Handle deletethebook, DataPack pack)
 
 public void CFA_OnEntityCreated(int entity, const char[] classname)
 {
+	b_EntityBlocksLOS[entity] = false;
+
 	if (StrContains(classname, "tf_projectile") != -1)
 	{
 		SDKHook(entity, SDKHook_SpawnPost, GetOwner);
@@ -3896,15 +3904,28 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 	GetClientEyePosition(client, startPos);
 	GetPointInDirection(startPos, shootAng, 9999.0, endPos);
 
-	if (!CF_HasLineOfSight(startPos, endPos, _, endPos))
+	int enemyBlockedLOS = -1;
+	if (!CF_HasLineOfSight(startPos, endPos, enemyBlockedLOS, endPos))
 	{
 		float eyePos[3];
 		GetClientEyePosition(client, eyePos);
 		UTIL_ImpactTrace(client, eyePos, DMG_BULLET);
 	}
 
-	ArrayList victims = CF_DoBulletTrace(client, startPos, endPos, pierce, checkTeam, checkPlugin, checkFunction, hitPos, width);
 	SpawnParticle_ControlPoints(shootPos, hitPos, particle, 0.1);
+
+	ArrayList initialVictims = CF_DoBulletTrace(client, startPos, endPos, pierce, checkTeam, checkPlugin, checkFunction, hitPos, width);
+	if (CF_IsValidTarget(enemyBlockedLOS, checkTeam, checkPlugin, checkFunction))
+		PushArrayCell(initialVictims, enemyBlockedLOS);
+
+	if (GetArraySize(initialVictims) <= 0)
+	{
+		delete initialVictims;
+		return;
+	}
+
+	ArrayList victims = SortListByDistance(startPos, initialVictims);
+	delete initialVictims;
 
 	bool crit = (TF2_IsPlayerInCondition(client, TFCond_CritCanteen) || TF2_IsPlayerInCondition(client, TFCond_CritMmmph) || TF2_IsPlayerInCondition(client, TFCond_CritOnDamage) || TF2_IsPlayerInCondition(client, TFCond_CritOnFirstBlood) || 
 	TF2_IsPlayerInCondition(client, TFCond_CritOnFlagCapture) || TF2_IsPlayerInCondition(client, TFCond_CritOnKill) || TF2_IsPlayerInCondition(client, TFCond_CritOnWin) || TF2_IsPlayerInCondition(client, TFCond_CritRuneTemp) ||
@@ -4018,7 +4039,7 @@ public any Native_CF_HasLineOfSight(Handle plugin, int numParams)
 	GetNativeArray(2, end, sizeof(end));
 	int user = GetNativeCell(5);
 
-	TR_TraceRayFilter(start, end, MASK_SHOT, RayType_EndPoint, CF_LOSTrace, user);
+	TR_TraceRayFilter(start, end, MASK_SHOT, RayType_EndPoint, CF_LOSTrace_Internal, user);
 
 	if (TR_DidHit())
 	{
@@ -4029,6 +4050,17 @@ public any Native_CF_HasLineOfSight(Handle plugin, int numParams)
 	}
 
 	return true;
+}
+
+stock bool CF_LOSTrace_Internal(int entity, int contentsmask, int target)
+{
+	if (b_EntityBlocksLOS[entity] && entity != target)
+		return true;
+
+	if (IsValidClient(entity) || entity == target || IsABuilding(entity) || IsAProjectile(entity) || !Brush_Is_Solid(entity))
+		return false;
+
+	return IsPayloadCart(entity) || !CF_IsValidTarget(entity, view_as<TFTeam>(GetTeam(target)));
 }
 
 public bool CF_OnlyHitTarget(int entity, int contentsMask, int target)
@@ -4672,4 +4704,12 @@ public void Native_CF_ForceGesture(Handle plugin, int numParams)
         g_cvSvCheats.SetBool(false);
         g_cvSvCheats.Flags |= FCVAR_NOTIFY;
     }
+}
+
+public void Native_CF_SetEntityBlocksLOS(Handle plugin, int numParams)
+{
+	b_EntityBlocksLOS[GetNativeCell(1)] = GetNativeCell(2);
+	#if defined _pnpc_included_
+	PNPC_SetEntityBlocksLOS(GetNativeCell(1), GetNativeCell(2));
+	#endif
 }
