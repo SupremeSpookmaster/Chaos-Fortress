@@ -29,6 +29,8 @@ int i_Repetitions[MAXPLAYERS + 1] = { 0, ... };
 int i_DefaultChannel[MAXPLAYERS + 1] = { 0, ... };
 int i_DetailedDescPage[MAXPLAYERS + 1] = { -1, ... };
 
+float f_DefaultVolume[MAXPLAYERS + 1] = { 1.0, ... };
+
 bool b_DisplayRole = true;
 bool b_CharacterApplied[MAXPLAYERS + 1] = { false, ... }; //Whether or not the client's character has been applied to them already. If true: skip MakeCharacter for that client. Set to false automatically on death, round end, disconnect, and if the player changes their character selection.
 bool b_ReadingLore[MAXPLAYERS + 1] = { false, ... };
@@ -2541,6 +2543,7 @@ public void CFC_NoLongerNeedsHelp(int client)
 	i_DialogueReduction[client] = GetIntFromCFGMap(map, "character.be_quiet", 1);
 	i_Repetitions[client] = GetIntFromCFGMap(map, "character.repeat_lines", 0);
 	i_DefaultChannel[client] = GetIntFromCFGMap(map, "character.default_channel", 7);
+	f_DefaultVolume[client] = GetFloatFromCFGMap(map, "character.default_volume", 0.65);
 	float scale = GetFloatFromCFGMap(map, "character.scale", 1.0);
 	
 	CFC_ApplyCharacter(client, speed, health, Classes[class], model, name, scale, weight, conf, archetype);
@@ -3734,4 +3737,12 @@ public int CFC_GetDefaultChannel(int client)
 		return 7;
 		
 	return i_DefaultChannel[client];
+}
+
+public float CFC_GetDefaultVolume(int client)
+{
+	if (!CF_IsPlayerCharacter(client))
+		return 1.0;
+		
+	return f_DefaultVolume[client];
 }

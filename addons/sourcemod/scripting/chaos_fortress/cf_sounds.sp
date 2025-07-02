@@ -131,11 +131,7 @@ methodmap CFSound __nullable__
 		char file[255];
 		this.GetFile(file, 255);
 
-		int times = 1 + this.i_Times;
-		if (IsValidClient(source))
-			times += CFC_GetTooQuietIncrement(source);
-
-		for (int plays = 0; plays < times; plays++)
+		for (int plays = 0; plays < this.i_Times; plays++)
 		{
 			int level = this.i_Level;
 
@@ -351,7 +347,7 @@ public void CFS_CreateSounds(int client, ConfigMap map)
 					ConfigMap sndSec = map.GetSection(path);
 					if (sndSec != null)
 					{
-						sound.f_Volume = GetFloatFromCFGMap(sndSec, "volume", 1.0);
+						sound.f_Volume = GetFloatFromCFGMap(sndSec, "volume", CFC_GetDefaultVolume(client));
 						sound.f_Chance = GetFloatFromCFGMap(sndSec, "chance", 1.0);
 
 						sound.b_Global = GetBoolFromCFGMap(sndSec, "global", false);
@@ -361,11 +357,16 @@ public void CFS_CreateSounds(int client, ConfigMap map)
 						sound.i_PlayMode = GetIntFromCFGMap(sndSec, "source", 0);
 						sound.i_MinPitch = GetIntFromCFGMap(sndSec, "pitch_min", 100);
 						sound.i_MaxPitch = GetIntFromCFGMap(sndSec, "pitch_max", 100);
-						sound.i_Times = GetIntFromCFGMap(sndSec, "times", 1);
+						sound.i_Times = GetIntFromCFGMap(sndSec, "times", CFC_GetTooQuietIncrement(client) + 1);
 					}
 				}
 				else
+				{
+					sound.i_Times = CFC_GetTooQuietIncrement(client) + 1;
+					sound.i_Channel = CFC_GetDefaultChannel(client);
+					sound.f_Volume = CFC_GetDefaultVolume(client);
 					subsection.Get(subKey, file, sizeof(file));
+				}
 
 				if (sound.SetFile(file))
 					cue.AddSound(sound);
