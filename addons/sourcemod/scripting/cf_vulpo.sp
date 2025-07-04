@@ -42,6 +42,8 @@ Handle MajorSteamTimer[MAXPLAYERS+1];
 float MajorSteamEndAt[MAXPLAYERS+1];
 TFClassType MajorSteamClass[MAXPLAYERS+1];
 float MajorSteamAlarmAt;
+float Amp_BuffAmt[2048];
+int Amp_Buffer[MAXPLAYERS + 1];
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
@@ -123,7 +125,16 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 		
 	if(AmpBuffTimer[attacker])
 	{
-		damage *= 1.15;
+		float originalDmg = damage;
+		damage *= Amp_BuffAmt[attacker];
+
+		int owner = GetClientOfUserId(Amp_Buffer[attacker]);
+		if (IsValidClient(owner))
+		{
+			float diff = originalDmg - damage;
+			CF_GiveUltCharge(owner, diff, CF_ResourceType_DamageDealt);
+		}
+
 		return Plugin_Changed;
 	}
 
@@ -406,6 +417,7 @@ void OnBuildObject(Event event, const char[] name, bool dontBroadcast)
 			{
 				SetEntityModel(entity, AMP_MODEL);
 				SetEntProp(entity, Prop_Send, "m_nSkin", GetEntProp(entity, Prop_Send, "m_nSkin") + 2);
+				Amp_BuffAmt[entity] = CF_GetArgF(owner, PluginName, ABILITY_BUILDINGS, buffer, 1.15);
 
 				CreateTimer(0.1, Timer_AmpBuilding, EntIndexToEntRef(entity), TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
 			}
@@ -518,6 +530,8 @@ Action Timer_AmpThink(Handle timer, int ref)
 						
 						delete AmpBuffTimer[client];
 						AmpBuffTimer[client] = CreateTimer(2.5, Timer_AmpBuff, client);
+						Amp_BuffAmt[client] = Amp_BuffAmt[entity];
+						Amp_Buffer[client] = GetClientUserId(owner);
 
 						metal -= cost;
 						ultCharge += float(cost);
