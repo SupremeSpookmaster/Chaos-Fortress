@@ -131,7 +131,7 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 		int owner = GetClientOfUserId(Amp_Buffer[attacker]);
 		if (IsValidClient(owner))
 		{
-			float diff = originalDmg - damage;
+			float diff = damage - originalDmg;
 			CF_GiveUltCharge(owner, diff, CF_ResourceType_DamageDealt);
 		}
 

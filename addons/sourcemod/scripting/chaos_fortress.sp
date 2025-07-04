@@ -110,6 +110,24 @@ public void OnMapEnd()
 	CFC_MapEnd();
 	CFB_MapEnd();
 	CFW_MapChange();
+
+	ConfigMap rules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
+	if (rules != null)
+	{
+		ConfigMap subsection = rules.GetSection("game_rules.general_rules");
+		if (subsection != null)
+		{
+			ConVar tickRate = FindConVar("sm_interval_per_tick");
+			if (tickRate != null)
+			{
+				tickRate.Flags &= ~FCVAR_CHEAT;
+				tickRate.SetFloat(GetFloatFromCFGMap(subsection, "tick_interval", 0.015000));
+				PrintToServer("SETTING TICK RATE");
+			}
+		}
+
+		DeleteCfg(rules);
+	}
 }
 
 public Action PlayerKilled(Event hEvent, const char[] sEvName, bool bDontBroadcast)
