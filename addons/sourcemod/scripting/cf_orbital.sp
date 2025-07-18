@@ -3,6 +3,7 @@
 #include <tf2_stocks>
 #include <cf_stocks>
 #include <fakeparticles>
+#include <cbasenpc>
 
 #define ORBITAL		"cf_orbital"
 #define HEIGHT		"orbital_height_advantage"
@@ -285,6 +286,7 @@ public void Thruster_Activate(int client, char abilityName[255])
 bool Gravity_Active[MAXPLAYERS + 1] = { false, ... };
 
 float Gravity_Cost[MAXPLAYERS + 1] = { 0.0, ... };
+float Gravity_Gravity[MAXPLAYERS + 1] = { 0.0, ... };
 
 int Gravity_Wearable[MAXPLAYERS + 1] = { -1, ... };
 int Gravity_Particle[MAXPLAYERS + 1] = { -1, ... };
@@ -304,10 +306,11 @@ public void Gravity_Toggle(int client, char abilityName[255])
 
 		CF_PlayRandomSound(client, client, "sound_gravity_on");
 		
-		SDKHook(client, SDKHook_PreThink, Gravity_PreThink);
+		RequestFrame(Gravity_Logic, GetClientUserId(client));
 		Gravity_Active[client] = true;
 		
-		SetEntityGravity(client, CF_GetArgF(client, ORBITAL, abilityName, "gravity"));
+		Gravity_Gravity[client] = CF_GetArgF(client, ORBITAL, abilityName, "gravity");
+		SetEntityGravity(client, Gravity_Gravity[client]);
 		EmitSoundToClient(client, SOUND_GRAVITY_LOOP, _, _, 80);
 	}
 	else
@@ -330,7 +333,6 @@ public void Gravity_Disable(int client, bool playSound)
 		RemoveEntity(particle);
 	}
 	
-	SDKUnhook(client, SDKHook_PreThink, Gravity_PreThink);
 	StopSound(client, 0, SOUND_GRAVITY_LOOP);
 	
 	Gravity_Active[client] = false;
@@ -342,45 +344,68 @@ public void Gravity_Disable(int client, bool playSound)
 	}
 }
 
-public Action Gravity_PreThink(int client)
+public void Gravity_Logic(int id)
 {
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client) || !Gravity_Active[client])
+		return;
+
 	float resource = CF_GetSpecialResource(client);
 	if (resource < Gravity_Cost[client])
 	{
 		Gravity_Disable(client, true);
-		SDKUnhook(client, SDKHook_PreThink, Gravity_PreThink);
-		return Plugin_Stop;
+		return;
 	}
 	
 	CF_SetSpecialResource(client, resource - Gravity_Cost[client]);
 	
 	Gravity_SetVelocity(client);
-	
-	return Plugin_Continue;
+	RequestFrame(Gravity_Logic, id);
 }
 
 //If this is not here, movement is really jittery and weird while hovering, which is bad as a sniper for obvious reasons:
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
 {
 	if (Gravity_Active[client])
-		Gravity_SetVelocity(client);
+	{
+		float targVel[3];
+		Gravity_CalculateVelocity(client, targVel);
+		vel[2] = targVel[2];
+		return Plugin_Changed;
+	}
 		
 	return Plugin_Continue;
 }
 
 public void Gravity_SetVelocity(int client)
 {
-	float currentVel[3];
-	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", currentVel);
-	
-	if (currentVel[2] < 1.0)
-		currentVel[2] = 1.0;
-	
-	int frame = GetEntProp(client, Prop_Send, "m_ubInterpolationFrame");
+	CF_StartLagCompensation(client);
 
-	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, currentVel);
+	float targVel[3];
+	Gravity_CalculateVelocity(client, targVel);
 	
-	SetEntProp(client, Prop_Send, "m_ubInterpolationFrame", frame);
+	//eleportEntity(client, _, _, currentVel);
+	//SetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", currentVel);
+	CBaseEntity(client).SetAbsVelocity(targVel);
+	
+	CF_EndLagCompensation(client);
+}
+
+public void Gravity_CalculateVelocity(int client, float output[3])
+{
+	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", output);
+	
+	float min = 1.0;
+	if (output[2] <= min)
+	{
+		SetEntityGravity(client, 0.0);
+	}
+	else
+	{
+		SetEntityGravity(client, Gravity_Gravity[client]);
+	}
+
+	output[2] = fmax(min, output[2]);
 }
 
 public void CF_OnCharacterCreated(int client)

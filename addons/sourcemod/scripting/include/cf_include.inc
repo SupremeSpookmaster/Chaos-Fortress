@@ -2147,3 +2147,14 @@ native void CF_ForceGesture(int client, char[] gesture = "ACT_MP_THROW");
  * @param status		True to make this entity block LOS traces, false otherwise.
  */
 native void CF_SetEntityBlocksLOS(int entity, bool status);
+
+/**
+ * Increments the client's "healing" value on the scoreboard.
+ * This is automatically called whenever either of the CF_HealPlayer natives are called with a valid healer,
+ * so this native is primarily intended for edge cases where no actual healing was done, but the client 
+ * still performed a supportive action that you want reflected on the scoreboard.
+ * 
+ * @param client		The client to give points to.
+ * @param points		The number of points to give.
+ */
+native void CF_GiveHealingPoints(int client, float points);

@@ -132,6 +132,7 @@ public void CFA_MakeNatives()
 	CreateNative("CF_RemoveCondition", Native_CF_RemoveCondition);
 	CreateNative("CF_ForceGesture", Native_CF_ForceGesture);
 	CreateNative("CF_SetEntityBlocksLOS", Native_CF_SetEntityBlocksLOS);
+	CreateNative("CF_GiveHealingPoints", Native_CF_GiveHealingPoints);
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -4712,4 +4713,9 @@ public void Native_CF_SetEntityBlocksLOS(Handle plugin, int numParams)
 	#if defined _pnpc_included_
 	PNPC_SetEntityBlocksLOS(GetNativeCell(1), GetNativeCell(2));
 	#endif
+}
+
+public void Native_CF_GiveHealingPoints(Handle plugin, int numParams)
+{
+	CFA_AddHealingPoints(GetNativeCell(1), RoundFloat(GetNativeCell(2)));
 }

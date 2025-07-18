@@ -120,6 +120,8 @@ void Barrier_GiveBarrier(int target, int giver, float amount, float percentage =
 	{
 		CF_GiveSpecialResource(giver, amountGiven, CF_ResourceType_Healing);
 		CF_GiveUltCharge(giver, amountGiven, CF_ResourceType_Healing);
+		CF_GiveHealingPoints(giver, amountGiven);
+		
 		EmitSoundToClient(giver, SOUND_GIVE_BARRIER, target, _, 80, _, 0.6, pitch);
 
 		float pos[3];

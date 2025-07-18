@@ -2541,6 +2541,7 @@ public Action CF_OnPhysPropHitByProjectile(int prop, int entity, TFTeam propTeam
 		
 		CF_GiveSpecialResource(entityOwner, -finalCost);
 		CF_GiveUltCharge(entityOwner, totalHealing, CF_ResourceType_Healing);
+		CF_GiveHealingPoints(entityOwner, totalHealing);
 	}
 	else
 		return Plugin_Continue;
@@ -3509,6 +3510,7 @@ public void PNPC_OnTouch(PNPC npc, int entity, char[] classname)
 		float finalCost = totalHealing / healPerScrap;
 		CF_GiveSpecialResource(entityOwner, -finalCost);
 		CF_GiveUltCharge(entityOwner, totalHealing, CF_ResourceType_Healing);
+		CF_GiveHealingPoints(entityOwner, totalHealing);
 	}
 	else
 		return;
@@ -4103,7 +4105,10 @@ public void Scrap_Hit(int attacker, int victim, float &baseDamage, bool &allowFa
 					owner = buddies[victim].GetOwner();
 
 				if (owner != attacker)
+				{
 					CF_GiveUltCharge(attacker, totalHealing, CF_ResourceType_Healing);
+					CF_GiveHealingPoints(attacker, totalHealing);
+				}
 			}
 		}
 		else
