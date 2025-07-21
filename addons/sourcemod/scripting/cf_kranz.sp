@@ -481,3 +481,31 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 
 	return ReturnValue;
 }
+
+bool b_Obliterating[MAXPLAYERS + 1] = { false, ... };
+
+public Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int weapon)
+{
+	if (!IsValidEntity(weapon) || !IsValidMulti(attacker) || b_Obliterating[attacker])
+		return Plugin_Continue;
+
+	float radius = TF2CustAttr_GetFloat(weapon, "kranz obliterator radius");
+	float obliteratorDMG = TF2CustAttr_GetFloat(weapon, "kranz obliterator damage");
+	
+	if (radius > 0.0)
+	{
+		float falloffStart = TF2CustAttr_GetFloat(weapon, "kranz obliterator falloff start");
+		float falloffMax = TF2CustAttr_GetFloat(weapon, "kranz obliterator falloff amount");
+
+		EmitSoundToAll(SND_OBLITERATOR_EXPLODE, victim);
+		float hitPos[3];
+		CF_WorldSpaceCenter(victim, hitPos);
+		SpawnParticle(hitPos, (TF2_GetClientTeam(attacker) == TFTeam_Red ? PARTICLE_OBLITERATOR_EXPLODE_RED : PARTICLE_OBLITERATOR_EXPLODE_BLUE), 2.0);
+
+		b_Obliterating[attacker] = true;
+		CF_GenericAOEDamage(attacker, attacker, weapon, obliteratorDMG, DMG_BLAST|DMG_ALWAYSGIB, radius, hitPos, falloffStart, falloffMax, _, false);
+		b_Obliterating[attacker] = false;
+	}
+
+	return Plugin_Continue;
+}

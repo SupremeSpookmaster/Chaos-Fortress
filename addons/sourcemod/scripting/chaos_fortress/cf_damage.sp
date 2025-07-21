@@ -71,6 +71,8 @@ public Action CFDMG_OnNonPlayerDamaged(int victim, int &attacker, int &inflictor
 {
 	Action ReturnValue = Plugin_Continue;
 	Action newValue;
+
+	CFDMG_CalculateDMGFromCustAtts(victim, attacker, inflictor, damage, weapon);
 	
 	int damagecustom = 0;	//This is not used for anything, I only have it because I can't compile this without passing a variable and I really don't feel like restructuring this right now.
 	//First, we call PreDamage:
@@ -135,6 +137,36 @@ public Action CFDMG_OnNonPlayerDamaged(int victim, int &attacker, int &inflictor
 	return ReturnValue;
 }
 
+public void CFDMG_CalculateDMGFromCustAtts(int victim, int attacker, int inflictor, float &damage, int weapon)
+{
+	float override = TF2CustAttr_GetFloat(weapon, "chaos fortress base damage override", -1.0);
+	if (override >= 0.0)
+	{
+		damage = override;
+	}
+
+	float falloffStart = TF2CustAttr_GetFloat(weapon, "chaos fortress falloff distance start", -1.0);
+	float falloffEnd = TF2CustAttr_GetFloat(weapon, "chaos fortress falloff distance end", -1.0);
+	if (falloffStart >= 0.0 && falloffEnd >= 0.0)
+	{
+		float falloffMax = TF2CustAttr_GetFloat(weapon, "chaos fortress falloff amount", 0.0);
+
+		if (falloffMax > 0.0)
+		{
+			float pos[3], vicPos[3];
+			CF_WorldSpaceCenter(attacker, pos);
+			CF_WorldSpaceCenter(victim, vicPos);
+
+			float dist = GetVectorDistance(pos, vicPos);
+
+			if (dist > falloffStart)
+			{
+				damage *= 1.0 - (((dist - falloffStart) / (falloffMax - falloffStart)) * falloffMax);
+			}
+		}
+	}
+}
+
 public void CFDMG_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, const float damageForce[3], const float damagePosition[3], int damagecustom)
 {
 	Call_StartForward(g_PostDamageForward);
@@ -172,6 +204,8 @@ public Action CFDMG_OnTakeDamageAlive(victim, &attacker, &inflictor, &Float:dama
 {	
 	Action ReturnValue = Plugin_Continue;
 	Action newValue;
+
+	CFDMG_CalculateDMGFromCustAtts(victim, attacker, inflictor, damage, weapon);
 	
 	//First, we call PreDamage:
 	ReturnValue = CFDMG_CallDamageForward(g_PreDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
