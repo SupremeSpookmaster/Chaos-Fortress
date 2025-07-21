@@ -395,17 +395,16 @@ public void Gravity_CalculateVelocity(int client, float output[3])
 {
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", output);
 	
-	float min = 1.0;
-	if (output[2] <= min)
+	float threshold = 20.0;
+	if (output[2] > -threshold && output[2] < threshold)
 	{
-		SetEntityGravity(client, 0.0);
+		SetEntityGravity(client, 0.01);
+		output[2] = 0.0;
 	}
 	else
 	{
 		SetEntityGravity(client, Gravity_Gravity[client]);
 	}
-
-	output[2] = fmax(min, output[2]);
 }
 
 public void CF_OnCharacterCreated(int client)
