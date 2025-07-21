@@ -69,10 +69,12 @@ public Action CFDMG_OnBuildingDamaged(int victim, int &attacker, int &inflictor,
 
 public Action CFDMG_OnNonPlayerDamaged(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], bool isBuilding)
 {
+	float originalDmg = damage;
 	Action ReturnValue = Plugin_Continue;
 	Action newValue;
 
-	CFDMG_CalculateDMGFromCustAtts(victim, attacker, inflictor, damage, weapon);
+	if (IsValidEntity(weapon) && IsValidEntity(victim) && IsValidEntity(attacker))
+		CFDMG_CalculateDMGFromCustAtts(victim, attacker, inflictor, damage, weapon);
 	
 	int damagecustom = 0;	//This is not used for anything, I only have it because I can't compile this without passing a variable and I really don't feel like restructuring this right now.
 	//First, we call PreDamage:
@@ -97,6 +99,9 @@ public Action CFDMG_OnNonPlayerDamaged(int victim, int &attacker, int &inflictor
 			ReturnValue = newValue;
 		}
 	}
+
+	if (ReturnValue != Plugin_Handled && ReturnValue != Plugin_Stop && originalDmg != damage)
+		ReturnValue = Plugin_Changed;
 
 	//Finally, call PostDamage and then give resources/ult charge:
 	if (ReturnValue != Plugin_Handled && ReturnValue != Plugin_Stop)
@@ -201,11 +206,13 @@ int i_LastWeaponDamagedBy[MAXPLAYERS + 1] = { -1, ... };
 
 public Action CFDMG_OnTakeDamageAlive(victim, &attacker, &inflictor, &Float:damage, &damagetype, &weapon,
 	Float:damageForce[3], Float:damagePosition[3], damagecustom)
-{	
+{
+	float originalDmg = damage;
 	Action ReturnValue = Plugin_Continue;
 	Action newValue;
 
-	CFDMG_CalculateDMGFromCustAtts(victim, attacker, inflictor, damage, weapon);
+	if (IsValidEntity(weapon) && IsValidEntity(victim) && IsValidEntity(attacker))
+		CFDMG_CalculateDMGFromCustAtts(victim, attacker, inflictor, damage, weapon);
 	
 	//First, we call PreDamage:
 	ReturnValue = CFDMG_CallDamageForward(g_PreDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
@@ -229,6 +236,9 @@ public Action CFDMG_OnTakeDamageAlive(victim, &attacker, &inflictor, &Float:dama
 			ReturnValue = newValue;
 		}
 	}
+
+	if (ReturnValue != Plugin_Handled && ReturnValue != Plugin_Stop && originalDmg != damage)
+		ReturnValue = Plugin_Changed;
 
 	if (IsValidEntity(weapon))
 		i_LastWeaponDamagedBy[victim] = EntIndexToEntRef(weapon);

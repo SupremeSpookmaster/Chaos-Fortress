@@ -484,7 +484,7 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 
 bool b_Obliterating[MAXPLAYERS + 1] = { false, ... };
 
-public Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int weapon)
+public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
 	if (!IsValidEntity(weapon) || !IsValidMulti(attacker) || b_Obliterating[attacker])
 		return Plugin_Continue;
@@ -498,12 +498,10 @@ public Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor,
 		float falloffMax = TF2CustAttr_GetFloat(weapon, "kranz obliterator falloff amount");
 
 		EmitSoundToAll(SND_OBLITERATOR_EXPLODE, victim);
-		float hitPos[3];
-		CF_WorldSpaceCenter(victim, hitPos);
-		SpawnParticle(hitPos, (TF2_GetClientTeam(attacker) == TFTeam_Red ? PARTICLE_OBLITERATOR_EXPLODE_RED : PARTICLE_OBLITERATOR_EXPLODE_BLUE), 2.0);
+		SpawnParticle(damagePosition, (TF2_GetClientTeam(attacker) == TFTeam_Red ? PARTICLE_OBLITERATOR_EXPLODE_RED : PARTICLE_OBLITERATOR_EXPLODE_BLUE), 2.0);
 
 		b_Obliterating[attacker] = true;
-		CF_GenericAOEDamage(attacker, attacker, weapon, obliteratorDMG, DMG_BLAST|DMG_ALWAYSGIB, radius, hitPos, falloffStart, falloffMax, _, false);
+		CF_GenericAOEDamage(attacker, attacker, -1, obliteratorDMG, DMG_BLAST|DMG_ALWAYSGIB, radius, damagePosition, falloffStart, falloffMax, _, false);
 		b_Obliterating[attacker] = false;
 	}
 
