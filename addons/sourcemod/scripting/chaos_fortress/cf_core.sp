@@ -659,6 +659,9 @@ public void OnGameFrame()
 
 public void OnEntityCreated(int entity, const char[] classname)
 {
+	if (entity < 0 || entity > 2047)
+		return;
+		
 	CFA_OnEntityCreated(entity, classname);
 	CFDMG_OnEntityCreated(entity, classname);
 	
