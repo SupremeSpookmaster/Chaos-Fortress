@@ -269,6 +269,8 @@ public void HookForDamage(int id)
  		SDKHook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
 		SDKUnhook(client, SDKHook_OnTakeDamageAlivePost, CFDMG_OnTakeDamageAlive_Post);
  		SDKHook(client, SDKHook_OnTakeDamageAlivePost, CFDMG_OnTakeDamageAlive_Post);
+		SDKUnhook(client, SDKHook_TraceAttack, CFDMG_TraceAttack);
+		SDKHook(client, SDKHook_TraceAttack, CFDMG_TraceAttack);
 	}
 }
 

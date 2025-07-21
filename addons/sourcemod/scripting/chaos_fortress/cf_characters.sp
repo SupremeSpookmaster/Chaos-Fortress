@@ -3228,6 +3228,7 @@ public void CFC_NoLongerNeedsHelp(int client)
  	CF_SetPlayerConfig(client, "");
  	SDKUnhook(client, SDKHook_OnTakeDamageAlive, CFDMG_OnTakeDamageAlive);
 	SDKUnhook(client, SDKHook_OnTakeDamageAlivePost, CFDMG_OnTakeDamageAlive_Post);
+	SDKUnhook(client, SDKHook_TraceAttack, CFDMG_TraceAttack);
  	b_CharacterApplied[client] = false;
 
  	CFCharacter chara = GetCharacterFromClient(client);

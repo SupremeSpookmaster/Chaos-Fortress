@@ -5,6 +5,8 @@ GlobalForward g_PostDamageForward;
 GlobalForward g_AllowStabForward;
 GlobalForward g_OnStab;
 
+bool b_WasHeadshot[2048][2048];
+
 public void CFDMG_MakeForwards()
 {
 	g_PreDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Pre", ET_Event, Param_Cell, Param_CellByRef, Param_CellByRef, Param_FloatByRef,
@@ -56,6 +58,11 @@ public void PNPC_OnBackstab(int attacker, int victim, float &damage)
 
 public void CFDMG_OnEntityCreated(int entity, const char[] classname)
 {
+	if (StrContains(classname, "npc") != -1 || StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_dispenser") || StrEqual(classname, "obj_teleporter"))
+	{
+		SDKHook(entity, SDKHook_TraceAttack, CFDMG_TraceAttack);
+	}
+
 	if (StrEqual(classname, "obj_sentrygun") || StrEqual(classname, "obj_dispenser") || StrEqual(classname, "obj_teleporter"))
 	{
 		SDKHook(entity, SDKHook_OnTakeDamage, CFDMG_OnBuildingDamaged);
@@ -74,7 +81,7 @@ public Action CFDMG_OnNonPlayerDamaged(int victim, int &attacker, int &inflictor
 	Action newValue;
 
 	if (IsValidEntity(weapon) && IsValidEntity(victim) && IsValidEntity(attacker))
-		CFDMG_CalculateDMGFromCustAtts(victim, attacker, inflictor, damage, weapon);
+		CFDMG_CalculateDMGFromCustAtts(victim, attacker, inflictor, damage, weapon, damagePosition);
 	
 	int damagecustom = 0;	//This is not used for anything, I only have it because I can't compile this without passing a variable and I really don't feel like restructuring this right now.
 	//First, we call PreDamage:
@@ -142,7 +149,27 @@ public Action CFDMG_OnNonPlayerDamaged(int victim, int &attacker, int &inflictor
 	return ReturnValue;
 }
 
-public void CFDMG_CalculateDMGFromCustAtts(int victim, int attacker, int inflictor, float &damage, int weapon)
+public Action CFDMG_TraceAttack(int victim, int& attacker, int& inflictor, float& damage, int& damagetype, int& ammotype, int hitbox, int hitgroup)
+{
+	if (!IsValidClient(attacker))
+		return Plugin_Continue;
+
+	int weapon = GetEntPropEnt(attacker, Prop_Send, "m_hActiveWeapon");
+	if (!IsValidEntity(weapon))
+		return Plugin_Continue;
+
+	float mult = TF2CustAttr_GetFloat(weapon, "chaos fortress headshot multiplier", 1.0);
+	int effect = TF2CustAttr_GetInt(weapon, "chaos fortress headshot effects", 2);
+	if (hitgroup != HITGROUP_HEAD || !(mult != 1.0 || effect < 2))
+		return Plugin_Continue;
+
+	b_WasHeadshot[victim][attacker] = true;
+	hitgroup = HITGROUP_GENERIC;
+	
+	return Plugin_Changed;
+}
+
+public void CFDMG_CalculateDMGFromCustAtts(int victim, int attacker, int inflictor, float &damage, int weapon, float damagePosition[3])
 {
 	float override = TF2CustAttr_GetFloat(weapon, "chaos fortress base damage override", -1.0);
 	if (override >= 0.0)
@@ -150,26 +177,58 @@ public void CFDMG_CalculateDMGFromCustAtts(int victim, int attacker, int inflict
 		damage = override;
 	}
 
-	float falloffStart = TF2CustAttr_GetFloat(weapon, "chaos fortress falloff distance start", -1.0);
-	float falloffEnd = TF2CustAttr_GetFloat(weapon, "chaos fortress falloff distance end", -1.0);
-	if (falloffStart >= 0.0 && falloffEnd >= 0.0)
+	if (b_WasHeadshot[victim][attacker])
 	{
-		float falloffMax = TF2CustAttr_GetFloat(weapon, "chaos fortress falloff amount", 0.0);
+		damage *= TF2CustAttr_GetFloat(weapon, "chaos fortress headshot multiplier", 1.0);
 
-		if (falloffMax > 0.0)
+		int effect = TF2CustAttr_GetInt(weapon, "chaos fortress headshot effects", 2);
+		if (effect == 1)
 		{
-			float pos[3], vicPos[3];
-			CF_WorldSpaceCenter(attacker, pos);
-			CF_WorldSpaceCenter(victim, vicPos);
+			SpawnParticle(damagePosition, "minicrit_text", 0.2);
 
-			float dist = GetVectorDistance(pos, vicPos);
+			if (IsValidClient(attacker))
+				PlayMiniCritSound(attacker);
 
-			if (dist > falloffStart)
+			if (IsValidClient(victim))
+				PlayMiniCritSound(victim);
+		}
+		else if (effect > 1)
+		{
+			SpawnParticle(damagePosition, "crit_text", 0.2);
+
+			if (IsValidClient(attacker))
+				PlayCritSound(attacker);
+				
+			if (IsValidClient(victim))
+				PlayCritVictimSound(victim);
+		}
+	}
+
+	if (!b_WasHeadshot[victim][attacker] || TF2CustAttr_GetInt(weapon, "chaos fortress custom headshot has falloff", 0) != 0)
+	{
+		float falloffStart = TF2CustAttr_GetFloat(weapon, "chaos fortress falloff distance start", -1.0);
+		float falloffEnd = TF2CustAttr_GetFloat(weapon, "chaos fortress falloff distance end", -1.0);
+		if (falloffStart >= 0.0 && falloffEnd >= 0.0)
+		{
+			float falloffMax = TF2CustAttr_GetFloat(weapon, "chaos fortress falloff amount", 0.0);
+
+			if (falloffMax > 0.0)
 			{
-				damage *= 1.0 - (((dist - falloffStart) / (falloffMax - falloffStart)) * falloffMax);
+				float pos[3], vicPos[3];
+				CF_WorldSpaceCenter(attacker, pos);
+				CF_WorldSpaceCenter(victim, vicPos);
+
+				float dist = GetVectorDistance(pos, vicPos);
+
+				if (dist > falloffStart)
+				{
+					damage *= 1.0 - (((dist - falloffStart) / (falloffEnd - falloffStart)) * falloffMax);
+				}
 			}
 		}
 	}
+
+	b_WasHeadshot[victim][attacker] = false;
 }
 
 public void CFDMG_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, const float damageForce[3], const float damagePosition[3], int damagecustom)
@@ -212,7 +271,7 @@ public Action CFDMG_OnTakeDamageAlive(victim, &attacker, &inflictor, &Float:dama
 	Action newValue;
 
 	if (IsValidEntity(weapon) && IsValidEntity(victim) && IsValidEntity(attacker))
-		CFDMG_CalculateDMGFromCustAtts(victim, attacker, inflictor, damage, weapon);
+		CFDMG_CalculateDMGFromCustAtts(victim, attacker, inflictor, damage, weapon, damagePosition);
 	
 	//First, we call PreDamage:
 	ReturnValue = CFDMG_CallDamageForward(g_PreDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
