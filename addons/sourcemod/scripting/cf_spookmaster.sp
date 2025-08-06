@@ -500,8 +500,11 @@ public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor
 	if (GetGameTime() <= Calcium_EndTime[attacker] && weapon == GetPlayerWeaponSlot(attacker, 2))
 	{
 		CF_WorldSpaceCenter(attacker, Calcium_PreviousPos);
-		Calcium_ShockTarget(attacker, victim, Calcium_Radius[attacker], attacker);
-		Calcium_ClearHitStatus(attacker);
+
+		DataPack pack = new DataPack();
+		RequestFrame(Calcium_ShockNextFrame, pack);
+		WritePackCell(pack, GetClientUserId(attacker));
+		WritePackCell(pack, EntIndexToEntRef(victim));
 	}
 	
 	if (IsValidEntity(inflictor) && Calcium_SkeleDamage[attacker] > 0.0)
@@ -519,7 +522,21 @@ public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor
 	return ReturnValue;
 }
 
-public void Calcium_ShockTarget(int attacker, int victim, float radius, int previousVictim)
+void Calcium_ShockNextFrame(DataPack pack)
+{
+	ResetPack(pack);
+	int attacker = GetClientOfUserId(ReadPackCell(pack));
+	int victim = EntRefToEntIndex(ReadPackCell(pack));
+	delete pack;
+
+	if (!IsValidEntity(victim) || (IsValidClient(victim) && !IsPlayerAlive(victim)))
+		return;
+		
+	Calcium_ShockTarget(attacker, victim, Calcium_Radius[attacker], attacker);
+	Calcium_ClearHitStatus(attacker);
+}
+
+void Calcium_ShockTarget(int attacker, int victim, float radius, int previousVictim, float posOverride[3] = NULL_VECTOR)
 {
 	if (!IsValidEntity(victim))
 		return;
@@ -528,7 +545,11 @@ public void Calcium_ShockTarget(int attacker, int victim, float radius, int prev
 	TFTeam team = TF2_GetClientTeam(attacker);
 	
 	float pos[3];
-	CF_WorldSpaceCenter(victim, pos);
+
+	if (Vector_Is_Null(posOverride))
+		CF_WorldSpaceCenter(victim, pos);
+	else
+		pos = posOverride;
 	
 	if (IsValidEntity(previousVictim))
 	{
@@ -537,14 +558,15 @@ public void Calcium_ShockTarget(int attacker, int victim, float radius, int prev
 		SpawnParticle_ControlPoints(Calcium_PreviousPos, pos, team == TFTeam_Red ? PARTICLE_CALCIUM_CHAIN_RED : PARTICLE_CALCIUM_CHAIN_BLUE, 0.5);
 	}
 	
-	SDKHooks_TakeDamage(victim, attacker, attacker, Calcium_Damage[attacker], DMG_CLUB | DMG_BLAST | DMG_ALWAYSGIB);
+	if (!IsValidClient(victim) || IsPlayerAlive(victim))
+		SDKHooks_TakeDamage(victim, attacker, attacker, Calcium_Damage[attacker], DMG_CLUB | DMG_BLAST | DMG_ALWAYSGIB);
 
 	if (!IsABuilding(victim))
 	{
 		#if defined _pnpc_included_
-		if (IsValidClient(victim))
+		if (IsValidMulti(victim))
 			TF2_IgnitePlayer(victim, attacker, Calcium_Ignite[attacker]);
-		else
+		else if (!IsValidClient(victim))
 			view_as<PNPC>(victim).Ignite(Calcium_Ignite[attacker], Calcium_Ignite[attacker], _, 5.0, true, attacker);
 		#else
 		TF2_IgnitePlayer(victim, attacker, Calcium_Ignite[attacker]);

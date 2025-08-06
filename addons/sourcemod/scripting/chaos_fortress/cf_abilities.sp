@@ -135,6 +135,15 @@ public void CFA_MakeNatives()
 	CreateNative("CF_GiveHealingPoints", Native_CF_GiveHealingPoints);
 }
 
+public void SetHeadshotIcon(int effect) 
+{ 
+	headshotKill = true;
+	if (effect < 2)
+		miniCritHit = true;
+	else
+		critHit = true;
+}
+
 Handle g_hSDKWorldSpaceCenter;
 DynamicHook g_DHookRocketExplode;
 DynamicHook g_DHookSentryFireBullet;
@@ -4400,6 +4409,7 @@ public int Native_CF_GetAbilityTypeSlot(Handle plugin, int numParams)
 
 int i_TauntSpeedWearable[MAXPLAYERS + 1] = { -1, ... };
 int i_ForceTauntWeapon[MAXPLAYERS + 1] = { -1, ... };
+int i_ForceTauntOriginalWeapon[MAXPLAYERS + 1] = { -1, ... };
 int i_ForceTauntSlot[MAXPLAYERS + 1] = { -1, ... };
 
 public any Native_CF_ForceTaunt(Handle plugin, int numParams)
@@ -4472,23 +4482,15 @@ public any Native_CF_ForceWeaponTaunt(Handle plugin, int numParams)
 	if (!IsValidMulti(client) || GetEntProp(client, Prop_Send, "m_nWaterLevel") >= 1 || GetEntityFlags(client) & FL_ONGROUND == 0 || (!interrupt && (TF2_IsPlayerStunned(client) || TF2_IsPlayerInCondition(client, TFCond_Taunting))))
 		return false;
 
+	int acWep = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+	i_ForceTauntOriginalWeapon[client] = EntIndexToEntRef(acWep);
+
 	char atts[255];
 	Format(atts, sizeof(atts), "201 ; %f", rate);
-	int weapon = CF_SpawnWeapon(client, classname, index, 77, 7, slot, (slot < 2 ? 1 : 0), (slot < 2 ? 1 : 0), atts, _, visible, false)
+	int weapon = CF_SpawnWeapon(client, classname, index, 77, 7, slot, (slot < 2 ? 1 : 0), (slot < 2 ? 1 : 0), atts, _, visible, false);
 
 	if(weapon != -1)
 	{
-		int acWep = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-
-		for (int i = 0; i < 5; i++)
-		{
-			if (GetPlayerWeaponSlot(client, i) == acWep)
-			{
-				i_ForceTauntSlot[client] = i;
-				break;
-			}
-		}
-
 		TF2_RemoveCondition(client, TFCond_Taunting);
 
 		SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", weapon);
@@ -4524,7 +4526,7 @@ public void TF2_OnConditionRemoved(int client, TFCond condition)
 
 			if (IsPlayerAlive(client))
 			{
-				int weapon = GetPlayerWeaponSlot(client, i_ForceTauntSlot[client]);
+				int weapon = EntRefToEntIndex(i_ForceTauntOriginalWeapon[client]);
 				if (IsValidEntity(weapon))
 				{
 					SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", weapon);

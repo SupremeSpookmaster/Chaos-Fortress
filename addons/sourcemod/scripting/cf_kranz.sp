@@ -497,13 +497,37 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 		float falloffStart = TF2CustAttr_GetFloat(weapon, "kranz obliterator falloff start");
 		float falloffMax = TF2CustAttr_GetFloat(weapon, "kranz obliterator falloff amount");
 
-		EmitSoundToAll(SND_OBLITERATOR_EXPLODE, victim);
-		SpawnParticle(damagePosition, (TF2_GetClientTeam(attacker) == TFTeam_Red ? PARTICLE_OBLITERATOR_EXPLODE_RED : PARTICLE_OBLITERATOR_EXPLODE_BLUE), 2.0);
+		DataPack pack = new DataPack();
+		RequestFrame(Obliterator_Kaboom, pack);
+		WritePackCell(pack, GetClientUserId(attacker));
+		WritePackFloat(pack, radius);
+		WritePackFloat(pack, obliteratorDMG);
+		WritePackFloat(pack, falloffStart);
+		WritePackFloat(pack, falloffMax);
+		WritePackFloatArray(pack, damagePosition, 3);
+	}
+
+	return Plugin_Continue;
+}
+
+public void Obliterator_Kaboom(DataPack pack)
+{
+	ResetPack(pack);
+	int attacker = GetClientOfUserId(ReadPackCell(pack));
+	float radius = ReadPackFloat(pack);
+	float obliteratorDMG = ReadPackFloat(pack);
+	float falloffStart = ReadPackFloat(pack);
+	float falloffMax = ReadPackFloat(pack);
+	float damagePosition[3];
+	ReadPackFloatArray(pack, damagePosition, 3);
+	delete pack;
+
+	if (IsValidClient(attacker))
+	{
+		EmitSoundToAll(SND_OBLITERATOR_EXPLODE, SpawnParticle(damagePosition, (TF2_GetClientTeam(attacker) == TFTeam_Red ? PARTICLE_OBLITERATOR_EXPLODE_RED : PARTICLE_OBLITERATOR_EXPLODE_BLUE), 2.0));
 
 		b_Obliterating[attacker] = true;
 		CF_GenericAOEDamage(attacker, attacker, -1, obliteratorDMG, DMG_BLAST|DMG_ALWAYSGIB, radius, damagePosition, falloffStart, falloffMax, _, false);
 		b_Obliterating[attacker] = false;
 	}
-
-	return Plugin_Continue;
 }

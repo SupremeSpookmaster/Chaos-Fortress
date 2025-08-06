@@ -164,6 +164,7 @@ public Action CFDMG_TraceAttack(int victim, int& attacker, int& inflictor, float
 		return Plugin_Continue;
 
 	b_WasHeadshot[victim][attacker] = true;
+	SetHeadshotIcon(effect);
 	hitgroup = HITGROUP_GENERIC;
 	
 	return Plugin_Changed;
