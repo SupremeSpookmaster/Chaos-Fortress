@@ -4410,7 +4410,6 @@ public int Native_CF_GetAbilityTypeSlot(Handle plugin, int numParams)
 int i_TauntSpeedWearable[MAXPLAYERS + 1] = { -1, ... };
 int i_ForceTauntWeapon[MAXPLAYERS + 1] = { -1, ... };
 int i_ForceTauntOriginalWeapon[MAXPLAYERS + 1] = { -1, ... };
-int i_ForceTauntSlot[MAXPLAYERS + 1] = { -1, ... };
 
 public any Native_CF_ForceTaunt(Handle plugin, int numParams)
 {
@@ -4483,7 +4482,8 @@ public any Native_CF_ForceWeaponTaunt(Handle plugin, int numParams)
 		return false;
 
 	int acWep = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-	i_ForceTauntOriginalWeapon[client] = EntIndexToEntRef(acWep);
+	if (IsValidEntity(acWep))
+		i_ForceTauntOriginalWeapon[client] = EntIndexToEntRef(acWep);
 
 	char atts[255];
 	Format(atts, sizeof(atts), "201 ; %f", rate);
