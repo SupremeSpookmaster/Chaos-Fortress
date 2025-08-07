@@ -2113,6 +2113,11 @@ public Native_CF_HealPlayer(Handle plugin, int numParams)
 		}
 		
 		SetEntProp(client, Prop_Send, "m_iHealth", newHP);
+
+		Event event = CreateEvent("player_healonhit", true);
+		event.SetInt("entindex", client);
+		event.SetInt("amount", healingDone);
+		event.Fire();
 	}
 	else
 	{
