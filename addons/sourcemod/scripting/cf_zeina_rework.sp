@@ -16,6 +16,7 @@
 
 #define ZEINA		"cf_zeina_rework"
 #define BULLET		"zeina_barrier_bullet"
+#define INFO		"zeina_barrier_visor"
 
 #define MODEL_DRG			"models/weapons/w_models/w_drg_ball.mdl"
 
@@ -69,6 +70,37 @@ public Action Text_Transmit(int entity, int client)
 
 float f_Barrier[MAXPLAYERS + 1] = { 0.0, ... };
 float f_NextBarrierTime[MAXPLAYERS + 1] = { 0.0, ... };
+
+int i_BarrierWorldText[MAXPLAYERS + 1] = { -1, ... };
+int i_BarrierWorldTextOwner[2048] = { -1, ... };
+
+bool b_HasBarrierGoggles[MAXPLAYERS + 1] = { false, ... };
+
+int numGoggles = 0;
+
+void Barrier_CheckGoggles(int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client))
+		return;
+
+	bool goggles = CF_HasAbility(client, ZEINA, INFO);
+	if (goggles && numGoggles <= 0)
+	{
+		for (int i = 1; i <= MaxClients; i++)
+		{
+			if (!IsValidMulti(i))
+				continue;
+
+			Barrier_AssignWorldText(i);
+		}
+	}
+
+	b_HasBarrierGoggles[client] = goggles;
+	numGoggles += view_as<int>(goggles);
+}
+
+int Barrier_GetWorldText(int client) { return EntRefToEntIndex(i_BarrierWorldText[client]); }
 
 /**
  * Gives the target some Barrier.
@@ -142,7 +174,7 @@ void Barrier_GiveBarrier(int target, int giver, float amount, float percentage =
 
 	EmitSoundToAll(SOUND_GIVE_BARRIER, target, _, 80, _, 0.4, pitch);
 
-	//TODO: Add prop_dynamic VFX if the target did not previously have Barrier
+	Barrier_Update(target, true);
 }
 
 void Barrier_RemoveBarrier(int target, float amount)
@@ -152,9 +184,88 @@ void Barrier_RemoveBarrier(int target, float amount)
 	if (f_Barrier[target] <= 0.0)
 	{
 		f_Barrier[target] = 0.0;
-		
-		//TODO: Remove prop_dynamic VFX
 	}
+
+	Barrier_Update(target, false);
+}
+
+void Barrier_Update(int client, bool gained)
+{
+	int text = Barrier_GetWorldText(client);
+
+	if (gained)
+	{
+		if (numGoggles > 0 && !IsValidEntity(text))
+			Barrier_AssignWorldText(client);
+
+		//TODO: Make shield bubble
+	}
+	else if (f_Barrier[client] <= 0.0)
+	{
+		if (IsValidEntity(text))
+		{
+			SetParent(text, text);
+			WorldText_MimicHitNumbers(text);
+			i_BarrierWorldText[client] = -1;
+		}
+
+		//TODO: Remove bubble
+	}
+
+	if (IsValidEntity(text))
+	{
+		char current[255];
+		Format(current, sizeof(current), "%i", RoundToFloor(f_Barrier[client]));
+		WorldText_SetMessage(text, current);
+	}
+}
+
+void Barrier_AssignWorldText(int client)
+{
+	if (f_Barrier[client] <= 0.0 || IsValidEntity(Barrier_GetWorldText(client)))
+		return;
+
+	char current[255];
+	Format(current, sizeof(current), "%i", RoundToFloor(f_Barrier[client]));
+
+	float pos[3], ang[3];
+	CF_WorldSpaceCenter(client, pos);
+	pos[2] += 50.0 * CF_GetCharacterScale(client);
+	GetClientAbsAngles(client, ang);
+			
+	int text = WorldText_Create(pos, ang, current, 16.0 * CF_GetCharacterScale(client), _, _, FONT_TF2_BULKY, TF2_GetClientTeam(client) == TFTeam_Red ? 255 : 120, 120, TF2_GetClientTeam(client) == TFTeam_Blue ? 255 : 120, 255);
+	if (IsValidEntity(text))
+	{
+		SetParent(client, text);
+		i_BarrierWorldText[client] = EntIndexToEntRef(text);
+		i_BarrierWorldTextOwner[text] = GetClientUserId(client);
+		
+		SetEdictFlags(text, GetEdictFlags(text) &~ FL_EDICT_ALWAYS);
+		SDKHook(text, SDKHook_SetTransmit, Barrier_TextTransmit);
+	}
+}
+
+public Action Barrier_TextTransmit(int text, int client)
+{
+	//First: block the transmit for anyone who doesn't have the goggles:
+	if (!b_HasBarrierGoggles[client])
+		return Plugin_Handled;
+
+	int owner = GetClientOfUserId(i_BarrierWorldTextOwner[text]);
+	if (!IsValidClient(owner))
+	{
+		return Plugin_Handled;
+	}
+
+	//Second: block the transmit if the target is invisible and the viewer is an enemy:
+	if (IsPlayerInvis(owner) && CF_IsValidTarget(owner, TF2_GetClientTeam(client)))
+		return Plugin_Handled;
+
+	//Last: block the transmit if the text belongs to this client, and they are not taunting or in third person:
+	if (client == owner && !(GetEntProp(client, Prop_Send, "m_nForceTauntCam") || TF2_IsPlayerInCondition(client, TFCond_Taunting)))
+		return Plugin_Handled;
+
+	return Plugin_Continue;
 }
 
 int Bullet_MagOwner = -1;
@@ -371,6 +482,7 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 public void CF_OnCharacterCreated(int client)
 {
 	f_NextBarrierTime[client] = 0.0;
+	RequestFrame(Barrier_CheckGoggles, GetClientUserId(client));
 }
 
 public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
@@ -379,6 +491,27 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 	{
 		Barrier_RemoveBarrier(client, f_Barrier[client] + 1.0);
 		f_NextBarrierTime[client] = 0.0;
+		
+		if (b_HasBarrierGoggles[client])
+		{
+			b_HasBarrierGoggles[client] = false;
+			numGoggles--;
+
+			if (numGoggles <= 0)
+			{
+				for (int i = 1; i <= MaxClients; i++)
+				{
+					int text = Barrier_GetWorldText(i);
+					if (IsValidEntity(text))
+					{
+						i_BarrierWorldTextOwner[text] = -1;
+						RemoveEntity(text);
+					}
+					
+					i_BarrierWorldText[i] = -1;
+				}
+			}
+		}
 	}
 }
 
@@ -400,6 +533,8 @@ public void OnEntityDestroyed(int entity)
 
 		i_BulletTrail[entity] = -1;
 	}
+
+	i_BarrierWorldTextOwner[entity] = -1;
 }
 
 public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
