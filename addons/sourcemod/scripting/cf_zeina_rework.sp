@@ -63,6 +63,7 @@ public void OnMapStart()
 
 public void OnPluginStart()
 {
+	RegAdminCmd("zeina_givebarrier", Barrier_GiveOnCommand, ADMFLAG_SLAY, "Zeina: gives a flat amount of Barrier to the specified client(s). Used mainly for debugging.");
 }
 
 int Text_Owner[2048] = { -1, ... };
@@ -90,6 +91,45 @@ bool b_HasBarrierGoggles[MAXPLAYERS + 1] = { false, ... };
 Handle g_BarrierHUDTimer[MAXPLAYERS + 1] = { null, ... };
 
 int numGoggles = 0;
+
+public Action Barrier_GiveOnCommand(int client, int args)
+{
+	if (args != 2)
+	{
+		ReplyToCommand(client, "Usage: zeina_givebarrier <target> <amount> | EXAMPLE: zeina_givebarrier john 100 will give John 100 Barrier.");
+		return Plugin_Continue;
+	}
+
+	char target[32], amtStr[32];
+	GetCmdArg(1, target, 32);
+	GetCmdArg(2, amtStr, 32);
+	float amt = StringToFloat(amtStr);
+
+	int targets[MAXPLAYERS];
+	char targName[MAX_TARGET_LENGTH];
+	bool tnml;
+
+	int targCount;
+	if ((targCount = ProcessTargetString(target, client, targets, MAXPLAYERS, 0, targName, sizeof(targName), tnml)) <= 0)
+	{
+		ReplyToTargetError(client, targCount);
+		return Plugin_Continue;
+	}
+
+	for (int i = 0; i < targCount; i++)
+	{
+		if (amt > 0.0)
+			Barrier_GiveBarrier(targets[i], 0, amt, _, _, _, true);
+		else
+			Barrier_RemoveBarrier(targets[i], -amt);
+
+		char repl[255];
+		Format(repl, sizeof(repl), "%s {yellow}%i{default} Barrier %s {%s}%N{default}.", amt > 0.0 ? "Gave" : "Removed", RoundToFloor(amt), amt > 0.0 ? "to" : "from", TF2_GetClientTeam(targets[i]) == TFTeam_Red ? "red" : "blue", targets[i]);
+		CPrintToChat(client, repl);
+	}
+
+	return Plugin_Handled;
+}
 
 void Barrier_DeleteHUDTimer(int client)
 {
@@ -346,11 +386,20 @@ void Barrier_AssignBubble(int client)
 		SDKHook(bubble, SDKHook_SetTransmit, Barrier_BubbleTransmit);
 		RequestFrame(Barrier_ManageBubble, GetClientUserId(client));
 
-		int targetOpacity = RoundFloat(160.0 * (f_Barrier[client] / 200.0));
-		if (targetOpacity < 30)
-			targetOpacity = 30;
+		int targetOpacity = Barrier_CalculateTargetOpacity(client);
 		SetEntityRenderColor(bubble, _, _, _, targetOpacity);
 	}
+}
+
+int Barrier_CalculateTargetOpacity(int client)
+{
+	//Reach max opacity at 400 Barrier:
+	int targetOpacity = RoundFloat(160.0 * ((ClampFloat(f_Barrier[client], 0.1, 400.0) / 400.0)));
+
+	if (targetOpacity < 10)
+		targetOpacity = 10;
+
+	return targetOpacity;
 }
 
 void Barrier_ManageBubble(int id)
@@ -363,16 +412,14 @@ void Barrier_ManageBubble(int id)
 	if (!IsValidEntity(bubble))
 		return;
 
-	int targetOpacity = RoundFloat(160.0 * ((ClampFloat(f_Barrier[client], 0.1, 200.0) / 200.0)));
-	if (targetOpacity < 30)
-		targetOpacity = 30;
+	int targetOpacity = Barrier_CalculateTargetOpacity(client);
 		
 	int junk, a;
 	GetEntityRenderColor(bubble, junk, junk, junk, a);
 
 	if (a != targetOpacity)
 	{
-		a = RoundFloat(LerpCurve(float(a), float(targetOpacity), 6.0, 12.0));
+		a = RoundFloat(LerpCurve(float(a), float(targetOpacity), 8.0, 16.0));
 		SetEntityRenderColor(bubble, _, _, _, a);
 	}
 
@@ -750,8 +797,9 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 		int bubble = Barrier_GetBubble(victim);
 		if (IsValidEntity(bubble))
 		{
-			MakeEntityFadeOut(bubble, 12);
-			MakeEntityGraduallyResize(bubble, 1.33 * GetEntPropFloat(bubble, Prop_Send, "m_flModelScale"), 0.2, true);
+			SetEntityRenderColor(bubble, _, _, _, 255);
+			MakeEntityFadeOut(bubble, 16);
+			MakeEntityGraduallyResize(bubble, 1.33 * GetEntPropFloat(bubble, Prop_Send, "m_flModelScale"), 0.25, false);
 			i_BarrierBubble[victim] = -1;
 		}
 
@@ -762,7 +810,7 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 	}
 	else
 	{
-		int pitch = 160 - RoundFloat(ClampFloat((f_Barrier[victim] / 200.0) * 100.0, 0.0, 100.0));
+		int pitch = 160 - RoundFloat(ClampFloat((f_Barrier[victim] / 400.0) * 100.0, 0.0, 100.0));
 		EmitSoundToAll(SOUND_BARRIER_BLOCKDAMAGE, victim, _, _, _, _, pitch);
 
 		if (IsValidClient(attacker))
@@ -775,19 +823,17 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 
 	Barrier_RemoveBarrier(victim, damage);
 
-	//Attackers only get half ult charge and resources when they hit someone who has Barrier:
-	if (IsValidClient(attacker))
+	//Subtract half of the ult charge and resources gained when attacking someone who has Barrier:
+	if (IsValidClient(attacker) && attacker != victim)
 	{
-		CF_GiveUltCharge(attacker, damage * 0.5, CF_ResourceType_DamageDealt);
-		CF_GiveSpecialResource(attacker, damage * 0.5, CF_ResourceType_DamageDealt);
+		CF_GiveUltCharge(attacker, -damage * 0.5, CF_ResourceType_DamageDealt);
+		CF_GiveSpecialResource(attacker, -damage * 0.5, CF_ResourceType_DamageDealt);
 	}
 
-	//Convert all damage taken to self-damage, so that we can still take full damage (and therefore full knockback) without giving the enemy the full amount of resources/ult:
-	attacker = victim;
-
-	//Heal the damage instantly and display a HUD notif, to create the illusion that the Barrier blocked the damage:
+	//Heal the damage instantly instead of setting it to 0, that way knockback still works:
 	CF_HealPlayer(victim, victim, RoundFloat(damage), 999.0, false);
 
+	//Display a HUD notif, to create the illusion that the Barrier blocked the damage.
 	Event event = CreateEvent("player_healonhit", true);
 	event.SetInt("entindex", victim);
 	event.SetInt("amount", -RoundFloat(damage));
