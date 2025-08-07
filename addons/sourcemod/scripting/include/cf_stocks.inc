@@ -3604,6 +3604,11 @@ stock bool Brush_Is_Solid(int entity)
 
 stock bool CollisionGroupIsSolid(int entity, bool countNPCsAsSolid = true)
 {
+	char classname[255];
+	GetEntityClassname(entity, classname, 255);
+	if (StrContains(classname, "wearable") != -1)
+		return false;
+
 	bool isSolid = (GetEntProp(entity, Prop_Send, "m_nSolidType") != 0) && ((GetEntProp(entity, Prop_Send, "m_usSolidFlags") & 4) == 0);
 	if (!isSolid)
 		return false;

@@ -14,11 +14,14 @@
 #include <fakeparticles>
 #include <worldtext>
 
+#define EF_BONEMERGE			(1 << 0)
+
 #define ZEINA		"cf_zeina_rework"
 #define BULLET		"zeina_barrier_bullet"
 #define INFO		"zeina_barrier_visor"
 
-#define MODEL_DRG			"models/weapons/w_models/w_drg_ball.mdl"
+#define MODEL_DRG				"models/weapons/w_models/w_drg_ball.mdl"
+#define MODEL_BARRIER_BUBBLE	"models/effects/resist_shield/resist_shield.mdl"
 
 #define SPR_BULLET_TRAIL_1_RED	"materials/effects/repair_claw_trail_red.vmt"
 #define SPR_BULLET_TRAIL_1_BLUE	"materials/effects/repair_claw_trail_blue.vmt"
@@ -39,6 +42,7 @@
 public void OnMapStart()
 {
 	PrecacheModel(MODEL_DRG);
+	PrecacheModel(MODEL_BARRIER_BUBBLE);
 	PrecacheModel(SPR_BULLET_TRAIL_1_RED);
 	PrecacheModel(SPR_BULLET_TRAIL_1_BLUE);
 	PrecacheModel(SPR_BULLET_TRAIL_2);
@@ -72,6 +76,7 @@ float f_Barrier[MAXPLAYERS + 1] = { 0.0, ... };
 float f_NextBarrierTime[MAXPLAYERS + 1] = { 0.0, ... };
 
 int i_BarrierWorldText[MAXPLAYERS + 1] = { -1, ... };
+int i_BarrierBubble[MAXPLAYERS + 1] = { -1, ... };
 int i_BarrierWorldTextOwner[2048] = { -1, ... };
 
 bool b_HasBarrierGoggles[MAXPLAYERS + 1] = { false, ... };
@@ -101,6 +106,7 @@ void Barrier_CheckGoggles(int id)
 }
 
 int Barrier_GetWorldText(int client) { return EntRefToEntIndex(i_BarrierWorldText[client]); }
+int Barrier_GetBubble(int client) { return EntRefToEntIndex(i_BarrierBubble[client]); }
 
 /**
  * Gives the target some Barrier.
@@ -192,13 +198,24 @@ void Barrier_RemoveBarrier(int target, float amount)
 void Barrier_Update(int client, bool gained)
 {
 	int text = Barrier_GetWorldText(client);
+	int bubble = Barrier_GetBubble(client);
 
 	if (gained)
 	{
 		if (numGoggles > 0 && !IsValidEntity(text))
 			Barrier_AssignWorldText(client);
 
-		//TODO: Make shield bubble
+		if (!IsValidEntity(bubble))
+			Barrier_AssignBubble(client);
+		else
+		{
+			int trash, a;
+			GetEntityRenderColor(bubble, trash, trash, trash, a);
+			a += 60;
+			if (a > 255)
+				a = 255;
+			SetEntityRenderColor(bubble, _, _, _, a);
+		}
 	}
 	else if (f_Barrier[client] <= 0.0)
 	{
@@ -209,7 +226,12 @@ void Barrier_Update(int client, bool gained)
 			i_BarrierWorldText[client] = -1;
 		}
 
-		//TODO: Remove bubble
+		if (IsValidEntity(bubble))
+		{
+			TF2_RemoveWearable(client, bubble);
+			RemoveEntity(bubble);
+			i_BarrierBubble[client] = -1;
+		}
 	}
 
 	if (IsValidEntity(text))
@@ -218,6 +240,53 @@ void Barrier_Update(int client, bool gained)
 		Format(current, sizeof(current), "%i", RoundToFloor(f_Barrier[client]));
 		WorldText_SetMessage(text, current);
 	}
+}
+
+void Barrier_AssignBubble(int client)
+{
+	int bubble = CF_AttachWearable(client, 57, "tf_wearable", true, 0, 0, _, "");
+	if (IsValidEntity(bubble))
+	{
+		SetEntProp(bubble, Prop_Send, "m_fEffects", GetEntProp(bubble, Prop_Send, "m_fEffects") &~ EF_BONEMERGE);
+		SetEntProp(bubble, Prop_Send, "m_nModelIndex", PrecacheModel(MODEL_BARRIER_BUBBLE));
+		SetEntPropFloat(bubble, Prop_Send, "m_flModelScale", CF_GetCharacterScale(client));
+
+		SetEntityRenderMode(bubble, RENDER_TRANSCOLOR);
+		i_BarrierBubble[client] = EntIndexToEntRef(bubble);
+		SDKHook(bubble, SDKHook_SetTransmit, Barrier_BubbleTransmit);
+		RequestFrame(Barrier_ManageBubble, GetClientUserId(client));
+
+		int targetOpacity = RoundFloat(160.0 * (f_Barrier[client] / 200.0));
+		if (targetOpacity < 30)
+			targetOpacity = 30;
+		SetEntityRenderColor(bubble, _, _, _, targetOpacity);
+	}
+}
+
+void Barrier_ManageBubble(int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client))
+		return;
+
+	int bubble = Barrier_GetBubble(client);
+	if (!IsValidEntity(bubble))
+		return;
+
+	int targetOpacity = RoundFloat(160.0 * (f_Barrier[client] / 200.0));
+	if (targetOpacity < 30)
+		targetOpacity = 30;
+		
+	int junk, a;
+	GetEntityRenderColor(bubble, junk, junk, junk, a);
+
+	if (a != targetOpacity)
+	{
+		a = RoundFloat(LerpCurve(float(a), float(targetOpacity), 6.0, 12.0));
+		SetEntityRenderColor(bubble, _, _, _, a);
+	}
+
+	RequestFrame(Barrier_ManageBubble, id);
 }
 
 void Barrier_AssignWorldText(int client)
@@ -243,6 +312,18 @@ void Barrier_AssignWorldText(int client)
 		SetEdictFlags(text, GetEdictFlags(text) &~ FL_EDICT_ALWAYS);
 		SDKHook(text, SDKHook_SetTransmit, Barrier_TextTransmit);
 	}
+}
+
+public Action Barrier_BubbleTransmit(int bubble, int client)
+{
+	int owner = GetEntPropEnt(bubble, Prop_Send, "m_hOwnerEntity");
+	if (IsValidClient(owner) && IsPlayerInvis(owner))
+		return Plugin_Handled;
+
+	if (bubble == Barrier_GetBubble(client) && !(GetEntProp(client, Prop_Send, "m_nForceTauntCam") || TF2_IsPlayerInCondition(client, TFCond_Taunting)))
+		return Plugin_Handled;
+
+	return Plugin_Continue;
 }
 
 public Action Barrier_TextTransmit(int text, int client)
@@ -545,7 +626,17 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 	if (damage >= f_Barrier[victim])
 	{
 		EmitSoundToAll(SOUND_BARRIER_BREAK, victim);
-    	EmitSoundToClient(attacker, SOUND_BARRIER_BREAK);
+
+		if (IsValidClient(attacker))
+    		EmitSoundToClient(attacker, SOUND_BARRIER_BREAK);
+
+		int bubble = Barrier_GetBubble(victim);
+		if (IsValidEntity(bubble))
+		{
+			MakeEntityFadeOut(bubble, 12);
+			MakeEntityGraduallyResize(bubble, 1.33 * GetEntPropFloat(bubble, Prop_Send, "m_flModelScale"), 0.2, true);
+			i_BarrierBubble[victim] = -1;
+		}
 
 		//Prevent victims from gaining Barrier for 2s after their Barrier breaks.
 		//This allows Barrier to still fully negate overflow damage (I have 1 Barrier, I will still take 0 damage from a 999999 damage attack), 
@@ -556,7 +647,13 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 	{
 		int pitch = 160 - RoundFloat(ClampFloat((f_Barrier[victim] / 200.0) * 100.0, 0.0, 100.0));
 		EmitSoundToAll(SOUND_BARRIER_BLOCKDAMAGE, victim, _, _, _, _, pitch);
-		EmitSoundToClient(attacker, SOUND_BARRIER_BLOCKDAMAGE, _, _, _, _, _, pitch);
+
+		if (IsValidClient(attacker))
+			EmitSoundToClient(attacker, SOUND_BARRIER_BLOCKDAMAGE, _, _, _, _, _, pitch);
+
+		int bubble = Barrier_GetBubble(victim);
+		if (IsValidEntity(bubble))
+			SetEntityRenderColor(bubble, _, _, _, 255);
 	}
 
 	//TODO: Make Barrier vfx flash
