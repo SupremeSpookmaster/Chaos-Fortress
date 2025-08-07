@@ -2092,6 +2092,7 @@ public Native_CF_HealPlayer(Handle plugin, int numParams)
 	int healer = GetNativeCell(2);
 	int amt = GetNativeCell(3);
 	float hpMult = GetNativeCell(4);
+	bool HUD = GetNativeCell(5);
 	
 	if (!IsValidMulti(client))
 		return;
@@ -2114,10 +2115,13 @@ public Native_CF_HealPlayer(Handle plugin, int numParams)
 		
 		SetEntProp(client, Prop_Send, "m_iHealth", newHP);
 
-		Event event = CreateEvent("player_healonhit", true);
-		event.SetInt("entindex", client);
-		event.SetInt("amount", healingDone);
-		event.Fire();
+		if (HUD)
+		{
+			Event event = CreateEvent("player_healonhit", true);
+			event.SetInt("entindex", client);
+			event.SetInt("amount", healingDone);
+			event.Fire();
+		}
 	}
 	else
 	{
@@ -2138,6 +2142,7 @@ public Native_CF_HealPlayer_WithAttributes(Handle plugin, int numParams)
 	int healer = GetNativeCell(2);
 	int amt = GetNativeCell(3);
 	float hpMult = GetNativeCell(4);
+	bool HUD = GetNativeCell(5);
 	
 	if (!IsValidMulti(client))
 		return;
@@ -2147,7 +2152,7 @@ public Native_CF_HealPlayer_WithAttributes(Handle plugin, int numParams)
 	amtFloat *= multiplier;
 	amt = RoundFloat(amtFloat);
 	
-	CF_HealPlayer(client, healer, amt, hpMult);
+	CF_HealPlayer(client, healer, amt, hpMult, HUD);
 }
 
 public void CFA_GiveChargesForHealing(int healer, float healingDone)

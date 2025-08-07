@@ -16,9 +16,11 @@
 
 #define EF_BONEMERGE			(1 << 0)
 
-#define ZEINA		"cf_zeina_rework"
-#define BULLET		"zeina_barrier_bullet"
-#define INFO		"zeina_barrier_visor"
+#define ZEINA			"cf_zeina_rework"
+#define BULLET			"zeina_barrier_bullet"
+#define INFO			"zeina_barrier_visor"
+#define BARRIER_SPAWN	"zeina_barrier_spawn"
+#define BARRIER_GAIN	"zeina_barrier_gain"
 
 #define MODEL_DRG				"models/weapons/w_models/w_drg_ball.mdl"
 #define MODEL_BARRIER_BUBBLE	"models/effects/resist_shield/resist_shield.mdl"
@@ -39,6 +41,8 @@
 #define SOUND_BARRIER_BLOCKDAMAGE	")physics/metal/metal_box_impact_bullet1.wav"
 #define SOUND_BARRIER_BREAK			")physics/metal/metal_box_break2.wav"
 
+Handle HudSync;
+
 public void OnMapStart()
 {
 	PrecacheModel(MODEL_DRG);
@@ -53,6 +57,8 @@ public void OnMapStart()
 	PrecacheSound(SOUND_BULLET_BEGIN_HOMING);
 	PrecacheSound(SOUND_BARRIER_BLOCKDAMAGE);
 	PrecacheSound(SOUND_BARRIER_BREAK);
+
+	HudSync = CreateHudSynchronizer();
 }
 
 public void OnPluginStart()
@@ -81,13 +87,38 @@ int i_BarrierWorldTextOwner[2048] = { -1, ... };
 
 bool b_HasBarrierGoggles[MAXPLAYERS + 1] = { false, ... };
 
+Handle g_BarrierHUDTimer[MAXPLAYERS + 1] = { null, ... };
+
 int numGoggles = 0;
 
-void Barrier_CheckGoggles(int id)
+void Barrier_DeleteHUDTimer(int client)
+{
+	if (g_BarrierHUDTimer[client] != null && g_BarrierHUDTimer[client] != INVALID_HANDLE)
+	{
+		delete g_BarrierHUDTimer[client];
+		g_BarrierHUDTimer[client] = null;
+	}
+}
+
+void Barrier_CheckSpawn(int id)
 {
 	int client = GetClientOfUserId(id);
 	if (!IsValidMulti(client))
 		return;
+
+	if (CF_HasAbility(client, ZEINA, BARRIER_SPAWN))
+	{
+		float amount = CF_GetArgF(client, ZEINA, BARRIER_SPAWN, "amount", 100.0);
+		Barrier_RemoveBarrier(client, amount);
+		Barrier_GiveBarrier(client, client, amount, _, _, _, true, true);
+	}
+}
+
+public Action Barrier_CheckGoggles(Handle timer, int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client))
+		return Plugin_Continue;
 
 	bool goggles = CF_HasAbility(client, ZEINA, INFO);
 	if (goggles && numGoggles <= 0)
@@ -103,6 +134,8 @@ void Barrier_CheckGoggles(int id)
 
 	b_HasBarrierGoggles[client] = goggles;
 	numGoggles += view_as<int>(goggles);
+
+	return Plugin_Continue;
 }
 
 int Barrier_GetWorldText(int client) { return EntRefToEntIndex(i_BarrierWorldText[client]); }
@@ -123,9 +156,9 @@ int Barrier_GetBubble(int client) { return EntRefToEntIndex(i_BarrierBubble[clie
  * 
  * @error	Invalid target.
  */
-void Barrier_GiveBarrier(int target, int giver, float amount, float percentage = 0.0, float max = 0.0, bool attributes = false)
+void Barrier_GiveBarrier(int target, int giver, float amount, float percentage = 0.0, float max = 0.0, bool attributes = false, bool ignoreCooldown = false, bool noSound = false)
 {
-	if (GetGameTime() < f_NextBarrierTime[target])
+	if (GetGameTime() < f_NextBarrierTime[target] && !ignoreCooldown)
 		return;
 
 	if (f_Barrier[target] >= max && max > 0.0)
@@ -145,7 +178,7 @@ void Barrier_GiveBarrier(int target, int giver, float amount, float percentage =
 	if (percentage > 0.0 && percentage * maxHP < max)
 		cap = percentage * maxHP;
 
-	if (f_Barrier[target] > cap)
+	if (f_Barrier[target] > cap && cap > 0.0)
 	{
 		float diff = f_Barrier[target] - cap;
 		amountGiven -= diff;
@@ -160,7 +193,8 @@ void Barrier_GiveBarrier(int target, int giver, float amount, float percentage =
 		CF_GiveUltCharge(giver, amountGiven, CF_ResourceType_Healing);
 		CF_GiveHealingPoints(giver, amountGiven);
 		
-		EmitSoundToClient(giver, SOUND_GIVE_BARRIER, target, _, 80, _, 0.6, pitch);
+		if (!noSound)
+			EmitSoundToClient(giver, SOUND_GIVE_BARRIER, target, _, 80, _, 0.6, pitch);
 
 		float pos[3];
 		CF_WorldSpaceCenter(target, pos);
@@ -178,7 +212,8 @@ void Barrier_GiveBarrier(int target, int giver, float amount, float percentage =
 		}
 	}
 
-	EmitSoundToAll(SOUND_GIVE_BARRIER, target, _, 80, _, 0.4, pitch);
+	if (!noSound)
+		EmitSoundToAll(SOUND_GIVE_BARRIER, target, _, 80, _, 0.4, pitch);
 
 	Barrier_Update(target, true);
 }
@@ -195,6 +230,48 @@ void Barrier_RemoveBarrier(int target, float amount)
 	Barrier_Update(target, false);
 }
 
+public Action Barrier_SecondaryHUD(Handle timer, DataPack pack)
+{
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	int slot = ReadPackCell(pack);
+
+	if (!IsValidMulti(client))
+	{
+		g_BarrierHUDTimer[slot] = null;
+		return Plugin_Stop;
+	}
+
+	if (f_Barrier[client] <= 0.0)
+	{
+		g_BarrierHUDTimer[slot] = null;
+		return Plugin_Stop;
+	}
+
+	Barrier_DisplayExtraHUD(client);
+
+	return Plugin_Continue;
+}
+
+void Barrier_DisplayExtraHUD(int client, bool destroyed = false)
+{
+	char HUDText[255];
+	if (!destroyed)
+		Format(HUDText, sizeof(HUDText), "Barrier: %i", RoundToFloor(f_Barrier[client]));
+	else
+		Format(HUDText, sizeof(HUDText), "Barrier: Destroyed!");
+
+	int r = 255, b = 160;
+	if (TF2_GetClientTeam(client) == TFTeam_Blue)
+	{
+		b = 255;
+		r = 160;
+	}
+
+	SetHudTextParams(-1.0, 0.15, 1.1, r, 160, b, 255);
+	ShowSyncHudText(client, HudSync, HUDText);
+}
+
 void Barrier_Update(int client, bool gained)
 {
 	int text = Barrier_GetWorldText(client);
@@ -206,7 +283,9 @@ void Barrier_Update(int client, bool gained)
 			Barrier_AssignWorldText(client);
 
 		if (!IsValidEntity(bubble))
+		{
 			Barrier_AssignBubble(client);
+		}
 		else
 		{
 			int trash, a;
@@ -215,6 +294,14 @@ void Barrier_Update(int client, bool gained)
 			if (a > 255)
 				a = 255;
 			SetEntityRenderColor(bubble, _, _, _, a);
+		}
+
+		if (g_BarrierHUDTimer[client] == null)
+		{
+			DataPack pack = new DataPack();
+			g_BarrierHUDTimer[client] = CreateDataTimer(1.0, Barrier_SecondaryHUD, pack, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+			WritePackCell(pack, GetClientUserId(client));
+			WritePackCell(pack, client);
 		}
 	}
 	else if (f_Barrier[client] <= 0.0)
@@ -240,6 +327,9 @@ void Barrier_Update(int client, bool gained)
 		Format(current, sizeof(current), "%i", RoundToFloor(f_Barrier[client]));
 		WorldText_SetMessage(text, current);
 	}
+
+	if (f_Barrier[client] > 0.0)
+		Barrier_DisplayExtraHUD(client);
 }
 
 void Barrier_AssignBubble(int client)
@@ -273,7 +363,7 @@ void Barrier_ManageBubble(int id)
 	if (!IsValidEntity(bubble))
 		return;
 
-	int targetOpacity = RoundFloat(160.0 * (f_Barrier[client] / 200.0));
+	int targetOpacity = RoundFloat(160.0 * ((ClampFloat(f_Barrier[client], 0.1, 200.0) / 200.0)));
 	if (targetOpacity < 30)
 		targetOpacity = 30;
 		
@@ -558,18 +648,44 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	{
 		Bullet_Activate(client, abilityName);
 	}
+
+	if (StrContains(abilityName, BARRIER_GAIN) != -1)
+	{
+		float amount = CF_GetArgF(client, ZEINA, abilityName, "amount", 250.0);
+		float max = CF_GetArgF(client, ZEINA, abilityName, "cap", 600.0);
+		Barrier_GiveBarrier(client, client, amount, _, max, _, _, true);
+	}
+}
+
+public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result)
+{
+	if (!StrEqual(plugin, ZEINA))
+		return Plugin_Continue;
+		
+	if (StrContains(ability, BARRIER_GAIN) != -1 && CF_GetArgI(client, ZEINA, ability, "block_if_above_cap", 1) > 0)
+	{
+		float cap = CF_GetArgF(client, ZEINA, ability, "cap", 600.0);
+		result = f_Barrier[client] < cap || cap <= 0.0;
+		return Plugin_Changed;
+	}
+
+	return Plugin_Continue;
 }
 
 public void CF_OnCharacterCreated(int client)
 {
+	Barrier_DeleteHUDTimer(client);
 	f_NextBarrierTime[client] = 0.0;
-	RequestFrame(Barrier_CheckGoggles, GetClientUserId(client));
+
+	RequestFrame(Barrier_CheckSpawn, GetClientUserId(client));
+	CreateTimer(0.1, Barrier_CheckGoggles, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
 	if (reason == CF_CRR_DEATH || reason == CF_CRR_DISCONNECT || reason == CF_CRR_ROUNDSTATE_CHANGED || reason == CF_CRR_SWITCHED_CHARACTER)
 	{
+		Barrier_DeleteHUDTimer(client);
 		Barrier_RemoveBarrier(client, f_Barrier[client] + 1.0);
 		f_NextBarrierTime[client] = 0.0;
 		
@@ -620,11 +736,12 @@ public void OnEntityDestroyed(int entity)
 
 public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
-    if (!IsValidClient(victim) || f_Barrier[victim] <= 0.0)
+    if (!IsValidClient(victim) || f_Barrier[victim] <= 0.0 || damage <= 0.0)
 		return Plugin_Continue;
 
 	if (damage >= f_Barrier[victim])
 	{
+		Barrier_DisplayExtraHUD(victim, true);
 		EmitSoundToAll(SOUND_BARRIER_BREAK, victim);
 
 		if (IsValidClient(attacker))
@@ -656,18 +773,35 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 			SetEntityRenderColor(bubble, _, _, _, 255);
 	}
 
-	//TODO: Make Barrier vfx flash
 	Barrier_RemoveBarrier(victim, damage);
 
-	damage = 0.0;
+	//Attackers only get half ult charge and resources when they hit someone who has Barrier:
+	if (IsValidClient(attacker))
+	{
+		CF_GiveUltCharge(attacker, damage * 0.5, CF_ResourceType_DamageDealt);
+		CF_GiveSpecialResource(attacker, damage * 0.5, CF_ResourceType_DamageDealt);
+	}
+
+	//Convert all damage taken to self-damage, so that we can still take full damage (and therefore full knockback) without giving the enemy the full amount of resources/ult:
+	attacker = victim;
+
+	//Heal the damage instantly and display a HUD notif, to create the illusion that the Barrier blocked the damage:
+	CF_HealPlayer(victim, victim, RoundFloat(damage), 999.0, false);
+
+	Event event = CreateEvent("player_healonhit", true);
+	event.SetInt("entindex", victim);
+	event.SetInt("amount", -RoundFloat(damage));
+	event.Fire();
+
+	//damage = 0.0;
 
 	return Plugin_Changed;
 }
 
-public void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, int &b, int &a)
+/*public void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, int &b, int &a)
 {
 	if (f_Barrier[client] > 0.0)
 	{
 		Format(HUDText, sizeof(HUDText), "BARRIER: %i\n%s", RoundFloat(f_Barrier[client]), HUDText);
 	}
-}
+}*/

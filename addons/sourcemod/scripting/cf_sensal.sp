@@ -202,6 +202,22 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 	MassLaser_HitList[client] = null;
 }
 
+float f_PortalGateSelfDamageImmunity[MAXPLAYERS + 1] = { 0.0, ... };
+
+public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
+{
+	if (!IsValidClient(victim))
+		return Plugin_Continue;
+
+	if (victim == attacker && GetGameTime() <= f_PortalGateSelfDamageImmunity[victim])
+	{
+		damage = 0.0;
+		return Plugin_Changed;
+	}
+
+	return Plugin_Continue;
+}
+
 public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
 	if (!IsValidClient(victim))
@@ -959,6 +975,7 @@ Action SetNoResourceTimer(Handle timer, DataPack pack)
 void DoPortalGate(int client, char abilityName[255])
 {
 	float delay = CF_GetArgF(client, PluginName, abilityName, "delay");
+	f_PortalGateSelfDamageImmunity[client] = GetGameTime() + delay + 1.0;
 
 	TF2_AddCondition(client, TFCond_HalloweenKartNoTurn, delay);
 	TF2_AddCondition(client, TFCond_MegaHeal, delay);
@@ -1154,7 +1171,7 @@ Action PortalGateLoopTimer(Handle timer, DataPack pack)
 						TE_SetupBeamPoints(pos, PosUser, g_Ruina_BEAM_Combine_Blue, 0, 0, 0, 0.7, ClampBeamWidth(diameter * 0.2), ClampBeamWidth(diameter * 0.2), 0, 0.5, glowColor, 0);
 						TE_SendToAll(0.0);
 						
-						CF_DoAbility(client, "cf_sensal", "sensal_ability_barrier_portal");
+						CF_DoAbility(client, "cf_zeina_rework", "zeina_barrier_gain_portal");
 					}
 
 					return Plugin_Continue;

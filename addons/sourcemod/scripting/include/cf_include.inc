@@ -1528,8 +1528,9 @@ native CF_UnblockAbilitySlot(int client, CF_AbilityType type);
  * @param healer				The client who performed the healing (does not need to be a valid client).
  * @param amt					The amount of healing given.
  * @param hpMult				The maximum percentage of the client's max HP for this to heal to. For example: 1.5 would allow this instance to heal the client up to a maximum of 150% of their max HP.
+ * @param HUDnotif				If true: the healing received is displayed next to your health bar, as if you picked up a health kit.
  */
-native CF_HealPlayer(int client, int healer, int amt, float hpMult);
+native CF_HealPlayer(int client, int healer, int amt, float hpMult, bool HUDnotif = true);
 
 /**
  * Heals a specified player for a specified amount, and gives the healer credit for it.
@@ -1539,8 +1540,9 @@ native CF_HealPlayer(int client, int healer, int amt, float hpMult);
  * @param healer				The client who performed the healing (does not need to be a valid client).
  * @param amt					The amount of healing given.
  * @param hpMult				The maximum percentage of the client's max HP for this to heal to. For example: 1.5 would allow this instance to heal the client up to a maximum of 150% of their max HP.
+ * @param HUDnotif				If true: the healing received is displayed next to your health bar, as if you picked up a health kit.
  */
-native CF_HealPlayer_WithAttributes(int client, int healer, int amt, float hpMult);
+native CF_HealPlayer_WithAttributes(int client, int healer, int amt, float hpMult, bool HUDnotif = true);
 
 /**
  * Launches a generic rocket, as if the user had fired a rocket launcher.
