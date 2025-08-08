@@ -41,6 +41,12 @@
 #define PARTICLE_BULLET_IMPACT_BLUE				"drg_cow_muzzleflash_normal_blue"
 #define PARTICLE_REPAIR_FIZZLE					"sapper_debris"
 #define PARTICLE_WINGS_TAKEOFF					"hammer_impact_button_dust"
+#define PARTICLE_BLASTER_CHARGEUP_RED			"sparks_powerline_red"
+#define PARTICLE_BLASTER_CHARGEUP_BLUE			"sparks_powerline_blue"
+#define PARTICLE_BLASTER_CHARGEUP_RED_AURA_1	"electrocuted_red"
+#define PARTICLE_BLASTER_CHARGEUP_BLUE_AURA_1	"electrocuted_blue"
+#define PARTICLE_BLASTER_CHARGEUP_RED_AURA_2	"critgun_weaponmodel_red"
+#define PARTICLE_BLASTER_CHARGEUP_BLUE_AURA_2	"critgun_weaponmodel_blu"
 
 #define SOUND_BULLET_IMPACT			")weapons/batsaber_hit_world1.wav"
 #define SOUND_GIVE_BARRIER			")weapons/rescue_ranger_charge_02.wav"
@@ -57,6 +63,9 @@
 #define SOUND_WINGS_CHARGEUP_LOOP	")weapons/rocket_pack_boosters_loop.wav"
 #define SOUND_BLASTER_FIRE_1		")mvm/giant_demoman/giant_demoman_grenade_shoot.wav"
 #define SOUND_BLASTER_FIRE_2		")misc/halloween/spell_lightning_ball_impact.wav"
+#define SOUND_BLASTER_FIRE_3		")weapons/vaccinator_charge_tier_04.wav"
+#define SOUND_BLASTER_CHARGEUP_LOOP_1	")weapons/man_melter_alt_fire_lp.wav"
+#define SOUND_BLASTER_CHARGEUP_LOOP_2	")weapons/weapon_crit_charged_on.wav"
 
 #define NOPE						"replay/record_fail.wav"
 
@@ -86,6 +95,9 @@ public void OnMapStart()
 	PrecacheSound(SOUND_WINGS_CHARGEUP_LOOP);
 	PrecacheSound(SOUND_BLASTER_FIRE_1);
 	PrecacheSound(SOUND_BLASTER_FIRE_2);
+	PrecacheSound(SOUND_BLASTER_FIRE_3);
+	PrecacheSound(SOUND_BLASTER_CHARGEUP_LOOP_1);
+	PrecacheSound(SOUND_BLASTER_CHARGEUP_LOOP_2);
 	PrecacheSound(NOPE);
 
 	PrecacheModel(SPR_BULLET_TRAIL_1_RED);
@@ -170,6 +182,11 @@ public void Charge_StartCharging(int client, char abilityName[255])
 	b_AbilityCharging[client] = true;
 
 	CreateTimer(0.1, Charge_ChargeUp, GetClientUserId(client), TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+
+	DataPack pack = new DataPack();
+	RequestFrame(Charge_Rings, pack);
+	WritePackCell(pack, GetClientUserId(client));
+	WritePackFloat(pack, GetGameTime() + 0.2);
 }
 
 public Action Charge_ChargeUp(Handle timer, int id)
@@ -194,26 +211,13 @@ public Action Charge_ChargeUp(Handle timer, int id)
 	{
 		EmitSoundToClient(client, SOUND_CHARGEUP_FULLYCHARGED, _, _, 120);
 		PrintCenterText(client, "FULLY CHARGED!");
+		if (b_ChargingBlaster[client])
+			AttachAura(client, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_BLASTER_CHARGEUP_RED_AURA_1 : PARTICLE_BLASTER_CHARGEUP_BLUE_AURA_1);
+
 		return Plugin_Stop;
 	}
 
 	return Plugin_Continue;
-}
-
-public void Charge_ResetChargeVariables(int client)
-{
-	b_AbilityCharging[client] = false;
-	b_ChargingWings[client] = false;
-	b_ChargingBlaster[client] = false;
-	b_ChargeRefunding[client] = false;
-
-	SDKUnhook(client, SDKHook_WeaponCanSwitchTo, Blaster_PreventWeaponSwitch);
-
-	StopSound(client, SNDCHAN_AUTO, SOUND_WINGS_CHARGEUP_BEGIN);
-	StopSound(client, SNDCHAN_AUTO, SOUND_WINGS_CHARGEUP_LOOP);
-
-	if (f_ChargeSpeedMod[client].b_Exists)
-		f_ChargeSpeedMod[client].Destroy();
 }
 
 public void Charge_TerminateAbility(int client, char abilityName[255], char reason[255])
@@ -274,11 +278,6 @@ public void Wings_Activate(int client, char abilityName[255])
 		SetEntPropFloat(wings, Prop_Send, "m_flModelScale", 0.1);
 		i_WingsWearable[client] = EntIndexToEntRef(wings);
 	}
-
-	DataPack pack = new DataPack();
-	RequestFrame(Wings_ChargeFX, pack);
-	WritePackCell(pack, GetClientUserId(client));
-	WritePackFloat(pack, GetGameTime() + 0.2);
 }
 
 void Wings_Takeoff(int client)
@@ -302,7 +301,7 @@ void Wings_Takeoff(int client)
 	CreateTimer(0.2, Wings_BeginGroundCheck, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
 }
 
-void Wings_ChargeFX(DataPack pack)
+void Charge_Rings(DataPack pack)
 {
 	ResetPack(pack);
 
@@ -311,7 +310,7 @@ void Wings_ChargeFX(DataPack pack)
 
 	delete pack;
 
-	if (!IsValidMulti(client) || !b_ChargingWings[client])
+	if (!IsValidMulti(client) || !b_AbilityCharging[client])
 		return;
 
 	float percentage = f_ChargeAmt[client] / f_ChargeMax[client];
@@ -336,7 +335,7 @@ void Wings_ChargeFX(DataPack pack)
 	}
 
 	pack = new DataPack();
-	RequestFrame(Wings_ChargeFX, pack);
+	RequestFrame(Charge_Rings, pack);
 	WritePackCell(pack, GetClientUserId(client));
 	WritePackFloat(pack, nextRing);
 }
@@ -397,19 +396,21 @@ public void Wings_CheckGrounded(int id)
 }
 
 int i_BlasterWeapon[MAXPLAYERS + 1] = { -1, ... };
+int i_BlasterParticle[MAXPLAYERS + 1] = { -1, ... };
 
 public void Blaster_Activate(int client, char abilityName[255])
 {
 	Charge_StartCharging(client, abilityName);
 	b_ChargingBlaster[client] = true;
 
+	EmitSoundToAll(SOUND_BLASTER_CHARGEUP_LOOP_1, client, _, _, _, 0.65);
+	EmitSoundToAll(SOUND_BLASTER_CHARGEUP_LOOP_2, client);
+	TF2_AddCondition(client, TFCond_FocusBuff);
+
 	i_BlasterWeapon[client] = EntIndexToEntRef(TF2_GetActiveWeapon(client));
 	SDKHook(client, SDKHook_WeaponCanSwitchTo, Blaster_PreventWeaponSwitch);
-
-	DataPack pack = new DataPack();
-	RequestFrame(Blaster_ChargeFX, pack);
-	WritePackCell(pack, GetClientUserId(client));
-	WritePackFloat(pack, GetGameTime() + 0.2);
+	i_BlasterParticle[client] = EntIndexToEntRef(CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_BLASTER_CHARGEUP_RED : PARTICLE_BLASTER_CHARGEUP_BLUE, "root"));
+	AttachAura(client, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_BLASTER_CHARGEUP_RED_AURA_2 : PARTICLE_BLASTER_CHARGEUP_BLUE_AURA_2);
 }
 
 public Action Blaster_PreventWeaponSwitch(int client, int weapon)
@@ -420,37 +421,13 @@ public Action Blaster_PreventWeaponSwitch(int client, int weapon)
 	return Plugin_Continue;
 }
 
-void Blaster_ChargeFX(DataPack pack)
-{
-	ResetPack(pack);
-
-	int client = GetClientOfUserId(ReadPackCell(pack));
-	float nextFX = ReadPackFloat(pack);
-
-	delete pack;
-
-	if (!IsValidMulti(client) || !b_ChargingBlaster[client])
-		return;
-
-	float percentage = f_ChargeAmt[client] / f_ChargeMax[client];
-
-	float gt = GetGameTime();
-	if (gt >= nextFX)
-	{
-	}
-
-	pack = new DataPack();
-	RequestFrame(Blaster_ChargeFX, pack);
-	WritePackCell(pack, GetClientUserId(client));
-	WritePackFloat(pack, nextFX);
-}
-
 public void Blaster_Fire(int client)
 {
 	float percentage = f_ChargeAmt[client] / f_ChargeMax[client];
 
 	EmitSoundToAll(SOUND_BLASTER_FIRE_1, client, _, _, _, _, 120 - RoundFloat(percentage * 40.0));
 	EmitSoundToAll(SOUND_BLASTER_FIRE_2, client, _, _, _, _, 120 - RoundFloat(percentage * 40.0));
+	EmitSoundToAll(SOUND_BLASTER_FIRE_3, client, _, _, _, _, 110 - RoundFloat(percentage * 20.0));
 	CF_PlayRandomSound(client, client, "sound_barrier_blaster_fire");
 
 
@@ -1508,4 +1485,29 @@ public void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, int
 	{
 		Format(HUDText, sizeof(HUDText), "BARRIER: %i\n%s", RoundFloat(f_Barrier[client]), HUDText);
 	}*/
+}
+
+public void Charge_ResetChargeVariables(int client)
+{
+	b_AbilityCharging[client] = false;
+	b_ChargingWings[client] = false;
+	b_ChargingBlaster[client] = false;
+	b_ChargeRefunding[client] = false;
+
+	SDKUnhook(client, SDKHook_WeaponCanSwitchTo, Blaster_PreventWeaponSwitch);
+	TF2_RemoveCondition(client, TFCond_FocusBuff);
+	
+	int particle = EntRefToEntIndex(i_BlasterParticle[client]);
+	if (IsValidEntity(particle))
+		RemoveEntity(particle);
+	RemoveAura(client, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_BLASTER_CHARGEUP_RED_AURA_1 : PARTICLE_BLASTER_CHARGEUP_BLUE_AURA_1);
+	RemoveAura(client, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_BLASTER_CHARGEUP_RED_AURA_2 : PARTICLE_BLASTER_CHARGEUP_BLUE_AURA_2);
+
+	StopSound(client, SNDCHAN_AUTO, SOUND_WINGS_CHARGEUP_BEGIN);
+	StopSound(client, SNDCHAN_AUTO, SOUND_WINGS_CHARGEUP_LOOP);
+	StopSound(client, SNDCHAN_AUTO, SOUND_BLASTER_CHARGEUP_LOOP_1);
+	StopSound(client, SNDCHAN_AUTO, SOUND_BLASTER_CHARGEUP_LOOP_2);
+
+	if (f_ChargeSpeedMod[client].b_Exists)
+		f_ChargeSpeedMod[client].Destroy();
 }

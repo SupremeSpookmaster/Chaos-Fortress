@@ -4155,3 +4155,19 @@ stock int CreateEnvBeam(int startEnt, int endEnt, float startPos[3] = NULL_VECTO
 	endOutput = end;
 	return beam;
 }
+
+stock void AttachAura(int target, char effect[255])
+{
+	TE_SetupParticleEffect(effect, PATTACH_ABSORIGIN_FOLLOW, target);
+	TE_WriteNum("m_bControlPoint1", target);	
+	TE_SendToAll();	
+}
+
+stock void RemoveAura(int target, char effect[255])
+{
+	TE_Start("EffectDispatch");
+	TE_WriteNum("entindex", target);
+	TE_WriteNum("m_nHitBox", GetParticleEffectIndex(effect));
+	TE_WriteNum("m_iEffectName", GetEffectIndex("ParticleEffectStop"));
+	TE_SendToAll();
+}
