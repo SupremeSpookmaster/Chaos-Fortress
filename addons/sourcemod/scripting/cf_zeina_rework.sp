@@ -25,11 +25,10 @@
 #define WINGS			"zeina_subwings_v2"
 #define BLASTER			"zeina_barrier_blast"
 
-int i_RepairGrenadeModelIndex = -1;
-
 #define MODEL_DRG				"models/weapons/w_models/w_drg_ball.mdl"
 #define MODEL_BARRIER_BUBBLE	"models/effects/resist_shield/resist_shield.mdl"
 #define MODEL_REPAIR_GRENADE	"models/Items/battery.mdl"
+#define MODEL_WINGS				"models/zombie_riot/weapons/custom_wings_1_3.mdl"
 
 #define SPR_BULLET_TRAIL_1_RED	"materials/effects/repair_claw_trail_red.vmt"
 #define SPR_BULLET_TRAIL_1_BLUE	"materials/effects/repair_claw_trail_blue.vmt"
@@ -54,19 +53,20 @@ int i_RepairGrenadeModelIndex = -1;
 #define SOUND_CHARGEUP_FULLYCHARGED	")items/powerup_pickup_agility.wav"
 #define SOUND_WINGS_TAKEOFF_1		")weapons/rocket_jumper_shoot.wav"
 #define SOUND_WINGS_TAKEOFF_2		")weapons/sticky_jumper_explode1.wav"
-#define SOUND_CHARGEUP_BEGIN		")weapons/rocket_pack_boosters_extend.wav"
-#define SOUND_CHARGEUP_LOOP			")weapons/rocket_pack_boosters_loop.wav"
+#define SOUND_WINGS_CHARGEUP_BEGIN		")weapons/rocket_pack_boosters_extend.wav"
+#define SOUND_WINGS_CHARGEUP_LOOP			")weapons/rocket_pack_boosters_loop.wav"
 
 #define NOPE						"replay/record_fail.wav"
 
 Handle HudSync;
 
-int glowModel, laserModel;
+int glowModel, laserModel, i_RepairGrenadeModelIndex, i_WingsModelIndex;
 
 public void OnMapStart()
 {
 	PrecacheModel(MODEL_DRG);
 	PrecacheModel(MODEL_BARRIER_BUBBLE);
+	i_WingsModelIndex = PrecacheModel(MODEL_WINGS);
 	i_RepairGrenadeModelIndex = PrecacheModel(MODEL_REPAIR_GRENADE);
 
 	PrecacheSound(SOUND_BULLET_IMPACT);
@@ -80,8 +80,8 @@ public void OnMapStart()
 	PrecacheSound(SOUND_CHARGEUP_FULLYCHARGED);
 	PrecacheSound(SOUND_WINGS_TAKEOFF_1);
 	PrecacheSound(SOUND_WINGS_TAKEOFF_2);
-	PrecacheSound(SOUND_CHARGEUP_BEGIN);
-	PrecacheSound(SOUND_CHARGEUP_LOOP);
+	PrecacheSound(SOUND_WINGS_CHARGEUP_BEGIN);
+	PrecacheSound(SOUND_WINGS_CHARGEUP_LOOP);
 	PrecacheSound(NOPE);
 
 	PrecacheModel(SPR_BULLET_TRAIL_1_RED);
@@ -124,27 +124,11 @@ int i_BarrierWorldTextOwner[2048] = { -1, ... };
 bool b_HasBarrierGoggles[MAXPLAYERS + 1] = { false, ... };
 bool b_ChargingWings[MAXPLAYERS + 1] = { false, ... };
 bool b_ChargingBlaster[MAXPLAYERS + 1] = { false, ... };
+bool b_ChargeRefunding[MAXPLAYERS + 1] = { false, ... };
 
 Handle g_BarrierHUDTimer[MAXPLAYERS + 1] = { null, ... };
 
 int numGoggles = 0;
-
-float f_WingsMaxVelocity[MAXPLAYERS + 1] = { 0.0, ... };
-
-public void Wings_Activate(int client, char abilityName[255])
-{
-	Charge_StartCharging(client, abilityName);
-	f_WingsMaxVelocity[client] = CF_GetArgF(client, ZEINA, abilityName, "max_velocity", 1200.0);
-	b_ChargingWings[client] = true;
-}
-
-public void Blaster_Activate(int client, char abilityName[255])
-{
-	Charge_StartCharging(client, abilityName);
-	b_ChargingBlaster[client] = true;
-
-	//TODO: Charge logic is finished, we just need to read the args, add custom charge VFX, and fire the laser on held end. Should take 30-45m tops
-}
 
 float f_ChargeAmt[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ChargeMin[MAXPLAYERS + 1] = { 0.0, ... };
@@ -180,8 +164,6 @@ public void Charge_StartCharging(int client, char abilityName[255])
 		f_ChargeSpeedMod[client] = CF_ApplyTemporarySpeedChange(client, 0, -speedPenalty, 0.0, 0, 0.0, false);
 
 	b_AbilityCharging[client] = true;
-	EmitSoundToAll(SOUND_CHARGEUP_BEGIN, client);
-	EmitSoundToAll(SOUND_CHARGEUP_LOOP, client);
 
 	CreateTimer(0.1, Charge_ChargeUp, GetClientUserId(client), TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
 }
@@ -221,7 +203,7 @@ public Action Charge_RefundBarrier(Handle timer, DataPack pack)
 	float amt = ReadPackFloat(pack);
 	int times = ReadPackCell(pack);
 
-	if (!IsValidMulti(client) || b_AbilityCharging[client] || times < 1)
+	if (!IsValidMulti(client) || b_AbilityCharging[client] || times < 1 || !b_ChargeRefunding[client])
 		return Plugin_Continue;
 
 	Barrier_GiveBarrier(client, client, amt, _, _, _, true, true);
@@ -233,6 +215,134 @@ public Action Charge_RefundBarrier(Handle timer, DataPack pack)
 	WritePackCell(pack2, times - 1);
 
 	return Plugin_Continue;
+}
+
+float f_WingsMaxVelocity[MAXPLAYERS + 1] = { 0.0, ... };
+
+int i_WingsWearable[MAXPLAYERS + 1] = { -1, ... };
+
+public void Wings_Activate(int client, char abilityName[255])
+{
+	Charge_StartCharging(client, abilityName);
+	f_WingsMaxVelocity[client] = CF_GetArgF(client, ZEINA, abilityName, "max_velocity", 1200.0);
+	b_ChargingWings[client] = true;
+
+	EmitSoundToAll(SOUND_WINGS_CHARGEUP_BEGIN, client);
+	EmitSoundToAll(SOUND_WINGS_CHARGEUP_LOOP, client);
+
+	int wings = Wings_Attach(client);
+	if (IsValidEntity(wings))
+	{
+		SetEntPropFloat(wings, Prop_Send, "m_flModelScale", 0.1);
+		i_WingsWearable[client] = EntIndexToEntRef(wings);
+	}
+
+	DataPack pack = new DataPack();
+	RequestFrame(Wings_ChargeFX, pack);
+	WritePackCell(pack, GetClientUserId(client));
+	WritePackFloat(pack, GetGameTime() + 0.2);
+}
+
+void Wings_ChargeFX(DataPack pack)
+{
+	ResetPack(pack);
+
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	float nextRing = ReadPackFloat(pack);
+
+	delete pack;
+
+	if (!IsValidMulti(client) || !b_ChargingWings[client])
+		return;
+
+	float percentage = f_ChargeAmt[client] / f_ChargeMax[client];
+
+	float gt = GetGameTime();
+	if (gt >= nextRing)
+	{
+		int weakerColor = RoundFloat(percentage * 180.0);
+		int r = 255;
+		int b = weakerColor;
+		if (TF2_GetClientTeam(client) == TFTeam_Blue)
+		{
+			r = weakerColor;
+			b = 255;
+		}
+
+		float pos[3];
+		GetClientAbsOrigin(client, pos);
+		SpawnRing(pos, 120.0 + (percentage * 80.0), 0.0, 0.0, 0.0, laserModel, glowModel, r, weakerColor, b, weakerColor + 75, 1, 0.3, 4.0 + percentage * 4.0, percentage * 4.0, 1, 1.0);
+	
+		nextRing = gt + 0.2;
+	}
+
+	pack = new DataPack();
+	RequestFrame(Wings_ChargeFX, pack);
+	WritePackCell(pack, GetClientUserId(client));
+	WritePackFloat(pack, nextRing);
+}
+
+int Wings_Attach(int client)
+{
+	int entity = CF_AttachWearable(client, 57, "tf_wearable", true, 0, 0);
+	if (IsValidEntity(entity))
+	{
+		//SetEntProp(entity, Prop_Send, "m_fEffects", GetEntProp(entity, Prop_Send, "m_fEffects") &~ EF_BONEMERGE);
+		SetEntProp(entity, Prop_Send, "m_nModelIndex", i_WingsModelIndex);
+
+		int alpha = (TF2_GetClientTeam(client) == TFTeam_Red ? 3 : 8);
+		SetEntityRenderColor(entity, _, _, _, alpha);
+
+		SetVariantInt(1);
+		AcceptEntityInput(entity, "SetBodyGroup");
+	}
+
+	return entity;
+}
+
+public Action Wings_BeginGroundCheck(Handle timer, int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client))
+		return Plugin_Continue;
+
+	int wearable = EntRefToEntIndex(i_WingsWearable[client]);
+	if (!IsValidEntity(wearable))
+		return Plugin_Continue;
+
+	RequestFrame(Wings_CheckGrounded, id);
+
+	return Plugin_Continue;
+}
+
+public void Wings_CheckGrounded(int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client))
+		return;
+
+	if (GetEntityFlags(client) & FL_ONGROUND != 0 || GetEntityFlags(client) & FL_INWATER != 0)
+	{
+		int wearable = EntRefToEntIndex(i_WingsWearable[client]);
+		if (IsValidEntity(wearable))
+		{
+			TF2_RemoveWearable(client, wearable);
+			RemoveEntity(wearable);
+			i_WingsWearable[client] = -1;
+		}
+		
+		return;
+	}
+
+	RequestFrame(Wings_CheckGrounded, id);
+}
+
+public void Blaster_Activate(int client, char abilityName[255])
+{
+	Charge_StartCharging(client, abilityName);
+	b_ChargingBlaster[client] = true;
+
+	//TODO: Charge logic is finished, we just need to read the args, add custom charge VFX, and fire the laser on held end. Should take 30-45m tops
 }
 
 public Action Barrier_GiveOnCommand(int client, int args)
@@ -1049,8 +1159,8 @@ public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255]
 		b_ChargingWings[client] = false;
 		b_ChargingBlaster[client] = false;
 
-		StopSound(client, SNDCHAN_AUTO, SOUND_CHARGEUP_BEGIN);
-		StopSound(client, SNDCHAN_AUTO, SOUND_CHARGEUP_LOOP);
+		StopSound(client, SNDCHAN_AUTO, SOUND_WINGS_CHARGEUP_BEGIN);
+		StopSound(client, SNDCHAN_AUTO, SOUND_WINGS_CHARGEUP_LOOP);
 
 		if (f_ChargeSpeedMod[client].b_Exists)
 			f_ChargeSpeedMod[client].Destroy();
@@ -1065,11 +1175,20 @@ public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255]
 
 			CF_ApplyAbilityCooldown(client, f_ChargeFailCD[client], CF_GetAbilitySlot(client, ZEINA, abilityName), true);
 
+			b_ChargeRefunding[client] = true;
 			DataPack pack = new DataPack();
 			CreateDataTimer(0.1, Charge_RefundBarrier, pack, TIMER_FLAG_NO_MAPCHANGE);
 			WritePackCell(pack, GetClientUserId(client));
 			WritePackFloat(pack, (f_ChargeAmt[client] / f_ChargeRefundTime[client]) * 0.1);
 			WritePackCell(pack, RoundFloat(10.0 * f_ChargeRefundTime[client]));
+
+			int wearable = EntRefToEntIndex(i_WingsWearable[client]);
+			if (IsValidEntity(wearable))
+			{
+				TF2_RemoveWearable(client, wearable);
+				RemoveEntity(wearable);
+				i_WingsWearable[client] = -1;
+			}
 		}
 		else if (StrContains(abilityName, WINGS) != -1)
 		{
@@ -1089,7 +1208,7 @@ public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255]
 			EmitSoundToAll(SOUND_WINGS_TAKEOFF_2, client, _, 120, _, _, GetRandomInt(90, 110));
 			CF_PlayRandomSound(client, client, "sound_subwings_takeoff");
 
-			//TODO: Temporarily attach wings
+			CreateTimer(0.2, Wings_BeginGroundCheck, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
 		}
 	}
 }
@@ -1137,6 +1256,7 @@ public void CF_OnCharacterCreated(int client)
 	b_AbilityCharging[client] = false;
 	b_ChargingWings[client] = false;
 	b_ChargingBlaster[client] = false;
+	b_ChargeRefunding[client] = false;
 
 	RequestFrame(Barrier_CheckSpawn, GetClientUserId(client));
 	CreateTimer(0.1, Barrier_CheckGoggles, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
@@ -1153,6 +1273,7 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 		b_AbilityCharging[client] = false;
 		b_ChargingWings[client] = false;
 		b_ChargingBlaster[client] = false;
+		b_ChargeRefunding[client] = false;
 		
 		if (b_HasBarrierGoggles[client])
 		{
