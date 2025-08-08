@@ -53,8 +53,10 @@
 #define SOUND_CHARGEUP_FULLYCHARGED	")items/powerup_pickup_agility.wav"
 #define SOUND_WINGS_TAKEOFF_1		")weapons/rocket_jumper_shoot.wav"
 #define SOUND_WINGS_TAKEOFF_2		")weapons/sticky_jumper_explode1.wav"
-#define SOUND_WINGS_CHARGEUP_BEGIN		")weapons/rocket_pack_boosters_extend.wav"
-#define SOUND_WINGS_CHARGEUP_LOOP			")weapons/rocket_pack_boosters_loop.wav"
+#define SOUND_WINGS_CHARGEUP_BEGIN	")weapons/rocket_pack_boosters_extend.wav"
+#define SOUND_WINGS_CHARGEUP_LOOP	")weapons/rocket_pack_boosters_loop.wav"
+#define SOUND_BLASTER_FIRE_1		")mvm/giant_demoman/giant_demoman_grenade_shoot.wav"
+#define SOUND_BLASTER_FIRE_2		")misc/halloween/spell_lightning_ball_impact.wav"
 
 #define NOPE						"replay/record_fail.wav"
 
@@ -82,6 +84,8 @@ public void OnMapStart()
 	PrecacheSound(SOUND_WINGS_TAKEOFF_2);
 	PrecacheSound(SOUND_WINGS_CHARGEUP_BEGIN);
 	PrecacheSound(SOUND_WINGS_CHARGEUP_LOOP);
+	PrecacheSound(SOUND_BLASTER_FIRE_1);
+	PrecacheSound(SOUND_BLASTER_FIRE_2);
 	PrecacheSound(NOPE);
 
 	PrecacheModel(SPR_BULLET_TRAIL_1_RED);
@@ -196,6 +200,22 @@ public Action Charge_ChargeUp(Handle timer, int id)
 	return Plugin_Continue;
 }
 
+public void Charge_ResetChargeVariables(int client)
+{
+	b_AbilityCharging[client] = false;
+	b_ChargingWings[client] = false;
+	b_ChargingBlaster[client] = false;
+	b_ChargeRefunding[client] = false;
+
+	SDKUnhook(client, SDKHook_WeaponCanSwitchTo, Blaster_PreventWeaponSwitch);
+
+	StopSound(client, SNDCHAN_AUTO, SOUND_WINGS_CHARGEUP_BEGIN);
+	StopSound(client, SNDCHAN_AUTO, SOUND_WINGS_CHARGEUP_LOOP);
+
+	if (f_ChargeSpeedMod[client].b_Exists)
+		f_ChargeSpeedMod[client].Destroy();
+}
+
 public void Charge_TerminateAbility(int client, char abilityName[255], char reason[255])
 {
 	EmitSoundToClient(client, SOUND_CHARGEUP_INSUFFICIENT);
@@ -259,6 +279,27 @@ public void Wings_Activate(int client, char abilityName[255])
 	RequestFrame(Wings_ChargeFX, pack);
 	WritePackCell(pack, GetClientUserId(client));
 	WritePackFloat(pack, GetGameTime() + 0.2);
+}
+
+void Wings_Takeoff(int client)
+{
+	float velocity = f_WingsMaxVelocity[client] * (f_ChargeAmt[client] / f_ChargeMax[client]);
+	float vel[3], ang[3], pos[3];
+	GetClientEyeAngles(client, ang);
+	GetVelocityInDirection(ang, velocity, vel);
+
+	if ((GetEntityFlags(client) & FL_ONGROUND) != 0 || GetEntProp(client, Prop_Send, "m_nWaterLevel") >= 1)
+		vel[2] = fmax(vel[2], 310.0);
+
+	TeleportEntity(client, _, _, vel);
+
+	GetClientAbsOrigin(client, pos);
+	SpawnParticle(pos, PARTICLE_WINGS_TAKEOFF, 0.2);
+	EmitSoundToAll(SOUND_WINGS_TAKEOFF_1, client, _, _, _, _, GetRandomInt(90, 110));
+	EmitSoundToAll(SOUND_WINGS_TAKEOFF_2, client, _, 120, _, _, GetRandomInt(90, 110));
+	CF_PlayRandomSound(client, client, "sound_subwings_takeoff");
+
+	CreateTimer(0.2, Wings_BeginGroundCheck, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
 }
 
 void Wings_ChargeFX(DataPack pack)
@@ -355,12 +396,67 @@ public void Wings_CheckGrounded(int id)
 	RequestFrame(Wings_CheckGrounded, id);
 }
 
+int i_BlasterWeapon[MAXPLAYERS + 1] = { -1, ... };
+
 public void Blaster_Activate(int client, char abilityName[255])
 {
 	Charge_StartCharging(client, abilityName);
 	b_ChargingBlaster[client] = true;
 
-	//TODO: Charge logic is finished, we just need to read the args, add custom charge VFX, and fire the laser on held end. Should take 30-45m tops
+	i_BlasterWeapon[client] = EntIndexToEntRef(TF2_GetActiveWeapon(client));
+	SDKHook(client, SDKHook_WeaponCanSwitchTo, Blaster_PreventWeaponSwitch);
+
+	DataPack pack = new DataPack();
+	RequestFrame(Blaster_ChargeFX, pack);
+	WritePackCell(pack, GetClientUserId(client));
+	WritePackFloat(pack, GetGameTime() + 0.2);
+}
+
+public Action Blaster_PreventWeaponSwitch(int client, int weapon)
+{
+	if (weapon != EntRefToEntIndex(i_BlasterWeapon[client]))
+		return Plugin_Handled;
+
+	return Plugin_Continue;
+}
+
+void Blaster_ChargeFX(DataPack pack)
+{
+	ResetPack(pack);
+
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	float nextFX = ReadPackFloat(pack);
+
+	delete pack;
+
+	if (!IsValidMulti(client) || !b_ChargingBlaster[client])
+		return;
+
+	float percentage = f_ChargeAmt[client] / f_ChargeMax[client];
+
+	float gt = GetGameTime();
+	if (gt >= nextFX)
+	{
+	}
+
+	pack = new DataPack();
+	RequestFrame(Blaster_ChargeFX, pack);
+	WritePackCell(pack, GetClientUserId(client));
+	WritePackFloat(pack, nextFX);
+}
+
+public void Blaster_Fire(int client)
+{
+	float percentage = f_ChargeAmt[client] / f_ChargeMax[client];
+
+	EmitSoundToAll(SOUND_BLASTER_FIRE_1, client, _, _, _, _, 120 - RoundFloat(percentage * 40.0));
+	EmitSoundToAll(SOUND_BLASTER_FIRE_2, client, _, _, _, _, 120 - RoundFloat(percentage * 40.0));
+	CF_PlayRandomSound(client, client, "sound_barrier_blaster_fire");
+
+
+	float shakePos[3];
+	GetClientAbsOrigin(client, shakePos);
+	SpawnShaker(shakePos, RoundFloat(16.0 * percentage), RoundFloat(200.0 * percentage), 2, 8 - RoundFloat(4.0 * percentage), 4);
 }
 
 public Action Barrier_GiveOnCommand(int client, int args)
@@ -1176,15 +1272,7 @@ public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255]
 
 	if (b_AbilityCharging[client])
 	{
-		b_AbilityCharging[client] = false;
-		b_ChargingWings[client] = false;
-		b_ChargingBlaster[client] = false;
-
-		StopSound(client, SNDCHAN_AUTO, SOUND_WINGS_CHARGEUP_BEGIN);
-		StopSound(client, SNDCHAN_AUTO, SOUND_WINGS_CHARGEUP_LOOP);
-
-		if (f_ChargeSpeedMod[client].b_Exists)
-			f_ChargeSpeedMod[client].Destroy();
+		Charge_ResetChargeVariables(client);
 
 		if (resupply)
 			return;
@@ -1203,23 +1291,11 @@ public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255]
 		}
 		else if (StrContains(abilityName, WINGS) != -1)
 		{
-			float velocity = f_WingsMaxVelocity[client] * (f_ChargeAmt[client] / f_ChargeMax[client]);
-			float vel[3], ang[3], pos[3];
-			GetClientEyeAngles(client, ang);
-			GetVelocityInDirection(ang, velocity, vel);
-
-			if ((GetEntityFlags(client) & FL_ONGROUND) != 0 || GetEntProp(client, Prop_Send, "m_nWaterLevel") >= 1)
-				vel[2] = fmax(vel[2], 310.0);
-
-			TeleportEntity(client, _, _, vel);
-
-			GetClientAbsOrigin(client, pos);
-			SpawnParticle(pos, PARTICLE_WINGS_TAKEOFF, 0.2);
-			EmitSoundToAll(SOUND_WINGS_TAKEOFF_1, client, _, _, _, _, GetRandomInt(90, 110));
-			EmitSoundToAll(SOUND_WINGS_TAKEOFF_2, client, _, 120, _, _, GetRandomInt(90, 110));
-			CF_PlayRandomSound(client, client, "sound_subwings_takeoff");
-
-			CreateTimer(0.2, Wings_BeginGroundCheck, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+			Wings_Takeoff(client);
+		}
+		else if (StrContains(abilityName, BLASTER) != -1)
+		{
+			Blaster_Fire(client);
 		}
 	}
 }
@@ -1276,10 +1352,8 @@ public void CF_OnCharacterCreated(int client)
 {
 	Barrier_DeleteHUDTimer(client);
 	f_NextBarrierTime[client] = 0.0;
-	b_AbilityCharging[client] = false;
-	b_ChargingWings[client] = false;
-	b_ChargingBlaster[client] = false;
-	b_ChargeRefunding[client] = false;
+
+	Charge_ResetChargeVariables(client);
 
 	RequestFrame(Barrier_CheckSpawn, GetClientUserId(client));
 	CreateTimer(0.1, Barrier_CheckGoggles, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
@@ -1293,10 +1367,8 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 		Barrier_RemoveBarrier(client, f_Barrier[client] + 1.0);
 		f_NextBarrierTime[client] = 0.0;
 		f_BarrierLostRecently[client] = 0.0;
-		b_AbilityCharging[client] = false;
-		b_ChargingWings[client] = false;
-		b_ChargingBlaster[client] = false;
-		b_ChargeRefunding[client] = false;
+		
+		Charge_ResetChargeVariables(client);
 		
 		if (b_HasBarrierGoggles[client])
 		{
