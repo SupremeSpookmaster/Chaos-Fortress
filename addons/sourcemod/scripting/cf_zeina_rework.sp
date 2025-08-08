@@ -196,6 +196,24 @@ public Action Charge_ChargeUp(Handle timer, int id)
 	return Plugin_Continue;
 }
 
+public void Charge_TerminateAbility(int client, char abilityName[255], char reason[255])
+{
+	EmitSoundToClient(client, SOUND_CHARGEUP_INSUFFICIENT);
+
+	char text[255];
+	Format(text, sizeof(text), "%s Refunding Barrier...", reason);
+	PrintCenterText(client, text);
+
+	CF_ApplyAbilityCooldown(client, f_ChargeFailCD[client], CF_GetAbilitySlot(client, ZEINA, abilityName), true);
+
+	b_ChargeRefunding[client] = true;
+	DataPack pack = new DataPack();
+	CreateDataTimer(0.1, Charge_RefundBarrier, pack, TIMER_FLAG_NO_MAPCHANGE);
+	WritePackCell(pack, GetClientUserId(client));
+	WritePackFloat(pack, (f_ChargeAmt[client] / f_ChargeRefundTime[client]) * 0.1);
+	WritePackCell(pack, RoundFloat(10.0 * f_ChargeRefundTime[client]));
+}
+
 public Action Charge_RefundBarrier(Handle timer, DataPack pack)
 {
 	ResetPack(pack);
@@ -508,6 +526,8 @@ float Barrier_GiveBarrier(int target, int giver, float amount, float percentage 
 			float pos[3];
 			CF_WorldSpaceCenter(target, pos);
 			pos[2] += 40.0 * CF_GetCharacterScale(target);
+			pos[0] += GetRandomFloat(-20.0, 20.0);
+			pos[1] += GetRandomFloat(-20.0, 20.0);
 			
 			char barrierText[16];
 			Format(barrierText, sizeof(barrierText), "+%i", RoundFloat(amountGiven));
@@ -1089,7 +1109,8 @@ public void Repair_Logic(DataPack pack)
 			if (GetVectorDistance(pos, theirPos) <= radius && CF_HasLineOfSight(pos, theirPos, _, _, grenade))
 			{
 				float repairAmt = f_BarrierLostRecently[i] * repair;
-				Barrier_GiveBarrier(i, owner, repairAmt + extra, capRatio, capFlat, _, true);
+				Barrier_GiveBarrier(i, owner, repairAmt, 0.0, 0.0, _, true);
+				Barrier_GiveBarrier(i, owner, extra, capRatio, capFlat, _, false);
 			}
 		}
 
@@ -1170,17 +1191,7 @@ public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255]
 
 		if (f_ChargeAmt[client] < f_ChargeMin[client])
 		{
-			EmitSoundToClient(client, SOUND_CHARGEUP_INSUFFICIENT);
-			PrintCenterText(client, "Not enough charge! Refunding Barrier...");
-
-			CF_ApplyAbilityCooldown(client, f_ChargeFailCD[client], CF_GetAbilitySlot(client, ZEINA, abilityName), true);
-
-			b_ChargeRefunding[client] = true;
-			DataPack pack = new DataPack();
-			CreateDataTimer(0.1, Charge_RefundBarrier, pack, TIMER_FLAG_NO_MAPCHANGE);
-			WritePackCell(pack, GetClientUserId(client));
-			WritePackFloat(pack, (f_ChargeAmt[client] / f_ChargeRefundTime[client]) * 0.1);
-			WritePackCell(pack, RoundFloat(10.0 * f_ChargeRefundTime[client]));
+			Charge_TerminateAbility(client, abilityName, "Not enough charge!");
 
 			int wearable = EntRefToEntIndex(i_WingsWearable[client]);
 			if (IsValidEntity(wearable))
@@ -1233,10 +1244,22 @@ public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability
 			return Plugin_Changed;
 		}
 
-		if (b_ChargingWings[client] && StrContains(ability, BLASTER) != -1)
+		if (StrContains(ability, BLASTER) != -1)
 		{
-			result = false;
-			return Plugin_Changed;
+			if (b_ChargingWings[client])
+			{
+				result = false;
+				return Plugin_Changed;
+			}
+
+			if (!IsPlayerHoldingWeapon(client, 1))
+			{
+				if (b_AbilityCharging[client])
+					Charge_TerminateAbility(client, ability, "Must be holding primary!");
+
+				result = false;
+				return Plugin_Changed;
+			}
 		}
 
 		if (b_ChargingBlaster[client] && StrContains(ability, WINGS) != -1)
