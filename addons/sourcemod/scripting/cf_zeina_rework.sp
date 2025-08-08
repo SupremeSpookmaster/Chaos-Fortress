@@ -22,6 +22,8 @@
 #define BARRIER_SPAWN	"zeina_barrier_spawn"
 #define BARRIER_GAIN	"zeina_barrier_gain"
 #define REPAIR			"zeina_repair_grenade"
+#define WINGS			"zeina_subwings_v2"
+#define BLASTER			"zeina_barrier_blast"
 
 int i_RepairGrenadeModelIndex = -1;
 
@@ -39,6 +41,7 @@ int i_RepairGrenadeModelIndex = -1;
 #define PARTICLE_BULLET_IMPACT_RED				"drg_cow_muzzleflash_normal"
 #define PARTICLE_BULLET_IMPACT_BLUE				"drg_cow_muzzleflash_normal_blue"
 #define PARTICLE_REPAIR_FIZZLE					"sapper_debris"
+#define PARTICLE_WINGS_TAKEOFF					"hammer_impact_button_dust"
 
 #define SOUND_BULLET_IMPACT			")weapons/batsaber_hit_world1.wav"
 #define SOUND_GIVE_BARRIER			")weapons/rescue_ranger_charge_02.wav"
@@ -47,6 +50,14 @@ int i_RepairGrenadeModelIndex = -1;
 #define SOUND_BARRIER_BREAK			")physics/metal/metal_box_break2.wav"
 #define SOUND_REPAIR_FIZZLE			")physics/concrete/concrete_impact_flare1.wav"
 #define SOUND_REPAIR_PULSE			")weapons/rescue_ranger_charge_02.wav"
+#define SOUND_CHARGEUP_INSUFFICIENT	")weapons/rocket_pack_boosters_not_ready.wav"
+#define SOUND_CHARGEUP_FULLYCHARGED	")items/powerup_pickup_agility.wav"
+#define SOUND_WINGS_TAKEOFF_1		")weapons/rocket_jumper_shoot.wav"
+#define SOUND_WINGS_TAKEOFF_2		")weapons/sticky_jumper_explode1.wav"
+#define SOUND_CHARGEUP_BEGIN		")weapons/rocket_pack_boosters_extend.wav"
+#define SOUND_CHARGEUP_LOOP			")weapons/rocket_pack_boosters_loop.wav"
+
+#define NOPE						"replay/record_fail.wav"
 
 Handle HudSync;
 
@@ -65,6 +76,13 @@ public void OnMapStart()
 	PrecacheSound(SOUND_BARRIER_BREAK);
 	PrecacheSound(SOUND_REPAIR_FIZZLE);
 	PrecacheSound(SOUND_REPAIR_PULSE);
+	PrecacheSound(SOUND_CHARGEUP_INSUFFICIENT);
+	PrecacheSound(SOUND_CHARGEUP_FULLYCHARGED);
+	PrecacheSound(SOUND_WINGS_TAKEOFF_1);
+	PrecacheSound(SOUND_WINGS_TAKEOFF_2);
+	PrecacheSound(SOUND_CHARGEUP_BEGIN);
+	PrecacheSound(SOUND_CHARGEUP_LOOP);
+	PrecacheSound(NOPE);
 
 	PrecacheModel(SPR_BULLET_TRAIL_1_RED);
 	PrecacheModel(SPR_BULLET_TRAIL_1_BLUE);
@@ -104,10 +122,118 @@ int i_BarrierBubble[MAXPLAYERS + 1] = { -1, ... };
 int i_BarrierWorldTextOwner[2048] = { -1, ... };
 
 bool b_HasBarrierGoggles[MAXPLAYERS + 1] = { false, ... };
+bool b_ChargingWings[MAXPLAYERS + 1] = { false, ... };
+bool b_ChargingBlaster[MAXPLAYERS + 1] = { false, ... };
 
 Handle g_BarrierHUDTimer[MAXPLAYERS + 1] = { null, ... };
 
 int numGoggles = 0;
+
+float f_WingsMaxVelocity[MAXPLAYERS + 1] = { 0.0, ... };
+
+public void Wings_Activate(int client, char abilityName[255])
+{
+	Charge_StartCharging(client, abilityName);
+	f_WingsMaxVelocity[client] = CF_GetArgF(client, ZEINA, abilityName, "max_velocity", 1200.0);
+	b_ChargingWings[client] = true;
+}
+
+public void Blaster_Activate(int client, char abilityName[255])
+{
+	Charge_StartCharging(client, abilityName);
+	b_ChargingBlaster[client] = true;
+
+	//TODO: Charge logic is finished, we just need to read the args, add custom charge VFX, and fire the laser on held end. Should take 30-45m tops
+}
+
+float f_ChargeAmt[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ChargeMin[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ChargeMax[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ChargeRate[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ChargeRefundTime[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ChargeBarrierMult[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ChargeFailCD[MAXPLAYERS + 1] = { 0.0, ... };
+
+CF_SpeedModifier f_ChargeSpeedMod[MAXPLAYERS + 1] = { null, ... };
+
+bool b_AbilityCharging[MAXPLAYERS + 1] = { false, ... };
+
+public void Charge_StartCharging(int client, char abilityName[255])
+{
+	if (b_AbilityCharging[client])
+		return;
+
+	if (f_ChargeSpeedMod[client].b_Exists)
+		f_ChargeSpeedMod[client].Destroy();
+
+	f_ChargeMin[client] = CF_GetArgF(client, ZEINA, abilityName, "min_barrier", 25.0);
+	f_ChargeMax[client] = CF_GetArgF(client, ZEINA, abilityName, "max_barrier", 100.0);
+	f_ChargeRate[client] = CF_GetArgF(client, ZEINA, abilityName, "charge_rate", 2.5);
+	f_ChargeRefundTime[client] = CF_GetArgF(client, ZEINA, abilityName, "refund_duration", 1.0);
+	f_ChargeFailCD[client] = CF_GetArgF(client, ZEINA, abilityName, "fail_cd", 4.0);
+	f_ChargeBarrierMult[client] = CF_GetArgF(client, ZEINA, abilityName, "barrier_mult", 0.5);
+
+	f_ChargeAmt[client] = 0.0;
+
+	float speedPenalty = CF_GetArgF(client, ZEINA, abilityName, "slow_amt", 240.0);
+	if (speedPenalty > 0.0)
+		f_ChargeSpeedMod[client] = CF_ApplyTemporarySpeedChange(client, 0, -speedPenalty, 0.0, 0, 0.0, false);
+
+	b_AbilityCharging[client] = true;
+	EmitSoundToAll(SOUND_CHARGEUP_BEGIN, client);
+	EmitSoundToAll(SOUND_CHARGEUP_LOOP, client);
+
+	CreateTimer(0.1, Charge_ChargeUp, GetClientUserId(client), TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+}
+
+public Action Charge_ChargeUp(Handle timer, int id)
+{
+	int client = GetClientOfUserId(id);
+
+	if (!IsValidMulti(client) || !b_AbilityCharging[client])
+		return Plugin_Stop;
+
+	float amt = f_ChargeRate[client];
+	if (f_Barrier[client] < amt)
+		amt = f_Barrier[client];
+
+	float diff = f_ChargeMax[client] - f_ChargeAmt[client];
+	if (diff < amt)
+		amt = diff;
+
+	f_ChargeAmt[client] += amt;
+	Barrier_RemoveBarrier(client, amt);
+
+	if (f_ChargeAmt[client] >= f_ChargeMax[client])
+	{
+		EmitSoundToClient(client, SOUND_CHARGEUP_FULLYCHARGED, _, _, 120);
+		PrintCenterText(client, "FULLY CHARGED!");
+		return Plugin_Stop;
+	}
+
+	return Plugin_Continue;
+}
+
+public Action Charge_RefundBarrier(Handle timer, DataPack pack)
+{
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	float amt = ReadPackFloat(pack);
+	int times = ReadPackCell(pack);
+
+	if (!IsValidMulti(client) || b_AbilityCharging[client] || times < 1)
+		return Plugin_Continue;
+
+	Barrier_GiveBarrier(client, client, amt, _, _, _, true, true);
+
+	DataPack pack2 = new DataPack();
+	CreateDataTimer(0.1, Charge_RefundBarrier, pack2, TIMER_FLAG_NO_MAPCHANGE);
+	WritePackCell(pack2, GetClientUserId(client));
+	WritePackFloat(pack2, amt);
+	WritePackCell(pack2, times - 1);
+
+	return Plugin_Continue;
+}
 
 public Action Barrier_GiveOnCommand(int client, int args)
 {
@@ -229,6 +355,9 @@ float Barrier_GiveBarrier(int target, int giver, float amount, float percentage 
 	if (attributes)
 		amount *= GetTotalAttributeValue(target, 854, 1.0) * GetTotalAttributeValue(target, 69, 1.0) * GetTotalAttributeValue(target, 70, 1.0);
 
+	if (b_AbilityCharging[target])
+		amount *= f_ChargeBarrierMult[target];
+
 	f_Barrier[target] += amount;
 	float amountGiven = amount;
 
@@ -246,7 +375,7 @@ float Barrier_GiveBarrier(int target, int giver, float amount, float percentage 
 	if (amountGiven > 0.0)
 	{
 		int pitch = GetRandomInt(120, 140);
-		
+
 		if (!noSound)
 			EmitSoundToAll(SOUND_GIVE_BARRIER, target, _, 80, _, 0.4, pitch);
 
@@ -895,11 +1024,73 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	if (StrContains(abilityName, REPAIR) != -1)
 		Repair_Activate(client, abilityName);
 
+	if (StrContains(abilityName, WINGS) != -1)
+		Wings_Activate(client, abilityName);
+
+	if (StrContains(abilityName, BLASTER) != -1)
+		Blaster_Activate(client, abilityName);
+
 	if (StrContains(abilityName, BARRIER_GAIN) != -1)
 	{
 		float amount = CF_GetArgF(client, ZEINA, abilityName, "amount", 250.0);
 		float max = CF_GetArgF(client, ZEINA, abilityName, "cap", 600.0);
 		Barrier_GiveBarrier(client, client, amount, _, max, _, _, true);
+	}
+}
+
+public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255], char abilityName[255])
+{
+	if (!StrEqual(pluginName, ZEINA))
+		return;
+
+	if (b_AbilityCharging[client])
+	{
+		b_AbilityCharging[client] = false;
+		b_ChargingWings[client] = false;
+		b_ChargingBlaster[client] = false;
+
+		StopSound(client, SNDCHAN_AUTO, SOUND_CHARGEUP_BEGIN);
+		StopSound(client, SNDCHAN_AUTO, SOUND_CHARGEUP_LOOP);
+
+		if (f_ChargeSpeedMod[client].b_Exists)
+			f_ChargeSpeedMod[client].Destroy();
+
+		if (resupply)
+			return;
+
+		if (f_ChargeAmt[client] < f_ChargeMin[client])
+		{
+			EmitSoundToClient(client, SOUND_CHARGEUP_INSUFFICIENT);
+			PrintCenterText(client, "Not enough charge! Refunding Barrier...");
+
+			CF_ApplyAbilityCooldown(client, f_ChargeFailCD[client], CF_GetAbilitySlot(client, ZEINA, abilityName), true);
+
+			DataPack pack = new DataPack();
+			CreateDataTimer(0.1, Charge_RefundBarrier, pack, TIMER_FLAG_NO_MAPCHANGE);
+			WritePackCell(pack, GetClientUserId(client));
+			WritePackFloat(pack, (f_ChargeAmt[client] / f_ChargeRefundTime[client]) * 0.1);
+			WritePackCell(pack, RoundFloat(10.0 * f_ChargeRefundTime[client]));
+		}
+		else if (StrContains(abilityName, WINGS) != -1)
+		{
+			float velocity = f_WingsMaxVelocity[client] * (f_ChargeAmt[client] / f_ChargeMax[client]);
+			float vel[3], ang[3], pos[3];
+			GetClientEyeAngles(client, ang);
+			GetVelocityInDirection(ang, velocity, vel);
+
+			if ((GetEntityFlags(client) & FL_ONGROUND) != 0 || GetEntProp(client, Prop_Send, "m_nWaterLevel") >= 1)
+				vel[2] = fmax(vel[2], 310.0);
+
+			TeleportEntity(client, _, _, vel);
+
+			GetClientAbsOrigin(client, pos);
+			SpawnParticle(pos, PARTICLE_WINGS_TAKEOFF, 0.2);
+			EmitSoundToAll(SOUND_WINGS_TAKEOFF_1, client, _, _, _, _, GetRandomInt(90, 110));
+			EmitSoundToAll(SOUND_WINGS_TAKEOFF_2, client, _, 120, _, _, GetRandomInt(90, 110));
+			CF_PlayRandomSound(client, client, "sound_subwings_takeoff");
+
+			//TODO: Temporarily attach wings
+		}
 	}
 }
 
@@ -915,6 +1106,27 @@ public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability
 		return Plugin_Changed;
 	}
 
+	if (StrContains(ability, WINGS) != -1 || StrContains(ability, BLASTER) != -1)
+	{
+		if (!b_AbilityCharging[client] && f_Barrier[client] < CF_GetArgF(client, ZEINA, ability, "min_barrier", 50.0))
+		{
+			result = false;
+			return Plugin_Changed;
+		}
+
+		if (b_ChargingWings[client] && StrContains(ability, BLASTER) != -1)
+		{
+			result = false;
+			return Plugin_Changed;
+		}
+
+		if (b_ChargingBlaster[client] && StrContains(ability, WINGS) != -1)
+		{
+			result = false;
+			return Plugin_Changed;
+		}
+	}
+
 	return Plugin_Continue;
 }
 
@@ -922,6 +1134,9 @@ public void CF_OnCharacterCreated(int client)
 {
 	Barrier_DeleteHUDTimer(client);
 	f_NextBarrierTime[client] = 0.0;
+	b_AbilityCharging[client] = false;
+	b_ChargingWings[client] = false;
+	b_ChargingBlaster[client] = false;
 
 	RequestFrame(Barrier_CheckSpawn, GetClientUserId(client));
 	CreateTimer(0.1, Barrier_CheckGoggles, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
@@ -935,6 +1150,9 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 		Barrier_RemoveBarrier(client, f_Barrier[client] + 1.0);
 		f_NextBarrierTime[client] = 0.0;
 		f_BarrierLostRecently[client] = 0.0;
+		b_AbilityCharging[client] = false;
+		b_ChargingWings[client] = false;
+		b_ChargingBlaster[client] = false;
 		
 		if (b_HasBarrierGoggles[client])
 		{
@@ -986,7 +1204,7 @@ public void OnEntityDestroyed(int entity)
 
 public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
-    if (!IsValidClient(victim) || f_Barrier[victim] <= 0.0 || damage <= 0.0)
+    if (!IsValidClient(victim) || f_Barrier[victim] <= 0.0 || damage <= 0.0 || b_AbilityCharging[victim])
 		return Plugin_Continue;
 
 	if (damage >= f_Barrier[victim])
@@ -1057,10 +1275,21 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 	return Plugin_Changed;
 }
 
-/*public void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, int &b, int &a)
+public void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, int &b, int &a)
 {
-	if (f_Barrier[client] > 0.0)
+	//Ugly ass hack but I really don't care
+	if (b_AbilityCharging[client])
+	{
+		char text[255];
+		Format(text, sizeof(text), "[%i[PERCENT] CHARGED] Sub Wings", RoundFloat(100.0 * (f_ChargeAmt[client] / f_ChargeMax[client])));
+		ReplaceString(HUDText, 255, "[ACTIVE] Sub Wings", text);
+
+		Format(text, sizeof(text), "[%i[PERCENT] CHARGED] Barrier Blaster", RoundFloat(100.0 * (f_ChargeAmt[client] / f_ChargeMax[client])));
+		ReplaceString(HUDText, 255, "[ACTIVE] Barrier Blaster", text);
+	}
+
+	/*if (f_Barrier[client] > 0.0)
 	{
 		Format(HUDText, sizeof(HUDText), "BARRIER: %i\n%s", RoundFloat(f_Barrier[client]), HUDText);
-	}
-}*/
+	}*/
+}
