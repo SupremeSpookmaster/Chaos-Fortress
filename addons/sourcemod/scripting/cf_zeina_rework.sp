@@ -47,6 +47,8 @@
 #define PARTICLE_BLASTER_CHARGEUP_BLUE_AURA_1	"electrocuted_blue"
 #define PARTICLE_BLASTER_CHARGEUP_RED_AURA_2	"critgun_weaponmodel_red"
 #define PARTICLE_BLASTER_CHARGEUP_BLUE_AURA_2	"critgun_weaponmodel_blu"
+#define PARTICLE_BLASTER_MUZZLE_RED				"drg_cow_explosioncore_charged"
+#define PARTICLE_BLASTER_MUZZLE_BLUE			"drg_cow_explosioncore_charged_blue"
 
 #define SOUND_BULLET_IMPACT			")weapons/batsaber_hit_world1.wav"
 #define SOUND_GIVE_BARRIER			")weapons/rescue_ranger_charge_02.wav"
@@ -398,6 +400,14 @@ public void Wings_CheckGrounded(int id)
 int i_BlasterWeapon[MAXPLAYERS + 1] = { -1, ... };
 int i_BlasterParticle[MAXPLAYERS + 1] = { -1, ... };
 
+float f_BlasterRange[MAXPLAYERS + 1] = { 0.0, ... };
+float f_BlasterWidth[MAXPLAYERS + 1] = { 0.0, ... };
+float f_BlasterBuffAmt[MAXPLAYERS + 1] = { 0.0, ... };
+float f_BlasterCapRatio[MAXPLAYERS + 1] = { 0.0, ... };
+float f_BlasterCapFlat[MAXPLAYERS + 1] = { 0.0, ... };
+float f_BlasterDMG[MAXPLAYERS + 1] = { 0.0, ... };
+float f_BlasterAttackRatePenalty[MAXPLAYERS + 1] = { 0.0, ... };
+
 public void Blaster_Activate(int client, char abilityName[255])
 {
 	Charge_StartCharging(client, abilityName);
@@ -411,6 +421,14 @@ public void Blaster_Activate(int client, char abilityName[255])
 	SDKHook(client, SDKHook_WeaponCanSwitchTo, Blaster_PreventWeaponSwitch);
 	i_BlasterParticle[client] = EntIndexToEntRef(CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_BLASTER_CHARGEUP_RED : PARTICLE_BLASTER_CHARGEUP_BLUE, "root"));
 	AttachAura(client, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_BLASTER_CHARGEUP_RED_AURA_2 : PARTICLE_BLASTER_CHARGEUP_BLUE_AURA_2);
+
+	f_BlasterRange[client] = CF_GetArgF(client, ZEINA, abilityName, "range", 600.0);
+	f_BlasterWidth[client] = CF_GetArgF(client, ZEINA, abilityName, "width", 60.0);
+	f_BlasterBuffAmt[client] = CF_GetArgF(client, ZEINA, abilityName, "buff_amt", 150.0);
+	f_BlasterCapRatio[client] = CF_GetArgF(client, ZEINA, abilityName, "cap_percentage", 0.75);
+	f_BlasterCapFlat[client] = CF_GetArgF(client, ZEINA, abilityName, "cap_flat", 300.0);
+	f_BlasterDMG[client] = CF_GetArgF(client, ZEINA, abilityName, "damage_amt", 150.0);
+	f_BlasterAttackRatePenalty[client] = CF_GetArgF(client, ZEINA, abilityName, "attack_interval_mult", 2.0);
 }
 
 public Action Blaster_PreventWeaponSwitch(int client, int weapon)
@@ -421,6 +439,7 @@ public Action Blaster_PreventWeaponSwitch(int client, int weapon)
 	return Plugin_Continue;
 }
 
+ArrayList Blaster_HitList;
 public void Blaster_Fire(int client)
 {
 	float percentage = f_ChargeAmt[client] / f_ChargeMax[client];
@@ -430,10 +449,159 @@ public void Blaster_Fire(int client)
 	EmitSoundToAll(SOUND_BLASTER_FIRE_3, client, _, _, _, _, 110 - RoundFloat(percentage * 20.0));
 	CF_PlayRandomSound(client, client, "sound_barrier_blaster_fire");
 
+	float startPos[3], endPos[3], ang[3], hullMin[3], hullMax[3];
+	GetClientEyePosition(client, startPos);
+	GetClientEyeAngles(client, ang);
+
+	//Get the actual start and end positions of the laser:
+	GetPointInDirection(startPos, ang, f_BlasterRange[client], endPos);
+	CF_HasLineOfSight(startPos, endPos, _, endPos, client);
+
+	hullMin[0] = -f_BlasterWidth[client];
+	hullMin[1] = hullMin[0];
+	hullMin[2] = hullMin[0];
+	hullMax[0] = -hullMin[0];
+	hullMax[1] = -hullMin[1];
+	hullMax[2] = -hullMin[2];
+
+	CF_StartLagCompensation(client);
+	Blaster_HitList = CreateArray(255);
+	TR_TraceHullFilterEx(startPos, endPos, hullMin, hullMax, 1073741824, Blaster_Trace, client);
+	CF_EndLagCompensation(client);
+
+	if (GetArraySize(Blaster_HitList) > 0)
+	{
+		for (int i = 0; i < GetArraySize(Blaster_HitList); i++)
+		{
+			int target = GetArrayCell(Blaster_HitList, i);
+
+			if (CF_IsValidTarget(target, TF2_GetClientTeam(client)))
+			{
+				Barrier_GiveBarrier(target, client, f_BlasterBuffAmt[client] * percentage, f_BlasterCapRatio[client], f_BlasterCapFlat[client], _, true);
+			}
+			else
+			{
+				SDKHooks_TakeDamage(target, client, client, f_BlasterDMG[client] * percentage, DMG_PLASMA);
+			}
+		}
+	}
+
+	delete Blaster_HitList;
+
+	//Get the visual start and end positions of the laser, then draw the laser:
+	startPos[2] -= 20.0 * CF_GetCharacterScale(client);
+	endPos[2] -= 20.0 * CF_GetCharacterScale(client);
+	GetPointInDirection(startPos, ang, 20.0, startPos);
+
+	SpawnParticle(startPos, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_BLASTER_MUZZLE_RED : PARTICLE_BLASTER_MUZZLE_BLUE, 0.2);
+
+	int weakerColor = RoundFloat(percentage * 90.0);
+	int r = 255;
+	int b = weakerColor;
+	if (TF2_GetClientTeam(client) == TFTeam_Blue)
+	{
+		r = weakerColor;
+		b = 255;
+	}
+
+	for (int i = 0; i < 9; i++)
+	{
+		float beamStart[3], beamEnd[3];
+		beamStart = startPos;
+		beamEnd = endPos;
+
+		if (i > 0)
+		{
+			float beamAng[3], startToEnd[3];
+			GetAngleBetweenPoints(beamStart, beamEnd, startToEnd);
+			beamAng[0] = startToEnd[0];
+			beamAng[1] = startToEnd[1];
+			beamAng[2] = (360.0 / 9.0) * float(i);
+
+			float dir[3];
+			GetAngleVectors(beamAng, dir, NULL_VECTOR, dir);
+			ScaleVector(dir, f_BlasterWidth[client]);
+			AddVectors(beamStart, dir, beamStart);
+			AddVectors(beamEnd, dir, beamEnd);
+		}
+
+		int startEnt, endEnt;
+		int beam = CreateEnvBeam(-1, -1, beamStart, beamEnd, _, _, startEnt, endEnt, r, weakerColor, b, weakerColor + 125, _, 60.0, 60.0, _, 12.0);
+
+		if (IsValidEntity(beam) && IsValidEntity(startEnt) && IsValidEntity(endEnt))
+		{
+			DataPack pack = new DataPack();
+			RequestFrame(Blaster_DissipateBeam, pack);
+			WritePackCell(pack, EntIndexToEntRef(beam));
+			WritePackCell(pack, EntIndexToEntRef(startEnt));
+			WritePackCell(pack, EntIndexToEntRef(endEnt));
+		}
+	}
 
 	float shakePos[3];
 	GetClientAbsOrigin(client, shakePos);
 	SpawnShaker(shakePos, RoundFloat(16.0 * percentage), RoundFloat(200.0 * percentage), 2, 8 - RoundFloat(4.0 * percentage), 4);
+}
+
+void Blaster_DissipateBeam(DataPack pack)
+{
+	ResetPack(pack);
+	int beam = EntRefToEntIndex(ReadPackCell(pack));
+	int start = EntRefToEntIndex(ReadPackCell(pack));
+	int end = EntRefToEntIndex(ReadPackCell(pack));
+	
+	if (!IsValidEntity(beam) || !IsValidEntity(start) || !IsValidEntity(end))
+	{
+		if (IsValidEntity(beam))
+			RemoveEntity(beam);
+		if (IsValidEntity(start))
+			RemoveEntity(start);
+		if (IsValidEntity(end))
+			RemoveEntity(end);
+
+		delete pack;
+		return;
+	}
+
+	int r, g, b, a;
+	GetEntityRenderColor(beam, r, g, b, a);
+	a = RoundFloat(LerpCurve(float(a), 0.0, 2.0, 6.0));
+	if (a <= 0)
+	{
+		RemoveEntity(beam);
+		RemoveEntity(start);
+		RemoveEntity(end);
+
+		delete pack;
+		return;
+	}
+
+	SetEntityRenderColor(beam, r, g, b, a);
+
+	float amplitude = GetEntPropFloat(beam, Prop_Data, "m_fAmplitude");
+    if (amplitude > 0.0)
+    {
+        amplitude = LerpCurve(amplitude, 0.0, 0.5, 1.0);
+        SetEntPropFloat(beam, Prop_Data, "m_fAmplitude", amplitude);
+    }
+
+	float width = GetEntPropFloat(beam, Prop_Data, "m_fWidth");
+    if (width > 0.0)
+    {
+        width = LerpCurve(amplitude, 0.0, 0.5, 1.0);
+        SetEntPropFloat(beam, Prop_Data, "m_fWidth", width);
+    	SetEntPropFloat(beam, Prop_Data, "m_fEndWidth", width);
+    }
+
+	RequestFrame(Blaster_DissipateBeam, pack);
+}
+
+bool Blaster_Trace(int entity, int contentsMask, int client)
+{
+	if (IsValidClient(entity) || CF_IsValidTarget(entity, grabEnemyTeam(client)))
+		PushArrayCell(Blaster_HitList, entity);
+
+	return false;
 }
 
 public Action Barrier_GiveOnCommand(int client, int args)
@@ -1510,4 +1678,15 @@ public void Charge_ResetChargeVariables(int client)
 
 	if (f_ChargeSpeedMod[client].b_Exists)
 		f_ChargeSpeedMod[client].Destroy();
+}
+
+public Action CF_OnCalcAttackInterval(int client, int weapon, int slot, char classname[255], float &rate)
+{
+	if (b_ChargingBlaster[client])
+	{
+		rate *= f_BlasterAttackRatePenalty[client];
+		return Plugin_Changed;
+	}
+
+	return Plugin_Continue;
 }
