@@ -21,9 +21,13 @@
 #define INFO			"zeina_barrier_visor"
 #define BARRIER_SPAWN	"zeina_barrier_spawn"
 #define BARRIER_GAIN	"zeina_barrier_gain"
+#define REPAIR			"zeina_repair_grenade"
+
+int i_RepairGrenadeModelIndex = -1;
 
 #define MODEL_DRG				"models/weapons/w_models/w_drg_ball.mdl"
 #define MODEL_BARRIER_BUBBLE	"models/effects/resist_shield/resist_shield.mdl"
+#define MODEL_REPAIR_GRENADE	"models/Items/battery.mdl"
 
 #define SPR_BULLET_TRAIL_1_RED	"materials/effects/repair_claw_trail_red.vmt"
 #define SPR_BULLET_TRAIL_1_BLUE	"materials/effects/repair_claw_trail_blue.vmt"
@@ -34,31 +38,43 @@
 #define PARTICLE_BULLET_GIVE_BARRIER_BLUE		"repair_claw_heal_blue3"
 #define PARTICLE_BULLET_IMPACT_RED				"drg_cow_muzzleflash_normal"
 #define PARTICLE_BULLET_IMPACT_BLUE				"drg_cow_muzzleflash_normal_blue"
+#define PARTICLE_REPAIR_FIZZLE					"sapper_debris"
 
 #define SOUND_BULLET_IMPACT			")weapons/batsaber_hit_world1.wav"
 #define SOUND_GIVE_BARRIER			")weapons/rescue_ranger_charge_02.wav"
 #define SOUND_BULLET_BEGIN_HOMING	")buttons/button19.wav"
 #define SOUND_BARRIER_BLOCKDAMAGE	")physics/metal/metal_box_impact_bullet1.wav"
 #define SOUND_BARRIER_BREAK			")physics/metal/metal_box_break2.wav"
+#define SOUND_REPAIR_FIZZLE			")physics/concrete/concrete_impact_flare1.wav"
+#define SOUND_REPAIR_PULSE			")weapons/rescue_ranger_charge_02.wav"
 
 Handle HudSync;
+
+int glowModel, laserModel;
 
 public void OnMapStart()
 {
 	PrecacheModel(MODEL_DRG);
 	PrecacheModel(MODEL_BARRIER_BUBBLE);
-	PrecacheModel(SPR_BULLET_TRAIL_1_RED);
-	PrecacheModel(SPR_BULLET_TRAIL_1_BLUE);
-	PrecacheModel(SPR_BULLET_TRAIL_2);
-	PrecacheModel(SPR_BULLET_HEAD);
+	i_RepairGrenadeModelIndex = PrecacheModel(MODEL_REPAIR_GRENADE);
 
 	PrecacheSound(SOUND_BULLET_IMPACT);
 	PrecacheSound(SOUND_GIVE_BARRIER);
 	PrecacheSound(SOUND_BULLET_BEGIN_HOMING);
 	PrecacheSound(SOUND_BARRIER_BLOCKDAMAGE);
 	PrecacheSound(SOUND_BARRIER_BREAK);
+	PrecacheSound(SOUND_REPAIR_FIZZLE);
+	PrecacheSound(SOUND_REPAIR_PULSE);
+
+	PrecacheModel(SPR_BULLET_TRAIL_1_RED);
+	PrecacheModel(SPR_BULLET_TRAIL_1_BLUE);
+	PrecacheModel(SPR_BULLET_TRAIL_2);
+	PrecacheModel(SPR_BULLET_HEAD);
 
 	HudSync = CreateHudSynchronizer();
+
+	glowModel = PrecacheModel("materials/sprites/glow02.vmt");
+	laserModel = PrecacheModel("materials/sprites/laser.vmt");
 }
 
 public void OnPluginStart()
@@ -81,6 +97,7 @@ public Action Text_Transmit(int entity, int client)
 
 float f_Barrier[MAXPLAYERS + 1] = { 0.0, ... };
 float f_NextBarrierTime[MAXPLAYERS + 1] = { 0.0, ... };
+float f_BarrierLostRecently[MAXPLAYERS + 1] = { 0.0, ... };
 
 int i_BarrierWorldText[MAXPLAYERS + 1] = { -1, ... };
 int i_BarrierBubble[MAXPLAYERS + 1] = { -1, ... };
@@ -195,18 +212,19 @@ int Barrier_GetBubble(int client) { return EntRefToEntIndex(i_BarrierBubble[clie
  * @param attributes	If true: use "health from healers" bonuses/penalties when calculating the amount of Barrier to provide.
  * 
  * @error	Invalid target.
+ * @return	The amount of Barrier given.
  */
-void Barrier_GiveBarrier(int target, int giver, float amount, float percentage = 0.0, float max = 0.0, bool attributes = false, bool ignoreCooldown = false, bool noSound = false)
+float Barrier_GiveBarrier(int target, int giver, float amount, float percentage = 0.0, float max = 0.0, bool attributes = false, bool ignoreCooldown = false, bool noSound = false)
 {
 	if (GetGameTime() < f_NextBarrierTime[target] && !ignoreCooldown)
-		return;
+		return 0.0;
 
 	if (f_Barrier[target] >= max && max > 0.0)
-		return;
+		return 0.0;
 
 	float maxHP = float(TF2Util_GetEntityMaxHealth(target));
 	if (f_Barrier[target] >= maxHP * percentage && percentage > 0.0)
-		return;
+		return 0.0;
 
 	if (attributes)
 		amount *= GetTotalAttributeValue(target, 854, 1.0) * GetTotalAttributeValue(target, 69, 1.0) * GetTotalAttributeValue(target, 70, 1.0);
@@ -225,37 +243,47 @@ void Barrier_GiveBarrier(int target, int giver, float amount, float percentage =
 		f_Barrier[target] = cap;
 	}
 
-	int pitch = GetRandomInt(120, 140);
-
-	if (IsValidClient(giver) && giver != target)
+	if (amountGiven > 0.0)
 	{
-		CF_GiveSpecialResource(giver, amountGiven, CF_ResourceType_Healing);
-		CF_GiveUltCharge(giver, amountGiven, CF_ResourceType_Healing);
-		CF_GiveHealingPoints(giver, amountGiven);
+		int pitch = GetRandomInt(120, 140);
 		
 		if (!noSound)
-			EmitSoundToClient(giver, SOUND_GIVE_BARRIER, target, _, 80, _, 0.6, pitch);
+			EmitSoundToAll(SOUND_GIVE_BARRIER, target, _, 80, _, 0.4, pitch);
 
-		float pos[3];
-		CF_WorldSpaceCenter(target, pos);
-		pos[2] += 40.0 * CF_GetCharacterScale(target);
-		
-		char barrierText[16];
-		Format(barrierText, sizeof(barrierText), "+%i", RoundFloat(amountGiven));
-		int text = WorldText_Create(pos, NULL_VECTOR, barrierText, 15.0, _, _, _, 200, 200, 200, 255);
-		if (IsValidEntity(text))
+		Barrier_Update(target, true);
+	
+		Event event = CreateEvent("player_healonhit", true);
+		event.SetInt("entindex", target);
+		event.SetInt("amount", RoundFloat(amountGiven));
+		event.Fire();
+
+		if (IsValidClient(giver) && giver != target)
 		{
-			Text_Owner[text] = GetClientUserId(giver);
-			SDKHook(text, SDKHook_SetTransmit, Text_Transmit);
+			CF_GiveSpecialResource(giver, amountGiven, CF_ResourceType_Healing);
+			CF_GiveUltCharge(giver, amountGiven, CF_ResourceType_Healing);
+			CF_GiveHealingPoints(giver, amountGiven);
 			
-			WorldText_MimicHitNumbers(text);
+			if (!noSound)
+				EmitSoundToClient(giver, SOUND_GIVE_BARRIER, target, _, 80, _, 0.6, pitch);
+
+			float pos[3];
+			CF_WorldSpaceCenter(target, pos);
+			pos[2] += 40.0 * CF_GetCharacterScale(target);
+			
+			char barrierText[16];
+			Format(barrierText, sizeof(barrierText), "+%i", RoundFloat(amountGiven));
+			int text = WorldText_Create(pos, NULL_VECTOR, barrierText, 15.0, _, _, _, 200, 200, 200, 255);
+			if (IsValidEntity(text))
+			{
+				Text_Owner[text] = GetClientUserId(giver);
+				SDKHook(text, SDKHook_SetTransmit, Text_Transmit);
+				
+				WorldText_MimicHitNumbers(text);
+			}
 		}
 	}
 
-	if (!noSound)
-		EmitSoundToAll(SOUND_GIVE_BARRIER, target, _, 80, _, 0.4, pitch);
-
-	Barrier_Update(target, true);
+	return amountGiven;
 }
 
 void Barrier_RemoveBarrier(int target, float amount)
@@ -486,6 +514,22 @@ public Action Barrier_TextTransmit(int text, int client)
 	return Plugin_Continue;
 }
 
+public Action Barrier_RemoveFromRecent(Handle timer, DataPack pack)
+{
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	float lost = ReadPackFloat(pack);
+
+	if (IsValidMulti(client))
+	{
+		f_BarrierLostRecently[client] -= lost;
+		if (f_BarrierLostRecently[client] < 0.0)
+			f_BarrierLostRecently[client] = 0.0;
+	}
+
+	return Plugin_Continue;
+}
+
 int Bullet_MagOwner = -1;
 int Bullet_User = -1;
 
@@ -686,15 +730,170 @@ public bool Bullet_OnlyAllies(entity, contentsMask)
 	return entity != Bullet_User && IsValidMulti(entity, true, true, true, TF2_GetClientTeam(Bullet_User)); 
 }
 
+bool b_IsRepairGrenade[2048] = { false, ... };
+
+public void Repair_Activate(int client, char abilityName[255])
+{
+	float delay = CF_GetArgF(client, ZEINA, abilityName, "delay", 1.0);
+	float interval = CF_GetArgF(client, ZEINA, abilityName, "interval", 0.65);
+	float repair = CF_GetArgF(client, ZEINA, abilityName, "repair_amt", 0.35);
+	float extra = CF_GetArgF(client, ZEINA, abilityName, "extra_amt", 10.0);
+	float capRatio = CF_GetArgF(client, ZEINA, abilityName, "cap_percentage", 0.5);
+	float capFlat = CF_GetArgF(client, ZEINA, abilityName, "cap_flat", 200.0);
+	float duration = CF_GetArgF(client, ZEINA, abilityName, "duration", 5.0);
+	float velocity = CF_GetArgF(client, ZEINA, abilityName, "velocity", 800.0);
+	float radius = CF_GetArgF(client, ZEINA, abilityName, "radius", 400.0);
+
+	float pos[3], ang[3], vel[3];
+	GetClientEyePosition(client, pos);
+	GetClientEyeAngles(client, ang);
+	GetPointInDirection(pos, ang, 30.0, pos);
+	GetVelocityInDirection(ang, velocity, vel);
+
+	int grenade = CreateEntityByName("tf_projectile_pipe_remote");
+	if (IsValidEntity(grenade))
+	{
+		SetEntPropEnt(grenade, Prop_Send, "m_hOwnerEntity", client);
+		SetEntProp(grenade, Prop_Send, "m_iTeamNum", GetEntProp(client, Prop_Send, "m_iTeamNum"), 1);
+		SetEntPropFloat(grenade, Prop_Send, "m_flDamage", 0.0); 
+		SetEntPropEnt(grenade, Prop_Send, "m_hThrower", client);
+		SetEntPropEnt(grenade, Prop_Send, "m_hOriginalLauncher", 0);
+		SetEntProp(grenade, Prop_Send, "m_iType", 1);
+		SetEntProp(grenade, Prop_Send, "m_bDefensiveBomb", true);
+
+		for(int i; i < 4; i++)
+		{
+			SetEntProp(grenade, Prop_Send, "m_nModelIndexOverrides", i_RepairGrenadeModelIndex, _, i);
+		}
+
+		DispatchSpawn(grenade);
+
+		for (int vec = 0; vec < 3; vec++)
+			ang[vec] = GetRandomFloat(0.0, 360.0);
+			
+		TeleportEntity(grenade, pos, ang, vel);
+
+		b_IsRepairGrenade[grenade] = true;
+
+		DataPack pack = new DataPack();
+		RequestFrame(Repair_Logic, pack);
+		WritePackCell(pack, EntIndexToEntRef(grenade));
+		WritePackFloat(pack, GetGameTime() + delay + duration);
+		WritePackFloat(pack, GetGameTime() + delay + interval);
+		WritePackFloat(pack, interval);
+		WritePackFloat(pack, repair);
+		WritePackFloat(pack, extra);
+		WritePackFloat(pack, capRatio);
+		WritePackFloat(pack, capFlat);
+		WritePackFloat(pack, radius);
+
+		CF_ForceGesture(client);
+		CF_SimulateSpellbookCast(client);
+	}
+}
+
+public void Repair_Logic(DataPack pack)
+{
+	ResetPack(pack);
+
+	int grenade = EntRefToEntIndex(ReadPackCell(pack));
+	float endTime = ReadPackFloat(pack);
+	float nextWave = ReadPackFloat(pack);
+	float interval = ReadPackFloat(pack);
+	float repair = ReadPackFloat(pack);
+	float extra = ReadPackFloat(pack);
+	float capRatio = ReadPackFloat(pack);
+	float capFlat = ReadPackFloat(pack);
+	float radius = ReadPackFloat(pack);
+
+	delete pack;
+
+	if (!IsValidEntity(grenade))
+		return;
+
+	float gt = GetGameTime();
+	int owner = GetEntPropEnt(grenade, Prop_Send, "m_hOwnerEntity");
+
+	if (!IsValidClient(owner) || gt >= endTime)
+	{
+		Repair_Destroy(grenade, true);
+		return;
+	}
+
+	if (gt >= nextWave)
+	{
+		int r = 255;
+		int b = 90;
+		if (TF2_GetClientTeam(owner) == TFTeam_Blue)
+		{
+			b = 255;
+			r = 90;
+		}
+
+		float pos[3];
+		CF_WorldSpaceCenter(grenade, pos);
+
+		SpawnRing(pos, 0.0, 0.0, 0.0, 0.0, laserModel, glowModel, r, 90, b, 200, 1, 0.33, 9.0, 0.0, 1, radius * 2.0);
+		EmitSoundToAll(SOUND_REPAIR_PULSE, grenade, _, 110, _, _, GetRandomInt(90, 110));
+
+		pos[2] += 20.0;
+
+		for (int i = 1; i <= MAXPLAYERS; i++)
+		{
+			if (!IsValidMulti(i, _, _, true, TF2_GetClientTeam(owner)))
+				continue;
+
+			float theirPos[3];
+			GetClientAbsOrigin(i, theirPos);
+			theirPos[2] += 20.0;
+
+			if (GetVectorDistance(pos, theirPos) <= radius && CF_HasLineOfSight(pos, theirPos, _, _, grenade))
+			{
+				float repairAmt = f_BarrierLostRecently[i] * repair;
+				Barrier_GiveBarrier(i, owner, repairAmt + extra, capRatio, capFlat, _, true);
+			}
+		}
+
+		nextWave = gt + interval;
+	}
+
+	pack = new DataPack();
+	RequestFrame(Repair_Logic, pack);
+	WritePackCell(pack, EntIndexToEntRef(grenade));
+	WritePackFloat(pack, endTime);
+	WritePackFloat(pack, nextWave);
+	WritePackFloat(pack, interval);
+	WritePackFloat(pack, repair);
+	WritePackFloat(pack, extra);
+	WritePackFloat(pack, capRatio);
+	WritePackFloat(pack, capFlat);
+	WritePackFloat(pack, radius);
+}
+
+void Repair_Destroy(int grenade, bool remove = false)
+{
+	float pos[3];
+	CF_WorldSpaceCenter(grenade, pos);
+
+	SpawnParticle(pos, PARTICLE_REPAIR_FIZZLE, 0.2);
+	EmitSoundToAll(SOUND_REPAIR_FIZZLE, grenade, _, 120, _, _, GetRandomInt(90, 110));
+
+	b_IsRepairGrenade[grenade] = false;
+	
+	if (remove)
+		RemoveEntity(grenade);
+}
+
 public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
 {
 	if (!StrEqual(pluginName, ZEINA))
 		return;
 	
 	if (StrContains(abilityName, BULLET) != -1)
-	{
 		Bullet_Activate(client, abilityName);
-	}
+
+	if (StrContains(abilityName, REPAIR) != -1)
+		Repair_Activate(client, abilityName);
 
 	if (StrContains(abilityName, BARRIER_GAIN) != -1)
 	{
@@ -735,6 +934,7 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 		Barrier_DeleteHUDTimer(client);
 		Barrier_RemoveBarrier(client, f_Barrier[client] + 1.0);
 		f_NextBarrierTime[client] = 0.0;
+		f_BarrierLostRecently[client] = 0.0;
 		
 		if (b_HasBarrierGoggles[client])
 		{
@@ -779,6 +979,9 @@ public void OnEntityDestroyed(int entity)
 	}
 
 	i_BarrierWorldTextOwner[entity] = -1;
+
+	if (b_IsRepairGrenade[entity])
+		Repair_Destroy(entity);
 }
 
 public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
@@ -821,7 +1024,17 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 			SetEntityRenderColor(bubble, _, _, _, 255);
 	}
 
-	Barrier_RemoveBarrier(victim, damage);
+	float removed = damage;
+	if (removed > f_Barrier[victim])
+		removed = f_Barrier[victim];
+
+	Barrier_RemoveBarrier(victim, removed);
+
+	f_BarrierLostRecently[victim] += removed;
+	DataPack pack = new DataPack();
+	CreateDataTimer(2.0, Barrier_RemoveFromRecent, pack, TIMER_FLAG_NO_MAPCHANGE);
+	WritePackCell(pack, GetClientUserId(victim));
+	WritePackFloat(pack, removed);
 
 	//Subtract half of the ult charge and resources gained when attacking someone who has Barrier:
 	if (IsValidClient(attacker) && attacker != victim)
