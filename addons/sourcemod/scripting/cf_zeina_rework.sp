@@ -1005,9 +1005,9 @@ int Barrier_GetBubble(int client) { return EntRefToEntIndex(i_BarrierBubble[clie
  * @error	Invalid target.
  * @return	The amount of Barrier given.
  */
-float Barrier_GiveBarrier(int target, int giver, float amount, float percentage = 0.0, float max = 0.0, bool attributes = false, bool ignoreCooldown = false, bool noSound = false)
+float Barrier_GiveBarrier(int target, int giver, float amount, float percentage = 0.0, float max = 0.0, bool attributes = false, bool ignoreCooldown = false, bool noSound = false, float partialCooldownIgnore = 0.0)
 {
-	if (GetGameTime() < f_NextBarrierTime[target] && !ignoreCooldown)
+	if (GetGameTime() < f_NextBarrierTime[target] - partialCooldownIgnore && !ignoreCooldown)
 		return 0.0;
 
 	if (f_Barrier[target] >= max && max > 0.0)
@@ -1646,7 +1646,7 @@ public void Repair_Logic(DataPack pack)
 			if (GetVectorDistance(pos, theirPos) <= radius && CF_HasLineOfSight(pos, theirPos, _, _, grenade))
 			{
 				float repairAmt = f_BarrierLostRecently[i] * repair;
-				Barrier_GiveBarrier(i, owner, repairAmt, 0.0, 0.0);
+				Barrier_GiveBarrier(i, owner, repairAmt, 0.0, 0.0, _, _, _, 1.5);
 				Barrier_GiveBarrier(i, owner, extra, capRatio, capFlat, _, false);
 			}
 		}
@@ -1711,7 +1711,9 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	{
 		float amount = CF_GetArgF(client, ZEINA, abilityName, "amount", 250.0);
 		float max = CF_GetArgF(client, ZEINA, abilityName, "cap", 600.0);
-		Barrier_GiveBarrier(client, client, amount, _, max, _, _, true);
+		bool ignoreCD = CF_GetArgI(client, ZEINA, abilityName, "ignore_cd", 1) > 0;
+		bool skipSound = CF_GetArgI(client, ZEINA, abilityName, "no_sound", 0) > 0;
+		Barrier_GiveBarrier(client, client, amount, _, max, _, ignoreCD, skipSound);
 	}
 }
 
@@ -1908,9 +1910,14 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
     if (!IsValidClient(victim) || f_Barrier[victim] <= 0.0 || damage <= 0.0 || b_AbilityCharging[victim])
 		return Plugin_Continue;
 
+	float removed = damage;
+
 	bool broke = false;
 	if (damage >= f_Barrier[victim])
 	{
+		damage -= f_Barrier[victim];
+		removed = f_Barrier[victim];
+
 		Barrier_DisplayExtraHUD(victim, true);
 		EmitSoundToAll(SOUND_BARRIER_BREAK, victim);
 
@@ -1945,10 +1952,6 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 			SetEntityRenderColor(bubble, _, _, _, 255);
 	}
 
-	float removed = damage;
-	if (removed > f_Barrier[victim])
-		removed = f_Barrier[victim];
-
 	Barrier_RemoveBarrier(victim, removed);
 
 	f_BarrierLostRecently[victim] += removed;
@@ -1966,7 +1969,7 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 
 	//Heal the damage instantly instead of setting it to 0, that way knockback still works:
 	if (broke)
-		CF_HealPlayer(victim, victim, RoundFloat(damage * 0.5), 999.0, false);
+		CF_HealPlayer(victim, victim, RoundFloat(damage * 0.2), 999.0, false);
 	else
 		CF_HealPlayer(victim, victim, RoundFloat(damage), 999.0, false);
 
