@@ -4152,6 +4152,10 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 	else if (miniCritHit)
 		critType = 1;
 
+	headshotKill = false;
+	critHit = false;
+	miniCritHit = false;
+
 	return returnVal;
 }
 

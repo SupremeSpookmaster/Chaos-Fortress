@@ -24,6 +24,9 @@
 #define REPAIR			"zeina_repair_grenade"
 #define WINGS			"zeina_subwings_v2"
 #define BLASTER			"zeina_barrier_blast"
+#define FLIGHT			"zeina_silvwings"
+#define YOINK			"zeina_grab_ally"
+#define RELEASE			"zeina_drop_ally"
 
 #define MODEL_DRG				"models/weapons/w_models/w_drg_ball.mdl"
 #define MODEL_BARRIER_BUBBLE	"models/effects/resist_shield/resist_shield.mdl"
@@ -73,7 +76,15 @@
 
 Handle HudSync;
 
+ConVar CvarAirAcclerate; //sv_airaccelerate
+ConVar CvarAcclerate; //sv_accelerate
+
 int glowModel, laserModel, i_RepairGrenadeModelIndex, i_WingsModelIndex;
+
+float f_FlightAirAccelerate[MAXPLAYERS + 1] = { 10.0, ... };
+float f_FlightAccelerate[MAXPLAYERS + 1] = { 10.0, ... };
+float f_FlightAirAccelerate_Replicate[MAXPLAYERS + 1] = { -1.0, ... };
+float f_FlightAccelerate_Replicate[MAXPLAYERS + 1] = { -1.0, ... };
 
 public void OnMapStart()
 {
@@ -111,11 +122,26 @@ public void OnMapStart()
 
 	glowModel = PrecacheModel("materials/sprites/glow02.vmt");
 	laserModel = PrecacheModel("materials/sprites/laser.vmt");
+	PrecacheModel("materials/sprites/laserbeam.vmt");
+
+	for (int i = 0; i <= MaxClients; i++)
+	{
+		f_FlightAirAccelerate[i] = CvarAirAcclerate.FloatValue;
+		f_FlightAccelerate[i] = CvarAcclerate.FloatValue;
+	}
 }
 
 public void OnPluginStart()
 {
 	RegAdminCmd("zeina_givebarrier", Barrier_GiveOnCommand, ADMFLAG_SLAY, "Zeina: gives a flat amount of Barrier to the specified client(s). Used mainly for debugging.");
+
+	CvarAirAcclerate = FindConVar("sv_airaccelerate");
+	if(CvarAirAcclerate)
+		CvarAirAcclerate.Flags &= ~(FCVAR_NOTIFY | FCVAR_REPLICATED);
+
+	CvarAcclerate = FindConVar("sv_accelerate");
+	if(CvarAcclerate)
+		CvarAcclerate.Flags &= ~(FCVAR_NOTIFY | FCVAR_REPLICATED);
 }
 
 int Text_Owner[2048] = { -1, ... };
@@ -526,7 +552,7 @@ public void Blaster_Fire(int client)
 		}
 
 		int startEnt, endEnt;
-		int beam = CreateEnvBeam(-1, -1, beamStart, beamEnd, _, _, startEnt, endEnt, r, weakerColor, b, weakerColor + 125, _, 60.0, 60.0, _, 12.0);
+		int beam = CreateEnvBeam(-1, -1, beamStart, beamEnd, _, _, startEnt, endEnt, r, weakerColor, b, weakerColor + 125, i > 0 ? "materials/sprites/laser.vmt" : "materials/sprites/laserbeam.vmt", 60.0, 60.0, _, 12.0);
 
 		if (IsValidEntity(beam) && IsValidEntity(startEnt) && IsValidEntity(endEnt))
 		{
@@ -602,6 +628,276 @@ bool Blaster_Trace(int entity, int contentsMask, int client)
 		PushArrayCell(Blaster_HitList, entity);
 
 	return false;
+}
+
+int i_YoinkTarget[MAXPLAYERS + 1] = { -1, ... };
+int i_YoinkBeam[MAXPLAYERS + 1] = { -1, ... };
+int i_YoinkStartEnt[MAXPLAYERS + 1] = { -1, ... };
+int i_YoinkEndEnt[MAXPLAYERS + 1] = { -1, ... };
+
+bool b_Yoinking[MAXPLAYERS + 1] = { false, ... };
+
+public void Yoink_Activate(int client, char abilityName[255])
+{
+	b_Yoinking[client] = true;
+	SDKHook(client, SDKHook_PreThink, Yoink_GrabLogic);
+
+	int target = Yoink_GetTarget(client);
+	Barrier_GiveBarrier(target, client, CF_GetArgF(client, ZEINA, abilityName, "barrier_give", 600.0));
+
+	float startPos[3], endPos[3];
+	CF_WorldSpaceCenter(client, startPos);
+	CF_WorldSpaceCenter(target, endPos);
+	startPos[2] += 15.0 * CF_GetCharacterScale(client);
+	endPos[2] += 15.0 * CF_GetCharacterScale(target);
+
+	int start, end;
+	int r = 255;
+	int b = 120;
+	if (TF2_GetClientTeam(client) == TFTeam_Blue)
+	{
+		r = 120;
+		b = 255;
+	}
+
+	i_YoinkBeam[client] = EntIndexToEntRef(CreateEnvBeam(client, target, startPos, endPos, _, _, start, end, r, 120, b, 255, "sprites/laser.vmt"));
+	if (IsValidEntity(start))
+		i_YoinkStartEnt[client] = EntIndexToEntRef(start);
+	if (IsValidEntity(end))
+		i_YoinkEndEnt[client] = EntIndexToEntRef(end);
+
+	CF_ChangeAbilityTitle(client, CF_AbilityType_M3, "RELEASE ALLY");
+	CF_ApplyAbilityCooldown(client, 0.5, CF_AbilityType_M3, true);
+	CF_SetAbilityTypeSlot(client, CF_AbilityType_M3, -777);
+}
+
+public Action Yoink_GrabLogic(int client)
+{
+	if (!IsValidMulti(client))
+		return Plugin_Stop;
+
+	int target = Yoink_GetTarget(client);
+	if (!IsValidMulti(target))
+	{
+		Yoink_Release(client, false, false, 2.0);
+		return Plugin_Stop;
+	}
+
+	float vecView[3], vecFwd[3], vecPos[3], vecVel[3];
+	GetClientEyeAngles(client, vecView);
+	GetAngleVectors(vecView, vecFwd, NULL_VECTOR, NULL_VECTOR);
+	GetClientEyePosition(client, vecPos);
+	vecPos[0]+=vecFwd[0] * 60.0;
+	vecPos[1]+=vecFwd[1] * 60.0;
+	vecPos[2]+=vecFwd[2] * 60.0;
+	GetEntPropVector(target, Prop_Send, "m_vecOrigin", vecFwd);
+	SubtractVectors(vecPos, vecFwd, vecVel);
+	ScaleVector(vecVel, 10.0);
+	TeleportEntity(target, NULL_VECTOR, NULL_VECTOR, vecVel);
+
+	return Plugin_Continue;
+}
+
+public void Yoink_Release(int client, bool ultOver, bool resupply, float cooldown)
+{
+	if (!b_Yoinking[client])
+		return;
+
+	SDKUnhook(client, SDKHook_PreThink, Yoink_GrabLogic);
+
+	b_Yoinking[client] = false;
+	i_YoinkTarget[client] = -1;
+
+	int ent = EntRefToEntIndex(i_YoinkBeam[client]);
+	if (IsValidEntity(ent))
+		RemoveEntity(ent);
+	ent = EntRefToEntIndex(i_YoinkStartEnt[client]);
+	if (IsValidEntity(ent))
+		RemoveEntity(ent);
+	ent = EntRefToEntIndex(i_YoinkEndEnt[client]);
+	if (IsValidEntity(ent))
+		RemoveEntity(ent);
+	
+	if (resupply || ultOver)
+	{
+		CF_ChangeAbilityTitle(client, CF_AbilityType_M3, "Expidonsan Repair Grenade");
+		if (cooldown > 0.0)
+			CF_ApplyAbilityCooldown(client, cooldown, CF_AbilityType_M3, true);
+		CF_SetAbilityTypeSlot(client, CF_AbilityType_M3, 3);
+	}
+	else
+	{
+		CF_ChangeAbilityTitle(client, CF_AbilityType_M3, "GRAB ALLY");
+		if (cooldown > 0.0)
+			CF_ApplyAbilityCooldown(client, cooldown, CF_AbilityType_M3, true);
+		CF_SetAbilityTypeSlot(client, CF_AbilityType_M3, -778);
+	}
+}
+
+public void Release_Activate(int client, char abilityName[255])
+{
+	Yoink_Release(client, false, false, CF_GetArgF(client, ZEINA, abilityName, "cooldown", 2.0));
+}
+
+public bool Yoink_FindTarget(int client, char abilityName[255])
+{
+	float dist = CF_GetArgF(client, ZEINA, abilityName, "range", 600.0);
+
+	float startPos[3], endPos[3], ang[3], hullMin[3], hullMax[3];
+	GetClientEyePosition(client, startPos);
+	GetClientEyeAngles(client, ang);
+	GetPointInDirection(startPos, ang, dist, endPos);
+	CF_HasLineOfSight(startPos, endPos, _, endPos, client);
+
+	hullMin[0] = -CF_GetArgF(client, ZEINA, abilityName, "width", 5.0);
+	hullMin[1] = hullMin[0];
+	hullMin[2] = hullMin[0];
+	hullMax[0] = -hullMin[0];
+	hullMax[1] = -hullMin[1];
+	hullMax[2] = -hullMin[2];
+
+	CF_StartLagCompensation(client);
+	Handle trace = TR_TraceHullFilterEx(startPos, endPos, hullMin, hullMax, MASK_SHOT, Yoink_OnlyHumanAllies, client);
+	CF_EndLagCompensation(client);
+
+	bool success = false;
+	if (TR_DidHit(trace))
+	{
+		int target = TR_GetEntityIndex(trace);
+		if (IsValidClient(target))
+		{
+			i_YoinkTarget[client] = GetClientUserId(target);
+			success = true;
+		}
+	}
+
+	delete trace;
+
+	return success;
+}
+
+public int Yoink_GetTarget(int client) { return GetClientOfUserId(i_YoinkTarget[client]); }
+
+public bool Yoink_OnlyHumanAllies(entity, contentsMask, int client)
+{
+	if (!IsValidMulti(entity) || entity == client)
+		return false;
+
+	return CF_IsValidTarget(entity, TF2_GetClientTeam(client));
+}
+
+int i_FlightWings[MAXPLAYERS + 1] = { -1, ... };
+
+float f_FlightEndTime[MAXPLAYERS + 1] = { 0.0, ... };
+
+bool b_Flying[MAXPLAYERS + 1] = { false, ... };
+
+public void Flight_Activate(int client, char abilityName[255])
+{
+	float ang[3], vel[3], pos[3];
+	GetClientAbsOrigin(client, pos);
+	GetClientEyeAngles(client, ang);
+	GetVelocityInDirection(ang, CF_GetArgF(client, ZEINA, abilityName, "jump_vel", 600.0), vel);
+
+	if ((GetEntityFlags(client) & FL_ONGROUND) != 0 || GetEntProp(client, Prop_Send, "m_nWaterLevel") >= 1)
+		vel[2] = fmax(vel[2], 310.0);
+
+	TeleportEntity(client, _, _, vel);
+
+	SpawnParticle(pos, PARTICLE_WINGS_TAKEOFF, 0.2);
+	EmitSoundToAll(SOUND_WINGS_TAKEOFF_1, client);
+	EmitSoundToAll(SOUND_WINGS_TAKEOFF_2, client);
+
+	i_FlightWings[client] = EntIndexToEntRef(Wings_Attach(client));
+
+	SDKUnhook(client, SDKHook_PreThink, Flight_PreThink);
+	SDKHook(client, SDKHook_PreThink, Flight_PreThink);
+
+	SetEntityMoveType(client, MOVETYPE_FLY);
+
+	f_FlightEndTime[client] = GetGameTime() + CF_GetArgF(client, ZEINA, abilityName, "duration", 16.0);
+	f_FlightAccelerate[client] = CF_GetArgF(client, ZEINA, abilityName, "accelerate", 15.0);
+	f_FlightAirAccelerate[client] = CF_GetArgF(client, ZEINA, abilityName, "air_accelerate", 1.0);
+
+	b_Flying[client] = true;
+}
+
+public void Flight_Terminate(int client)
+{
+	if (!b_Flying[client])
+		return;
+
+	b_Flying[client] = false;
+
+	int wings = EntRefToEntIndex(i_FlightWings[client]);
+	if (IsValidEntity(wings))
+		RemoveEntity(wings);
+
+	SDKUnhook(client, SDKHook_PreThink, Flight_PreThink);
+	SetEntityMoveType(client, MOVETYPE_WALK);
+
+	f_FlightAccelerate[client] = f_FlightAccelerate[0];
+	f_FlightAirAccelerate[client] = f_FlightAirAccelerate[0];
+}
+
+public Action Flight_PreThink(int client)
+{
+	if (!IsPlayerAlive(client) || GetGameTime() >= f_FlightEndTime[client])
+	{
+		Yoink_Release(client, true, false, 4.0);
+		CF_ChangeAbilityTitle(client, CF_AbilityType_M3, "Expidonsan Repair Grenade");
+		CF_ApplyAbilityCooldown(client, 4.0, CF_AbilityType_M3, true);
+		CF_SetAbilityTypeSlot(client, CF_AbilityType_M3, 3);
+		Flight_Terminate(client);
+		return Plugin_Stop;
+	}
+
+	float currentVel[3];
+	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", currentVel);
+	
+	int buttons = GetClientButtons(client);
+	if (buttons & IN_DUCK != 0)
+		currentVel[2] = -300.0;
+	if (buttons & IN_JUMP != 0)
+		currentVel[2] = 300.0;
+
+	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, currentVel);
+
+	if (GetEntityFlags(client) & FL_ONGROUND != 0)
+		SetEntityMoveType(client, MOVETYPE_WALK);
+	else
+		SetEntityMoveType(client, MOVETYPE_FLY);
+
+	return Plugin_Continue;
+}
+
+public void Flight_OnPostThink(int client)
+{
+	if(f_FlightAirAccelerate_Replicate[client] != f_FlightAirAccelerate[client])
+	{
+		char IntToStringDo[4];
+		FloatToString(f_FlightAirAccelerate[client], IntToStringDo, sizeof(IntToStringDo));
+		CvarAirAcclerate.ReplicateToClient(client, IntToStringDo); //set down
+		f_FlightAirAccelerate_Replicate[client] = f_FlightAirAccelerate[client];
+	}
+	if(f_FlightAccelerate_Replicate[client] != f_FlightAccelerate[client])
+	{
+		char IntToStringDo[4];
+		FloatToString(f_FlightAccelerate[client], IntToStringDo, sizeof(IntToStringDo));
+		CvarAcclerate.ReplicateToClient(client, IntToStringDo); //set down
+		f_FlightAccelerate_Replicate[client] = f_FlightAccelerate[client];
+	}
+}
+public void Flight_OnPreThinkPost(int client)
+{
+	CvarAirAcclerate.FloatValue = f_FlightAirAccelerate[client];
+	CvarAcclerate.FloatValue = f_FlightAccelerate[client];
+}
+
+public void Flight_OnPostThinkPost(int client)
+{
+	CvarAirAcclerate.FloatValue = f_FlightAirAccelerate[0];
+	CvarAcclerate.FloatValue = f_FlightAccelerate[0];
 }
 
 public Action Barrier_GiveOnCommand(int client, int args)
@@ -1402,6 +1698,15 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	if (StrContains(abilityName, BLASTER) != -1)
 		Blaster_Activate(client, abilityName);
 
+	if (StrContains(abilityName, FLIGHT) != -1)
+		Flight_Activate(client, abilityName);
+
+	if (StrContains(abilityName, YOINK) != -1)
+		Yoink_Activate(client, abilityName);
+
+	if (StrContains(abilityName, RELEASE) != -1)
+		Release_Activate(client, abilityName);
+
 	if (StrContains(abilityName, BARRIER_GAIN) != -1)
 	{
 		float amount = CF_GetArgF(client, ZEINA, abilityName, "amount", 250.0);
@@ -1459,7 +1764,7 @@ public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability
 
 	if (StrContains(ability, WINGS) != -1 || StrContains(ability, BLASTER) != -1)
 	{
-		if (!b_AbilityCharging[client] && f_Barrier[client] < CF_GetArgF(client, ZEINA, ability, "min_barrier", 50.0))
+		if (b_Flying[client] || (!b_AbilityCharging[client] && f_Barrier[client] < CF_GetArgF(client, ZEINA, ability, "min_barrier", 50.0)))
 		{
 			result = false;
 			return Plugin_Changed;
@@ -1490,6 +1795,18 @@ public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability
 		}
 	}
 
+	if (StrContains(ability, FLIGHT) != -1 && b_AbilityCharging[client])
+	{
+		result = false;
+		return Plugin_Changed;
+	}
+
+	if (StrContains(ability, YOINK) != -1 && (!b_Yoinking[client] && !Yoink_FindTarget(client, ability)))
+	{
+		result = false;
+		return Plugin_Changed;
+	}
+
 	return Plugin_Continue;
 }
 
@@ -1497,11 +1814,24 @@ public void CF_OnCharacterCreated(int client)
 {
 	Barrier_DeleteHUDTimer(client);
 	f_NextBarrierTime[client] = 0.0;
+	Yoink_Release(client, false, true, 0.0);
 
 	Charge_ResetChargeVariables(client);
 
 	RequestFrame(Barrier_CheckSpawn, GetClientUserId(client));
 	CreateTimer(0.1, Barrier_CheckGoggles, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+
+	if (!IsFakeClient(client) && CF_HasAbility(client, ZEINA, FLIGHT))
+	{
+		SDKUnhook(client, SDKHook_PreThinkPost, Flight_OnPreThinkPost);
+		SDKHook(client, SDKHook_PreThinkPost, Flight_OnPreThinkPost);
+
+		SDKUnhook(client, SDKHook_PostThink, Flight_OnPostThink);
+		SDKHook(client, SDKHook_PostThink, Flight_OnPostThink);
+				
+		SDKUnhook(client, SDKHook_PostThinkPost, Flight_OnPostThinkPost);
+		SDKHook(client, SDKHook_PostThinkPost, Flight_OnPostThinkPost);
+	}
 }
 
 public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
@@ -1510,10 +1840,20 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 	{
 		Barrier_DeleteHUDTimer(client);
 		Barrier_RemoveBarrier(client, f_Barrier[client] + 1.0);
+		Yoink_Release(client, false, true, 0.0);
 		f_NextBarrierTime[client] = 0.0;
 		f_BarrierLostRecently[client] = 0.0;
 		
 		Charge_ResetChargeVariables(client);
+
+		Flight_Terminate(client);
+
+		if (!IsFakeClient(client))
+		{
+			SDKUnhook(client, SDKHook_PreThinkPost, Flight_OnPreThinkPost);
+			SDKUnhook(client, SDKHook_PostThink, Flight_OnPostThink);
+			SDKUnhook(client, SDKHook_PostThinkPost, Flight_OnPostThinkPost);
+		}
 		
 		if (b_HasBarrierGoggles[client])
 		{
@@ -1631,8 +1971,6 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 	event.SetInt("amount", -RoundFloat(damage));
 	event.Fire();
 
-	//damage = 0.0;
-
 	return Plugin_Changed;
 }
 
@@ -1645,10 +1983,11 @@ public void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, int
 		Format(text, sizeof(text), "[%i[PERCENT] CHARGED] Sub Wings", RoundFloat(100.0 * (f_ChargeAmt[client] / f_ChargeMax[client])));
 		ReplaceString(HUDText, 255, "[ACTIVE] Sub Wings", text);
 
-		Format(text, sizeof(text), "[%i[PERCENT] CHARGED] Barrier Blaster", RoundFloat(100.0 * (f_ChargeAmt[client] / f_ChargeMax[client])));
-		ReplaceString(HUDText, 255, "[ACTIVE] Barrier Blaster", text);
+		Format(text, sizeof(text), "[%i[PERCENT] CHARGED] Barrier Blast", RoundFloat(100.0 * (f_ChargeAmt[client] / f_ChargeMax[client])));
+		ReplaceString(HUDText, 255, "[ACTIVE] Barrier Blast", text);
 	}
 
+	//Uncomment to enable the old Barrier HUD:
 	/*if (f_Barrier[client] > 0.0)
 	{
 		Format(HUDText, sizeof(HUDText), "BARRIER: %i\n%s", RoundFloat(f_Barrier[client]), HUDText);
