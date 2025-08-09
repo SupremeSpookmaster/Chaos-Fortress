@@ -1646,7 +1646,7 @@ public void Repair_Logic(DataPack pack)
 			if (GetVectorDistance(pos, theirPos) <= radius && CF_HasLineOfSight(pos, theirPos, _, _, grenade))
 			{
 				float repairAmt = f_BarrierLostRecently[i] * repair;
-				Barrier_GiveBarrier(i, owner, repairAmt, 0.0, 0.0, _, true);
+				Barrier_GiveBarrier(i, owner, repairAmt, 0.0, 0.0);
 				Barrier_GiveBarrier(i, owner, extra, capRatio, capFlat, _, false);
 			}
 		}
@@ -1908,6 +1908,7 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
     if (!IsValidClient(victim) || f_Barrier[victim] <= 0.0 || damage <= 0.0 || b_AbilityCharging[victim])
 		return Plugin_Continue;
 
+	bool broke = false;
 	if (damage >= f_Barrier[victim])
 	{
 		Barrier_DisplayExtraHUD(victim, true);
@@ -1928,7 +1929,8 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 		//Prevent victims from gaining Barrier for 2s after their Barrier breaks.
 		//This allows Barrier to still fully negate overflow damage (I have 1 Barrier, I will still take 0 damage from a 999999 damage attack), 
 		//without making the Barrier Gun monstrously OP by allowing it to make people immortal by constantly spamming +2 Barrier.
-		f_NextBarrierTime[victim] = GetGameTime() + 2.0;
+		f_NextBarrierTime[victim] = GetGameTime() + 3.0;
+		broke = true;
 	}
 	else
 	{
@@ -1963,7 +1965,10 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 	}
 
 	//Heal the damage instantly instead of setting it to 0, that way knockback still works:
-	CF_HealPlayer(victim, victim, RoundFloat(damage), 999.0, false);
+	if (broke)
+		CF_HealPlayer(victim, victim, RoundFloat(damage * 0.5), 999.0, false);
+	else
+		CF_HealPlayer(victim, victim, RoundFloat(damage), 999.0, false);
 
 	//Display a HUD notif, to create the illusion that the Barrier blocked the damage.
 	Event event = CreateEvent("player_healonhit", true);
