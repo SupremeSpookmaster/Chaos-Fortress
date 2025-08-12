@@ -497,6 +497,7 @@ public void Blaster_Fire(int client)
 
 	if (GetArraySize(Blaster_HitList) > 0)
 	{
+		int weapon = TF2_GetActiveWeapon(client);
 		for (int i = 0; i < GetArraySize(Blaster_HitList); i++)
 		{
 			int target = GetArrayCell(Blaster_HitList, i);
@@ -507,7 +508,7 @@ public void Blaster_Fire(int client)
 			}
 			else
 			{
-				SDKHooks_TakeDamage(target, client, client, f_BlasterDMG[client] * percentage, DMG_PLASMA);
+				SDKHooks_TakeDamage(target, client, client, f_BlasterDMG[client] * percentage, DMG_PLASMA, IsValidEntity(weapon) ? weapon : -1);
 			}
 		}
 	}
@@ -643,7 +644,7 @@ public void Yoink_Activate(int client, char abilityName[255])
 	SDKHook(client, SDKHook_PreThink, Yoink_GrabLogic);
 
 	int target = Yoink_GetTarget(client);
-	Barrier_GiveBarrier(target, client, CF_GetArgF(client, ZEINA, abilityName, "barrier_give", 600.0));
+	Barrier_GiveBarrier(target, client, CF_GetArgF(client, ZEINA, abilityName, "barrier_give", 600.0), CF_GetArgF(client, ZEINA, abilityName, "cap_ratio", 3.0), CF_GetArgF(client, ZEINA, abilityName, "cap_flat", 600.0));
 
 	float startPos[3], endPos[3];
 	CF_WorldSpaceCenter(client, startPos);
@@ -1198,7 +1199,7 @@ void Barrier_Update(int client, bool gained)
 
 void Barrier_AssignBubble(int client)
 {
-	int bubble = CF_AttachWearable(client, 57, "tf_wearable", true, 0, 0, _, "");
+	int bubble = CF_AttachWearable(client, 57, "tf_wearable", true, 0, 0);
 	if (IsValidEntity(bubble))
 	{
 		SetEntProp(bubble, Prop_Send, "m_fEffects", GetEntProp(bubble, Prop_Send, "m_fEffects") &~ EF_BONEMERGE);
@@ -1440,6 +1441,10 @@ public void Bullet_Activate(int client, char abilityName[255])
 		f_BulletSelfBarrier[bullet] = CF_GetArgF(client, ZEINA, abilityName, "barrier_self", 5.0);
 		f_BulletSelfBarrierPercentage[bullet] = CF_GetArgF(client, ZEINA, abilityName, "barrier_percentage_self", 0.5);
 		f_BulletSelfBarrierMax[bullet] = CF_GetArgF(client, ZEINA, abilityName, "barrier_max_self", 200.0);
+
+		int weapon = TF2_GetActiveWeapon(client);
+		if (IsValidEntity(weapon))
+			SetEntPropEnt(bullet, Prop_Send, "m_hOriginalLauncher", weapon);
 	}
 }
 
@@ -1456,7 +1461,8 @@ public void Bullet_OnImpact(int entity, int owner, int team, int other, float po
 	}
 	else if (CF_IsValidTarget(other, grabEnemyTeam(owner)))
 	{
-		SDKHooks_TakeDamage(other, entity, owner, f_BulletDMG[entity], DMG_BULLET);
+		int weapon = GetEntPropEnt(entity, Prop_Send, "m_hOriginalLauncher");
+		SDKHooks_TakeDamage(other, entity, owner, f_BulletDMG[entity], DMG_BULLET, (IsValidEntity(weapon) ? weapon : -1));
 	}
 
 	SpawnParticle(pos, team == 2 ? PARTICLE_BULLET_IMPACT_RED : PARTICLE_BULLET_IMPACT_BLUE, 0.2);
@@ -1910,12 +1916,19 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
     if (!IsValidClient(victim) || f_Barrier[victim] <= 0.0 || damage <= 0.0 || b_AbilityCharging[victim])
 		return Plugin_Continue;
 
+	float originalDmg = damage;
+
+	if (IsValidEntity(weapon))
+	{
+		damage *= TF2CustAttr_GetFloat(weapon, "barrier damage multiplier", 1.0);
+	}
+
 	float removed = damage;
 
 	bool broke = false;
 	if (damage >= f_Barrier[victim])
 	{
-		damage -= f_Barrier[victim];
+		damage = originalDmg;
 		removed = f_Barrier[victim];
 
 		Barrier_DisplayExtraHUD(victim, true);
@@ -1933,19 +1946,20 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 			i_BarrierBubble[victim] = -1;
 		}
 
-		//Prevent victims from gaining Barrier for 2s after their Barrier breaks.
+		//Prevent victims from gaining Barrier for 3s after their Barrier breaks.
 		//This allows Barrier to still fully negate overflow damage (I have 1 Barrier, I will still take 0 damage from a 999999 damage attack), 
 		//without making the Barrier Gun monstrously OP by allowing it to make people immortal by constantly spamming +2 Barrier.
 		f_NextBarrierTime[victim] = GetGameTime() + 3.0;
+		
 		broke = true;
 	}
 	else
 	{
 		int pitch = 160 - RoundFloat(ClampFloat((f_Barrier[victim] / 400.0) * 100.0, 0.0, 100.0));
-		EmitSoundToAll(SOUND_BARRIER_BLOCKDAMAGE, victim, _, _, _, _, pitch);
+		EmitSoundToAll(SOUND_BARRIER_BLOCKDAMAGE, victim, _, _, _, 0.8, pitch);
 
 		if (IsValidClient(attacker))
-			EmitSoundToClient(attacker, SOUND_BARRIER_BLOCKDAMAGE, _, _, _, _, _, pitch);
+			EmitSoundToClient(attacker, SOUND_BARRIER_BLOCKDAMAGE, _, _, _, _, 0.65, pitch);
 
 		int bubble = Barrier_GetBubble(victim);
 		if (IsValidEntity(bubble))
@@ -1953,31 +1967,37 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 	}
 
 	Barrier_RemoveBarrier(victim, removed);
+	//Display a HUD notif, to create the illusion that the Barrier blocked the damage.
+	Event event = CreateEvent("player_healonhit", true);
+	event.SetInt("entindex", victim);
+	event.SetInt("amount", -RoundFloat(removed));
+	event.Fire();
 
 	f_BarrierLostRecently[victim] += removed;
 	DataPack pack = new DataPack();
-	CreateDataTimer(2.0, Barrier_RemoveFromRecent, pack, TIMER_FLAG_NO_MAPCHANGE);
+	CreateDataTimer(2.5, Barrier_RemoveFromRecent, pack, TIMER_FLAG_NO_MAPCHANGE);
 	WritePackCell(pack, GetClientUserId(victim));
 	WritePackFloat(pack, removed);
 
 	//Subtract half of the ult charge and resources gained when attacking someone who has Barrier:
 	if (IsValidClient(attacker) && attacker != victim)
 	{
-		CF_GiveUltCharge(attacker, -damage * 0.5, CF_ResourceType_DamageDealt);
-		CF_GiveSpecialResource(attacker, -damage * 0.5, CF_ResourceType_DamageDealt);
+		CF_GiveUltCharge(attacker, -removed * 0.5, CF_ResourceType_DamageDealt);
+		CF_GiveSpecialResource(attacker, -removed * 0.5, CF_ResourceType_DamageDealt);
 	}
 
-	//Heal the damage instantly instead of setting it to 0, that way knockback still works:
-	if (broke)
-		CF_HealPlayer(victim, victim, RoundFloat(damage * 0.2), 999.0, false);
+	if (!broke)
+		CF_HealPlayer(victim, victim, RoundFloat(damage), 99999.0, false);
 	else
-		CF_HealPlayer(victim, victim, RoundFloat(damage), 999.0, false);
+	{
+		float diff = 0.5;
+		if (IsValidEntity(weapon))
+		{
+			diff = TF2CustAttr_GetFloat(weapon, "barrier break pierce amt", 0.5);
+		}
 
-	//Display a HUD notif, to create the illusion that the Barrier blocked the damage.
-	Event event = CreateEvent("player_healonhit", true);
-	event.SetInt("entindex", victim);
-	event.SetInt("amount", -RoundFloat(damage));
-	event.Fire();
+		CF_HealPlayer(victim, victim, RoundFloat(damage * (1.0 - diff)), 99999.0, false);
+	}
 
 	return Plugin_Changed;
 }
