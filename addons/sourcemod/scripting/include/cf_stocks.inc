@@ -1694,13 +1694,22 @@ stock void SetClip(int client, int weapon, int newAmmo)
 
 stock GetClip(int weapon)
 {
-    if (IsValidEntity(weapon))
+    if (IsValidEntity(weapon) && !IsCliplessWeapon(weapon))
     {
         return GetEntProp(weapon, Prop_Send, "m_iClip1");
     }
     return 0;
 } 
 //Above is borrowed from DarthNinja
+
+stock bool IsCliplessWeapon(int weapon)
+{
+	char classname[255];
+	GetEntityClassname(weapon, classname, 255);
+
+	return (StrContains(classname, "flamethrower") != -1 || StrContains(classname, "rocketlauncher_fireball") != -1 || StrContains(classname, "flaregun") != -1 ||
+	StrContains(classname, "minigun") != -1 || StrContains(classname, "mechanical_arm") != -1 || StrContains(classname, "sniperrifle") != -1);
+}
 
 /**
  * Retrieves the client's enemy team.
@@ -4170,4 +4179,16 @@ stock void RemoveAura(int target, char effect[255])
 	TE_WriteNum("m_nHitBox", GetParticleEffectIndex(effect));
 	TE_WriteNum("m_iEffectName", GetEffectIndex("ParticleEffectStop"));
 	TE_SendToAll();
+}
+
+//Generates hull mins and maxs for the given width, and outputs them via the output vectors.
+stock void GenerateMinMax(float width, float minsOutput[3], float maxsOutput[3])
+{
+	minsOutput[0] = -width;
+	minsOutput[1] = minsOutput[0];
+	minsOutput[2] = minsOutput[0];
+
+	maxsOutput[0] = -minsOutput[0];
+	maxsOutput[1] = -minsOutput[1];
+	maxsOutput[2] = -minsOutput[2];
 }

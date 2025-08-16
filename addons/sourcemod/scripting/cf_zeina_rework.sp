@@ -1929,6 +1929,7 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 	if (damage >= f_Barrier[victim])
 	{
 		damage = originalDmg;
+		damage -= f_Barrier[victim] * 0.35;
 		removed = f_Barrier[victim];
 
 		Barrier_DisplayExtraHUD(victim, true);
