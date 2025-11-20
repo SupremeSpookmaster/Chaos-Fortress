@@ -2543,6 +2543,16 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 	else if (IsValidClient(GetClientOfUserId(i_GenericProjectileOwner[ent1])))
 	{
 		TFTeam team = view_as<TFTeam>(GetEntProp(ent1, Prop_Send, "m_iTeamNum"));
+
+		#if defined _pnpc_included_
+		if (PNPC_IsNPC(ent2) && CF_IsValidTarget(ent2, team))
+		{
+			result = false;
+			ReturnVal = Plugin_Changed;
+			CallForward = false;
+		}
+		#endif
+
 		int owner = GetEntPropEnt(ent1, Prop_Send, "m_hOwnerEntity");
 		if (ent2 == owner || (CF_IsValidTarget(ent2, team) && !b_ProjectileCanCollideWithAllies[ent1]))
 		{
@@ -2554,6 +2564,16 @@ public Action CH_PassFilter(int ent1, int ent2, bool &result)
 	else if (IsValidClient(GetClientOfUserId(i_GenericProjectileOwner[ent2])))
 	{
 		TFTeam team = view_as<TFTeam>(GetEntProp(ent2, Prop_Send, "m_iTeamNum"));
+
+		#if defined _pnpc_included_
+		if (PNPC_IsNPC(ent1) && CF_IsValidTarget(ent1, team))
+		{
+			result = false;
+			ReturnVal = Plugin_Changed;
+			CallForward = false;
+		}
+		#endif
+
 		int owner = GetEntPropEnt(ent2, Prop_Send, "m_hOwnerEntity");
 		if (ent1 == owner || (CF_IsValidTarget(ent1, team) && !b_ProjectileCanCollideWithAllies[ent2]))
 		{

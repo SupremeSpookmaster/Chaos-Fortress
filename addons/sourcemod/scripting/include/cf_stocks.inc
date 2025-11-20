@@ -2336,7 +2336,7 @@ public bool Trace_StuckCheck(entity, mask)
 	char classname[255];
 	GetEntityClassname(entity, classname, sizeof(classname));
 	
-	if (StrContains(classname, "tf_projectile") != -1)
+	if (StrContains(classname, "tf_projectile") != -1 || StrContains(classname, "npc") != -1)
 		return false;
 		
 	return true;
@@ -4048,12 +4048,6 @@ stock void FloatToDouble(float flValue, int dblVal[2]) {
 	// no bits in lower three bytes of double
 	dblVal[0] = (mantissa << 29);
 	dblVal[1] = (sign << 31) | (expdbl_2 << 20) | (mantissa >> 3);
-}
-
-//Forces the client's speed to update
-stock void ForceSpeedUpdate(int client)
-{
-    ClientCommand(client, "cyoa_pda_open");
 }
 
 /**

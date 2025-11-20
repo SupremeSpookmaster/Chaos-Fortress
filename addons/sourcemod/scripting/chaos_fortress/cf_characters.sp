@@ -53,6 +53,8 @@ Handle c_DontNeedHelp;
 GlobalForward g_OnCharacterCreated;
 GlobalForward g_OnCharacterRemoved;
 
+Handle SDKSetSpeed;
+
 public void CFC_MakeForwards()
 {
 	CF_Characters_Configs = CreateArray(255);
@@ -82,6 +84,16 @@ public void CFC_MakeForwards()
 
 	PrecacheSound(SOUND_SPEED_APPLY);
 	PrecacheSound(SOUND_SPEED_REMOVE);
+
+	GameData gd = LoadGameConfigFile("chaos_fortress");
+
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(gd, SDKConf_Signature, "CTFPlayer::TeamFortress_SetSpeed()");
+	SDKSetSpeed = EndPrepSDKCall();
+	if (!SDKSetSpeed)
+		LogError("[Gamedata] Could not find CTFPlayer::TeamFortress_SetSpeed()");
+
+	delete gd;
 }
 
 public const char s_PreviewParticles[][] =
@@ -3746,4 +3758,17 @@ public float CFC_GetDefaultVolume(int client)
 		return 1.0;
 		
 	return f_DefaultVolume[client];
+}
+
+//Forces the client's speed to update.
+stock void ForceSpeedUpdate(int client)
+{
+	if(SDKSetSpeed)
+	{
+		SDKCall(SDKSetSpeed, client);
+	}
+	else
+	{
+		ClientCommand(client, "cyoa_pda_open");
+	}
 }

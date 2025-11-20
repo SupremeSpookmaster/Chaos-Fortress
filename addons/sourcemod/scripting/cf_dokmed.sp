@@ -632,7 +632,7 @@ public void Surgery_Teleport(int client)
 	RequestFrame(Surgery_Telefrag, GetClientUserId(client));
 	
 	SpawnShaker(Surgery_Destination[client], 8, 100, 4, 4, 4);
-	Overlay_Flash(client, GetRandomInt(1, 1000) != 777 ? "lights/white005" : "models/player/medic/medic_head_red", 0.1);
+	Overlay_Flash(client, GetRandomInt(1, 10) != 7 ? "lights/white005" : "models/player/medic/medic_head_red", 0.1);
 		
 	b_Telefrag = true;
 	CF_GenericAOEDamage(client, client, client, Surgery_DMG[client], DMG_GENERIC | DMG_CLUB | DMG_ALWAYSGIB, Surgery_DMGRadius[client], Surgery_Destination[client], Surgery_DMGFalloffStart[client], Surgery_DMGFalloffMax[client], _, false);

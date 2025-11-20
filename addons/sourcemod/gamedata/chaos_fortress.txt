@@ -74,6 +74,11 @@
 				"linux"				"@_ZN9CTFPlayer22PlayTauntSceneFromItemEPK13CEconItemView"
 				"mac"				"@_ZN9CTFPlayer22PlayTauntSceneFromItemEPK13CEconItemView"
 			}
+			"CTFPlayer::TeamFortress_SetSpeed()"
+			{
+				"linux"		"@_ZN9CTFPlayer21TeamFortress_SetSpeedEv"
+				"windows"	"\x55\x8B\xEC\x83\xEC\x24\xA1\x2A\x2A\x2A\x2A\x56\x8B\xF1\x89\x75\xF0"
+			}
 		}
 		"Functions"
 		{
@@ -189,6 +194,13 @@
 				"hooktype"		"entity"
 				"return"		"void"
 				"this"			"entity"
+			}
+			"CTFPlayer::TeamFortress_SetSpeed()"
+			{
+				"signature"	"CTFPlayer::TeamFortress_SetSpeed()"
+				"callconv"	"thiscall"
+				"return"	"void"
+				"this"		"entity"
 			}
 		}
 		"Offsets"
