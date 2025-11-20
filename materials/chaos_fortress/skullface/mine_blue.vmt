@@ -1,0 +1,50 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "chaos_fortress/skullface/mine_blue"
+	"$basemapalphaphongmask"	"1"
+	"$selfillum" "1"
+	"$nodecal" "1"
+
+	"$phong" "1"
+	"$phongexponent" "5"
+	"$phongboost" ".25"	
+	"$lightwarptexture" "models\lightwarps\weapon_lightwarp"
+	"$phongfresnelranges" "[0.25 0.5 1]"
+	"$glowcolor" "1"
+
+	// Use separate self-illum mask on Pre DX9 hardware
+	">=DX90"
+	{
+		"$baseTexture" 		"chaos_fortress/skullface/mine_blue_no_alpha"
+		"$selfillummask" 	"chaos_fortress/skullface/mine_selfillum"
+	}
+
+	// Use redundant self-illum in base alpha on Pre DX9 hardware
+	"<DX90"
+	{
+		"$baseTexture" 	"chaos_fortress/skullface/mine_blue"
+	}
+
+	// Cloaking
+	"$cloakPassEnabled" "1"
+	"Proxies"
+	{
+		"weapon_invis"
+		{
+		}
+		"stickybombGlowColor"
+		{
+			"resultVar" "$glowcolor"
+		}
+		"Equals"
+		{
+			"srcVar1"  "$glowcolor"
+			"resultVar" "$selfillumtint"
+		}
+		"Equals"
+		{
+			"srcVar1"  "$glowcolor"
+			"resultVar" "$color2"
+		}
+	}
+}
