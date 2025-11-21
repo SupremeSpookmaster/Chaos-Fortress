@@ -55,6 +55,7 @@ stock void ResetToZero2(any[][] array, int length1, int length2)
 #define SOUND_UAV_FOUND_CLIENT 			"weapons/sentry_spot.wav"
 #define SOUND_CLOAK_BLOCKED				"buttons/combine_button_locked.wav"
 #define SOUND_STAB_NONLETHAL			"player/spy_shield_break.wav"
+#define SOUND_BOMB_PLANTED				"chaos_fortress/agent/plant_bomb.mp3"
 
 static const char DroneGear_Gib[][255] =
 {
@@ -103,6 +104,8 @@ public void OnMapStart()
 	PrecacheSound(SOUND_UAV_FOUND_CLIENT, true);
 	PrecacheSound(SOUND_CLOAK_BLOCKED, true);
 	PrecacheSound(DRONE_PLACED, true);
+	PrecacheSound(SOUND_STAB_NONLETHAL, true);
+	PrecacheSound(SOUND_BOMB_PLANTED, true);
 	for (int i = 0; i < sizeof(DroneDamaged); i++) { PrecacheSound(DroneDamaged[i]); }
 
 	Zero(Generic_Laser_BEAM_HitDetected);
@@ -129,6 +132,8 @@ static int BombPhase[MAXTF2PLAYERS]={0,...};
 static float BombDetonationTime[MAXTF2PLAYERS]={0.0,...};
 static float BombCooldown[MAXTF2PLAYERS]={0.0,...};
 static float BombDamage[MAXTF2PLAYERS]={0.0,...};
+static float BombDamage_AoE[MAXTF2PLAYERS]={0.0,...};
+static float BombDamage_Buildings_AoE[MAXTF2PLAYERS]={0.0,...};
 static float BombRadius[MAXTF2PLAYERS]={0.0,...};
 
 enum
@@ -144,9 +149,12 @@ static void PrepareBombs(int client, char abilityName[255])
 	BombActive[client] = true;
 	BombsToPlace[client] = 0;
 	BombPhase[client] = BOMB_IDLE;
+	CF_UnblockAbilitySlot(client, M3);
 
 	BombsAmount[client] = CF_GetArgI(client, SHADOW, abilityName, "bombs_amount", 1);
 	BombDamage[client] = CF_GetArgF(client, SHADOW, abilityName, "bomb_damage", 250.0);
+	BombDamage_AoE[client] = CF_GetArgF(client, SHADOW, abilityName, "bomb_damage_aoe", 100.0);
+	BombDamage_Buildings_AoE[client] = CF_GetArgF(client, SHADOW, abilityName, "bomb_damage_aoe_buildings", 300.0);
 	BombRadius[client] = CF_GetArgF(client, SHADOW, abilityName, "bomb_radius", 100.0);
 	BombOnNPC[client] = CF_GetArgI(client, SHADOW, abilityName, "plant_on_npc", 0);
 	BombCooldown[client] = CF_GetArgF(client, SHADOW, abilityName, "bomb_cooldown", 12.0);
@@ -174,6 +182,7 @@ static void Bombs_PlantOnEntity(int entity, int owner)
 
 	if(BombsToPlace[owner] > 0)
 	{
+		EmitSoundToAll(SOUND_BOMB_PLANTED, owner);
 		HasABomb[entity] = true;
 		BombsToPlace[owner]--;
 		
@@ -215,17 +224,20 @@ static void Bombs_RequestFrame(DataPack pack)
 		if(BombPhase[owner] == BOMB_PLANTED)
 		{
 			BombPhase[owner] = BOMB_IDLE;
-			BombsToPlace[owner]++;
+			BombsToPlace[owner] = 0;
 			CF_ApplyAbilityCooldown(owner, 5.0, M3, true);
 			CF_UnblockAbilitySlot(owner, M3);
 		}
-
+		
 		if(BombPhase[owner] == BOMB_DETONATING)
 		{
-			CF_ApplyAbilityCooldown(owner, BombCooldown[owner], M3, true);
-			CF_UnblockAbilitySlot(owner, M3);
-
-			BombPhase[owner] = BOMB_IDLE;
+			if(BombDetonationTime[owner] > GetGameTime())
+			{
+				BombPhase[owner] = BOMB_IDLE;
+				BombsToPlace[owner] = 0;
+				CF_ApplyAbilityCooldown(owner, 12.0, M3, true);
+				CF_UnblockAbilitySlot(owner, M3);
+			}
 		}
 
 		delete pack;
@@ -241,6 +253,13 @@ static void Bombs_RequestFrame(DataPack pack)
 			CF_UnblockAbilitySlot(owner, M3);
 
 			SetEntityRenderColor(entity, 255, 255, 255, 255);
+
+			HasABomb[entity] = false;
+			BombsToPlace[owner] = 0;
+			
+			BombOwner[entity] = -1;
+			BombPlantedOn[owner] = -1;
+			
 			delete pack;
 
 			return;
@@ -265,8 +284,11 @@ static void Bombs_RequestFrame(DataPack pack)
 
 			for(int i = 1; i <= MAXENTITIES; i++)
 			{
-				if(IsValidMulti(i) && entity != i)
+				if(IsValidMulti(i))
 				{
+					if(entity == i)
+						continue;
+
 					if(GetTeam(i) == GetTeam(owner))
 						continue;
 
@@ -276,12 +298,15 @@ static void Bombs_RequestFrame(DataPack pack)
 
 					if(CF_HasLineOfSight(Origin, TargetLocation, _, Origin) && dist <= BombRadius[owner])
 					{
-						SDKHooks_TakeDamage(i, owner, owner, BombDamage[owner], DMG_BLAST);
+						SDKHooks_TakeDamage(i, owner, owner, BombDamage_AoE[owner], DMG_BLAST);
 					}
 				}
 
-				if(IsABuilding(i, true) && entity != i)
+				if(IsABuilding(i, true))
 				{
+					if(entity == i)
+						continue;
+						
 					if(GetTeam(i) == GetTeam(owner))
 						continue;
 					
@@ -291,7 +316,7 @@ static void Bombs_RequestFrame(DataPack pack)
 
 					if(CF_HasLineOfSight(Origin, TargetLocation, _, Origin) && dist <= BombRadius[owner])
 					{
-						SDKHooks_TakeDamage(i, owner, owner, BombDamage[owner], DMG_BLAST);
+						SDKHooks_TakeDamage(i, owner, owner, BombDamage_Buildings_AoE[owner], DMG_BLAST);
 					}
 				}
 			}
@@ -1743,9 +1768,9 @@ public void OnEntityDestroyed(int entity)
 	{
 		if(IsValidClient(BombOwner[entity]))
 		{
-			CF_ApplyAbilityCooldown(BombOwner[entity], BombCooldown[BombOwner[entity]], M3, true);
-			CF_UnblockAbilitySlot(BombOwner[entity], M3);
-			BombPhase[BombOwner[entity]] = BOMB_IDLE;
+			// CF_ApplyAbilityCooldown(BombOwner[entity], 12.0, M3, true);
+			// CF_UnblockAbilitySlot(BombOwner[entity], M3);
+			// BombPhase[BombOwner[entity]] = BOMB_IDLE;
 		}
 
 		BombOwner[entity] = -1;
