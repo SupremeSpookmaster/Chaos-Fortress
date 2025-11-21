@@ -1,0 +1,16 @@
+"VertexLitGeneric"
+{
+	"$basetexture" "chaos_fortress/drone_model/drone_red"
+	"$phongexponenttexture" "models\props_teaser\saucer_exponent"	
+	"$selfillummask"  "models\props_teaser\saucer_selfillum"
+	"$selfillum" "1"	
+	
+
+    "$phong" "1"
+    "$phongboost" "3"    
+    "$phongfresnelranges"    "[1 1.5 1]"
+	"$basemapalphaphongmask" "1"
+	"$PhongAlbedoTint" "1"
+	
+	"$phongtint" "[0.3 0.7 0.7]"
+}
