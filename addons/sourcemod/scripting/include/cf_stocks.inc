@@ -1787,8 +1787,8 @@ stock float GetTotalAttributeValue(int client, int attribute, float baseVal)
 	return baseVal;
 }
 
-//An extension of TF2Util_CanWeaponAttack, which checks for m_flNextPrimaryAttack, as well as ammo.
-stock bool CanWeaponAttack(int client, int weapon)
+//An extension of TF2Util_CanWeaponAttack, which checks for ammo, and also m_flNextPrimaryAttack if nextAttackTime is set to true.
+stock bool CanWeaponAttack(int client, int weapon, bool nextAttackTime = true)
 {
 	if (!IsValidEntity(weapon) || weapon < MaxClients)
 		return false;
@@ -1796,8 +1796,7 @@ stock bool CanWeaponAttack(int client, int weapon)
 	if (!TF2Util_CanWeaponAttack(weapon))
 		return false;
 
-	float gt = GetGameTime();
-	if (GetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack") > gt)
+	if (nextAttackTime && GetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack") > GetGameTime())
 		return false;
 
 	if (!IsWeaponMelee(client, weapon))
