@@ -85,7 +85,7 @@ public void AB_DrawLaser(int client, float startPos[3], float endPos[3], float a
 		GetPointInDirection(startPos, ang, 60.0, canPos);
 
 		canAng = ang;
-		canAng[0] += 90.0;
+		canAng[0] -= 90.0;
 		TeleportEntitySmoothly(can, canPos, canAng);
 		SetEntityRenderMode(can, RENDER_NONE);
 	}
@@ -183,7 +183,7 @@ public void AB_CreateLaser(int client, float startPos[3], float endPos[3])
 
 	float ang[3];
 	GetAngleBetweenPoints(startPos, endPos, ang);
-	ang[0] += 90.0;
+	ang[0] -= 90.0;
 
 	int canister = SpawnPropDynamic(MODEL_AB_PARTICLEBODY, startPos, ang, _, f_ABRange[client] / 59.121);	//59.121 is the height of the canister in HU.
 	if (IsValidEntity(canister))
