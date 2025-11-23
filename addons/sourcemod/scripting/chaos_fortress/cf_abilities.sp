@@ -4845,7 +4845,7 @@ bool Laser_Trace(int entity, int contentsMask, int client)
 		Call_StartFunction(GetPluginHandle(Laser_Plugin), Laser_Filter);
 
 		Call_PushCell(entity);
-		Call_PushCellRef(client);
+		Call_PushCell(client);
 
 		Call_Finish(passed);
 	}
@@ -4854,18 +4854,18 @@ bool Laser_Trace(int entity, int contentsMask, int client)
 
 	if (passed)
 	{
-		if (Laser_DMG != 0.0)
-			SDKHooks_TakeDamage(entity, Laser_Inflictor, client, Laser_DMG, Laser_DamageType, Laser_Weapon);
-
 		if (Laser_OnHit != INVALID_FUNCTION && !StrEqual(Laser_Plugin, ""))
 		{
 			Call_StartFunction(GetPluginHandle(Laser_Plugin), Laser_OnHit);
 
 			Call_PushCell(entity);
-			Call_PushCellRef(client);
+			Call_PushCell(client);
 
 			Call_Finish();
 		}
+
+		if (Laser_DMG != 0.0)
+			SDKHooks_TakeDamage(entity, Laser_Inflictor, client, Laser_DMG, Laser_DamageType, Laser_Weapon);
 	}
 
 	return false;

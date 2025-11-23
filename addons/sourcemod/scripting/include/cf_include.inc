@@ -2177,7 +2177,7 @@ native void CF_GiveHealingPoints(int client, float points);
  * @param inflictor		The inflictor which deals this laser's damage.
  * @param plugin		The plugin which owns all optional functions called by this native.
  * @param filterFunc	Optional function to filter out certain entities from being hit by the laser. Must take the target's index and the user's index in that order, and return a bool (true to allow the hit, false to prevent it). If this is left as INVALID_FUNCTION, the laser will automatically filter out anything that is not a valid enemy.
- * @param onHitFunc		Optional function to call when the laser hits a target. Must take the target's index and the user's index, in that order.
+ * @param onHitFunc		Optional function to call when the laser hits a target. This is called immediately BEFORE the laser deals damage. Must take the target's index and the user's index, in that order.
  * @param drawLaserFunc	Optional function to call to draw the beam. Must take the user's index, the start vector of the beam, the end vector of the beam, the angle vector of the beam, and the beam's width (float), all in that order.
  */
 native void CF_FireGenericLaser(int client, float startPos[3], float ang[3], float width, float range, float damage = 0.0, int damagetype = DMG_GENERIC, int weapon = -1, int inflictor = -1, char[] plugin = "", Function filterFunc = INVALID_FUNCTION, Function onHitFunc = INVALID_FUNCTION, Function drawLaserFunc = INVALID_FUNCTION);

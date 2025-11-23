@@ -3,6 +3,7 @@
 #include <tf2_stocks>
 #include <cf_stocks>
 #include <fakeparticles>
+#include <pnpc>
 
 #define KHOLDROZ		"cf_kholdroz"
 #define BEAM			"kholdroz_aurora_beam"
@@ -20,7 +21,8 @@
 
 #define SOUND_AB_START				")weapons/flame_thrower_airblast_rocket_redirect.wav"
 #define SOUND_AB_LOOP_1				")misc/halloween/merasmus_float.wav"
-#define SOUND_AB_LOOP_2				")weapons/flame_thrower_bb_loop.wav"
+#define SOUND_AB_LOOP_2				")npc/stalker/laser_burn.wav"
+#define SOUND_AB_LOOP_3				")npc/headcrab/headcrab_burning_loop2.wav"
 #define SOUND_AB_STOP				")weapons/flame_thrower_bb_end.wav"
 
 public void OnMapStart()
@@ -40,12 +42,15 @@ public void OnMapStart()
 	PrecacheSound(SOUND_AB_START);
 	PrecacheSound(SOUND_AB_LOOP_1);
 	PrecacheSound(SOUND_AB_LOOP_2);
+	PrecacheSound(SOUND_AB_LOOP_3);
 	PrecacheSound(SOUND_AB_STOP);
 }
 
 public void OnPluginStart()
 {
 }
+
+bool b_IceDamage[MAXPLAYERS + 1] = { false, ... };
 
 float f_ABWidth[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ABRange[MAXPLAYERS + 1] = { 0.0, ... };
@@ -89,18 +94,23 @@ public void AB_Fire(int client, char abilityName[255])
 	f_ABAttackStopgap[client] = CF_GetArgF(client, KHOLDROZ, abilityName, "attack_stopgap", 1.2);
 
 	CF_FireGenericLaser(client, startPos, ang, f_ABWidth[client], f_ABRange[client], f_ABDamage[client], DMG_ENERGYBEAM, AB_GetWeapon(client), client, KHOLDROZ, _, AB_OnHit, AB_DrawLaser);
+	b_IceDamage[client] = false;
+
 	CF_SetTimeUntilResourceRegen(client, CF_GetTimeUntilResourceRegen(client) + f_ABDrainInterval[client] + 0.5);
 	SetEntPropFloat(AB_GetWeapon(client), Prop_Send, "m_flNextPrimaryAttack", GetGameTime() + 999.0);
 
 	b_ABActive[client] = true;
 
 	EmitSoundToAll(SOUND_AB_START, client, _, _, _, _, 120);
-	EmitSoundToAll(SOUND_AB_LOOP_1, client, _, 105, _, _, 120);
-	EmitSoundToAll(SOUND_AB_LOOP_2, client, _, 90, _, 0.8, 120);
+	EmitSoundToAll(SOUND_AB_LOOP_1, client, _, 105, _, _, GetRandomInt(60, 90));
+	EmitSoundToAll(SOUND_AB_LOOP_1, client, _, 105, _, _, GetRandomInt(110, 140));
+	EmitSoundToAll(SOUND_AB_LOOP_2, client, _, 90, _, 0.3, 60);
+	EmitSoundToAll(SOUND_AB_LOOP_3, client, _, 110);
 }
 
 public void AB_OnHit(int victim, int attacker)
 {
+	b_IceDamage[attacker] = true;
 	//TODO: CRYO BUILDUP
 }
 
@@ -281,6 +291,7 @@ public void AB_HoldLaser(int id)
 	if (gt >= f_ABNextHit[client])
 	{
 		CF_FireGenericLaser(client, startPos, ang, f_ABWidth[client], f_ABRange[client], f_ABDamage[client], DMG_ENERGYBEAM|DMG_PREVENT_PHYSICS_FORCE, AB_GetWeapon(client), client, KHOLDROZ, _, AB_OnHit, AB_DrawLaser);
+		b_IceDamage[client] = false;
 		f_ABNextHit[client] = gt + f_ABInterval[client];
 	}
 	else
@@ -302,7 +313,9 @@ public void AB_Terminate(int client)
 
 		EmitSoundToAll(SOUND_AB_STOP, client, _, _, _, _, 120);
 		StopSound(client, SNDCHAN_AUTO, SOUND_AB_LOOP_1);
+		StopSound(client, SNDCHAN_AUTO, SOUND_AB_LOOP_1);
 		StopSound(client, SNDCHAN_AUTO, SOUND_AB_LOOP_2);
+		StopSound(client, SNDCHAN_AUTO, SOUND_AB_LOOP_3);
 	}
 
 	b_ABActive[client] = false;
@@ -424,3 +437,16 @@ public void OnEntityDestroyed(int entity)
 		i_ABTrail[entity] = -1;
 	}
 }
+
+#if defined _pnpc_included_
+
+public void PNPC_OnPlayerRagdoll(int victim, int attacker, int inflictor, bool &freeze, bool &cloaked, bool &ash, bool &gold, bool &shocked, bool &burning, bool &gib)
+{
+	if (b_IceDamage[attacker])
+	{
+		freeze = true;
+		b_IceDamage[attacker] = false;
+	}
+}
+
+#endif
