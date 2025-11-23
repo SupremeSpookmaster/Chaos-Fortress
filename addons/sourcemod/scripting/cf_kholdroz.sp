@@ -13,6 +13,10 @@
 #define SPR_LASER				"materials/sprites/laserbeam.vmt"
 
 #define MODEL_DRG				"models/weapons/w_models/w_drg_ball.mdl"
+#define MODEL_AB_PARTICLEBODY				"models/props_c17/canister01a.mdl"
+
+#define PARTICLE_SNOW_AURA_RED		"utaunt_glitter_teamcolor_red"
+#define PARTICLE_SNOW_AURA_BLUE		"utaunt_glitter_parent_silver"
 
 public void OnMapStart()
 {
@@ -23,6 +27,10 @@ public void OnMapStart()
 	PrecacheModel(SPR_LASER);
 
 	PrecacheModel(MODEL_DRG);
+	PrecacheModel(MODEL_AB_PARTICLEBODY);
+
+	PrecacheParticleEffect(PARTICLE_SNOW_AURA_RED);
+	PrecacheParticleEffect(PARTICLE_SNOW_AURA_BLUE);
 }
 
 public void OnPluginStart()
@@ -31,13 +39,13 @@ public void OnPluginStart()
 
 float f_ABWidth[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ABRange[MAXPLAYERS + 1] = { 0.0, ... };
-float f_ABNextTrails[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ABSlowDownMult[2049] = { 0.0, ... };
 
 int i_ABWeapon[MAXPLAYERS + 1] = { -1, ... };
 int i_ABBeamEnt[MAXPLAYERS + 1] = { -1, ... };
 int i_ABStartEnt[MAXPLAYERS + 1] = { -1, ... };
 int i_ABEndEnt[MAXPLAYERS + 1] = { -1, ... };
+int i_ABCanister[MAXPLAYERS + 1] = { -1, ... };
 int i_ABTrail[2049] = { -1, ... };
 int i_ABTargetColors[2049][3];
 
@@ -70,84 +78,19 @@ public void AB_DrawLaser(int client, float startPos[3], float endPos[3], float a
 	GetPointInDirection(startPos, ang, 40.0, startPos);
 	GetPointInDirection(endPos, ang, 20.0, endPos);
 
-	float gt = GetGameTime();
-	if (gt >= f_ABNextTrails[client])
+	int can = AB_GetCanister(client);
+	if (IsValidEntity(can))
 	{
-		f_ABNextTrails[client] = gt + 0.1;
+		float canPos[3], canAng[3];
+		GetPointInDirection(startPos, ang, 60.0, canPos);
 
-		TFTeam team = TF2_GetClientTeam(client);
-		for (int i = 0; i < 4; i++)
-		{
-			float trailTargPos[3], trailAng[3], trailVel[3];
-			trailAng = ang;
-			float speed = GetRandomFloat(0.2, 0.25);
-
-			for (int j = 0; j < 3; j++)
-				trailAng[j] += GetRandomFloat(-width * 0.25, width * 0.25);
-
-			GetPointInDirection(startPos, trailAng, f_ABRange[client], trailTargPos);
-
-			GetAngleBetweenPoints(startPos, trailTargPos, trailAng);
-
-			GetVelocityInDirection(trailAng, f_ABRange[client] / speed, trailVel);
-
-			float userVel[3];
-			GetEntPropVector(client, Prop_Data, "m_vecVelocity", userVel);
-			for (int j = 0; j < 3; j++)
-				trailVel[j] += userVel[j];
-
-			ParticleBody trail = FPS_CreateParticleBody(startPos, NULL_VECTOR);
-			TeleportEntity(trail.Index, startPos);
-			
-			int realColor[3], targColor[3];
-			targColor[0] = team == TFTeam_Red ? 255 : 160;
-			targColor[1] = 160;
-			targColor[2] = team == TFTeam_Blue ? 255 : 160;
-
-			realColor[0] = 255;
-			realColor[1] = 255;
-			realColor[2] = 255;
-
-			int a = GetRandomInt(60, 100);
-
-			//These trails spawn in the wrong place and then teleport to the pbody. This is likely an issue with the fake particle system, but it's 3:12 AM and I need sleep so I'll fix it later and then reduce trail count from 4 to 3, wink wink
-			/*int ent = trail.AddTrail(SPR_SNOWFLAKE, 0.2, 8.0, 0.0, realColor, a, RENDER_TRANSALPHA, 3, 2.0, AB_FadeSnowflake, KHOLDROZ);
-			if (IsValidEntity(ent))
-			{
-				for (int c = 0; c < 3; c++)
-					i_ABTargetColors[ent][c] = targColor[c];
-			}*/
-
-			int ent = trail.AddSprite(SPR_SNOWFLAKE, 0.05, realColor, a, RENDER_TRANSALPHA, _, _, 2.0, AB_FadeSnowflake, KHOLDROZ);
-			if (IsValidEntity(ent))
-			{
-				for (int c = 0; c < 3; c++)
-					i_ABTargetColors[ent][c] = targColor[c];
-			}
-
-			trail.Fade_Rate = GetRandomFloat(2.0, 3.0);
-			trail.Fading = true;
-
-			int move = CF_FireGenericRocket(client, 0.0, 0.0, _, _, KHOLDROZ, AB_DeleteOnContact);
-			if (IsValidEntity(move))
-			{
-				CreateTimer(3.0, Timer_RemoveEntity, EntIndexToEntRef(move), TIMER_FLAG_NO_MAPCHANGE);
-				SetEntityModel(move, MODEL_DRG);
-
-				SetEntPropFloat(move, Prop_Send, "m_flModelScale", 0.01); 
-
-				TeleportEntity(move, startPos, trailAng, trailVel);
-
-				SetParent(move, trail.Index);
-				i_ABTrail[move] = EntIndexToEntRef(trail.Index);
-				f_ABSlowDownMult[move] = GetRandomFloat(0.85, 0.95);
-				SetEntityCollisionGroup(move, 1);
-				RequestFrame(AB_SlowDown, EntIndexToEntRef(move));
-			}
-		}
+		canAng = ang;
+		canAng[0] += 90.0;
+		TeleportEntitySmoothly(can, canPos, canAng);
+		SetEntityRenderMode(can, RENDER_NONE);
 	}
 
-	if (!IsValidEntity(AB_GetBeamEnt(client)) || !IsValidEntity(start) || !IsValidEntity(end))
+	if (!IsValidEntity(AB_GetBeamEnt(client)) || !IsValidEntity(start) || !IsValidEntity(end) || !IsValidEntity(can))
 	{
 		AB_CreateLaser(client, startPos, endPos);
 		return;
@@ -177,11 +120,8 @@ public void AB_DrawLaser(int client, float startPos[3], float endPos[3], float a
 	currentB += 4;
 	if (currentB > b)
 		currentB = b;
-	currentA += 2;
-	if (currentA > 120)
-		currentA = 120;
 
-	SetEntityRenderColor(beam, currentR, currentG, currentB, currentA);
+	SetEntityRenderColor(beam, currentR, currentG, currentB, 60 + RoundToFloor((Sine(GetGameTime() * 2.0) * 40.0)));
 
 	//float amplitude = GetEntPropFloat(beam, Prop_Data, "m_fAmplitude");
     SetEntPropFloat(beam, Prop_Data, "m_fAmplitude", 1.5);
@@ -240,6 +180,19 @@ public void AB_CreateLaser(int client, float startPos[3], float endPos[3])
 
 		RequestFrame(AB_HoldLaser, GetClientUserId(client));
 	}
+
+	float ang[3];
+	GetAngleBetweenPoints(startPos, endPos, ang);
+	ang[0] += 90.0;
+
+	int canister = SpawnPropDynamic(MODEL_AB_PARTICLEBODY, startPos, ang, _, f_ABRange[client] / 59.121);	//59.121 is the height of the canister in HU.
+	if (IsValidEntity(canister))
+	{
+		i_ABCanister[client] = EntIndexToEntRef(canister);
+		AttachAura(canister, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_SNOW_AURA_RED : PARTICLE_SNOW_AURA_BLUE);
+		SetEntityRenderMode(canister, RENDER_TRANSALPHA);
+		SetEntityRenderColor(canister, 1, 1, 1, 0);
+	}
 }
 
 public void AB_HoldLaser(int id)
@@ -284,9 +237,14 @@ public void AB_RemoveLaser(int client)
 	if (IsValidEntity(ent))
 		CreateTimer(3.0, Timer_RemoveEntity, EntIndexToEntRef(ent), TIMER_FLAG_NO_MAPCHANGE);
 
+	ent = AB_GetCanister(client);
+	if (IsValidEntity(ent))
+		RemoveEntity(ent);
+
 	i_ABBeamEnt[client] = -1;
 	i_ABStartEnt[client] = -1;
 	i_ABEndEnt[client] = -1;
+	i_ABCanister[client] = -1;
 }
 
 void AB_DissipateBeam(int ref)
@@ -331,6 +289,7 @@ int AB_GetWeapon(int client) { return EntRefToEntIndex(i_ABWeapon[client]); }
 int AB_GetBeamEnt(int client) { return EntRefToEntIndex(i_ABBeamEnt[client]); }
 int AB_GetStartEnt(int client) { return EntRefToEntIndex(i_ABStartEnt[client]); }
 int AB_GetEndEnt(int client) { return EntRefToEntIndex(i_ABEndEnt[client]); }
+int AB_GetCanister(int client) { return EntRefToEntIndex(i_ABCanister[client]); }
 
 public void CF_OnCharacterCreated(int client)
 {
