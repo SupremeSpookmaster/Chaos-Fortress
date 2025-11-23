@@ -2181,3 +2181,38 @@ native void CF_GiveHealingPoints(int client, float points);
  * @param drawLaserFunc	Optional function to call to draw the beam. Must take the user's index, the start vector of the beam, the end vector of the beam, the angle vector of the beam, and the beam's width (float), all in that order.
  */
 native void CF_FireGenericLaser(int client, float startPos[3], float ang[3], float width, float range, float damage = 0.0, int damagetype = DMG_GENERIC, int weapon = -1, int inflictor = -1, char[] plugin = "", Function filterFunc = INVALID_FUNCTION, Function onHitFunc = INVALID_FUNCTION, Function drawLaserFunc = INVALID_FUNCTION);
+
+/**
+ * Sets the time until the client's next special resource regen tick, in seconds.
+ * 
+ * @param client		The client whose next regen tick to set.
+ * @param delay			The duration until the next regen tick will occur.
+ */
+native void CF_SetTimeUntilResourceRegen(int client, float delay);
+
+/**
+ * Gets the time until the client's next special resource regen tick, in seconds.
+ * 
+ * @param client		The client whose next regen tick to get.
+ * 
+ * @return				The duration until the next regen tick will occur.
+ */
+native float CF_GetTimeUntilResourceRegen(int client);
+
+/**
+ * Sets the time between special resource regen ticks for this client.
+ * If you only need to speed up or delay the next tick, use CF_SetTimeUntilResourceRegen instead.
+ * 
+ * @param client			The client to set the special resource regen interval of.
+ * @param interval			The desired special resource regen interval.
+ */
+native void CF_SetResourceRegenInterval(int client, float interval);
+
+/**
+ * Gets the time between special resource regen ticks for this client.
+ * 
+ * @param client			The client to get the special resource regen interval of.
+ * 
+ * @return			The time between special resource regen ticks.
+ */
+native float CF_GetResourceRegenInterval(int client);

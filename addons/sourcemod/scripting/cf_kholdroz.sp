@@ -39,6 +39,15 @@ public void OnPluginStart()
 
 float f_ABWidth[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ABRange[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ABDamage[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ABInterval[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ABNextHit[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ABDrainInterval[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ABNextDrain[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ABCost[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ABRegenStopgap[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ABAttackStopgap[MAXPLAYERS + 1] = { 0.0, ... };
+
 float f_ABSlowDownMult[2049] = { 0.0, ... };
 
 int i_ABWeapon[MAXPLAYERS + 1] = { -1, ... };
@@ -49,6 +58,8 @@ int i_ABCanister[MAXPLAYERS + 1] = { -1, ... };
 int i_ABTrail[2049] = { -1, ... };
 int i_ABTargetColors[2049][3];
 
+bool b_ABActive[MAXPLAYERS + 1] = { false, ... };
+
 public void AB_Fire(int client, char abilityName[255])
 {
 	float startPos[3], ang[3];
@@ -58,9 +69,20 @@ public void AB_Fire(int client, char abilityName[255])
 	i_ABWeapon[client] = EntIndexToEntRef(TF2_GetActiveWeapon(client));
 	f_ABWidth[client] = CF_GetArgF(client, KHOLDROZ, abilityName, "width", 20.0);
 	f_ABRange[client] = CF_GetArgF(client, KHOLDROZ, abilityName, "range", 120.0);
-	float damage = CF_GetArgF(client, KHOLDROZ, abilityName, "damage", 6.0);
+	f_ABDamage[client] = CF_GetArgF(client, KHOLDROZ, abilityName, "damage", 6.0);
+	f_ABInterval[client] = CF_GetArgF(client, KHOLDROZ, abilityName, "hit_interval", 6.0);
+	f_ABNextHit[client] = GetGameTime() + f_ABInterval[client];
+	f_ABDrainInterval[client] = CF_GetArgF(client, KHOLDROZ, abilityName, "drain_interval", 6.0);
+	f_ABNextDrain[client] = GetGameTime() + f_ABDrainInterval[client];
+	f_ABCost[client] = CF_GetArgF(client, KHOLDROZ, abilityName, "cost", 5.0);
+	f_ABRegenStopgap[client] = CF_GetArgF(client, KHOLDROZ, abilityName, "regen_stopgap", 3.0);
+	f_ABAttackStopgap[client] = CF_GetArgF(client, KHOLDROZ, abilityName, "attack_stopgap", 1.2);
 
-	CF_FireGenericLaser(client, startPos, ang, f_ABWidth[client], f_ABRange[client], damage, DMG_ENERGYBEAM, AB_GetWeapon(client), client, KHOLDROZ, _, AB_OnHit, AB_DrawLaser);
+	CF_FireGenericLaser(client, startPos, ang, f_ABWidth[client], f_ABRange[client], f_ABDamage[client], DMG_ENERGYBEAM, AB_GetWeapon(client), client, KHOLDROZ, _, AB_OnHit, AB_DrawLaser);
+	CF_SetTimeUntilResourceRegen(client, CF_GetTimeUntilResourceRegen(client) + f_ABDrainInterval[client] + 0.5);
+	SetEntPropFloat(AB_GetWeapon(client), Prop_Send, "m_flNextPrimaryAttack", GetGameTime() + 999.0);
+
+	b_ABActive[client] = true;
 }
 
 public void AB_OnHit(int victim, int attacker)
@@ -198,8 +220,7 @@ public void AB_HoldLaser(int id)
 {
 	int client = GetClientOfUserId(id);
 
-	//If the client is invalid, dead, not holding the right weapon, can't attack with said weapon, said weapon is invalid, or not holding M1: stop drawing the beam and terminate sound effects. 
-	if (!IsValidMulti(client) || !IsValidEntity(AB_GetWeapon(client)) || TF2_GetActiveWeapon(client) != AB_GetWeapon(client) || !CanWeaponAttack(client, AB_GetWeapon(client), false) || GetClientButtons(client) & IN_ATTACK == 0)
+	if (!IsValidMulti(client) || !b_ABActive[client] || !IsValidEntity(AB_GetWeapon(client)))
 	{
 		AB_Terminate(client);
 		return;
@@ -209,7 +230,31 @@ public void AB_HoldLaser(int id)
 	GetClientEyePosition(client, startPos);
 	GetClientEyeAngles(client, ang);
 
-	CF_FireGenericLaser(client, startPos, ang, f_ABWidth[client], f_ABRange[client], _, _, _, _, KHOLDROZ, _, _, AB_DrawLaser);
+	float gt = GetGameTime();
+
+	SetEntPropFloat(AB_GetWeapon(client), Prop_Send, "m_flNextPrimaryAttack", GetGameTime() + 999.0);
+
+	if (gt >= f_ABNextDrain[client] && CF_GetMaxSpecialResource(client) > 0.0)
+	{
+		float current = CF_GetSpecialResource(client);
+		if (current < f_ABCost[client])
+		{
+			CF_EndHeldAbility(client, KHOLDROZ, BEAM, false);
+			return;
+		}
+
+		CF_SetSpecialResource(client, current - f_ABCost[client]);
+		CF_SetTimeUntilResourceRegen(client, CF_GetTimeUntilResourceRegen(client) + f_ABDrainInterval[client] + 0.5);
+		f_ABNextDrain[client] = gt + f_ABDrainInterval[client];
+	}
+
+	if (gt >= f_ABNextHit[client])
+	{
+		CF_FireGenericLaser(client, startPos, ang, f_ABWidth[client], f_ABRange[client], f_ABDamage[client], DMG_ENERGYBEAM|DMG_PREVENT_PHYSICS_FORCE, AB_GetWeapon(client), client, KHOLDROZ, _, AB_OnHit, AB_DrawLaser);
+		f_ABNextHit[client] = gt + f_ABInterval[client];
+	}
+	else
+		CF_FireGenericLaser(client, startPos, ang, f_ABWidth[client], f_ABRange[client], _, _, _, _, KHOLDROZ, _, _, AB_DrawLaser);
 
 	RequestFrame(AB_HoldLaser, id);
 }
@@ -217,6 +262,16 @@ public void AB_HoldLaser(int id)
 public void AB_Terminate(int client)
 {
 	AB_RemoveLaser(client);
+
+	if (b_ABActive[client])
+	{
+		CF_SetTimeUntilResourceRegen(client, CF_GetTimeUntilResourceRegen(client) + f_ABRegenStopgap[client]);
+
+		if (IsValidEntity(AB_GetWeapon(client)))
+			SetEntPropFloat(AB_GetWeapon(client), Prop_Send, "m_flNextPrimaryAttack", GetGameTime() + f_ABAttackStopgap[client]);
+	}
+	
+	b_ABActive[client] = false;
 	//TODO sounds
 }
 
@@ -307,6 +362,17 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	
 	if (StrContains(abilityName, BEAM) != -1)
 		AB_Fire(client, abilityName);
+}
+
+public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255], char abilityName[255])
+{
+	if (!StrEqual(pluginName, KHOLDROZ))
+		return;
+
+	if (StrContains(abilityName, BEAM) != -1)
+	{
+		AB_Terminate(client);
+	}
 }
 
 public void OnEntityDestroyed(int entity)

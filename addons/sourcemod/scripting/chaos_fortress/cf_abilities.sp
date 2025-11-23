@@ -134,6 +134,10 @@ public void CFA_MakeNatives()
 	CreateNative("CF_SetEntityBlocksLOS", Native_CF_SetEntityBlocksLOS);
 	CreateNative("CF_GiveHealingPoints", Native_CF_GiveHealingPoints);
 	CreateNative("CF_FireGenericLaser", Native_CF_FireGenericLaser);
+	CreateNative("CF_GetTimeUntilResourceRegen", Native_CF_GetTimeUntilResourceRegen);
+	CreateNative("CF_SetTimeUntilResourceRegen", Native_CF_SetTimeUntilResourceRegen);
+	CreateNative("CF_SetResourceRegenInterval", Native_CF_SetResourceRegenInterval);
+	CreateNative("CF_GetResourceRegenInterval", Native_CF_GetResourceRegenInterval);
 }
 
 public void SetHeadshotIcon(int effect) 
@@ -1603,6 +1607,70 @@ public Native_CF_SetMaxSpecialResource(Handle plugin, int numParams)
 		return;
 	
 	chara.f_MaxResources = amt;
+}
+
+public any Native_CF_GetTimeUntilResourceRegen(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return 0.0;
+		
+	CFCharacter chara = GetCharacterFromClient(client);
+	float gt = GetGameTime();
+
+	if (!chara.b_UsingResources || gt <= chara.f_NextResourceRegen)
+		return 0.0;
+
+	return chara.f_NextResourceRegen - gt;
+}
+
+public Native_CF_SetTimeUntilResourceRegen(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	float delay = GetNativeCell(2);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	CFCharacter chara = GetCharacterFromClient(client);
+	float gt = GetGameTime();
+
+	if (!chara.b_UsingResources)
+		return;
+
+	chara.f_NextResourceRegen = gt + delay;
+}
+
+public any Native_CF_GetResourceRegenInterval(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return 0.0;
+		
+	CFCharacter chara = GetCharacterFromClient(client);
+
+	if (!chara.b_UsingResources)
+		return 0.0;
+
+	return chara.f_ResourceRegenInterval;
+}
+
+public Native_CF_SetResourceRegenInterval(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	float interval = GetNativeCell(2);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	CFCharacter chara = GetCharacterFromClient(client);
+
+	if (!chara.b_UsingResources)
+		return;
+
+	chara.f_ResourceRegenInterval = interval;
 }
 
 public Native_CF_ApplyAbilityCooldown(Handle plugin, int numParams)
