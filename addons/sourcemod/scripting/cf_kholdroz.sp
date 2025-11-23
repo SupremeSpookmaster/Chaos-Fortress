@@ -18,6 +18,11 @@
 #define PARTICLE_SNOW_AURA_RED		"utaunt_glitter_teamcolor_red"
 #define PARTICLE_SNOW_AURA_BLUE		"utaunt_glitter_parent_silver"
 
+#define SOUND_AB_START				")weapons/flame_thrower_airblast_rocket_redirect.wav"
+#define SOUND_AB_LOOP_1				")misc/halloween/merasmus_float.wav"
+#define SOUND_AB_LOOP_2				")weapons/flame_thrower_bb_loop.wav"
+#define SOUND_AB_STOP				")weapons/flame_thrower_bb_end.wav"
+
 public void OnMapStart()
 {
 	PrecacheModel("materials/sprites/laserbeam.vmt");
@@ -31,6 +36,11 @@ public void OnMapStart()
 
 	PrecacheParticleEffect(PARTICLE_SNOW_AURA_RED);
 	PrecacheParticleEffect(PARTICLE_SNOW_AURA_BLUE);
+
+	PrecacheSound(SOUND_AB_START);
+	PrecacheSound(SOUND_AB_LOOP_1);
+	PrecacheSound(SOUND_AB_LOOP_2);
+	PrecacheSound(SOUND_AB_STOP);
 }
 
 public void OnPluginStart()
@@ -83,6 +93,10 @@ public void AB_Fire(int client, char abilityName[255])
 	SetEntPropFloat(AB_GetWeapon(client), Prop_Send, "m_flNextPrimaryAttack", GetGameTime() + 999.0);
 
 	b_ABActive[client] = true;
+
+	EmitSoundToAll(SOUND_AB_START, client, _, _, _, _, 120);
+	EmitSoundToAll(SOUND_AB_LOOP_1, client, _, 105, _, _, 120);
+	EmitSoundToAll(SOUND_AB_LOOP_2, client, _, 90, _, 0.8, 120);
 }
 
 public void AB_OnHit(int victim, int attacker)
@@ -103,6 +117,10 @@ public void AB_DrawLaser(int client, float startPos[3], float endPos[3], float a
 		return;
 	}
 
+	float originalStart[3], originalEnd[3];
+	originalStart = startPos;
+	originalEnd = endPos;
+
 	startPos[2] -= 17.5 * CF_GetCharacterScale(client);
 	endPos[2] -= 17.5 * CF_GetCharacterScale(client);
 	
@@ -112,8 +130,20 @@ public void AB_DrawLaser(int client, float startPos[3], float endPos[3], float a
 	TeleportEntitySmoothly(start, startPos);
 	TeleportEntitySmoothly(end, endPos);
 
-	float canPos[3], canAng[3];
-	GetPointInDirection(startPos, ang, 80.0, canPos);
+	float canPos[3], canEndPos[3], canAng[3];
+	float originalDist = GetVectorDistance(originalStart, originalEnd);
+	float canDist = fmin(80.0, originalDist);
+	GetPointInDirection(startPos, ang, canDist, canPos);
+	CF_HasLineOfSight(startPos, canPos, _, canPos, client);
+	GetPointInDirection(endPos, ang, canDist, canEndPos);
+	CF_HasLineOfSight(canPos, canEndPos, _, canEndPos, client);
+
+	//This shrinks the canister (and therefore the snow particle) so that it doesn't clip through walls. 
+	//The trade-off is that the particle gets way too bright if the distance is too short, but that's preferable to having wallhacks against Kholdroz just because he fired Aurora Beam in a narrow space.
+	char scalechar[16];
+	float scale = fmin(f_ABRange[client] / 59.121, GetVectorDistance(canPos, canEndPos) / 59.121);
+	Format(scalechar, sizeof(scalechar), "%f", scale);
+	DispatchKeyValue(can, "modelscale", scalechar);
 
 	canAng = ang;
 	canAng[0] -= 90.0;
@@ -206,7 +236,7 @@ public void AB_CreateLaser(int client, float startPos[3], float endPos[3])
 	GetAngleBetweenPoints(startPos, endPos, ang);
 	ang[0] -= 90.0;
 
-	int canister = SpawnPropDynamic(MODEL_AB_PARTICLEBODY, startPos, ang, _, f_ABRange[client] / 59.121);	//59.121 is the height of the canister in HU.
+	int canister = SpawnPropDynamic(MODEL_AB_PARTICLEBODY, startPos, ang, _, GetVectorDistance(startPos, endPos) / 59.121);	//59.121 is the height of the canister in HU.
 	if (IsValidEntity(canister))
 	{
 		i_ABCanister[client] = EntIndexToEntRef(canister);
@@ -269,10 +299,13 @@ public void AB_Terminate(int client)
 
 		if (IsValidEntity(AB_GetWeapon(client)))
 			SetEntPropFloat(AB_GetWeapon(client), Prop_Send, "m_flNextPrimaryAttack", GetGameTime() + f_ABAttackStopgap[client]);
+
+		EmitSoundToAll(SOUND_AB_STOP, client, _, _, _, _, 120);
+		StopSound(client, SNDCHAN_AUTO, SOUND_AB_LOOP_1);
+		StopSound(client, SNDCHAN_AUTO, SOUND_AB_LOOP_2);
 	}
-	
+
 	b_ABActive[client] = false;
-	//TODO sounds
 }
 
 public void AB_RemoveLaser(int client)
