@@ -10,10 +10,10 @@
 #define SPR_SNOW_TRAIL			"materials/effects/softglow.vmt"
 #define SPR_SNOWFLAKE			"materials/chaos_fortress/sprites/snowflake.vmt"//"materials/effects/softglow.vmt"
 #define SPR_GLOW				"materials/sprites/glow02.vmt"
-#define SPR_LASER				"materials/sprites/laserbeam.vmt"
+#define SPR_AURORABEAM			"materials/chaos_fortress/sprites/aurora_beam.vmt"
 
 #define MODEL_DRG				"models/weapons/w_models/w_drg_ball.mdl"
-#define MODEL_AB_PARTICLEBODY				"models/props_c17/canister01a.mdl"
+#define MODEL_AB_PARTICLEBODY	"models/props_c17/canister01a.mdl"
 
 #define PARTICLE_SNOW_AURA_RED		"utaunt_glitter_teamcolor_red"
 #define PARTICLE_SNOW_AURA_BLUE		"utaunt_glitter_parent_silver"
@@ -24,7 +24,7 @@ public void OnMapStart()
 	PrecacheModel(SPR_SNOW_TRAIL);
 	PrecacheModel(SPR_SNOWFLAKE);
 	PrecacheModel(SPR_GLOW);
-	PrecacheModel(SPR_LASER);
+	PrecacheModel(SPR_AURORABEAM);
 
 	PrecacheModel(MODEL_DRG);
 	PrecacheModel(MODEL_AB_PARTICLEBODY);
@@ -72,32 +72,31 @@ public void AB_DrawLaser(int client, float startPos[3], float endPos[3], float a
 {	
 	int start = AB_GetStartEnt(client);
 	int end = AB_GetEndEnt(client);
-
-	startPos[2] -= 17.5 * CF_GetCharacterScale(client);
-	endPos[2] -= 17.5 * CF_GetCharacterScale(client);
-	GetPointInDirection(startPos, ang, 40.0, startPos);
-	GetPointInDirection(endPos, ang, 20.0, endPos);
-
 	int can = AB_GetCanister(client);
-	if (IsValidEntity(can))
-	{
-		float canPos[3], canAng[3];
-		GetPointInDirection(startPos, ang, 60.0, canPos);
+	int beam = AB_GetBeamEnt(client);
 
-		canAng = ang;
-		canAng[0] -= 90.0;
-		TeleportEntitySmoothly(can, canPos, canAng);
-		SetEntityRenderMode(can, RENDER_NONE);
-	}
-
-	if (!IsValidEntity(AB_GetBeamEnt(client)) || !IsValidEntity(start) || !IsValidEntity(end) || !IsValidEntity(can))
+	if (!IsValidEntity(beam) || !IsValidEntity(start) || !IsValidEntity(end) || !IsValidEntity(can))
 	{
 		AB_CreateLaser(client, startPos, endPos);
 		return;
 	}
 
+	startPos[2] -= 17.5 * CF_GetCharacterScale(client);
+	endPos[2] -= 17.5 * CF_GetCharacterScale(client);
+	
+	GetPointInDirection(startPos, ang, 20.0, startPos);
+	GetPointInDirection(endPos, ang, 20.0, endPos);
+
 	TeleportEntitySmoothly(start, startPos);
 	TeleportEntitySmoothly(end, endPos);
+
+	float canPos[3], canAng[3];
+	GetPointInDirection(startPos, ang, 80.0, canPos);
+
+	canAng = ang;
+	canAng[0] -= 90.0;
+	TeleportEntitySmoothly(can, canPos, canAng);
+	SetEntityRenderMode(can, RENDER_NONE);
 
 	int r = 255, b = 200;
 	if (TF2_GetClientTeam(client) == TFTeam_Blue)
@@ -105,8 +104,6 @@ public void AB_DrawLaser(int client, float startPos[3], float endPos[3], float a
 		r = 200;
 		b = 255;
 	}
-
-	int beam = AB_GetBeamEnt(client);
 
 	int currentR, currentG, currentB, currentA;
 	GetEntityRenderColor(beam, currentR, currentG, currentB, currentA);
@@ -121,12 +118,14 @@ public void AB_DrawLaser(int client, float startPos[3], float endPos[3], float a
 	if (currentB > b)
 		currentB = b;
 
-	SetEntityRenderColor(beam, currentR, currentG, currentB, 60 + RoundToFloor((Sine(GetGameTime() * 2.0) * 40.0)));
+	SetEntityRenderColor(beam, currentR, currentG, currentB, 90 + RoundToFloor((Sine(GetGameTime() * 4.0) * 30.0)));
 
 	//float amplitude = GetEntPropFloat(beam, Prop_Data, "m_fAmplitude");
-    SetEntPropFloat(beam, Prop_Data, "m_fAmplitude", 1.5);
-	SetEntPropFloat(beam, Prop_Data, "m_fWidth", (f_ABWidth[client] * 0.25) + (Sine(GetGameTime() * 2.0) * (f_ABWidth[client] * 0.1)));
-	SetEntPropFloat(beam, Prop_Data, "m_fEndWidth", (f_ABWidth[client] * 0.35) + (Sine(GetGameTime() * 2.0) * (f_ABWidth[client] * 0.1)));
+    SetEntPropFloat(beam, Prop_Data, "m_fAmplitude", 0.5);
+
+	//These are backwards on purpose!
+	SetEntPropFloat(beam, Prop_Data, "m_fEndWidth", (f_ABWidth[client] * 0.1) + (Sine(GetGameTime() * 3.0) * (f_ABWidth[client] * 0.05)));
+	SetEntPropFloat(beam, Prop_Data, "m_fWidth", (f_ABWidth[client]) + (Sine(GetGameTime() * 3.0) * (f_ABWidth[client] * 0.1)));
 }
 
 public void AB_SlowDown(int ref)
@@ -171,7 +170,7 @@ public void AB_CreateLaser(int client, float startPos[3], float endPos[3])
 	AB_RemoveLaser(client);
 
 	int start, end;
-	int beam = CreateEnvBeam(-1, -1, startPos, endPos, _, _, start, end, 200, 200, 200, 20, SPR_LASER, 0.1, 0.1, _, 0.0);
+	int beam = CreateEnvBeam(-1, -1, startPos, endPos, _, _, end, start, 200, 200, 200, 20, SPR_AURORABEAM, 0.1, 0.1, _, 0.0, 22.5);
 	if (IsValidEntity(beam) && IsValidEntity(start) && IsValidEntity(start))
 	{
 		i_ABBeamEnt[client] = EntIndexToEntRef(beam);
