@@ -185,8 +185,8 @@ public void AB_DrawLaser(int client, float startPos[3], float endPos[3], float a
 
 	//float amplitude = GetEntPropFloat(beam, Prop_Data, "m_fAmplitude");
     SetEntPropFloat(beam, Prop_Data, "m_fAmplitude", 1.5);
-	SetEntPropFloat(beam, Prop_Data, "m_fWidth", (f_ABWidth[client] * 0.25) + (Sine(GetGameTime()) * (f_ABWidth[client] * 0.1)));
-	SetEntPropFloat(beam, Prop_Data, "m_fEndWidth", (f_ABWidth[client] * 0.35) + (Sine(GetGameTime()) * (f_ABWidth[client] * 0.1)));
+	SetEntPropFloat(beam, Prop_Data, "m_fWidth", (f_ABWidth[client] * 0.25) + (Sine(GetGameTime() * 2.0) * (f_ABWidth[client] * 0.1)));
+	SetEntPropFloat(beam, Prop_Data, "m_fEndWidth", (f_ABWidth[client] * 0.35) + (Sine(GetGameTime() * 2.0) * (f_ABWidth[client] * 0.1)));
 }
 
 public void AB_SlowDown(int ref)
