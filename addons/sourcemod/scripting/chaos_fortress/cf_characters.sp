@@ -12,6 +12,8 @@ ArrayList CF_Characters_Configs;
 ArrayList CF_Characters_Names;
 ArrayList CF_CharacterParticles[MAXPLAYERS + 1] = { null, ... };
 
+bool b_IsAdminCharacter[2049] = { false, ... };
+
 ConfigMap Characters;
 
 #if defined USE_PREVIEWS
@@ -1501,6 +1503,7 @@ public void CFC_OnEntityDestroyed(int entity)
  	
  	FoundEnabled = CF_CheckPack("characters.Enabled Character Packs", false);
  	CF_CheckPack("characters.Download Character Packs", true);
+	CF_LoadCharacterPack("Admin", false);
  	
  	if (!FoundEnabled)
  	{
@@ -1569,7 +1572,7 @@ public void CFC_OnEntityDestroyed(int entity)
  		
  		Format(value, sizeof(value), "configs/chaos_fortress/%s.cfg", value);
  		
- 		CF_LoadSpecificCharacter(value, JustDownload);
+ 		CF_LoadSpecificCharacter(value, JustDownload, StrEqual(pack, "Admin"));
 			
 		if (!JustDownload)
 		{
@@ -1603,7 +1606,7 @@ public int CF_GetNumPlayers(char conf[255], int client)
 	return num;
 }
 
- public void CF_LoadSpecificCharacter(char path[255], bool JustDownload)
+void CF_LoadSpecificCharacter(char path[255], bool JustDownload, bool admin = false)
  {
 	if (!path[0])
 		return;
@@ -1629,6 +1632,7 @@ public int CF_GetNumPlayers(char conf[255], int client)
  	
  	if (!JustDownload)
  	{
+		b_IsAdminCharacter[GetArraySize(CF_Characters_Names)] = admin;
  		PushArrayString(CF_Characters_Names, str);
  	
  		#if defined DEBUG_CHARACTER_CREATION
@@ -1640,7 +1644,7 @@ public int CF_GetNumPlayers(char conf[255], int client)
  	DeleteCfg(Character);
  }
  
- public Menu CF_BuildCharactersMenu()
+Menu CF_BuildCharactersMenu(int client = 0)
  {
  	Menu menu = new Menu(CFC_Menu);
 	menu.SetTitle("Welcome to Chaos Fortress!\nWhich character would you like to spawn as?");
@@ -1648,17 +1652,20 @@ public int CF_GetNumPlayers(char conf[255], int client)
 	char name[255];
 	for (int i = 0; i < GetArraySize(CF_Characters_Names); i++)
 	{
-		GetArrayString(CF_Characters_Names, i, name, 255);
-		
-		#if defined DEBUG_CHARACTER_CREATION
-		PrintToServer("CREATING CHARACTER MENU: ADDED ITEM ''%s''", name);
-		#endif
-		
-		menu.AddItem("Character", name);
+		if (!IsValidClient(client) || !b_IsAdminCharacter[i] || CheckCommandAccess(client, "kick", ADMFLAG_KICK))
+		{
+			GetArrayString(CF_Characters_Names, i, name, 255);
+			
+			#if defined DEBUG_CHARACTER_CREATION
+			PrintToServer("CREATING CHARACTER MENU: ADDED ITEM ''%s''", name);
+			#endif
+			
+			menu.AddItem("Character", name);
+		}
 	}
 
 	return menu;
- }
+}
  
 public CFC_Menu(Menu menu, MenuAction action, int client, int param)
 {	
@@ -1707,7 +1714,7 @@ public Action CFC_OpenMenu(int client, int args)
 		return Plugin_Continue;
 	}
 		
-	Menu menu = CF_BuildCharactersMenu();
+	Menu menu = CF_BuildCharactersMenu(client);
 	menu.Display(client, MENU_TIME_FOREVER);
 	b_ReadingLore[client] = false;
 	i_DetailedDescPage[client] = -1;

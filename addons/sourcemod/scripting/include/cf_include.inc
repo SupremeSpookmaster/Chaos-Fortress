@@ -2160,3 +2160,59 @@ native void CF_SetEntityBlocksLOS(int entity, bool status);
  * @param points		The number of points to give.
  */
 native void CF_GiveHealingPoints(int client, float points);
+
+/**
+ * Automatically runs a hull trace, and can damage or perform custom logic on all targets caught.
+ * The hull trace is automatically lag-compensated and also automatically takes line-of-sight into consideration.
+ * This intended primarily for use with lasers.
+ * 
+ * @param client		The client firing the laser.
+ * @param startPos		Origin of the laser.
+ * @param ang			Angle in which to fire the laser.
+ * @param width			Hull trace width. Can be set to 0.0 or below to use a ray instead of a hull.
+ * @param range			Hull trace length.
+ * @param damage		Damage to deal.
+ * @param damagetype	Damage type.
+ * @param weapon		The weapon which deals this laser's damage.
+ * @param inflictor		The inflictor which deals this laser's damage.
+ * @param plugin		The plugin which owns all optional functions called by this native.
+ * @param filterFunc	Optional function to filter out certain entities from being hit by the laser. Must take the target's index and the user's index in that order, and return a bool (true to allow the hit, false to prevent it). If this is left as INVALID_FUNCTION, the laser will automatically filter out anything that is not a valid enemy.
+ * @param onHitFunc		Optional function to call when the laser hits a target. This is called immediately BEFORE the laser deals damage. Must take the target's index and the user's index, in that order.
+ * @param drawLaserFunc	Optional function to call to draw the beam. Must take the user's index, the start vector of the beam, the end vector of the beam, the angle vector of the beam, and the beam's width (float), all in that order.
+ */
+native void CF_FireGenericLaser(int client, float startPos[3], float ang[3], float width, float range, float damage = 0.0, int damagetype = DMG_GENERIC, int weapon = -1, int inflictor = -1, char[] plugin = "", Function filterFunc = INVALID_FUNCTION, Function onHitFunc = INVALID_FUNCTION, Function drawLaserFunc = INVALID_FUNCTION);
+
+/**
+ * Sets the time until the client's next special resource regen tick, in seconds.
+ * 
+ * @param client		The client whose next regen tick to set.
+ * @param delay			The duration until the next regen tick will occur.
+ */
+native void CF_SetTimeUntilResourceRegen(int client, float delay);
+
+/**
+ * Gets the time until the client's next special resource regen tick, in seconds.
+ * 
+ * @param client		The client whose next regen tick to get.
+ * 
+ * @return				The duration until the next regen tick will occur.
+ */
+native float CF_GetTimeUntilResourceRegen(int client);
+
+/**
+ * Sets the time between special resource regen ticks for this client.
+ * If you only need to speed up or delay the next tick, use CF_SetTimeUntilResourceRegen instead.
+ * 
+ * @param client			The client to set the special resource regen interval of.
+ * @param interval			The desired special resource regen interval.
+ */
+native void CF_SetResourceRegenInterval(int client, float interval);
+
+/**
+ * Gets the time between special resource regen ticks for this client.
+ * 
+ * @param client			The client to get the special resource regen interval of.
+ * 
+ * @return			The time between special resource regen ticks.
+ */
+native float CF_GetResourceRegenInterval(int client);
