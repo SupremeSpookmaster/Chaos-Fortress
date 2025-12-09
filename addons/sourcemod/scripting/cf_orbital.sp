@@ -364,7 +364,7 @@ public void Gravity_Logic(int id)
 }
 
 //If this is not here, movement is really jittery and weird while hovering, which is bad as a sniper for obvious reasons:
-public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
+/*public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
 {
 	if (Gravity_Active[client])
 	{
@@ -375,30 +375,33 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	}
 		
 	return Plugin_Continue;
-}
+}*/
 
 public void Gravity_SetVelocity(int client)
 {
-	CF_StartLagCompensation(client);
+	//CF_StartLagCompensation(client);
 
 	float targVel[3];
-	Gravity_CalculateVelocity(client, targVel);
-	
-	//eleportEntity(client, _, _, currentVel);
+
+	if (Gravity_CalculateVelocity(client, targVel))
+		TeleportEntity(client, _, _, targVel);
+
 	//SetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", currentVel);
-	CBaseEntity(client).SetAbsVelocity(targVel);
+	//CBaseEntity(client).SetAbsVelocity(targVel);
 	
-	CF_EndLagCompensation(client);
+	//CF_EndLagCompensation(client);
 }
 
-public void Gravity_CalculateVelocity(int client, float output[3])
+public bool Gravity_CalculateVelocity(int client, float output[3])
 {
+	bool returnVal = false;
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", output);
 	
-	float min = 1.0;
+	float min = 0.0;
 	if (output[2] <= min)
 	{
-		SetEntityGravity(client, 0.0);
+		SetEntityGravity(client, 0.000001);
+		returnVal = true;
 	}
 	else
 	{
@@ -406,6 +409,8 @@ public void Gravity_CalculateVelocity(int client, float output[3])
 	}
 
 	output[2] = fmax(min, output[2]);
+
+	return returnVal;
 }
 
 public void CF_OnCharacterCreated(int client)
