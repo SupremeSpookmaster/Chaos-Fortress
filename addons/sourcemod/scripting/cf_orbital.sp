@@ -304,7 +304,7 @@ public void Gravity_Toggle(int client, char abilityName[255])
 		Gravity_Wearable[client] = EntIndexToEntRef(CF_AttachWearable(client, view_as<int>(CF_ClassToken_Sniper), "tf_wearable", false, 0, 0, false, atts));
 		Gravity_Particle[client] = EntIndexToEntRef(CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_GRAVITY_RED : PARTICLE_GRAVITY_BLUE, "root"));
 
-		CF_PlayRandomSound(client, client, "sound_gravity_on");
+		CF_PlayRandomSound(client, client, "sound_gravity_boots_start");
 		
 		RequestFrame(Gravity_Logic, GetClientUserId(client));
 		Gravity_Active[client] = true;
