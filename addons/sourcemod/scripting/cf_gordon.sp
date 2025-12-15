@@ -35,12 +35,16 @@
 
 #define SOUND_GRAB_TF "ui/item_default_pickup.wav"      // grab
 #define SOUND_TOSS_TF "ui/item_default_drop.wav"        // throw
+#define SOUND_PROP_LOOP					")weapons/cow_mangler_idle.wav"
 
 #define PARTICLE_MINE_DESTROYED			"sapper_debris"
 
 
 #define SOUND_GRAB_OM "buttons/combine_button5.wav"     // grab
 #define SOUND_TOSS_OM "buttons/combine_button5.wav"     // throw
+
+
+
 #define SOUND_MINE_DESTROYED				"passtime/ball_smack.wav"
 #define BALL_HIT				"passtime/ball_smack.wav"
 
@@ -79,7 +83,7 @@ public void OnMapStart()
 	PrecacheSound(SOUND_TOSS_TF, true);
 	PrecacheSound(SOUND_MINE_DESTROYED);
 	PrecacheSound(BALL_HIT);
-
+	PrecacheSound(SOUND_PROP_LOOP);
 	PrecacheModel("materials/sprites/laserbeam.vmt");
 
 	for (int i = 0; i <= MaxClients; i++)
@@ -367,6 +371,7 @@ public void GrabProp_Activate(int client, char abilityName[255])
 	if (IsValidEntity(current))
 	{
 		i_GrabbedProp[client] = -1;
+		StopSound(client, SNDCHAN_AUTO, SOUND_PROP_LOOP);
 		return;
 	}
 
@@ -393,6 +398,8 @@ public void GrabProp_Activate(int client, char abilityName[255])
 		{
 			i_GrabbedProp[client] = EntIndexToEntRef(prop);
 			RequestFrame(GrabProp_Hold, GetClientUserId(client));
+			CF_PlayRandomSound(client, client, "prop_prepare");
+			EmitSoundToClient(client, SOUND_PROP_LOOP);
 		}
 	}
 }
@@ -518,9 +525,11 @@ public void pushProp(int id)
 
 	SubtractVectors(vecPos, vecFwd, vecVel);
 	ScaleVector(vecVel, 10.0);
-
+	StopSound(client, SNDCHAN_AUTO, SOUND_PROP_LOOP);
+	CF_PlayRandomSound(client, client, "gordon_push_prop");
 	TeleportEntity(prop, NULL_VECTOR, NULL_VECTOR, vecVel);
 }
+
 
 
 //////////////////////////////////////////////////////////////////////
@@ -986,6 +995,7 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 			SDKUnhook(client, SDKHook_PostThinkPost, Physcharge_OnPostThinkPost);
 		}
 	}
+	StopSound(client, SNDCHAN_AUTO, SOUND_PROP_LOOP);
 }
 
 public void OnEntityDestroyed(int entity)
