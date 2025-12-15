@@ -49,20 +49,12 @@ int i_GordonPropOwner[2048] = { -1, ... };
 int i_GrabbedProp[MAXPLAYERS + 1] = { -1, ... };
 float f_MineRadius[2048] = { 0.0, ... };
 float f_MineDMG[2048] = { 0.0, ... };
-float f_Minesound[2048] = { 0.0, ... };
 float f_MineBlastRadius[2048] = { 0.0, ... };
 float f_MineFalloffStart[2048] = { 0.0, ... };
 float f_MineFalloffMax[2048] = { 0.0, ... };
 float f_MineNextThink[2048] = { 0.0, ... };
 float f_PropHP[2048] = { 0.0, ... };
 
-
-int g_grabbed[MAXPLAYERS+1];          // track client's grabbed player
-float gDistance[MAXPLAYERS+1];
-
-
-int glowModel;
-int laserModel;
 
 ArrayList g_Mines[MAXPLAYERS + 1] = { null, ... };
 
@@ -78,8 +70,6 @@ public void OnPluginStart()
 
 public void OnMapStart()
 {
-
-	
 	PrecacheModel(MODEL_VENDINGMACHINE);
 	PrecacheModel(MODEL_BALL);
 	PrecacheModel(MODEL_TV);
@@ -90,10 +80,6 @@ public void OnMapStart()
 	PrecacheSound(SOUND_MINE_DESTROYED);
 	PrecacheSound(BALL_HIT);
 
-
-
-	glowModel = PrecacheModel("materials/sprites/glow02.vmt");
-	laserModel = PrecacheModel("materials/sprites/laser.vmt");
 	PrecacheModel("materials/sprites/laserbeam.vmt");
 
 	for (int i = 0; i <= MaxClients; i++)
@@ -131,7 +117,6 @@ public void SpawnProp_Activate(int client, char abilityName[255])
 	//Those methods are a bit on the advanced side, so for now, we'll stick to hard-coding each individual prop.
 	float durability, force, dammage;
 	char model[255];
-	char sound[255];
 
 	int selection = GetRandomInt(1, 5);
 	switch(selection)
@@ -141,7 +126,6 @@ public void SpawnProp_Activate(int client, char abilityName[255])
 			durability = 20.0;
 			force = 1200.0;
 			model = MODEL_BALL;
-			sound = BALL_HIT;
 			dammage = 175.0;
 			radius = 75.0;
 		}
@@ -150,7 +134,6 @@ public void SpawnProp_Activate(int client, char abilityName[255])
 			durability = 150.0;
 			force = 40.0;
 			model = MODEL_VENDINGMACHINE;
-			sound = BALL_HIT;
 			dammage = 150.0;
 			radius = 175.0;
 		}
@@ -159,7 +142,6 @@ public void SpawnProp_Activate(int client, char abilityName[255])
 			durability = 500.0;
 			force = 40.0;
 			model = MODEL_DOOR;
-			sound = BALL_HIT;
 			dammage = 100.0;
 			radius = 100.0;
 		}
@@ -169,7 +151,6 @@ public void SpawnProp_Activate(int client, char abilityName[255])
 			durability = 70.0;
 			force = 40.0;
 			model = MODEL_Prop;
-			sound = BALL_HIT;
 			dammage = 100.0;
 			radius = 65.0;
 		}
@@ -180,7 +161,6 @@ public void SpawnProp_Activate(int client, char abilityName[255])
 			durability = 100.0;
 			force = 200.0;
 			model = MODEL_TV;
-			sound = BALL_HIT;
 			dammage = 125.0;
 			radius = 175.0;
 		}
@@ -202,8 +182,6 @@ public void SpawnProp_Activate(int client, char abilityName[255])
 		f_PropHP[prop] = durability;
 		Mine_AddToList(prop, client, CF_GetArgI(client, GORDON, abilityName, "max_mines", 1));
 }
-
-
 
 
 
@@ -349,7 +327,6 @@ public void Mine_CheckVictims(int ref)
 
 	float dist;
 	int victim = CF_GetClosestTarget(pos, true, dist, f_MineRadius[prop], grabEnemyTeam(owner), GORDON, Mine_CheckVictim, true);
-	float ang[3];
 
 
 	if (IsValidEntity(victim))
@@ -498,12 +475,12 @@ public void PushProp_Activate(int client, char abilityName[255])
 		if (IsValidEntity(prop))
 		{
 			i_GrabbedProp[client] = EntIndexToEntRef(prop);
-			force = 2500;
 			RequestFrame(pushProp, GetClientUserId(client));
 		}
 	}
 	GetVelocityInDirection(ang, force, vel);
 }
+
 
 public void pushProp(int id)
 {
@@ -517,7 +494,7 @@ public void pushProp(int id)
 		return;
 	}
 
-	float targPos[3], ang[3], currentLoc[3], targVel[3], currentAng[3];
+	float targPos[3], currentLoc[3];
 	GetClientEyePosition(client, targPos);
 
 	//Don't allow the user to hold props through walls:
@@ -767,8 +744,6 @@ public bool Yoink_OnlyHumanAllies(entity, contentsMask, int client)
 	return CF_IsValidTarget(entity, TF2_GetClientTeam(entity));
 }
 
-int i_PhyschargeWings[MAXPLAYERS + 1] = { -1, ... };
-
 float f_PhyschargeEndTime[MAXPLAYERS + 1] = { 0.0, ... };
 
 bool b_Flying[MAXPLAYERS + 1] = { false, ... };
@@ -818,7 +793,7 @@ public Action Physcharge_PreThink(int client)
 	}
 
 	float currentVel[3];
-	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", currentVel);
+
 	
 	int buttons = GetClientButtons(client);
 	if (buttons & IN_DUCK != 0)
@@ -903,16 +878,7 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 /////////////                  ETC Commands                  /////////////
 //////////////////////////////////////////////////////////////////////
 
-public TraceToObject(client)
-{
-	new Float:vecClientEyePos[3], Float:vecClientEyeAng[3];
-	GetClientEyePosition(client, vecClientEyePos);
-	GetClientEyeAngles(client, vecClientEyeAng);
 
-	TR_TraceRayFilter(vecClientEyePos, vecClientEyeAng, MASK_PLAYERSOLID, RayType_Infinite, TraceRayGrab, client);
-
-	return TR_GetEntityIndex(INVALID_HANDLE);
-}
 
 public bool TraceRayGrab(int entityhit, int mask, any self)
 {
@@ -936,14 +902,6 @@ public bool TraceRayGrab(int entityhit, int mask, any self)
 		}
 	}
 	return false;
-}
-
-
-void PrintTF2MessFormatted(int client, const char[] message, any  ...)
-{
-	char buffer[256];
-	VFormat(buffer, sizeof(buffer), message, 3);
-	//CreateTFStypeMessage(client, buffer);
 }
 
 
