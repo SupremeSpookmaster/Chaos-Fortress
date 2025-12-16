@@ -1,15 +1,8 @@
-
-
-
-#pragma semicolon 1
-
 #include <cf_include>
-#include <sourcemod>
 #include <sdkhooks>
 #include <tf2_stocks>
 #include <cf_stocks>
 #include <fakeparticles>
-#include <worldtext>
 
 //This is the name of our plugin, in this case "cf_gordon".
 #define GORDON			"cf_gordon"
@@ -19,8 +12,8 @@
 #define GRAB_PROP		"gordon_grab_prop"
 #define PUSH_PROP		"gordon_push_prop"
 #define Physcharge		"gordon_ult"
-#define YOINK			"zeina_grab_ally"
-#define RELEASE			"zeina_drop_ally"
+#define YOINK			"gordon_grab_target"
+#define RELEASE			"gordon_drop_target"
 
 #define THROW_FORCE 1000.0
 
@@ -482,6 +475,7 @@ public void PushProp_Activate(int client, char abilityName[255])
 		if (IsValidEntity(prop))
 		{
 			i_GrabbedProp[client] = EntIndexToEntRef(prop);
+			force = 2500;
 			RequestFrame(pushProp, GetClientUserId(client));
 		}
 	}
@@ -745,6 +739,9 @@ public bool Yoink_FindTarget(int client, char abilityName[255])
 
 public int Yoink_GetTarget(int client) { return GetClientOfUserId(i_YoinkTarget[client]); }
 
+
+
+
 public bool Yoink_OnlyHumanAllies(entity, contentsMask, int client)
 {
 	if (!IsValidMulti(entity) || entity == client)
@@ -755,14 +752,13 @@ public bool Yoink_OnlyHumanAllies(entity, contentsMask, int client)
 
 float f_PhyschargeEndTime[MAXPLAYERS + 1] = { 0.0, ... };
 
-bool b_Flying[MAXPLAYERS + 1] = { false, ... };
+bool b_energying[MAXPLAYERS + 1] = { false, ... };
 
 public void Physcharge_Activate(int client, char abilityName[255])
 {
 	float ang[3], vel[3], pos[3];
 	GetClientAbsOrigin(client, pos);
 	GetClientEyeAngles(client, ang);
-
 
 	TeleportEntity(client, _, _, vel);
 
@@ -774,15 +770,15 @@ public void Physcharge_Activate(int client, char abilityName[255])
 	f_PhyschargeEndTime[client] = GetGameTime() + CF_GetArgF(client, GORDON, abilityName, "duration", 16.0);
 
 
-	b_Flying[client] = true;
+	b_energying[client] = true;
 }
 
 public void Physcharge_Terminate(int client)
 {
-	if (!b_Flying[client])
+	if (!b_energying[client])
 		return;
 
-	b_Flying[client] = false;
+	b_energying[client] = false;
 
 
 	SDKUnhook(client, SDKHook_PreThink, Physcharge_PreThink);
@@ -801,35 +797,21 @@ public Action Physcharge_PreThink(int client)
 		return Plugin_Stop;
 	}
 
-	float currentVel[3];
 
 	
 	int buttons = GetClientButtons(client);
 	if (buttons & IN_DUCK != 0)
-		currentVel[2] = -300.0;
+
 	if (buttons & IN_JUMP != 0)
-		currentVel[2] = 300.0;
 
-	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, currentVel);
 
-	if (GetEntityFlags(client) & FL_ONGROUND != 0)
-		SetEntityMoveType(client, MOVETYPE_WALK);
-	else
-		SetEntityMoveType(client, MOVETYPE_FLY);
+
+
 
 	return Plugin_Continue;
 }
 
-public void Physcharge_OnPostThink(int client)
-{
-}
-public void Physcharge_OnPreThinkPost(int client)
-{
-}
 
-public void Physcharge_OnPostThinkPost(int client)
-{
-}
 
 
 //////////////////////////////////////////////////////////////////////
@@ -889,49 +871,6 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 
 
 
-public bool TraceRayGrab(int entityhit, int mask, any self)
-{
-	if(entityhit > 0 && entityhit <= MaxClients)
-	{
-		if(IsPlayerAlive(entityhit) && entityhit != self)
-		{
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}
-	else
-	{        
-		char classname[32];
-		if(GetEntityClassname(entityhit, classname, sizeof(classname)) && (StrEqual(classname, "prop_physics") || StrEqual(classname, "tf_ammo_pack") || !StrContains(classname, "tf_projectil")))
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
-
-stock bool CreateTFStypeMessage(int client, const char[] message, const char[] icon="leaderboard_streak", int color=0)
-{
-	if(client<=0 || client>MaxClients || !IsClientInGame(client))
-	{
-		return false;
-	}
-	Handle bf = StartMessageOne("HudNotifyCustom", client);
-	if(bf==INVALID_HANDLE)
-	{
-		return false;
-	}
-	BfWriteString(bf, message);
-	BfWriteString(bf, icon);
-	BfWriteByte(bf, color);
-	EndMessage();
-	return true;
-}
-
 public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result)
 {
 	if (!StrEqual(plugin, GORDON))
@@ -958,19 +897,6 @@ public void CF_OnCharacterCreated(int client)
 {
 	i_GrabbedProp[client] = -1;
 	Yoink_Release(client, false, true, 0.0);
-
-
-	if (!IsFakeClient(client) && CF_HasAbility(client, GORDON, Physcharge))
-	{
-		SDKUnhook(client, SDKHook_PreThinkPost, Physcharge_OnPreThinkPost);
-		SDKHook(client, SDKHook_PreThinkPost, Physcharge_OnPreThinkPost);
-
-		SDKUnhook(client, SDKHook_PostThink, Physcharge_OnPostThink);
-		SDKHook(client, SDKHook_PostThink, Physcharge_OnPostThink);
-				
-		SDKUnhook(client, SDKHook_PostThinkPost, Physcharge_OnPostThinkPost);
-		SDKHook(client, SDKHook_PostThinkPost, Physcharge_OnPostThinkPost);
-	}
 }
 
 //When a player's character is removed (typically when they die or leave the match), this forward is called.
@@ -981,19 +907,12 @@ public void CF_OnCharacterRemoved(int client, CF_CharacterRemovalReason reason)
 {
 	i_GrabbedProp[client] = -1;
 	Mine_DestroyAll(client);
+
 	if (reason == CF_CRR_DEATH || reason == CF_CRR_DISCONNECT || reason == CF_CRR_ROUNDSTATE_CHANGED || reason == CF_CRR_SWITCHED_CHARACTER)
 	{
-		Yoink_Release(client, false, true, 0.0);
-		
+		Yoink_Release(client, false, true, 0.0);		
 
 		Physcharge_Terminate(client);
-
-		if (!IsFakeClient(client))
-		{
-			SDKUnhook(client, SDKHook_PreThinkPost, Physcharge_OnPreThinkPost);
-			SDKUnhook(client, SDKHook_PostThink, Physcharge_OnPostThink);
-			SDKUnhook(client, SDKHook_PostThinkPost, Physcharge_OnPostThinkPost);
-		}
 	}
 	StopSound(client, SNDCHAN_AUTO, SOUND_PROP_LOOP);
 }
@@ -1015,34 +934,6 @@ public void OnEntityDestroyed(int entity)
 }
 
 
-public TraceToPlayer(client)
-{
-    new Float:vecClientEyePos[3], Float:vecClientEyeAng[3];
-	GetClientEyePosition(client, vecClientEyePos);
-	GetClientEyeAngles(client, vecClientEyeAng);
-
-	TR_TraceRayFilter(vecClientEyePos, vecClientEyeAng, MASK_PLAYERSOLID, RayType_Infinite, TraceRayPlayer, client);
-
-	if (TR_DidHit(INVALID_HANDLE))
-	{
-                new ent = TR_GetEntityIndex(INVALID_HANDLE);
-                if(ent != 0)
-                {
-                        return ent;
-                }
-	}
-
-	return 0;
-}
-
-public bool:TraceRayPlayer(entityhit, mask, any:self) {
-	if(entityhit > 0 && entityhit <= MaxClients && IsPlayerAlive(entityhit) && entityhit != self)
-        {
-                return true;
-	}
-
-	return false;
-}
 
 //"stock" is just a keyword that tells the compiler not to throw warnings if the function never gets used. 
 //I've replaced it with "public" here to be cleaner, but leaving it as "stock" would not have caused any issues.
