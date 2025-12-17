@@ -442,6 +442,7 @@ public void GrabProp_Hold(int id)
 
 public void PushProp_Activate(int client, char abilityName[255])
 {
+	CF_PlayRandomSound(client, client, "gordon_push_prop");
 	//Step 0: If we're already grabbing a prop, drop it.
 	//You might also use this as an easy way to let the user launch props.
 	int current = EntRefToEntIndex(i_GrabbedProp[client]);
@@ -451,7 +452,6 @@ public void PushProp_Activate(int client, char abilityName[255])
 		return;
 	}
 
-	float force;
 
 	//Step 1: Get the position of the client's eyes, as well as the position of their crosshair.
 	float pos[3], endPos[3], ang[3],vel[3];
@@ -475,11 +475,10 @@ public void PushProp_Activate(int client, char abilityName[255])
 		if (IsValidEntity(prop))
 		{
 			i_GrabbedProp[client] = EntIndexToEntRef(prop);
-			force = 2500;
 			RequestFrame(pushProp, GetClientUserId(client));
 		}
 	}
-	GetVelocityInDirection(ang, force, vel);
+
 }
 
 
@@ -520,7 +519,7 @@ public void pushProp(int id)
 	SubtractVectors(vecPos, vecFwd, vecVel);
 	ScaleVector(vecVel, 10.0);
 	StopSound(client, SNDCHAN_AUTO, SOUND_PROP_LOOP);
-	CF_PlayRandomSound(client, client, "gordon_push_prop");
+
 	TeleportEntity(prop, NULL_VECTOR, NULL_VECTOR, vecVel);
 }
 
@@ -643,23 +642,7 @@ public void Yoink_Release(int client, bool ultOver, bool resupply, float cooldow
 {
 	
 	int target = Yoink_GetTarget(client);
-	new Float:vecView[3], Float:vecFwd[3], Float:vecPos[3], Float:vecVel[3];
-
-	GetClientEyeAngles(client, vecView);
-	GetAngleVectors(vecView, vecFwd, NULL_VECTOR, NULL_VECTOR);
-	GetClientEyePosition(client, vecPos);
-
-	vecPos[0]+=vecFwd[0]*THROW_FORCE;
-	vecPos[1]+=vecFwd[1]*THROW_FORCE;
-	vecPos[2]+=vecFwd[2]*THROW_FORCE;
-
-	GetEntPropVector(target, Prop_Send, "m_vecOrigin", vecFwd);
-
-	SubtractVectors(vecPos, vecFwd, vecVel);
-	ScaleVector(vecVel, 10.0);
-
-	TeleportEntity(target, NULL_VECTOR, NULL_VECTOR, vecVel);
-
+	/// THIS IS THAT MF Above
 
 	if (!b_Yoinking[client])
 		return;
@@ -693,6 +676,23 @@ public void Yoink_Release(int client, bool ultOver, bool resupply, float cooldow
 			CF_ApplyAbilityCooldown(client, cooldown, CF_AbilityType_M3, true);
 		CF_SetAbilityTypeSlot(client, CF_AbilityType_M3, -778);
 	}
+	new Float:vecView[3], Float:vecFwd[3], Float:vecPos[3], Float:vecVel[3];
+
+	GetClientEyeAngles(client, vecView);
+	GetAngleVectors(vecView, vecFwd, NULL_VECTOR, NULL_VECTOR);
+	GetClientEyePosition(client, vecPos);
+
+	vecPos[0]+=vecFwd[0]*THROW_FORCE;
+	vecPos[1]+=vecFwd[1]*THROW_FORCE;
+	vecPos[2]+=vecFwd[2]*THROW_FORCE;
+
+	GetEntPropVector(target, Prop_Send, "m_vecOrigin", vecFwd);
+
+	SubtractVectors(vecPos, vecFwd, vecVel);
+	ScaleVector(vecVel, 10.0);
+
+	CF_PlayRandomSound(client, client, "gordon_push_prop");
+	TeleportEntity(target, NULL_VECTOR, NULL_VECTOR, vecVel);
 }
 
 public void Release_Activate(int client, char abilityName[255])
@@ -736,6 +736,7 @@ public bool Yoink_FindTarget(int client, char abilityName[255])
 
 	return success;
 }
+
 
 public int Yoink_GetTarget(int client) { return GetClientOfUserId(i_YoinkTarget[client]); }
 
@@ -896,7 +897,6 @@ public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability
 public void CF_OnCharacterCreated(int client)
 {
 	i_GrabbedProp[client] = -1;
-	Yoink_Release(client, false, true, 0.0);
 }
 
 //When a player's character is removed (typically when they die or leave the match), this forward is called.
