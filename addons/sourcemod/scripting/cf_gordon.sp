@@ -442,7 +442,6 @@ public void GrabProp_Hold(int id)
 
 public void PushProp_Activate(int client, char abilityName[255])
 {
-	CF_PlayRandomSound(client, client, "gordon_push_prop");
 	//Step 0: If we're already grabbing a prop, drop it.
 	//You might also use this as an easy way to let the user launch props.
 	int current = EntRefToEntIndex(i_GrabbedProp[client]);
@@ -478,7 +477,6 @@ public void PushProp_Activate(int client, char abilityName[255])
 			RequestFrame(pushProp, GetClientUserId(client));
 		}
 	}
-
 }
 
 
@@ -498,11 +496,7 @@ public void pushProp(int id)
 	GetClientEyePosition(client, targPos);
 
 	//Don't allow the user to hold props through walls:
-	if (!CF_HasLineOfSight(targPos, currentLoc, _, _, client))
-	{
-		return;
-	}
-
+	
 	//Get a point which is 80 HU in the direction the user is aiming. This is the distance we want to hold our prop at.
 		new Float:vecView[3], Float:vecFwd[3], Float:vecPos[3], Float:vecVel[3];
 
@@ -519,7 +513,7 @@ public void pushProp(int id)
 	SubtractVectors(vecPos, vecFwd, vecVel);
 	ScaleVector(vecVel, 10.0);
 	StopSound(client, SNDCHAN_AUTO, SOUND_PROP_LOOP);
-
+	CF_PlayRandomSound(client, client, "gordon_push_prop");
 	TeleportEntity(prop, NULL_VECTOR, NULL_VECTOR, vecVel);
 }
 
