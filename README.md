@@ -1,11 +1,6 @@
-# *NOTICE*
-This game mode is currently incompatible with 64-bit servers. I am in the process of reducing gamedata usage so that everything will remain entirely functional when 32-bit is deprecated, but this will take some time. This notice will be deleted when compatibility issues are resolved.
-
 <img width="1706" height="794" alt="cf logo render 8" src="https://github.com/user-attachments/assets/6d72d425-d265-4943-83ab-e133c3ce7b03" />
 
 ***Chaos Fortress*** is just like normal TF2, but with a twist: instead of playing as one of the nine mercenaries, players step into the shoes of one of many custom characters, each with their own unique kit. Some of these characters are designed to function like suped-up versions of the nine mercenaries, while others act more as wildcards, going their own directions entirely. To top it all off, all of these characters have access to powerful Ultimate Abilities, which charge very slowly over time, or by meeting certain conditions such as dealing damage or healing allies. As for developers, CF is incredibly dev-friendly, coming packed with countless forwards and natives to make the creation of new custom characters a breeze.
-
-***Chaos Fortress*** is a game mode inspired by one of my previous developer ventures: **Boss VS Boss**. It was an old, private game mode, centered around **[the highly talented Batfoxkid's _FF2 Rewrite_](https://github.com/Batfoxkid/Freak-Fortress-2-Rewrite)**, in which every player took control of a Freak Fortress boss and fought alongside their team to kill everybody on the enemy team in the Arena game mode. In addition to being every bit as insane as it sounds, most of the bosses in BvB could get VERY complex, which made the game mode nightmarishly unfriendly to beginners and incredibly difficult to balance. BvB was also plagued by numerous glitches and poor game design practices, to the extent where I finally decided it was time to wipe the slate clean and use what I learned to make something bigger and better. And so, ***Chaos Fortress*** was born!
  
 ## *Installation Guide:*
   1. Install all of the **[prerequisites](https://github.com/SupremeSpookmaster/Chaos-Fortress#prerequisites)**.
@@ -30,17 +25,17 @@ All of these are required for ***Chaos Fortress*** to function.
 - **[CollisionHook](https://github.com/voided/CollisionHook)**
 - **[SteamWorks](https://users.alliedmods.net/~kyles/builds/SteamWorks/)**
 - **[TF2 Custom Attributes](https://forums.alliedmods.net/showthread.php?p=2703773)**
+- **[Portable NPC System](https://github.com/SupremeSpookmaster/TF2-Portable-NPC-System)**
 - **[CBaseNPC](https://github.com/TF2-DMB/CBaseNPC)**
 
 ## *Recommended Plugins/Settings:*
 None of these are required for ***Chaos Fortress*** to function, but are nonetheless highly recommended for the features they provide.
 - **[Halloween Cosmetic Enabler](https://github.com/Mikusch/HalloweenCosmeticEnabler)** - Allows Halloween cosmetics to be used year-round, therefore allowing Halloween-restricted wearables to be used by characters, without needing to force Halloween mode to be active. ***TODO: Ask Mikusch for permission to port this to CF. If granted: remove from prerequisites, add Mikusch to credits.***
-- **[TF2 Weaponmodel Override](https://github.com/Zabaniya001/TF2CA-weaponmodel_override)** - Used by some default characters for custom weapon models. ***TODO: Port all features to CF and remove this from prerequisites.***
-- **[Queue.inc](https://forums.alliedmods.net/showthread.php?t=319495)** - Not required to function, but *is* required to compile the plugin. ***TODO: Remove from Gadgeteer, Herlven, and Demopan, then remove from prerequisites.***
+- **[TF2 Weaponmodel Override](https://github.com/Zabaniya001/TF2CA-weaponmodel_override)** - Used by some default characters for custom weapon models.
+- **[Queue.inc](https://forums.alliedmods.net/showthread.php?t=319495)** - Not required to function, but *is* required to compile the plugin.
 - **[FF2Rewrite's version of cfgmap.inc](https://github.com/Batfoxkid/Freak-Fortress-2-Rewrite/blob/74584d3792ed35c34a09623ab2ea75bfffa82d5b/addons/sourcemod/scripting/include/cfgmap.inc)** - Not required to function, but *is* required to compile the plugin.
-- **[Portable NPC System](https://github.com/SupremeSpookmaster/TF2-Portable-NPC-System)** - Required for Gadgeteer to function, but is otherwise unneeded. Disable Gadgeteer if you do not install this.
-- **[TF2 World Text Helper](https://github.com/SupremeSpookmaster/TF2-World-Text-Helper)** - Used by Gadgeteer for various damage/healing indicators, but is not required for him to function.
-- **[TF2 Move Speed Unlocker](https://forums.alliedmods.net/showthread.php?p=2659562)** - Allows characters to move above TF2's default 520 HU/s limit. ***TODO: Port all features to CF and remove this from prerequisites.***
+- **[TF2 World Text Helper](https://github.com/SupremeSpookmaster/TF2-World-Text-Helper)** - Used by numerous characters for various custom damage/healing indicators, but is not required for base functionality.
+- **[TF2 Move Speed Unlocker](https://forums.alliedmods.net/showthread.php?p=2659562)** - Allows characters to move above TF2's default 520 HU/s limit.
 - **[Fake Particle System](https://github.com/SupremeSpookmaster/Fake-Particle-System)** - Used by some characters for VFX. Note that you will need to use the version of `data/fake_particle_system/fakeparticles.cfg` which comes packaged with ***Chaos Fortress***, and not the version included in the release build of the Fake Particle System.
 
 ## *Making Custom Characters*
@@ -99,3 +94,6 @@ Without a programmer, you don't have a game, but without the rest of the crew, y
  - **[HairyPairy](https://gamebanana.com/members/1289258)** (Creator of the **[Nikolai Belinski as the Heavy](https://gamebanana.com/sounds/27837)** voice pack, which I used as the source of Kranz's voice)
  - **Fred Tatasciore** (Voice actor for Nikolai Belinski, the source of Kranz's voice)
 </details>
+
+# *NOTICE*
+This game mode is currently incompatible with 64-bit servers due to gamedata incompatibility. I am in the process of reducing gamedata usage so that everything will remain entirely functional when 32-bit is deprecated, but this will take some time. This notice will be deleted when compatibility issues are resolved.
