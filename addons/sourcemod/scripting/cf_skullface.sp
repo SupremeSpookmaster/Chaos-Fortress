@@ -1444,6 +1444,9 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 
 public void CF_OnCheckCanBackstab(int attacker, int victim, bool &forceStab, bool &result)
 {
+	if (!result)
+		return;
+		
 	if (b_DaggerActive[attacker] && !IsABuilding(victim) && CF_IsValidTarget(victim, grabEnemyTeam(attacker)))
 		result = true;
 }

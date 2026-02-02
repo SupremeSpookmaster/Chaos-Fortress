@@ -224,7 +224,10 @@ public Action Stabs_DoMeleeStunSequence(Handle timely, DataPack pack)
 }
 
 public void CF_OnCheckCanBackstab(int attacker, int victim, bool &forceStab, bool &result)
-{ 
+{
+	if (!result)
+		return;
+		
 	if (!b_StabsEnabled[attacker] || IsABuilding(victim) || !CF_IsValidTarget(victim, grabEnemyTeam(attacker)))
 		return;
 

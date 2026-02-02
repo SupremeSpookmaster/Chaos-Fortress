@@ -29,7 +29,18 @@ public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inf
 
 public void PNPC_OnMeleeHit(int attacker, int weapon, int target, float &damage, bool &crit, bool &canStab, bool &forceStab, bool &result)
 {
-	canStab = false;
+	CFDMG_CheckCanStab(attacker, target, forceStab, canStab);
+}
+
+public void PNPC_OnBackstab(int attacker, int victim, float &damage)
+{
+	CFDMG_OnBackstab(attacker, victim, damage);
+}
+
+#endif
+
+void CFDMG_CheckCanStab(int attacker, int target, bool &forceStab, bool &canStab)
+{
 	if (!IsPhysProp(target))
 	{
 		Call_StartForward(g_AllowStabForward);
@@ -43,7 +54,7 @@ public void PNPC_OnMeleeHit(int attacker, int weapon, int target, float &damage,
 	}
 }
 
-public void PNPC_OnBackstab(int attacker, int victim, float &damage)
+public void CFDMG_OnBackstab(int attacker, int victim, float &damage)
 {
 	Call_StartForward(g_OnStab);
 
@@ -53,8 +64,6 @@ public void PNPC_OnBackstab(int attacker, int victim, float &damage)
 
 	Call_Finish();
 }
-
-#endif
 
 public void CFDMG_OnEntityCreated(int entity, const char[] classname)
 {
@@ -270,6 +279,33 @@ public Action CFDMG_OnTakeDamageAlive(victim, &attacker, &inflictor, &Float:dama
 	float originalDmg = damage;
 	Action ReturnValue = Plugin_Continue;
 	Action newValue;
+
+	bool usingCustomMeleeHitreg = false;
+
+	#if defined _pnpc_included_
+	usingCustomMeleeHitreg = PNPC_IsMeleeHitregEnabled();
+	#endif
+
+	if (!usingCustomMeleeHitreg && IsValidClient(victim) && weapon == GetPlayerWeaponSlot(attacker, 2))
+	{
+		bool canStab = damagecustom & TF_CUSTOM_BACKSTAB != 0, forceStab = false;
+		CFDMG_CheckCanStab(attacker, victim, forceStab, canStab);
+
+		if (canStab || forceStab)
+		{
+			CFDMG_OnBackstab(attacker, victim, damage);
+			ReturnValue = Plugin_Changed;
+
+			if (damagecustom & TF_CUSTOM_BACKSTAB == 0)
+				damagecustom |= TF_CUSTOM_BACKSTAB;
+		}
+		else if (damagecustom & TF_CUSTOM_BACKSTAB != 0)
+		{
+			damagecustom &= ~TF_CUSTOM_BACKSTAB;
+			damage = 0.0;
+			ReturnValue = Plugin_Changed;
+		}
+	}
 
 	if (IsValidEntity(weapon) && IsValidEntity(victim) && IsValidEntity(attacker))
 		CFDMG_CalculateDMGFromCustAtts(victim, attacker, inflictor, damage, weapon, damagePosition);
