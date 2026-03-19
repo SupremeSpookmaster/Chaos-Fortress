@@ -43,6 +43,9 @@ float MajorSteamEndAt[MAXPLAYERS+1];
 TFClassType MajorSteamClass[MAXPLAYERS+1];
 float MajorSteamAlarmAt;
 float Amp_BuffAmt[2048];
+float Amp_Radius[2048];
+float Amp_Res[2048];
+bool Is_Amp[2048];
 int Amp_Buffer[MAXPLAYERS + 1];
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -143,6 +146,20 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 
 public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
+	if (Is_Amp[victim] && Amp_Res[victim] != 1.0)
+	{
+		float metal = float(GetEntProp(victim, Prop_Send, "m_iUpgradeMetal"));
+
+		float maxToResist = fmin(metal, damage * (1.0 - Amp_Res[victim]));
+
+		float resisted = damage - maxToResist;
+
+		SetEntProp(victim, Prop_Send, "m_iUpgradeMetal", GetEntProp(victim, Prop_Send, "m_iUpgradeMetal") - RoundToFloor(resisted));
+
+		damage -= resisted;
+		return Plugin_Changed;
+	}
+
 	if (!IsValidClient(victim))
 		return Plugin_Continue;
 		
@@ -419,6 +436,14 @@ void OnBuildObject(Event event, const char[] name, bool dontBroadcast)
 				SetEntProp(entity, Prop_Send, "m_nSkin", GetEntProp(entity, Prop_Send, "m_nSkin") + 2);
 				Amp_BuffAmt[entity] = CF_GetArgF(owner, PluginName, ABILITY_BUILDINGS, buffer, 1.15);
 
+				FormatEx(buffer, sizeof(buffer), "%s_amplifier_radius", prefix);
+				Amp_Radius[entity] = CF_GetArgF(owner, PluginName, ABILITY_BUILDINGS, buffer, 400.0);
+
+				FormatEx(buffer, sizeof(buffer), "%s_amplifier_res", prefix);
+				Amp_Res[entity] = CF_GetArgF(owner, PluginName, ABILITY_BUILDINGS, buffer, 0.75);
+
+				Is_Amp[entity] = true;
+
 				CreateTimer(0.1, Timer_AmpBuilding, EntIndexToEntRef(entity), TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
 			}
 			else
@@ -435,6 +460,14 @@ void OnBuildObject(Event event, const char[] name, bool dontBroadcast)
 			}
 		}
 	}
+}
+
+public void OnEntityDestroyed(int entity)
+{
+	if (entity < 0 || entity > 2048)
+		return;
+
+	Is_Amp[entity] = false;
 }
 
 Action Timer_LimitBuilding(Handle timer, DataPack pack)
@@ -515,7 +548,7 @@ Action Timer_AmpThink(Handle timer, int ref)
 				}
 
 				GetEntPropVector(client, Prop_Send, "m_vecOrigin", pos2);
-				if(GetVectorDistance(pos1, pos2, true) < 30000.0)
+				if(GetVectorDistance(pos1, pos2, false) < Amp_Radius[entity])
 				{
 					int cost = AmpBuffTimer[client] ? 6 : 50;
 					if(metal >= cost)
@@ -532,6 +565,15 @@ Action Timer_AmpThink(Handle timer, int ref)
 						AmpBuffTimer[client] = CreateTimer(2.5, Timer_AmpBuff, client);
 						Amp_BuffAmt[client] = Amp_BuffAmt[entity];
 						Amp_Buffer[client] = GetClientUserId(owner);
+
+						int r = 255, b = 200;
+						if (TF2_GetClientTeam(client) == TFTeam_Blue)
+						{
+							r = 200;
+							b = 255;
+						}
+
+						SpawnRing(pos2, 80.0, 0.0, 0.0, 0.0, BeamSprite, HaloSprite, r, 200, b, 180, 1, 0.2, 16.0, 0.0, 1, 1.0, 0);
 
 						metal -= cost;
 						ultCharge += float(cost);
