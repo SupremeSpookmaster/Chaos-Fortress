@@ -81,6 +81,21 @@
 				"linux64"		"@_ZN9CTFPlayer21TeamFortress_SetSpeedEv"
 				"windows"	"\x55\x8B\xEC\x83\xEC\x24\xA1\x2A\x2A\x2A\x2A\x56\x8B\xF1\x89\x75\xF0"
 			}
+			"CTFWrench::Equip"
+			{
+				"library"	"server"
+				"linux"		"@_ZN9CTFWrench5EquipEP20CBaseCombatCharacter"
+			}
+			"CTFWeaponBase::Equip"
+			{
+				"library"	"server"
+				"linux"		"@_ZN13CTFWeaponBase5EquipEP20CBaseCombatCharacter"
+			}
+			"CTFWrench::Detach"
+			{
+				"library"	"server"
+				"linux"		"@_ZN9CTFWrench6DetachEv"
+			}
 		}
 		"Functions"
 		{
@@ -236,6 +251,27 @@
 						"type" "cbaseentity"
 					}
 				}
+			}
+			"CTFWrench::Equip"
+			{
+				"signature"	"CTFWrench::Equip"
+				"callconv"	"thiscall"
+				"return"	"void"
+				"this"		"entity"
+				"arguments"
+				{
+					"player"
+					{
+						"type"	"cbaseentity"
+					}
+				}
+			}
+			"CTFWrench::Detach"
+			{
+				"signature"	"CTFWrench::Detach"
+				"callconv"	"thiscall"
+				"return"	"void"
+				"this"		"entity"
 			}
 		}
 		"Offsets"
