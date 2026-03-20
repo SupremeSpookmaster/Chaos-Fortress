@@ -150,9 +150,7 @@ public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &in
 	{
 		float metal = float(GetEntProp(victim, Prop_Send, "m_iUpgradeMetal"));
 
-		float maxToResist = fmin(metal, damage * (1.0 - Amp_Res[victim]));
-
-		float resisted = damage - maxToResist;
+		float resisted = fmin(metal, damage * (1.0 - Amp_Res[victim]));
 
 		SetEntProp(victim, Prop_Send, "m_iUpgradeMetal", GetEntProp(victim, Prop_Send, "m_iUpgradeMetal") - RoundToFloor(resisted));
 
