@@ -211,6 +211,8 @@ public Native_CF_SetKillstreak(Handle plugin, int numParams)
  	
  	if (IsValidClient(client))
  	{
+		SetEntProp(client, Prop_Send, "m_nStreaks", kills);
+
  		if (announce)
  		{
 	 		bool ksMessage = false;

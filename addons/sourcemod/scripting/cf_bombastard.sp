@@ -27,6 +27,7 @@
 #define MODEL_CLUSTER_BOMB		"models/weapons/w_models/w_cannonball.mdl"
 
 int Model_TripBeam, Model_TripHalo;
+float f_ClusterUnblockedAt[MAXPLAYERS + 1] = { 0.0, ... };
 
 public void OnMapStart()
 {
@@ -305,6 +306,8 @@ public void Strike_Activate(int client, char ability[255])
 
 public Action TF2_CalcIsAttackCritical(int client, int weapon, char[]weaponname, bool &result)
 {
+	f_ClusterUnblockedAt[client] = GetGameTime() + 0.8;
+
 	if (GetGameTime() > f_StrikeSwingTime[client])
 		return Plugin_Continue;
 
@@ -571,6 +574,12 @@ public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability
 
 	if (!StrEqual(plugin, BOMBASTARD))
 		return Plugin_Continue;
+
+	if (StrContains(ability, CLUSTER) != -1 && GetGameTime() < f_ClusterUnblockedAt[client])
+	{
+		result = false;
+		return Plugin_Changed;
+	}
 
 	if (StrContains(ability, STRIKE) != -1)
 	{
