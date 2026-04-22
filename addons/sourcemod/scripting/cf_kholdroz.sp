@@ -17,6 +17,7 @@
 
 #define MODEL_DRG				"models/weapons/w_models/w_drg_ball.mdl"
 #define MODEL_AB_PARTICLEBODY	"models/props_c17/canister01a.mdl"
+#define MODEL_BOLT				"models/workshop/weapons/c_models/c_xms_cold_shoulder/c_xms_cold_shoulder.mdl"
 
 #define PARTICLE_SNOW_AURA_RED		"utaunt_glitter_teamcolor_red"
 #define PARTICLE_SNOW_AURA_BLUE		"utaunt_glitter_parent_silver"
@@ -37,6 +38,8 @@
 #define SOUND_ICICLE_HIT			")weapons/icicle_melt_01.wav"
 #define SOUND_COLDSNAP_1			")weapons/demo_charge_hit_flesh3.wav"
 #define SOUND_COLDSNAP_2			")weapons/breadmonster/throwable/bm_throwable_smash.wav"
+#define SOUND_BOLT_CHARGE_START_1	")weapons/icicle_freeze_victim_01.wav"
+#define SOUND_BOLT_CHARGE_FINISH_1	")"
 
 static char g_FrozenVulnSFX[][] = {
 	")weapons/icicle_hit_world_01.wav",
@@ -54,6 +57,7 @@ public void OnMapStart()
 	PrecacheModel(SPR_GLOW);
 	i_AuroraBeam = PrecacheModel(SPR_AURORABEAM);
 	i_AuroraMist = PrecacheModel(SPR_AURORAMIST);
+	PrecacheModel(MODEL_BOLT);
 
 	PrecacheModel(MODEL_DRG);
 	PrecacheModel(MODEL_AB_PARTICLEBODY);
@@ -72,6 +76,8 @@ public void OnMapStart()
 	PrecacheSound(SOUND_ICICLE_HIT);
 	PrecacheSound(SOUND_COLDSNAP_1);
 	PrecacheSound(SOUND_COLDSNAP_2);
+	PrecacheSound(SOUND_BOLT_CHARGE_START_1);
+	//PrecacheSound(SOUND_BOLT_CHARGE_FINISH_1);
 
 	for (int i = 0; i < sizeof(g_FrozenVulnSFX); i++) { PrecacheSound(g_FrozenVulnSFX[i]); }
 
@@ -387,7 +393,7 @@ public void AB_ShootRing(int client, float startPos[3], float ang[3], float endP
 	color[2] = TF2_GetClientTeam(client) == TFTeam_Blue ? 255 : 180;
 	color[3] = 140;
 
-	if (SpawnRing_Controllable(startPos, ang, f_ABWidth[client] * 0.25, i_AuroraMist, _, _, f_ABRingTravelTime, 12.0, 2.0, color, 10, _, x, y))
+	if (SpawnRing_Controllable(startPos, ang, f_ABWidth[client] * 0.25, i_AuroraMist, _, _, f_ABRingTravelTime, 12.0, 0.0, color, 10, _, x, y))
 	{
 		float dummy[3];
 		GetAngleBetweenPoints(startPos, endPos, dummy);
@@ -714,14 +720,200 @@ int AB_GetStartEnt(int client) { return EntRefToEntIndex(i_ABStartEnt[client]); 
 int AB_GetEndEnt(int client) { return EntRefToEntIndex(i_ABEndEnt[client]); }
 int AB_GetCanister(int client) { return EntRefToEntIndex(i_ABCanister[client]); }
 
+float f_BoltChargeTime[MAXPLAYERS + 1] = { 0.0, ... };
+float f_BoltChargeStartTime[MAXPLAYERS + 1] = { 0.0, ... };
+float f_BoltChargeCost[MAXPLAYERS + 1] = { 0.0, ... };
+float f_BoltBaseVel[MAXPLAYERS + 1] = { 0.0, ... };
+float f_BoltBonusVel[MAXPLAYERS + 1] = { 0.0, ... };
+float f_BoltBaseDMG[MAXPLAYERS + 1] = { 0.0, ... };
+float f_BoltBonusDMG[MAXPLAYERS + 1] = { 0.0, ... };
+float f_BoltDMG[2049] = { 0.0, ... };
+float f_BoltHSMult[2049] = { 1.0, ... };
+float f_BoltFrozenMult[2049] = { 1.0, ... };
+float f_BoltBaseCryo[MAXPLAYERS + 1] = { 0.0, ... };
+float f_BoltBonusCryo[MAXPLAYERS + 1] = { 0.0, ... };
+float f_BoltCryo[2049] = { 0.0, ... };
+float f_BoltCryoHSMult[2049] = { 1.0, ... };
+
+bool b_BoltCanHeadshot[2049] = { false, ... };
+bool b_BoltFullCharge[MAXPLAYERS + 1] = { false, ... };
+
+int i_BoltProp[MAXPLAYERS + 1] = { -1, ... };
+
+Handle g_BoltChargeTimer[MAXPLAYERS + 1] = { null, ... };
+
+public void Bolt_StartCharging(int client, char ability[255])
+{
+	f_BoltChargeTime[client] = CF_GetArgF(client, KHOLDROZ, ability, "charge_time", 1.2);
+	f_BoltChargeStartTime[client] = GetGameTime();
+
+	f_BoltChargeCost[client] = (CF_GetArgF(client, KHOLDROZ, ability, "charge_cost", 10.0) / f_BoltChargeTime[client]) * 0.1;
+
+	f_BoltBaseVel[client] = CF_GetArgF(client, KHOLDROZ, ability, "velocity_base", 1200.0);
+	f_BoltBonusVel[client] = CF_GetArgF(client, KHOLDROZ, ability, "velocity_bonus", 600.0);
+
+	b_BoltCanHeadshot[client] = CF_GetArgI(client, KHOLDROZ, ability, "can_headshot", 1) != 0;
+
+	f_BoltBaseDMG[client] = CF_GetArgF(client, KHOLDROZ, ability, "damage_base", 30.0);
+	f_BoltBonusDMG[client] = CF_GetArgF(client, KHOLDROZ, ability, "damage_bonus", 60.0);
+
+	f_BoltHSMult[client] = CF_GetArgF(client, KHOLDROZ, ability, "damage_hs_mult", 1.5);
+	f_BoltFrozenMult[client] = CF_GetArgF(client, KHOLDROZ, ability, "damage_frozen_mult", 1.5);
+
+	f_BoltBaseCryo[client] = CF_GetArgF(client, KHOLDROZ, ability, "cryo_base", 0.1);
+	f_BoltBonusCryo[client] = CF_GetArgF(client, KHOLDROZ, ability, "cryo_bonus", 0.25);
+	f_BoltCryoHSMult[client] = CF_GetArgF(client, KHOLDROZ, ability, "cryo_hs_mult", 3.0);
+
+	EmitSoundToAll(SOUND_BOLT_CHARGE_START_1, client, _, 110, _, _, GetRandomInt(120, 140));
+
+	if (f_BoltChargeTime[client] > 0.0)
+	{
+		b_BoltFullCharge[client] = false;
+
+		Bolt_KillChargeTimer(client);
+
+		DataPack pack = new DataPack();
+		g_BoltChargeTimer[client] = CreateDataTimer(0.1, Bolt_ChargeLogic, pack, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+		WritePackCell(pack, GetClientUserId(client));
+		WritePackCell(pack, client);
+
+		float pos[3], ang[3];
+		GetClientEyeAngles(client, ang);
+		Bolt_GetPropLocation(client, pos);
+		ang[0] += 90.0;
+
+		int prop = SpawnPropDynamic(MODEL_BOLT, pos, ang);
+		if (IsValidEntity(prop))
+		{
+			CPrintToChatAll("Prop spawned");
+			i_BoltProp[client] = EntIndexToEntRef(prop);
+			AttachAura(prop, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_SNOW_AURA_RED : PARTICLE_SNOW_AURA_BLUE);
+			RequestFrame(Bolt_MovePropToLocation, GetClientUserId(client));
+		}
+	}
+	else
+	{
+		Bolt_Fire(client);
+	}
+}
+
+public void Bolt_GetPropLocation(int client, float endOutput[3])
+{
+	float pos[3], ang[3];
+	GetClientEyePosition(client, pos);
+	GetClientEyeAngles(client, ang);
+	pos[2] -= 20.0;
+
+	GetPointInDirection(pos, ang, 60.0, endOutput);
+}
+
+public void Bolt_MovePropToLocation(int id)
+{
+	int client = GetClientOfUserId(id);
+	if (!IsValidMulti(client))
+		return;
+
+	int prop = EntRefToEntIndex(i_BoltProp[client]);
+	if (!IsValidEntity(prop))
+		return;
+
+	CPrintToChatAll("Moving prop");
+
+	float currentPos[3], targPos[3], ang[3], buffer[3];
+	GetClientEyeAngles(client, ang);
+	Bolt_GetPropLocation(client, targPos);
+	GetEntPropVector(prop, Prop_Data, "m_vecAbsOrigin", currentPos);
+	SubtractVectors(targPos, currentPos, buffer);
+	ScaleVector(buffer, (GetTickInterval() / 1.0) * 12.0);
+
+	AddVectors(currentPos, buffer, currentPos);
+
+	ang[0] += 90.0;
+	TeleportEntity(prop, currentPos, ang);
+
+	float scale = Bolt_GetPropScale(client);
+	char scalechar[16];
+	Format(scalechar, sizeof(scalechar), "%f", scale);
+	DispatchKeyValue(prop, "modelscale", scalechar);
+
+	RequestFrame(Bolt_MovePropToLocation, id);
+}
+
+public Action Bolt_ChargeLogic(Handle timer, DataPack pack)
+{
+	ResetPack(pack);
+	int client = GetClientOfUserId(ReadPackCell(pack));
+	int cell = ReadPackCell(pack);
+
+	if (!IsValidMulti(client))
+	{
+		g_BoltChargeTimer[cell] = null;
+		return Plugin_Stop;
+	}
+
+	if (f_BoltChargeCost[client] > 0.0)
+	{
+		CF_SetTimeUntilResourceRegen(client, 1.0);
+
+		if (!b_BoltFullCharge[client])
+		{
+			if (f_BoltChargeCost[client] > CF_GetSpecialResource(client))
+				f_BoltChargeStartTime[client] += 0.1;
+			else
+				CF_GiveSpecialResource(client, -f_BoltChargeCost[client]);
+		}
+	}
+
+	if (!b_BoltFullCharge[client] && Bolt_GetChargePercentage(client) >= 1.0)
+	{
+		b_BoltFullCharge[client] = true;
+		EmitSoundToAll(SOUND_BOLT_CHARGE_FINISH_1, client, _, 110);
+	}
+
+	return Plugin_Continue;
+}
+
+public void Bolt_Fire(int client)
+{
+
+	Bolt_Terminate(client);
+}
+
+public void Bolt_KillChargeTimer(int client)
+{
+	delete g_BoltChargeTimer[client];
+	g_BoltChargeTimer[client] = null;
+}
+
+public void Bolt_Terminate(int client)
+{
+	Bolt_KillChargeTimer(client);
+	int prop = EntRefToEntIndex(i_BoltProp[client]);
+	if (IsValidEntity(prop))
+		RemoveEntity(prop);
+}
+
+public float Bolt_GetPropScale(int client) { return 1.0 + (Bolt_GetChargePercentage(client) * 1.5); }
+
+public float Bolt_GetChargePercentage(int client)
+{
+	float gt = GetGameTime();
+	if ((gt >= f_BoltChargeStartTime[client] + f_BoltChargeTime[client]) || f_BoltChargeTime[client] <= 0.0)
+		return 1.0;
+	
+	return (gt - f_BoltChargeStartTime[client]) / f_BoltChargeTime[client];
+}
+
 public void CF_OnCharacterCreated(int client)
 {
 	AB_Terminate(client);
+	Bolt_Terminate(client);
 }
 
 public void CF_OnCharacterRemoved(int client)
 {
 	AB_Terminate(client);
+	Bolt_Terminate(client);
 	i_ColdSnapSlot[client] = 0;
 }
 
@@ -732,6 +924,9 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	
 	if (StrContains(abilityName, BEAM) != -1)
 		AB_Fire(client, abilityName);
+
+	if (StrContains(abilityName, BOLT) != -1)
+		Bolt_StartCharging(client, abilityName);
 }
 
 public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255], char abilityName[255])
@@ -740,9 +935,9 @@ public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255]
 		return;
 
 	if (StrContains(abilityName, BEAM) != -1)
-	{
 		AB_Terminate(client);
-	}
+	if (StrContains(abilityName, BOLT) != -1)
+		Bolt_Fire(client);
 }
 
 public void OnEntityDestroyed(int entity)

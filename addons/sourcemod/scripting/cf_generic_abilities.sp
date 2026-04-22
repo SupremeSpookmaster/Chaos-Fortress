@@ -31,6 +31,7 @@
 #define CLOAK_BLOCK			"generic_block_cloak"
 #define RESOURCES			"generic_give_resources"
 #define BULLET				"generic_bullets"
+#define SHIELD				"generic_shield_allies"
 
 float Weapon_EndTime[2049] = { 0.0, ... };
 
@@ -604,6 +605,11 @@ public void CF_OnAbility(int client, char pluginName[255], char abilityName[255]
 	{
 		Bullet_Activate(client, abilityName);
 	}
+
+	if (StrContains(abilityName, SHIELD) != -1)
+	{
+		Shield_Activate(client, abilityName);
+	}
 }
 
 bool PrimaryFire_HSFalloff = false;
@@ -643,6 +649,11 @@ public void Bullet_Hit(int attacker, int victim, float &baseDamage, bool &allowF
 	}
 
 	hsEffect = PrimaryFire_HSEffect;
+}
+
+public void Shield_Activate(int client, char abilityName[255])
+{
+	
 }
 
 public void Resources_Activate(int client, char abilityName[255])
