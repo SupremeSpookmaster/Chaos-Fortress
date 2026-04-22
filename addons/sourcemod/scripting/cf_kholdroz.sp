@@ -43,13 +43,15 @@ static char g_FrozenVulnSFX[][] = {
 	")weapons/icicle_hit_world_03.wav"
 };
 
+int i_AuroraBeam;
+
 public void OnMapStart()
 {
 	PrecacheModel("materials/sprites/laserbeam.vmt");
 	PrecacheModel(SPR_SNOW_TRAIL);
 	PrecacheModel(SPR_SNOWFLAKE);
 	PrecacheModel(SPR_GLOW);
-	PrecacheModel(SPR_AURORABEAM);
+	i_AuroraBeam = PrecacheModel(SPR_AURORABEAM);
 
 	PrecacheModel(MODEL_DRG);
 	PrecacheModel(MODEL_AB_PARTICLEBODY);
@@ -70,6 +72,8 @@ public void OnMapStart()
 	PrecacheSound(SOUND_COLDSNAP_2);
 
 	for (int i = 0; i < sizeof(g_FrozenVulnSFX); i++) { PrecacheSound(g_FrozenVulnSFX[i]); }
+
+	CFStocks_Precache();
 }
 
 public void OnPluginStart()
@@ -319,6 +323,7 @@ float f_ABCost[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ABRegenStopgap[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ABAttackStopgap[MAXPLAYERS + 1] = { 0.0, ... };
 float f_ABBuildup[MAXPLAYERS + 1] = { 0.0, ... };
+float f_ABNextRing[MAXPLAYERS + 1] = { 0.0, ... };
 
 float f_ABSlowDownMult[2049] = { 0.0, ... };
 
@@ -366,6 +371,55 @@ public void AB_Fire(int client, char abilityName[255])
 	EmitSoundToAll(SOUND_AB_LOOP_3, client, _, 110);
 }
 
+float vec_ABRingTargPos[2049][3];
+
+float f_ABRingTravelTime = 1.0;
+
+public void AB_ShootRing(int client, float startPos[3], float ang[3], float endPos[3])
+{
+	int x, y;
+
+	int color[4];
+	color[0] = TF2_GetClientTeam(client) == TFTeam_Red ? 255 : 120;
+	color[1] = 120;
+	color[2] = TF2_GetClientTeam(client) == TFTeam_Blue ? 255 : 120;
+	color[3] = 140;
+
+	if (SpawnRing_Controllable(startPos, ang, f_ABWidth[client] * 0.25, i_AuroraBeam, _, _, f_ABRingTravelTime, 18.0, 2.0, color, 8, _, x, y))
+	{
+		float dummy[3];
+		GetAngleBetweenPoints(startPos, endPos, dummy);
+
+		dummy[0] += 90.0;
+		GetPointInDirection(endPos, dummy, f_ABWidth[client] * 0.75, vec_ABRingTargPos[x]);
+
+		dummy[0] -= 180.0;
+		GetPointInDirection(endPos, dummy, f_ABWidth[client] * 0.75, vec_ABRingTargPos[y]);
+
+		RequestFrame(AB_MoveRing, EntIndexToEntRef(x));
+		RequestFrame(AB_MoveRing, EntIndexToEntRef(y));
+	}
+}
+
+public void AB_MoveRing(int ref)
+{
+	int ent = EntRefToEntIndex(ref);
+	if (!IsValidEntity(ent))
+		return;
+
+	float currentPos[3], buffer[3];
+	GetEntPropVector(ent, Prop_Data, "m_vecAbsOrigin", currentPos);
+	SubtractVectors(vec_ABRingTargPos[ent], currentPos, buffer);
+
+	ScaleVector(buffer, (GetTickInterval() / f_ABRingTravelTime) * 4.0);
+
+	AddVectors(currentPos, buffer, currentPos);
+
+	TeleportEntity(ent, currentPos);
+
+	RequestFrame(AB_MoveRing, ref);
+}
+
 public void AB_OnHit(int victim, int attacker)
 {
 	b_IceDamage[attacker] = true;
@@ -381,7 +435,7 @@ public void AB_DrawLaser(int client, float startPos[3], float endPos[3], float a
 
 	if (!IsValidEntity(beam) || !IsValidEntity(start) || !IsValidEntity(end) || !IsValidEntity(can))
 	{
-		AB_CreateLaser(client, startPos, endPos);
+		AB_CreateLaser(client, startPos, endPos, ang);
 		return;
 	}
 
@@ -391,6 +445,8 @@ public void AB_DrawLaser(int client, float startPos[3], float endPos[3], float a
 
 	startPos[2] -= 17.5 * CF_GetCharacterScale(client);
 	endPos[2] -= 17.5 * CF_GetCharacterScale(client);
+
+	//AB_ShootRing(client, startPos, ang, endPos);
 	
 	GetPointInDirection(startPos, ang, 20.0, startPos);
 	GetPointInDirection(endPos, ang, 20.0, endPos);
@@ -446,6 +502,12 @@ public void AB_DrawLaser(int client, float startPos[3], float endPos[3], float a
 	//These are backwards on purpose!
 	SetEntPropFloat(beam, Prop_Data, "m_fEndWidth", (f_ABWidth[client] * 0.1) + (Sine(GetGameTime() * 3.0) * (f_ABWidth[client] * 0.05)));
 	SetEntPropFloat(beam, Prop_Data, "m_fWidth", (f_ABWidth[client]) + (Sine(GetGameTime() * 3.0) * (f_ABWidth[client] * 0.1)));
+
+	if (GetGameTime() >= f_ABNextRing[client])
+	{
+		AB_ShootRing(client, startPos, ang, endPos);
+		f_ABNextRing[client] = GetGameTime() + 0.1;
+	}
 }
 
 public void AB_SlowDown(int ref)
@@ -485,8 +547,10 @@ public void AB_FadeSnowflake(int sprite)
 	SetEntityRenderColor(sprite, color[0], color[1], color[2], a);
 }
 
-public void AB_CreateLaser(int client, float startPos[3], float endPos[3])
+public void AB_CreateLaser(int client, float startPos[3], float endPos[3], float ang[3])
 {
+	//AB_ShootRing(client, startPos, ang, endPos);
+
 	AB_RemoveLaser(client);
 
 	int start, end;
@@ -500,7 +564,6 @@ public void AB_CreateLaser(int client, float startPos[3], float endPos[3])
 		RequestFrame(AB_HoldLaser, GetClientUserId(client));
 	}
 
-	float ang[3];
 	GetAngleBetweenPoints(startPos, endPos, ang);
 	ang[0] -= 90.0;
 

@@ -75,6 +75,23 @@ enum ParticleAttachment_t {
 #define PARTICLE_DISPATCH_FROM_ENTITY		(1<<0)
 #define PARTICLE_DISPATCH_RESET_PARTICLES	(1<<1)
 
+#define DOT_POINT_MODEL		"models/props_c17/canister01a.mdl"
+
+bool b_StocksPrecached = false;
+
+//This must be called in your plugin's OnMapStart or else certain stocks will not work.
+stock void CFStocks_Precache()
+{
+	PrecacheModel(DOT_POINT_MODEL);
+	b_StocksPrecached = true;
+}
+stock void CFStocks_ComplainAboutPrecache(char stockName[64])
+{
+	char message[255];
+	Format(message, sizeof(message), "Stock ''%s'' uses an asset which must be precached! Add CFStocks_Precache to your plugin's OnMapStart!", stockName);
+	ThrowError(message);
+}
+
 stock float ApproachAngle(float target, float value, float speed)
 {
 	target = anglemod(target);
@@ -4375,4 +4392,139 @@ stock void GetPointOnVerticalRing(float origin[3], float width, float output[3],
 	ScaleVector(dir, width);
 
 	AddVectors(origin, dir, output);
+}
+
+/**
+ * Spawns a TE ring, but with the special effect of being able to be tilted instead of always being flat, and can also be a partial circle instead of a full one.
+ * This works by creating 2 invisible parent entities, both on opposite sides of the ring, and then connecting them with the beam to form the ring.
+ * 
+ * @param pos		The position of the ring.
+ * @param ang		The angle of the ring.
+ * @param radius	The distance from the center of the ring to each parent entity.
+ * @param model		Sprite model index.
+ * @param halo		Halo model index.
+ * @param frameRate	Rate at which the sprite's animation should play, if it is an animated sprite.
+ * @param lifespan	How long should the TE beam exist for? Note that the parent entities will be automatically deleted after this duration passes.
+ * @param width		The beam's thickness.
+ * @param amplitude	Higher values make the beam jitter.
+ * @param color		RGBA color of the beam.
+ * @param speed		The speed at which the beam spins around the two points.
+ * @param flags		Beam flags.
+ * @param xOut		Optional parameter in which to store the first parent entity. This is useful for making the beam move.
+ * @param yOut		Optional parameter in which to store the second parent entity. This is useful for making the beam move.
+ * @param targets	Optional array of clients to whom the beam should be rendered. If null: render to all clients. This ArrayList is NOT automatically deleted, you must delete it yourself when you are done with it.
+ * @param delay		Optional duration to delay the rendering of the beam.
+ * 
+ * @return 	True if the ring was successfully spawned, false otherwise (both xOut and yOut will be invalid if this happens).
+ */
+stock bool SpawnRing_Controllable(float pos[3], float ang[3], float radius, int model, int halo = 0, int frameRate = 10, float lifespan = 5.0, float width = 10.0, float amplitude = 0.0, int color[4] = { 255, 255, 255, 255}, int speed = 2, int flags = 0, int &xOut = 0, int &yOut = 0, ArrayList targets = null, float delay = 0.0)
+{
+	if (!b_StocksPrecached)
+	{
+		CFStocks_ComplainAboutPrecache("SpawnRing_Controllable");
+		return false;
+	}
+
+	if (ang[0] == 0.0)	//Necessary to prevent the beam from freaking out, as it does not like both points having the same horizontal coordinates.
+		ang[0] = 1.0;
+
+	ang[0] += 90.0;
+
+	float xPos[3], yPos[3];
+	GetPointInDirection(pos, ang, radius, xPos);
+
+	ang[0] -= 180.0;
+	GetPointInDirection(pos, ang, radius, yPos);
+
+	xOut = Create_Dot(xPos, true, lifespan);
+	yOut = Create_Dot(yPos, true, lifespan);
+
+	if (!IsValidEntity(xOut) || !IsValidEntity(yOut))
+	{
+		RemoveEntity_AutoCheck(xOut);
+		RemoveEntity_AutoCheck(yOut);
+		return false;
+	}
+
+	if (targets != null)
+	{
+		for (int i = 0; i < GetArraySize(targets); i++)
+		{
+			int targ = GetArrayCell(targets, i);
+			if (IsValidClient(targ))
+			{
+				TE_SetupBeamRing(xOut, yOut, model, halo, 0, frameRate, lifespan, width, amplitude, color, speed, flags);
+				TE_SendToClient(targ, delay);
+			}
+		}
+	}
+	else
+	{
+		TE_SetupBeamRing(xOut, yOut, model, halo, 0, frameRate, lifespan, width, amplitude, color, speed, flags);
+		TE_SendToAll(delay);
+	}
+
+	return true;
+}
+
+//An extension of RemoveEntity which automatically checks to make sure the entity is valid before removing it.
+//This is more expensive than RemoveEntity, so use it wisely.
+stock void RemoveEntity_AutoCheck(int ent)
+{
+	if (IsValidEntity(ent))
+		RemoveEntity(ent);
+}
+
+stock int Create_Dot(float Loc[3], bool noclip = false, float duration = 0.0)
+{
+	if (!b_StocksPrecached)
+	{
+		CFStocks_ComplainAboutPrecache("Create_Dot");
+		return -1;
+	}
+
+	int prop = CreateEntityByName("prop_physics_override");
+	
+	if (IsValidEntity(prop))
+	{
+		DispatchKeyValue(prop, "model", DOT_POINT_MODEL);
+		
+		DispatchKeyValue(prop, "modelscale", "0.001");
+		
+		DispatchKeyValue(prop, "solid", "0"); 
+		
+		DispatchSpawn(prop);
+		
+		ActivateEntity(prop);
+		
+		SetEntProp(prop, Prop_Send, "m_fEffects", 32); //EF_NODRAW
+		
+		MakeObjectIntangible(prop);
+		
+		if(noclip)
+		{
+			SetEntityMoveType(prop, MOVETYPE_NOCLIP);
+		}
+
+		TeleportEntity(prop, Loc, NULL_VECTOR, NULL_VECTOR);
+
+		if (duration > 0.0)
+			CreateTimer(duration, Timer_RemoveEntity, EntIndexToEntRef(prop), TIMER_FLAG_NO_MAPCHANGE);
+				
+		SetEntityTransmitState(prop, FL_EDICT_FULLCHECK);
+		SetEdictFlags(prop, GetEdictFlags(prop)|FL_EDICT_ALWAYS);
+		
+		return prop;
+	}
+	else
+	{
+		return -1;
+	}
+}
+
+stock void MakeObjectIntangible(int entity)
+{
+	SetEntityCollisionGroup(entity, 1); //Dont Touch Anything.
+	SetEntProp(entity, Prop_Send, "m_usSolidFlags", 12); 
+	SetEntProp(entity, Prop_Data, "m_nSolidType", 6);
 }
