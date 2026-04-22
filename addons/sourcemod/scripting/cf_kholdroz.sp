@@ -26,6 +26,7 @@
 #define PARTICLE_ABSOLUTE_ZERO_AURA	"utaunt_chillingmist_parent"
 #define PARTICLE_COLDSNAP_1			"xms_snowburst_child01"
 #define PARTICLE_COLDSNAP_2			"xms_snowburst_child02"
+#define PARTICLE_BOLT_IMPACT		"snow_steppuff01"
 
 #define SOUND_AB_START				")weapons/flame_thrower_airblast_rocket_redirect.wav"
 #define SOUND_AB_LOOP_1				")misc/halloween/merasmus_float.wav"
@@ -40,11 +41,25 @@
 #define SOUND_COLDSNAP_2			")weapons/breadmonster/throwable/bm_throwable_smash.wav"
 #define SOUND_BOLT_CHARGE_START_1	")weapons/icicle_freeze_victim_01.wav"
 #define SOUND_BOLT_CHARGE_FINISH_1	")"
+#define SOUND_BOLT_IMPACT			")weapons/bottle_break.wav"
 
 static char g_FrozenVulnSFX[][] = {
 	")weapons/icicle_hit_world_01.wav",
 	")weapons/icicle_hit_world_02.wav",
 	")weapons/icicle_hit_world_03.wav"
+};
+
+static char g_BoltHitSFX[][] = {
+	")weapons/fx/rics/arrow_impact_flesh.wav",
+	")weapons/fx/rics/arrow_impact_flesh2.wav",
+	")weapons/fx/rics/arrow_impact_flesh3.wav",
+	")weapons/fx/rics/arrow_impact_flesh4.wav"
+};
+
+static char g_BoltHitMetalSFX[][] = {
+	")weapons/fx/rics/arrow_impact_metal.wav",
+	")weapons/fx/rics/arrow_impact_metal2.wav",
+	")weapons/fx/rics/arrow_impact_metal4.wav"
 };
 
 int i_AuroraBeam, i_AuroraMist;
@@ -78,8 +93,11 @@ public void OnMapStart()
 	PrecacheSound(SOUND_COLDSNAP_2);
 	PrecacheSound(SOUND_BOLT_CHARGE_START_1);
 	//PrecacheSound(SOUND_BOLT_CHARGE_FINISH_1);
+	PrecacheSound(SOUND_BOLT_IMPACT);
 
 	for (int i = 0; i < sizeof(g_FrozenVulnSFX); i++) { PrecacheSound(g_FrozenVulnSFX[i]); }
+	for (int i = 0; i < sizeof(g_BoltHitSFX); i++) { PrecacheSound(g_BoltHitSFX[i]); }
+	for (int i = 0; i < sizeof(g_BoltHitMetalSFX); i++) { PrecacheSound(g_BoltHitMetalSFX[i]); }
 
 	CFStocks_Precache();
 }
@@ -166,6 +184,13 @@ public void Cryo_ClearDecayTimer(int entity)
 	g_CryoDecayTimer[entity] = null;
 }
 
+public void Cryo_ApplyFrozen(int entity, int applicant)
+{
+	CF_RemoveStatusEffect(entity, STATUS_CRYO_BUILDUP);
+	CF_ApplyStatusEffect(entity, STATUS_FROZEN, CF_GetStatusEffectArgF(STATUS_FROZEN, "duration", 6.0), applicant);
+	Cryo_ClearDecayTimer(entity);
+}
+
 //This forward is called whenever a status effect's "Active Value" changes.
 //Here, we use it to detect when the Active Value of Cryo Buildup has been changed.
 //If we detect that it has reached 100%: we remove the Cryo Buildup status effect and apply the Frozen status effect.
@@ -173,9 +198,7 @@ public void CF_OnStatusEffectActiveValueChanged_Post(int entity, char[] effect, 
 {
 	if (StrEqual(effect, STATUS_CRYO_BUILDUP) && newValue >= 1.0)
 	{
-		CF_RemoveStatusEffect(entity, STATUS_CRYO_BUILDUP);
-		CF_ApplyStatusEffect(entity, STATUS_FROZEN, CF_GetStatusEffectArgF(STATUS_FROZEN, "duration", 6.0), applicant);
-		Cryo_ClearDecayTimer(entity);
+		Cryo_ApplyFrozen(entity, applicant);
 	}
 }
 
@@ -215,6 +238,11 @@ public void CF_OnStatusEffectApplied_Post(int entity, char[] effect, int applica
 			EmitSoundToClient(applicant, SOUND_FROZEN_1);
 			EmitSoundToClient(applicant, SOUND_FROZEN_2);
 		}
+	}
+
+	if (StrEqual(effect, STATUS_CRYO_BUILDUP) && CF_GetStatusEffectActiveValue(entity, STATUS_CRYO_BUILDUP) >= 1.0)
+	{
+		Cryo_ApplyFrozen(entity, applicant);
 	}
 }
 
@@ -734,7 +762,7 @@ float f_BoltBaseCryo[MAXPLAYERS + 1] = { 0.0, ... };
 float f_BoltBonusCryo[MAXPLAYERS + 1] = { 0.0, ... };
 float f_BoltCryo[2049] = { 0.0, ... };
 float f_BoltCryoHSMult[2049] = { 1.0, ... };
-float f_BoltPropRotation[2049] = { 0.0, ... };
+float f_BoltChargeAmt[2049] = { 0.0, ... };
 
 bool b_BoltCanHeadshot[2049] = { false, ... };
 bool b_BoltFullCharge[MAXPLAYERS + 1] = { false, ... };
@@ -786,11 +814,9 @@ public void Bolt_StartCharging(int client, char ability[255])
 		int prop = SpawnPropDynamic(MODEL_BOLT, pos, ang);
 		if (IsValidEntity(prop))
 		{
-			CPrintToChatAll("Prop spawned");
 			i_BoltProp[client] = EntIndexToEntRef(prop);
 			AttachAura(prop, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_SNOW_AURA_RED : PARTICLE_SNOW_AURA_BLUE);
 			RequestFrame(Bolt_MovePropToLocation, GetClientUserId(client));
-			f_BoltPropRotation[prop] = 0.0;
 		}
 	}
 	else
@@ -890,7 +916,7 @@ public Action Bolt_ChargeLogic(Handle timer, DataPack pack)
 
 public void Bolt_Fire(int client)
 {
-	int bolt = CF_FireGenericRocket(client, 0.0, 0.0);
+	int bolt = CF_FireGenericRocket(client, 0.0, 0.0, _, _, KHOLDROZ, Bolt_OnHit);
 	if (IsValidEntity(bolt))
 	{
 		float charge = Bolt_GetChargePercentage(client);
@@ -899,12 +925,19 @@ public void Bolt_Fire(int client)
 		GetClientEyePosition(client, pos);
 		GetClientEyeAngles(client, ang);
 		GetPointInDirection(pos, ang, 60.0, pos);
-		//pos[2] -= 10.0;
 
 		GetVelocityInDirection(ang, f_BoltBaseVel[client] + (charge * f_BoltBonusVel[client]), vel);
 
 		SetEntityModel(bolt, MODEL_DRG);
 		TeleportEntity(bolt, pos, ang, vel);
+
+		f_BoltDMG[bolt] = f_BoltBaseDMG[client] + (charge * f_BoltBonusDMG[client]);
+		f_BoltCryo[bolt] = f_BoltBaseCryo[client] + (charge * f_BoltBonusCryo[client]);
+		f_BoltFrozenMult[bolt] = f_BoltFrozenMult[client];
+		b_BoltCanHeadshot[bolt] = b_BoltCanHeadshot[client];
+		f_BoltHSMult[bolt] = f_BoltHSMult[client];
+		f_BoltCryoHSMult[bolt] = f_BoltCryoHSMult[client];
+		f_BoltChargeAmt[bolt] = charge;
 
 		int prop = EntRefToEntIndex(i_BoltProp[client]);
 		if (IsValidEntity(prop))
@@ -918,6 +951,57 @@ public void Bolt_Fire(int client)
 	}
 
 	Bolt_KillChargeTimer(client);
+}
+
+public void Bolt_OnHit(int bolt, int owner, int team, int other, float pos[3])
+{
+	int pitch = 120 - RoundFloat(40.0 * f_BoltChargeAmt[bolt]);
+
+	if (CF_IsValidTarget(other, grabEnemyTeam(owner)))
+	{
+		bool frozen = CF_HasStatusEffect(other, STATUS_FROZEN);
+		bool player = IsValidClient(other);
+
+		float dmg = f_BoltDMG[bolt];
+		if (frozen)
+			dmg *= f_BoltFrozenMult[bolt];
+
+		float cryo = f_BoltCryo[bolt];
+
+		bool hs = b_BoltCanHeadshot[bolt];
+		if (hs)
+		{
+			float ang[3], endPos[3];
+			GetEntPropVector(bolt, Prop_Send, "m_angRotation", ang);
+			GetPointInDirection(pos, ang, 40.0, endPos);
+
+			CF_TraceShot(owner, other, pos, endPos, hs);
+
+			if (hs)
+				SpawnParticle(pos, "minicrit_text", 0.2);
+		}
+
+		if (hs)
+		{
+			dmg *= f_BoltHSMult[bolt];
+			cryo *= f_BoltCryoHSMult[bolt];
+
+			PlayMiniCritSound(owner);
+			if (player)
+				PlayMiniCritSound(other);
+		}
+
+		int snd = GetRandomInt(0, (player ? sizeof(g_BoltHitSFX) : sizeof(g_BoltHitMetalSFX)) - 1);
+		EmitSoundToClient(owner, (player ? g_BoltHitSFX[snd] : g_BoltHitMetalSFX[snd]), _, _, _, _, _, pitch);
+		EmitSoundToAll((player ? g_BoltHitSFX[snd] : g_BoltHitMetalSFX[snd]), other, _, _, _, _, pitch);
+
+		Cryo_ApplyBuildup(other, owner, cryo);
+		SDKHooks_TakeDamage(other, bolt, owner, dmg, DMG_BULLET);
+	}
+
+	EmitSoundToAll(SOUND_BOLT_IMPACT, bolt, _, _, _, _, pitch);
+	SpawnParticle(pos, PARTICLE_BOLT_IMPACT, 0.2);
+	RemoveEntity(bolt);
 }
 
 public void Bolt_KillChargeTimer(int client)
@@ -1010,3 +1094,13 @@ public void PNPC_OnPlayerRagdoll(int victim, int attacker, int inflictor, bool &
 }
 
 #endif
+
+public void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, int &b, int &a)
+{
+	if (g_BoltChargeTimer[client] != null)
+	{
+		float charge = Bolt_GetChargePercentage(client);
+
+		Format(HUDText, sizeof(HUDText), "CHARGING FROSTBOLT: %i[PERCENT]\n \n\n%s", RoundToFloor(100.0 * charge), HUDText);
+	}
+}
