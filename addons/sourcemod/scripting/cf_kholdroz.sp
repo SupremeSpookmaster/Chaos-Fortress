@@ -1133,3 +1133,17 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 
 	return Plugin_Continue;
 }
+
+public Action CF_OnAbilityCheckCanUse(int client, char plugin[255], char ability[255], CF_AbilityType type, bool &result)
+{
+	if (!StrEqual(plugin, KHOLDROZ))
+		return Plugin_Continue;
+
+	if (StrContains(ability, BEAM) != -1 && g_BoltChargeTimer[client] != null)
+	{
+		result = false;
+		return Plugin_Changed;
+	}
+
+	return Plugin_Continue;
+}
