@@ -387,7 +387,7 @@ public void AB_ShootRing(int client, float startPos[3], float ang[3], float endP
 	color[2] = TF2_GetClientTeam(client) == TFTeam_Blue ? 255 : 180;
 	color[3] = 140;
 
-	if (SpawnRing_Controllable(startPos, ang, f_ABWidth[client] * 0.25, i_AuroraMist, _, _, f_ABRingTravelTime, 12.0, 2.0, color, 8, _, x, y))
+	if (SpawnRing_Controllable(startPos, ang, f_ABWidth[client] * 0.25, i_AuroraMist, _, _, f_ABRingTravelTime, 12.0, 2.0, color, 10, _, x, y))
 	{
 		float dummy[3];
 		GetAngleBetweenPoints(startPos, endPos, dummy);
