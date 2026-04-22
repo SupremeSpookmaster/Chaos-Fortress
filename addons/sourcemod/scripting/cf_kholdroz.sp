@@ -13,6 +13,7 @@
 #define SPR_SNOWFLAKE			"materials/chaos_fortress/sprites/snowflake.vmt"//"materials/effects/softglow.vmt"
 #define SPR_GLOW				"materials/sprites/glow02.vmt"
 #define SPR_AURORABEAM			"materials/chaos_fortress/sprites/aurora_beam.vmt"
+#define SPR_AURORAMIST			"materials/chaos_fortress/sprites/aurora_mist.vmt"
 
 #define MODEL_DRG				"models/weapons/w_models/w_drg_ball.mdl"
 #define MODEL_AB_PARTICLEBODY	"models/props_c17/canister01a.mdl"
@@ -43,7 +44,7 @@ static char g_FrozenVulnSFX[][] = {
 	")weapons/icicle_hit_world_03.wav"
 };
 
-int i_AuroraBeam;
+int i_AuroraBeam, i_AuroraMist;
 
 public void OnMapStart()
 {
@@ -52,6 +53,7 @@ public void OnMapStart()
 	PrecacheModel(SPR_SNOWFLAKE);
 	PrecacheModel(SPR_GLOW);
 	i_AuroraBeam = PrecacheModel(SPR_AURORABEAM);
+	i_AuroraMist = PrecacheModel(SPR_AURORAMIST);
 
 	PrecacheModel(MODEL_DRG);
 	PrecacheModel(MODEL_AB_PARTICLEBODY);
@@ -380,12 +382,12 @@ public void AB_ShootRing(int client, float startPos[3], float ang[3], float endP
 	int x, y;
 
 	int color[4];
-	color[0] = TF2_GetClientTeam(client) == TFTeam_Red ? 255 : 120;
-	color[1] = 120;
-	color[2] = TF2_GetClientTeam(client) == TFTeam_Blue ? 255 : 120;
+	color[0] = TF2_GetClientTeam(client) == TFTeam_Red ? 255 : 180;
+	color[1] = 180;
+	color[2] = TF2_GetClientTeam(client) == TFTeam_Blue ? 255 : 180;
 	color[3] = 140;
 
-	if (SpawnRing_Controllable(startPos, ang, f_ABWidth[client] * 0.25, i_AuroraBeam, _, _, f_ABRingTravelTime, 18.0, 2.0, color, 8, _, x, y))
+	if (SpawnRing_Controllable(startPos, ang, f_ABWidth[client] * 0.25, i_AuroraMist, _, _, f_ABRingTravelTime, 12.0, 2.0, color, 8, _, x, y))
 	{
 		float dummy[3];
 		GetAngleBetweenPoints(startPos, endPos, dummy);
