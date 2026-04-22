@@ -106,6 +106,8 @@ public void OnPluginStart()
 {
 }
 
+bool b_FrostboltIcon, b_AuroraIcon;
+
 #define STATUS_CRYO_BUILDUP		"Cryo Buildup"
 #define STATUS_FROZEN			"Frozen"
 
@@ -392,7 +394,9 @@ public void AB_Fire(int client, char abilityName[255])
 	f_ABAttackStopgap[client] = CF_GetArgF(client, KHOLDROZ, abilityName, "attack_stopgap", 1.2);
 	f_ABBuildup[client] = CF_GetArgF(client, KHOLDROZ, abilityName, "cryo_buildup", 0.06);
 
+	b_AuroraIcon = true;
 	CF_FireGenericLaser(client, startPos, ang, f_ABWidth[client], f_ABRange[client], f_ABDamage[client], DMG_ENERGYBEAM, AB_GetWeapon(client), client, KHOLDROZ, _, AB_OnHit, AB_DrawLaser);
+	b_AuroraIcon = false;
 	b_IceDamage[client] = false;
 
 	CF_SetTimeUntilResourceRegen(client, CF_GetTimeUntilResourceRegen(client) + f_ABDrainInterval[client] + 0.5);
@@ -647,7 +651,9 @@ public void AB_HoldLaser(int id)
 
 	if (gt >= f_ABNextHit[client])
 	{
+		b_AuroraIcon = true;
 		CF_FireGenericLaser(client, startPos, ang, f_ABWidth[client], f_ABRange[client], f_ABDamage[client], DMG_ENERGYBEAM|DMG_PREVENT_PHYSICS_FORCE, AB_GetWeapon(client), client, KHOLDROZ, _, AB_OnHit, AB_DrawLaser);
+		b_AuroraIcon = false;
 		b_IceDamage[client] = false;
 		f_ABNextHit[client] = gt + f_ABInterval[client];
 	}
@@ -996,7 +1002,10 @@ public void Bolt_OnHit(int bolt, int owner, int team, int other, float pos[3])
 		EmitSoundToAll((player ? g_BoltHitSFX[snd] : g_BoltHitMetalSFX[snd]), other, _, _, _, _, pitch);
 
 		Cryo_ApplyBuildup(other, owner, cryo);
+
+		b_FrostboltIcon = true;
 		SDKHooks_TakeDamage(other, bolt, owner, dmg, DMG_BULLET);
+		b_FrostboltIcon = false;
 	}
 
 	EmitSoundToAll(SOUND_BOLT_IMPACT, bolt, _, _, _, _, pitch);
@@ -1061,7 +1070,7 @@ public void CF_OnHeldEnd_Ability(int client, bool resupply, char pluginName[255]
 
 	if (StrContains(abilityName, BEAM) != -1)
 		AB_Terminate(client);
-	if (StrContains(abilityName, BOLT) != -1)
+	if (StrContains(abilityName, BOLT) != -1 && g_BoltChargeTimer[client] != null)
 		Bolt_Fire(client);
 }
 
@@ -1103,4 +1112,24 @@ public void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, int
 
 		Format(HUDText, sizeof(HUDText), "CHARGING FROSTBOLT: %i[PERCENT]\n \n\n%s", RoundToFloor(100.0 * charge), HUDText);
 	}
+}
+
+public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, char weapon[255], char console[255], int &custom, int deadRinger, int &critType, int &damagebits)
+{
+	if (b_FrostboltIcon)
+	{
+		Format(weapon, sizeof(weapon), "huntsman");
+		Format(console, sizeof(console), "Frostbolt");
+
+		return Plugin_Changed;
+	}
+	else if (b_AuroraIcon)
+	{
+		Format(weapon, sizeof(weapon), "merasmus_decap");
+		Format(console, sizeof(console), "Aurora Beam");
+
+		return Plugin_Changed;
+	}
+
+	return Plugin_Continue;
 }
