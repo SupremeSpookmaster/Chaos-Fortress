@@ -734,6 +734,7 @@ float f_BoltBaseCryo[MAXPLAYERS + 1] = { 0.0, ... };
 float f_BoltBonusCryo[MAXPLAYERS + 1] = { 0.0, ... };
 float f_BoltCryo[2049] = { 0.0, ... };
 float f_BoltCryoHSMult[2049] = { 1.0, ... };
+float f_BoltPropRotation[2049] = { 0.0, ... };
 
 bool b_BoltCanHeadshot[2049] = { false, ... };
 bool b_BoltFullCharge[MAXPLAYERS + 1] = { false, ... };
@@ -789,6 +790,7 @@ public void Bolt_StartCharging(int client, char ability[255])
 			i_BoltProp[client] = EntIndexToEntRef(prop);
 			AttachAura(prop, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_SNOW_AURA_RED : PARTICLE_SNOW_AURA_BLUE);
 			RequestFrame(Bolt_MovePropToLocation, GetClientUserId(client));
+			f_BoltPropRotation[prop] = 0.0;
 		}
 	}
 	else
@@ -802,9 +804,9 @@ public void Bolt_GetPropLocation(int client, float endOutput[3])
 	float pos[3], ang[3];
 	GetClientEyePosition(client, pos);
 	GetClientEyeAngles(client, ang);
-	pos[2] -= 20.0;
 
 	GetPointInDirection(pos, ang, 60.0, endOutput);
+	endOutput[2] -= 20.0;
 }
 
 public void Bolt_MovePropToLocation(int id)
@@ -817,8 +819,6 @@ public void Bolt_MovePropToLocation(int id)
 	if (!IsValidEntity(prop))
 		return;
 
-	CPrintToChatAll("Moving prop");
-
 	float currentPos[3], targPos[3], ang[3], buffer[3];
 	GetClientEyeAngles(client, ang);
 	Bolt_GetPropLocation(client, targPos);
@@ -829,6 +829,21 @@ public void Bolt_MovePropToLocation(int id)
 	AddVectors(currentPos, buffer, currentPos);
 
 	ang[0] += 90.0;
+
+	float rand = 8.0 - (Bolt_GetChargePercentage(client) * 7.0);
+	if (rand > 0.0)
+	{
+		float dummy[3];
+		dummy = ang;
+		for (int i = 0; i < 3; i++)
+			dummy[i] += GetRandomFloat(-rand, rand);
+
+		SubtractVectors(ang, dummy, dummy);
+		ScaleVector(dummy, (GetTickInterval() / 1.0) * 24.0);
+
+		AddVectors(ang, dummy, ang);
+	}
+
 	TeleportEntity(prop, currentPos, ang);
 
 	float scale = Bolt_GetPropScale(client);
@@ -875,8 +890,34 @@ public Action Bolt_ChargeLogic(Handle timer, DataPack pack)
 
 public void Bolt_Fire(int client)
 {
+	int bolt = CF_FireGenericRocket(client, 0.0, 0.0);
+	if (IsValidEntity(bolt))
+	{
+		float charge = Bolt_GetChargePercentage(client);
 
-	Bolt_Terminate(client);
+		float pos[3], ang[3], vel[3];
+		GetClientEyePosition(client, pos);
+		GetClientEyeAngles(client, ang);
+		GetPointInDirection(pos, ang, 60.0, pos);
+		//pos[2] -= 10.0;
+
+		GetVelocityInDirection(ang, f_BoltBaseVel[client] + (charge * f_BoltBonusVel[client]), vel);
+
+		SetEntityModel(bolt, MODEL_DRG);
+		TeleportEntity(bolt, pos, ang, vel);
+
+		int prop = EntRefToEntIndex(i_BoltProp[client]);
+		if (IsValidEntity(prop))
+		{
+			ang[0] += 90.0;
+			TeleportEntity(prop, pos, ang);
+			
+			SetParent(bolt, prop);
+			i_BoltProp[client] = -1;
+		}
+	}
+
+	Bolt_KillChargeTimer(client);
 }
 
 public void Bolt_KillChargeTimer(int client)
@@ -893,7 +934,7 @@ public void Bolt_Terminate(int client)
 		RemoveEntity(prop);
 }
 
-public float Bolt_GetPropScale(int client) { return 1.0 + (Bolt_GetChargePercentage(client) * 1.5); }
+public float Bolt_GetPropScale(int client) { return 1.0 + (Bolt_GetChargePercentage(client) * 1.2); }
 
 public float Bolt_GetChargePercentage(int client)
 {
