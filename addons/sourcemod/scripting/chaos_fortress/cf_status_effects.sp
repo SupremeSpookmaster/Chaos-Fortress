@@ -35,7 +35,6 @@ ArrayList g_StatusNames;
 ArrayList g_StatusTemplateArgs[2049];
 ArrayList g_StatusTemplateValues[2049];
 
-StatusInfo g_StatusTemplates[2049];
 enum struct StatusInfo
 {
     bool positive;
@@ -44,6 +43,8 @@ enum struct StatusInfo
     void Create(bool pos, bool ents) { this.positive = pos; this.allow_entities = ents; }
     void RevertToDefault() { this.positive = false; this.allow_entities = false; }
 }
+
+StatusInfo g_StatusTemplates[2049];
 
 ArrayList g_ActiveEffectNames[2049];
 ArrayList g_ActiveEffectStats[2049];
