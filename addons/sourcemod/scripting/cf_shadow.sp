@@ -506,6 +506,9 @@ static float UAV_EndPoint[MAXENTITIES][3];
 static float AgentCurrentLoc[MAXTF2PLAYERS][3];
 
 static bool Exposed[MAXTF2PLAYERS];
+static float Exposed_DMG_Melee;
+static float Exposed_DMG_Bullet;
+static float Exposed_DMG_Bullet_HS;
 
 #define DRONE_COLLISION_NOTHING		10
 #define DRONE_COLLISION_NON_PLAYER	26
@@ -671,6 +674,10 @@ public void PrepareUAV(int client, char abilityName[255])
 {
 	UAVActive[client] = true;
 	UAVTarget[client] = -1;
+
+	Exposed_DMG_Melee = CF_GetArgF(client, SHADOW, abilityName, "exposed_melee_dmg", 0.0);
+	Exposed_DMG_Bullet = CF_GetArgF(client, SHADOW, abilityName, "exposed_bullet_dmg", 0.0);
+	Exposed_DMG_Bullet_HS = CF_GetArgF(client, SHADOW, abilityName, "exposed_bullet_headshot_dmg", 0.0);
 
 	UAV_Destroy(client);
 }
@@ -1665,6 +1672,35 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 			}
 
 			damage *= (1.0 + newDmg);
+
+			ReturnValue = Plugin_Changed;
+		}
+	}
+	bool bIsExposed = IsTargetOutlined_FromEnemy(victim, attacker);
+	if(bIsExposed)
+	{
+		float flBonus = 0.0;
+		float flMelee = Exposed_DMG_Melee;
+		float flBullet = Exposed_DMG_Bullet;
+		float flHeadshot = Exposed_DMG_Bullet_HS;
+
+		if(damagetype & DMG_CLUB)
+		{
+			flBonus += flMelee;
+		}
+
+		if(damagecustom == TF_CUSTOM_HEADSHOT)
+		{
+			flBonus += flBullet;
+		}
+		else if(damagetype & DMG_BULLET)
+		{
+			flBonus += flHeadshot;
+		}
+
+		if(flBonus > 0.0)
+		{
+			damage *= (1.0 + flBonus);
 
 			ReturnValue = Plugin_Changed;
 		}
