@@ -32,9 +32,51 @@ public void CFW_MapChange()
 	}
 }
 
+Handle SDKWeaponBaseEquip;
+
 public void CFW_MakeForwards()
 {
 	g_CalcAttackRate = new GlobalForward("CF_OnCalcAttackInterval", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_String, Param_FloatByRef);
+
+	GameData gamedata = new GameData("chaos_fortress");
+	if (!gamedata)
+		SetFailState("Failed to load gamedata (chaos_fortress.txt)");
+	
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(gamedata, SDKConf_Signature, "CTFWeaponBase::Equip");
+	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
+	SDKWeaponBaseEquip = EndPrepSDKCall();
+	
+	DynamicDetour dtWrenchEquip = DynamicDetour.FromConf(gamedata, "CTFWrench::Equip");
+	if (dtWrenchEquip)
+		dtWrenchEquip.Enable(Hook_Pre, OnWrenchEquipPre);
+	
+	DynamicDetour dtWrenchDetach = DynamicDetour.FromConf(gamedata, "CTFWrench::Detach");
+	if (dtWrenchDetach)
+		dtWrenchDetach.Enable(Hook_Pre, OnWrenchDetachPre);
+	
+	delete gamedata;
+}
+
+MRESReturn OnWrenchEquipPre(int wrench, DHookParam param) {
+	if (param.IsNull(1))
+		return MRES_Ignored;
+	
+	int owner = param.Get(1);
+	if (0 < owner <= MaxClients) {
+		SDKCall_CTFWeaponBase_Equip(wrench, owner);
+		return MRES_Supercede;
+	}
+	
+	return MRES_Ignored;
+}
+
+MRESReturn OnWrenchDetachPre(int wrench) {
+	return MRES_Supercede;
+}
+
+void SDKCall_CTFWeaponBase_Equip(int wrench, int owner) {
+	SDKCall(SDKWeaponBaseEquip, wrench, owner);
 }
 
 public Action TF2_CalcIsAttackCritical(int client, int weapon, char[] classname, bool &result)

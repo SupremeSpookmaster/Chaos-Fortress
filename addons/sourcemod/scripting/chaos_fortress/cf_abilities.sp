@@ -8,7 +8,7 @@ bool b_UseHUD[MAXPLAYERS + 1] = { false, ... };
 bool b_IsFakeHealthKit[2049] = { false, ... };
 bool b_IsMedigunShield[2049] = { false, ... };
 
-bool critHit, miniCritHit, headshotKill;
+bool critHit, miniCritHit, headshotKill, arrowHeadshotKill;
 
 GlobalForward g_OnAbility;
 GlobalForward g_OnUltUsed;
@@ -133,15 +133,33 @@ public void CFA_MakeNatives()
 	CreateNative("CF_ForceGesture", Native_CF_ForceGesture);
 	CreateNative("CF_SetEntityBlocksLOS", Native_CF_SetEntityBlocksLOS);
 	CreateNative("CF_GiveHealingPoints", Native_CF_GiveHealingPoints);
+	CreateNative("CF_FireGenericLaser", Native_CF_FireGenericLaser);
+	CreateNative("CF_GetTimeUntilResourceRegen", Native_CF_GetTimeUntilResourceRegen);
+	CreateNative("CF_SetTimeUntilResourceRegen", Native_CF_SetTimeUntilResourceRegen);
+	CreateNative("CF_SetResourceRegenInterval", Native_CF_SetResourceRegenInterval);
+	CreateNative("CF_GetResourceRegenInterval", Native_CF_GetResourceRegenInterval);
 }
 
-public void SetHeadshotIcon(int effect) 
-{ 
+public void SetHeadshotIcon(int effect, bool wasArrow) 
+{
+	arrowHeadshotKill = wasArrow;
 	headshotKill = true;
 	if (effect < 2)
 		miniCritHit = true;
 	else
 		critHit = true;
+
+	RequestFrame(ClearHeadshotIcon, effect);
+}
+
+public void ClearHeadshotIcon(int effect)
+{
+	headshotKill = false;
+	arrowHeadshotKill = false;
+	if (effect < 2)
+		miniCritHit = false;
+	else
+		critHit = false;
 }
 
 Handle g_hSDKWorldSpaceCenter;
@@ -396,6 +414,8 @@ public void CFA_StockLogic(int client, CFAbility ability, CF_AbilityType type)
 
 public Action CFA_HUDTimer(Handle timer)
 {
+	CFSE_ManageEffectDurations();
+	
 	int rState = CF_GetRoundState();
 	
 	for (int client = 1; client <= MaxClients; client++)
@@ -1189,7 +1209,7 @@ public void CF_AttemptAbilitySlot(int client, CF_AbilityType type)
 		}
 		
 		if (!AbilityUsesStocks(client, type))
-			CF_ApplyAbilityCooldown(client, cooldown, type, true, false);
+			CF_ApplyAbilityCooldown(client, cooldown, type, true, true);
 	}
 	else
 	{
@@ -1602,6 +1622,70 @@ public Native_CF_SetMaxSpecialResource(Handle plugin, int numParams)
 		return;
 	
 	chara.f_MaxResources = amt;
+}
+
+public any Native_CF_GetTimeUntilResourceRegen(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return 0.0;
+		
+	CFCharacter chara = GetCharacterFromClient(client);
+	float gt = GetGameTime();
+
+	if (!chara.b_UsingResources || gt <= chara.f_NextResourceRegen)
+		return 0.0;
+
+	return chara.f_NextResourceRegen - gt;
+}
+
+public Native_CF_SetTimeUntilResourceRegen(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	float delay = GetNativeCell(2);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	CFCharacter chara = GetCharacterFromClient(client);
+	float gt = GetGameTime();
+
+	if (!chara.b_UsingResources)
+		return;
+
+	chara.f_NextResourceRegen = gt + delay;
+}
+
+public any Native_CF_GetResourceRegenInterval(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return 0.0;
+		
+	CFCharacter chara = GetCharacterFromClient(client);
+
+	if (!chara.b_UsingResources)
+		return 0.0;
+
+	return chara.f_ResourceRegenInterval;
+}
+
+public Native_CF_SetResourceRegenInterval(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	float interval = GetNativeCell(2);
+	
+	if (!CF_IsPlayerCharacter(client))
+		return;
+		
+	CFCharacter chara = GetCharacterFromClient(client);
+
+	if (!chara.b_UsingResources)
+		return;
+
+	chara.f_ResourceRegenInterval = interval;
 }
 
 public Native_CF_ApplyAbilityCooldown(Handle plugin, int numParams)
@@ -4067,6 +4151,7 @@ public Native_CF_FireGenericBullet(Handle plugin, int numParams)
 		headshotKill = false;
 		miniCritHit = false;
 		critHit = false;
+		arrowHeadshotKill = false;
 	}
 
 	delete victims;
@@ -4162,8 +4247,8 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 
 	if (headshotKill)
 	{
-		strcopy(console, sizeof(console), "headshot");
-		strcopy(weapon, sizeof(weapon), "headshot");
+		strcopy(console, sizeof(console), arrowHeadshotKill ? "huntsman_headshot" : "headshot");
+		strcopy(weapon, sizeof(weapon), arrowHeadshotKill ? "huntsman_headshot" : "headshot");
 		returnVal = Plugin_Changed;
 	}
 
@@ -4175,6 +4260,7 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 	headshotKill = false;
 	critHit = false;
 	miniCritHit = false;
+	arrowHeadshotKill = false;
 
 	return returnVal;
 }
@@ -4754,4 +4840,90 @@ public void Native_CF_SetEntityBlocksLOS(Handle plugin, int numParams)
 public void Native_CF_GiveHealingPoints(Handle plugin, int numParams)
 {
 	CFA_AddHealingPoints(GetNativeCell(1), RoundFloat(GetNativeCell(2)));
+}
+
+float Laser_DMG = 0.0;
+
+int Laser_DamageType = DMG_GENERIC;
+int Laser_Weapon = -1;
+int Laser_Inflictor = -1;
+
+char Laser_Plugin[255] = "";
+
+Function Laser_Filter = INVALID_FUNCTION;
+Function Laser_OnHit = INVALID_FUNCTION;
+
+bool Laser_Trace(int entity, int contentsMask, int client)
+{
+	bool passed = false;
+
+	if (Laser_Filter != INVALID_FUNCTION && !StrEqual(Laser_Plugin, ""))
+	{
+		Call_StartFunction(GetPluginHandle(Laser_Plugin), Laser_Filter);
+
+		Call_PushCell(entity);
+		Call_PushCell(client);
+
+		Call_Finish(passed);
+	}
+	else
+		passed = CF_IsValidTarget(entity, grabEnemyTeam(client));
+
+	if (passed)
+	{
+		if (Laser_OnHit != INVALID_FUNCTION && !StrEqual(Laser_Plugin, ""))
+		{
+			Call_StartFunction(GetPluginHandle(Laser_Plugin), Laser_OnHit);
+
+			Call_PushCell(entity);
+			Call_PushCell(client);
+
+			Call_Finish();
+		}
+
+		if (Laser_DMG != 0.0)
+			SDKHooks_TakeDamage(entity, Laser_Inflictor, client, Laser_DMG, Laser_DamageType, Laser_Weapon);
+	}
+
+	return false;
+}
+
+public void Native_CF_FireGenericLaser(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	float startPos[3], ang[3], endPos[3], mins[3], maxs[3];
+	GetNativeArray(2, startPos, 3);
+	GetNativeArray(3, ang, 3);
+	float width = GetNativeCell(4);
+	float range = GetNativeCell(5);
+	Laser_DMG = GetNativeCell(6);
+	Laser_DamageType = GetNativeCell(7);
+	Laser_Weapon = GetNativeCell(8);
+	Laser_Inflictor = GetNativeCell(9);
+	GetNativeString(10, Laser_Plugin, 255);
+	Laser_Filter = GetNativeFunction(11);
+	Laser_OnHit = GetNativeFunction(12);
+	Function drawLaserFunc = GetNativeFunction(13);
+
+	GetPointInDirection(startPos, ang, range, endPos);
+	CF_HasLineOfSight(startPos, endPos, _, endPos, client);
+
+	GenerateMinMax(width, mins, maxs);
+
+	CF_StartLagCompensation(client);
+	TR_TraceHullFilter(startPos, endPos, mins, maxs, MASK_SHOT, Laser_Trace, client);
+	CF_EndLagCompensation(client);
+
+	if (drawLaserFunc != INVALID_FUNCTION && !StrEqual(Laser_Plugin, ""))
+	{
+		Call_StartFunction(GetPluginHandle(Laser_Plugin), drawLaserFunc);
+
+		Call_PushCell(client);
+		Call_PushArray(startPos, 3);
+		Call_PushArray(endPos, 3);
+		Call_PushArray(ang, 3);
+		Call_PushFloat(width);
+
+		Call_Finish();
+	}
 }

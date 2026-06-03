@@ -6,6 +6,7 @@
 //#define DEBUG_GAMERULES
 //#define DEBUG_SOUNDS
 //#define USE_PREVIEWS
+//#define DEBUG_STATUS_EFFECTS
 //#define TESTING
 
 //	- MANDATORY TO-DO LIST (these MUST be done before the initial release):
@@ -86,6 +87,8 @@ public void OnPluginStart()
 	RegAdminCmd("cf_reloadcharacters", CF_ReloadCharacters, ADMFLAG_KICK, "Chaos Fortress: Reloads the character packs, as defined in characters.cfg.");
 	RegAdminCmd("cf_makecharacter", CF_ForceCharacter, ADMFLAG_KICK, "Chaos Fortress: Forces a client to become the specified character.");
 	RegAdminCmd("cf_giveult", CF_GiveUltCommand, ADMFLAG_SLAY, "Chaos Fortress: Gives a percentage of ult charge to the specified client(s).");
+	RegAdminCmd("cf_applystatus", CF_ApplyStatusCommand, ADMFLAG_SLAY, "Chaos Fortress: Applies the given status effect to the specified client(s)");
+	RegAdminCmd("cf_removestatus", CF_RemoveStatusCommand, ADMFLAG_SLAY, "Chaos Fortress: Removes the given status effect from the specified client(s)");
 	
 	CF_OnPluginStart();
 }
@@ -110,6 +113,7 @@ public void OnMapEnd()
 	CFC_MapEnd();
 	CFB_MapEnd();
 	CFW_MapChange();
+	CFSE_ClearStatusEffects();
 
 	ConfigMap rules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
 	if (rules != null)
@@ -368,6 +372,109 @@ public Action CF_GiveUltCommand(int client, int args)
 	}
 
 	return Plugin_Handled;
+}
+
+public Action CF_ApplyStatusCommand(int client, int args)
+{
+	if (args < 2)
+	{
+		ReplyToCommand(client, "[Chaos Fortress] Usage: cf_applystatus <target> <status effect> <duration> <active value> | EXAMPLE: cf_applystatus john Frozen 3 4 will apply the Frozen status effect to John for 3 seconds, with an active value of 4.");
+		return Plugin_Continue;
+	}
+
+	char name[32], status[255];
+	GetCmdArg(1, name, sizeof(name));
+	GetCmdArg(2, status, sizeof(status));
+	
+	float duration = 0.0;
+	float acVal;
+	if (args > 2)
+	{
+		char durStr[32];
+		GetCmdArg(3, durStr, 32);
+		duration = StringToFloat(durStr);
+
+		if (args > 3)
+		{
+			GetCmdArg(4, durStr, 32);
+			acVal = StringToFloat(durStr);
+		}
+	}
+
+	if (CFSE_GetEffectSlot(status) < 0)
+	{
+		ReplyToCommand(client, "[Chaos Fortress] Failure: status effect ''%s'' does not exist.", status);
+		return Plugin_Handled;
+	}
+
+	if (StrEqual(name, "@all"))
+	{
+		CFSE_ApplyStatusToGroup(status, TFTeam_Unassigned, client, duration, false, acVal);
+	}
+	else if (StrEqual(name, "@red"))
+	{
+		CFSE_ApplyStatusToGroup(status, TFTeam_Red, client, duration, false, acVal);
+	}
+	else if (StrEqual(name, "@blue"))
+	{
+		CFSE_ApplyStatusToGroup(status, TFTeam_Blue, client, duration, false, acVal);
+	}
+	else
+	{
+		int target = FindTarget(client, name, false, false);
+		
+		if (!IsValidMulti(target) && IsValidClient(client))
+		{
+			ReplyToCommand(client, "[Chaos Fortress] Failure: the target must be alive and in-game.");
+			return Plugin_Handled;
+		}
+		
+		CF_ApplyStatusEffect(target, status, duration, client, acVal, true, true);
+		CFSE_TellAdmin(target, client, false, status, duration, acVal);
+	}
+
+	return Plugin_Continue;
+}
+
+public Action CF_RemoveStatusCommand(int client, int args)
+{
+	if (args < 2)
+	{
+		ReplyToCommand(client, "[Chaos Fortress] Usage: cf_removestatus <target> <status effect>| EXAMPLE: cf_removestatus john Frozen will remove the Frozen status effect from John.");
+		return Plugin_Continue;
+	}
+
+	char name[32], status[255];
+	GetCmdArg(1, name, sizeof(name));
+	GetCmdArg(2, status, sizeof(status));
+
+	if (StrEqual(name, "@all"))
+	{
+		CFSE_ApplyStatusToGroup(status, TFTeam_Unassigned, client, 0.0, true);
+	}
+	else if (StrEqual(name, "@red"))
+	{
+		CFSE_ApplyStatusToGroup(status, TFTeam_Red, client, 0.0, true);
+	}
+	else if (StrEqual(name, "@blue"))
+	{
+		CFSE_ApplyStatusToGroup(status, TFTeam_Blue, client, 0.0, true);
+	}
+	else
+	{
+		int target = FindTarget(client, name, false, false);
+		
+		if (!IsValidMulti(target) && IsValidClient(client))
+		{
+			ReplyToCommand(client, "[Chaos Fortress] Failure: the target must be alive and in-game.");
+			return Plugin_Handled;
+		}
+		
+		CF_RemoveStatusEffect(target, status);
+		CFSE_TellAdmin(target, client, true, status, 0.0, 0.0);
+	}
+
+	return Plugin_Continue;
 }
 
 public Action CF_ForceCharacter(int client, int args)

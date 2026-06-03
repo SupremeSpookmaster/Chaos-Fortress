@@ -1,0 +1,17 @@
+"Sprite"
+{
+	"$spriteorientation" "vp_parallel"
+	"$spriteorigin" "[ 0.50 0.50 ]"
+	"$basetexture" "chaos_fortress/sprites/aurora_mist"
+
+	Proxies
+	{
+		Sine
+		{
+			sineperiod	3
+			sinemin		0.5
+			sinemax		1
+			resultVar	$alpha
+		}
+	}
+}

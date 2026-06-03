@@ -14,6 +14,9 @@
 #define ABILITY_CIRCUITAMMO	"vulpo_special_circuitammo"
 #define ABILITY_MAJORSTEAM	"vulpo_rage_majorsteam"
 
+#define PARTICLE_AMP_BUFFED_RED		"teleporter_red_charged_level3"
+#define PARTICLE_AMP_BUFFED_BLUE	"teleporter_blue_charged_level3"
+
 static const char BotClassNames[][] =
 {
 	"",
@@ -34,6 +37,7 @@ int HaloSprite;
 
 Handle AmpBuffTimer[MAXPLAYERS+1];
 int AmpBuffEntRef[MAXPLAYERS+1];
+int Amp_Particle[MAXPLAYERS+1] = { -1, ... };
 
 Handle CircuitBuffTimer[MAXENTITIES];
 int CircuitBuffEntRef[MAXENTITIES];
@@ -43,6 +47,9 @@ float MajorSteamEndAt[MAXPLAYERS+1];
 TFClassType MajorSteamClass[MAXPLAYERS+1];
 float MajorSteamAlarmAt;
 float Amp_BuffAmt[2048];
+float Amp_Radius[2048];
+float Amp_Res[2048];
+bool Is_Amp[2048];
 int Amp_Buffer[MAXPLAYERS + 1];
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -143,6 +150,18 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 
 public Action CF_OnTakeDamageAlive_Resistance(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int &damagecustom)
 {
+	if (Is_Amp[victim] && Amp_Res[victim] != 1.0)
+	{
+		float metal = float(GetEntProp(victim, Prop_Send, "m_iUpgradeMetal"));
+
+		float resisted = fmin(metal, damage * (1.0 - Amp_Res[victim]));
+
+		SetEntProp(victim, Prop_Send, "m_iUpgradeMetal", GetEntProp(victim, Prop_Send, "m_iUpgradeMetal") - RoundToFloor(resisted));
+
+		damage -= resisted;
+		return Plugin_Changed;
+	}
+
 	if (!IsValidClient(victim))
 		return Plugin_Continue;
 		
@@ -419,6 +438,14 @@ void OnBuildObject(Event event, const char[] name, bool dontBroadcast)
 				SetEntProp(entity, Prop_Send, "m_nSkin", GetEntProp(entity, Prop_Send, "m_nSkin") + 2);
 				Amp_BuffAmt[entity] = CF_GetArgF(owner, PluginName, ABILITY_BUILDINGS, buffer, 1.15);
 
+				FormatEx(buffer, sizeof(buffer), "%s_amplifier_radius", prefix);
+				Amp_Radius[entity] = CF_GetArgF(owner, PluginName, ABILITY_BUILDINGS, buffer, 400.0);
+
+				FormatEx(buffer, sizeof(buffer), "%s_amplifier_res", prefix);
+				Amp_Res[entity] = CF_GetArgF(owner, PluginName, ABILITY_BUILDINGS, buffer, 0.75);
+
+				Is_Amp[entity] = true;
+
 				CreateTimer(0.1, Timer_AmpBuilding, EntIndexToEntRef(entity), TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
 			}
 			else
@@ -435,6 +462,14 @@ void OnBuildObject(Event event, const char[] name, bool dontBroadcast)
 			}
 		}
 	}
+}
+
+public void OnEntityDestroyed(int entity)
+{
+	if (entity < 0 || entity > 2048)
+		return;
+
+	Is_Amp[entity] = false;
 }
 
 Action Timer_LimitBuilding(Handle timer, DataPack pack)
@@ -515,14 +550,24 @@ Action Timer_AmpThink(Handle timer, int ref)
 				}
 
 				GetEntPropVector(client, Prop_Send, "m_vecOrigin", pos2);
-				if(GetVectorDistance(pos1, pos2, true) < 30000.0)
+				if(GetVectorDistance(pos1, pos2, false) < Amp_Radius[entity])
 				{
 					int cost = AmpBuffTimer[client] ? 6 : 50;
 					if(metal >= cost)
 					{
 						if(!AmpBuffTimer[client])
 						{
-							ClientCommand(client, "playgamesound items/powerup_pickup_precision.wav");
+							ClientCommand(client, "playgamesound items/powerup_pickup_agility.wav");
+
+							char message[255];
+							Format(message, sizeof(message), "Buffed by %N's amplifier! (+%iPCNTG Damage)", owner, RoundFloat((Amp_BuffAmt[entity] - 1.0) * 100.0));
+							ReplaceString(message, sizeof(message), "PCNTG", "%%");
+							PrintCenterText(client, message);
+
+							TF2_AddCondition(client, TFCond_FocusBuff);
+
+							Amp_Particle[client] = EntIndexToEntRef(CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_AMP_BUFFED_RED : PARTICLE_AMP_BUFFED_BLUE, "root"));
+
 							#if defined _fps_included_
 							AmpBuffEntRef[client] = EntIndexToEntRef(FPS_AttachFakeParticleToEntity(client, "root", "models/fake_particles/chaos_fortress/player_aura.mdl", 2, "rotate", 0.75, _, team == 2 ? 255 : 180, 180, team == 2 ? 180 : 255, 0));
 							#endif
@@ -570,7 +615,7 @@ Action Timer_AmpThink(Handle timer, int ref)
 		color[3] = metal * 255 / 400;
 
 		pos1[2] += 90.0;
-		TE_SetupBeamRingPoint(pos1, 10.0, boosted ? 700.0 : 350.0, BeamSprite, HaloSprite, 0, 15, 1.0, 5.0, 0.0, color, boosted ? 16 : 8, 0);
+		TE_SetupBeamRingPoint(pos1, 10.0, Amp_Radius[entity] * 2.0, BeamSprite, HaloSprite, 0, 15, 1.0, 5.0, 0.0, color, boosted ? 16 : 8, 0);
 		TE_SendToAll();	
 
 		SetEntProp(entity, Prop_Send, "m_iAmmoMetal", metal);
@@ -580,11 +625,34 @@ Action Timer_AmpThink(Handle timer, int ref)
 	return Plugin_Stop;
 }
 
+public void Amp_RemoveBuffEffects(int client)
+{
+	if (IsValidClient(client))
+	{
+		TF2_RemoveCondition(client, TFCond_FocusBuff);
+		ClientCommand(client, "playgamesound player/invuln_off_vaccinator.wav");
+
+		int particle = EntRefToEntIndex(Amp_Particle[client]);
+		if (IsValidEntity(particle))
+			RemoveEntity(particle);
+
+		int buffer = GetClientOfUserId(Amp_Buffer[client]);
+		if (IsValidClient(buffer))
+		{
+			char message[255];
+			Format(message, sizeof(message), "No longer buffed by %N's amplifier.", buffer);
+			PrintCenterText(client, message);
+		}
+	}
+}
+
 Action Timer_AmpBuff(Handle timer, int client)
 {
 	int entity = EntRefToEntIndex(AmpBuffEntRef[client]);
 	if(entity != -1)
 		RemoveEntity(entity);
+
+	Amp_RemoveBuffEffects(client);
 
 	AmpBuffTimer[client] = null;
 	return Plugin_Stop;

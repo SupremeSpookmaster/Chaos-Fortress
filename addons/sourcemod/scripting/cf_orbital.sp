@@ -45,6 +45,7 @@ int laserModel;
 #define SOUND_STRIKE_BLAST_2			")weapons/cow_mangler_explosion_charge_01.wav"
 #define SOUND_STRIKE_WARNING			")ambient_mp3/alarms/doomsday_lift_alarm.mp3"
 #define SOUND_TRACER_FULLCHARGE_LOOP	")weapons/crit_power.wav"
+#define SOUND_FUEL_DRAINED_BY_DAMAGE	")player/footsteps/mud3.wav"
 
 #define MODEL_TASER						"models/weapons/w_models/w_drg_ball.mdl"
 
@@ -61,6 +62,7 @@ public void OnMapStart()
 	PrecacheSound(SOUND_STRIKE_BLAST_2);
 	PrecacheSound(SOUND_STRIKE_WARNING);
 	PrecacheSound(SOUND_TRACER_FULLCHARGE_LOOP);
+	PrecacheSound(SOUND_FUEL_DRAINED_BY_DAMAGE);
 }
 
 public void CF_OnAbility(int client, char pluginName[255], char abilityName[255])
@@ -287,6 +289,7 @@ bool Gravity_Active[MAXPLAYERS + 1] = { false, ... };
 
 float Gravity_Cost[MAXPLAYERS + 1] = { 0.0, ... };
 float Gravity_Gravity[MAXPLAYERS + 1] = { 0.0, ... };
+float Gravity_LostPerDamage[MAXPLAYERS + 1] = { 0.0, ... };
 
 int Gravity_Wearable[MAXPLAYERS + 1] = { -1, ... };
 int Gravity_Particle[MAXPLAYERS + 1] = { -1, ... };
@@ -298,13 +301,14 @@ public void Gravity_Toggle(int client, char abilityName[255])
 		Gravity_Disable(client, false);
 		
 		Gravity_Cost[client] = CF_GetArgF(client, ORBITAL, abilityName, "drain");
+		Gravity_LostPerDamage[client] = CF_GetArgF(client, ORBITAL, abilityName, "drained_on_damage");
 		
 		char atts[255];
 		Format(atts, sizeof(atts), "610 ; %.4f", CF_GetArgF(client, ORBITAL, abilityName, "control"));
 		Gravity_Wearable[client] = EntIndexToEntRef(CF_AttachWearable(client, view_as<int>(CF_ClassToken_Sniper), "tf_wearable", false, 0, 0, false, atts));
 		Gravity_Particle[client] = EntIndexToEntRef(CF_AttachParticle(client, TF2_GetClientTeam(client) == TFTeam_Red ? PARTICLE_GRAVITY_RED : PARTICLE_GRAVITY_BLUE, "root"));
 
-		CF_PlayRandomSound(client, client, "sound_gravity_on");
+		CF_PlayRandomSound(client, client, "sound_gravity_boots_start");
 		
 		RequestFrame(Gravity_Logic, GetClientUserId(client));
 		Gravity_Active[client] = true;
@@ -364,7 +368,7 @@ public void Gravity_Logic(int id)
 }
 
 //If this is not here, movement is really jittery and weird while hovering, which is bad as a sniper for obvious reasons:
-public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
+/*public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
 {
 	if (Gravity_Active[client])
 	{
@@ -375,30 +379,33 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	}
 		
 	return Plugin_Continue;
-}
+}*/
 
 public void Gravity_SetVelocity(int client)
 {
-	CF_StartLagCompensation(client);
+	//CF_StartLagCompensation(client);
 
 	float targVel[3];
-	Gravity_CalculateVelocity(client, targVel);
-	
-	//eleportEntity(client, _, _, currentVel);
+
+	if (Gravity_CalculateVelocity(client, targVel))
+		TeleportEntity(client, _, _, targVel);
+
 	//SetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", currentVel);
-	CBaseEntity(client).SetAbsVelocity(targVel);
+	//CBaseEntity(client).SetAbsVelocity(targVel);
 	
-	CF_EndLagCompensation(client);
+	//CF_EndLagCompensation(client);
 }
 
-public void Gravity_CalculateVelocity(int client, float output[3])
+public bool Gravity_CalculateVelocity(int client, float output[3])
 {
+	bool returnVal = false;
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", output);
 	
-	float min = 1.0;
+	float min = 0.0;
 	if (output[2] <= min)
 	{
-		SetEntityGravity(client, 0.0);
+		SetEntityGravity(client, 0.000001);
+		returnVal = true;
 	}
 	else
 	{
@@ -406,6 +413,8 @@ public void Gravity_CalculateVelocity(int client, float output[3])
 	}
 
 	output[2] = fmax(min, output[2]);
+
+	return returnVal;
 }
 
 public void CF_OnCharacterCreated(int client)
@@ -823,6 +832,21 @@ public Action CF_OnPlayerKilled_Pre(int &victim, int &inflictor, int &attacker, 
 		strcopy(weapon, sizeof(weapon), "righteous_bison");
 		return Plugin_Changed;
 	}
+
+	return Plugin_Continue;
+}
+
+public Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int weapon)
+{
+	if (!IsValidClient(victim) || !Gravity_Active[victim] || Gravity_LostPerDamage[victim] == 0.0)
+		return Plugin_Continue;
+
+	CF_GiveSpecialResource(victim, -damage * Gravity_LostPerDamage[victim]);
+
+	if (IsValidClient(attacker))
+		EmitSoundToClient(attacker, SOUND_FUEL_DRAINED_BY_DAMAGE, _, _, _, _, _, GetRandomInt(90, 120));
+
+	EmitSoundToClient(victim, SOUND_FUEL_DRAINED_BY_DAMAGE, _, _, _, _, _, GetRandomInt(90, 120));
 
 	return Plugin_Continue;
 }

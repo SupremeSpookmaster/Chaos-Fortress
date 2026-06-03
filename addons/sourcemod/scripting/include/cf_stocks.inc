@@ -75,6 +75,23 @@ enum ParticleAttachment_t {
 #define PARTICLE_DISPATCH_FROM_ENTITY		(1<<0)
 #define PARTICLE_DISPATCH_RESET_PARTICLES	(1<<1)
 
+#define DOT_POINT_MODEL		"models/props_c17/canister01a.mdl"
+
+bool b_StocksPrecached = false;
+
+//This must be called in your plugin's OnMapStart or else certain stocks will not work.
+stock void CFStocks_Precache()
+{
+	PrecacheModel(DOT_POINT_MODEL);
+	b_StocksPrecached = true;
+}
+stock void CFStocks_ComplainAboutPrecache(char stockName[64])
+{
+	char message[255];
+	Format(message, sizeof(message), "Stock ''%s'' uses an asset which must be precached! Add CFStocks_Precache to your plugin's OnMapStart!", stockName);
+	ThrowError(message);
+}
+
 stock float ApproachAngle(float target, float value, float speed)
 {
 	target = anglemod(target);
@@ -1787,8 +1804,8 @@ stock float GetTotalAttributeValue(int client, int attribute, float baseVal)
 	return baseVal;
 }
 
-//An extension of TF2Util_CanWeaponAttack, which checks for m_flNextPrimaryAttack, as well as ammo.
-stock bool CanWeaponAttack(int client, int weapon)
+//An extension of TF2Util_CanWeaponAttack, which checks for ammo, and also m_flNextPrimaryAttack if nextAttackTime is set to true.
+stock bool CanWeaponAttack(int client, int weapon, bool nextAttackTime = true)
 {
 	if (!IsValidEntity(weapon) || weapon < MaxClients)
 		return false;
@@ -1796,8 +1813,7 @@ stock bool CanWeaponAttack(int client, int weapon)
 	if (!TF2Util_CanWeaponAttack(weapon))
 		return false;
 
-	float gt = GetGameTime();
-	if (GetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack") > gt)
+	if (nextAttackTime && GetEntPropFloat(weapon, Prop_Send, "m_flNextPrimaryAttack") > GetGameTime())
 		return false;
 
 	if (!IsWeaponMelee(client, weapon))
@@ -3795,7 +3811,7 @@ public bool TraceEntityEnumerator_EnumerateTriggers(int entity, int client)
 	return true;
 }
 
-stock bool IsAProjectile(int entity, bool includeNPCs = true)
+stock bool IsAProjectile(int entity)
 {
 	if (!IsValidEntity(entity))
 		return false;
@@ -4075,7 +4091,7 @@ stock void FloatToDouble(float flValue, int dblVal[2]) {
  * 
  * @return	The entity index of the env_beam, or -1 on failure. If either of the info_targets fail to be created, the env_beam itself will still be returned, but it will not be connected to anything.
  */
-stock int CreateEnvBeam(int startEnt, int endEnt, float startPos[3] = NULL_VECTOR, float endPos[3] = NULL_VECTOR, char[] startPoint = "", char[] endPoint = "", int &startOutput = -1, int &endOutput = -1, int r = 255, int g = 255, int b = 255, int a = 255, char[] model = "sprites/laserbeam.vmt", float width = 2.0, float endWidth = 2.0, float fadelength = 1.0, float amplitude = 0.0, float speed = 0.0, float duration = 0.0)
+stock int CreateEnvBeam(int startEnt, int endEnt, float startPos[3] = NULL_VECTOR, float endPos[3] = NULL_VECTOR, char[] startPoint = "", char[] endPoint = "", int &startOutput = -1, int &endOutput = -1, int r = 255, int g = 255, int b = 255, int a = 255, char[] model = "materials/sprites/laserbeam.vmt", float width = 2.0, float endWidth = 2.0, float fadelength = 1.0, float amplitude = 0.0, float speed = 0.0, float duration = 0.0)
 {
 	int beam = CreateEntityByName("env_beam");
 	if (!IsValidEntity(beam))
@@ -4185,4 +4201,330 @@ stock void GenerateMinMax(float width, float minsOutput[3], float maxsOutput[3])
 	maxsOutput[0] = -minsOutput[0];
 	maxsOutput[1] = -minsOutput[1];
 	maxsOutput[2] = -minsOutput[2];
+}
+
+stock void TeleportEntitySmoothly(int entity, float pos[3] = NULL_VECTOR, float ang[3] = NULL_VECTOR, float vel[3] = NULL_VECTOR)
+{
+	int frame = GetEntProp(entity, Prop_Send, "m_ubInterpolationFrame");
+	TeleportEntity(entity, pos, ang, vel);
+	SetEntProp(entity, Prop_Send, "m_ubInterpolationFrame", frame);
+}
+
+Function g_TrailColorFunc[2049] = { INVALID_FUNCTION, ... };
+
+static float f_TrailStartTime[2049] = { 0.0, ... };
+static float f_TrailEndTime[2049] = { 0.0, ... };
+static float f_TrailDistance[2049] = { 0.0, ... };
+static float f_TrailIntensity[2049] = { 0.0, ... };
+static float f_TrailDecelerate[2049] = { 0.0, ... };
+
+static float vec_TrailTarg[2049][3];
+
+/**
+ * Spawns a trail at startPos, and automatically moves it to targPos over a given span of time.
+ * 
+ * @param startPos		The starting position of the trail.
+ * @param targPos		The ending position of the trail.
+ * @param time			The time it should take for the trail to move from startPos to targPos.
+ * @param sprite		The sprite to use.
+ * @param r				R color value.
+ * @param g				G color value.
+ * @param b				B color value.
+ * @param a				Alpha value.
+ * @param func_SetColor	Optional function to call each frame while the trail moves to its target position. Must take an int, being the trail's index, as well as a float representing the trail's progress towards its target position (0.0: still at startPos, 1.0: reached targPos).
+ * @param lifetime		Trail's lifetime.
+ * @param startWidth	Trail's start width.
+ * @param endWidth		Trail's end width.
+ * @param rendermode	Trail's render mode.
+ * @param intensity		The amount by which the trail should zip around each frame. Higher values make it look more chaotic, like electricity. 0.0 means it goes straight from startPos to targPos.
+ * @param decelerate	Percentage to reduce movement speed as the trail gets closer to its target.
+ * 
+ * @return		The entity index of the trail which was created.
+ */
+stock int SpawnMovingTrail(float startPos[3], float targPos[3], float time, char[] sprite, int r, int g, int b, int a, Function func_SetColor = INVALID_FUNCTION, float lifetime = 1.0, float startWidth = 22.0, float endWidth = 0.0, int rendermode = 4, float intensity = 6.0, float decelerate = 0.0)
+{
+	int trail = CreateTrail(sprite, a, lifetime, startWidth, endWidth, rendermode);
+
+	if (IsValidEntity(trail))
+	{
+		SetEntityRenderColor(trail, r, g, b, a);
+		TeleportEntity(trail, startPos);
+		g_TrailColorFunc[trail] = func_SetColor;
+		f_TrailStartTime[trail] = GetGameTime();
+		f_TrailEndTime[trail] = f_TrailStartTime[trail] + time;
+		f_TrailDistance[trail] = GetVectorDistance(startPos, targPos);
+		f_TrailIntensity[trail] = intensity;
+		f_TrailDecelerate[trail] = decelerate;
+
+		for (int i = 0; i < 3; i++)
+			vec_TrailTarg[trail][i] = targPos[i];
+
+		RequestFrame(MovingTrail_MoveToTarg, EntIndexToEntRef(trail));
+
+		return trail;
+	}
+
+	return -1;
+}
+
+stock void MovingTrail_MoveToTarg(int ref)
+{
+	int trail = EntRefToEntIndex(ref);
+	if (!IsValidEntity(trail))
+		return;
+
+	float pos[3], ang[3];
+	CF_WorldSpaceCenter(trail, pos);
+	GetAngleBetweenPoints(vec_TrailTarg[trail], pos, ang);
+
+	float gt = GetGameTime();
+	float duration = f_TrailEndTime[trail] - f_TrailStartTime[trail];
+	float timePassed = duration - (f_TrailEndTime[trail] - gt);
+
+	float progress = timePassed / duration;
+
+	if (f_TrailDecelerate[trail] > 0.0)
+	{
+		float ratio = timePassed / (duration / f_TrailDecelerate[trail]);
+		progress *= 1.0 - (f_TrailDecelerate[trail] * ratio);
+	}
+
+	float distance = f_TrailDistance[trail] - (f_TrailDistance[trail] * progress);
+	GetPointInDirection(vec_TrailTarg[trail], ang, distance, pos);
+
+	if (progress < 1.0)
+	{
+		pos[0] += GetRandomFloat(-f_TrailIntensity[trail], f_TrailIntensity[trail]);
+		pos[1] += GetRandomFloat(-f_TrailIntensity[trail], f_TrailIntensity[trail]);
+	}
+
+	TeleportEntity(trail, pos);
+
+	if (g_TrailColorFunc[trail] != INVALID_FUNCTION)
+	{
+		Call_StartFunction(INVALID_HANDLE, g_TrailColorFunc[trail]);
+
+		Call_PushCell(trail);
+		Call_PushFloat(progress);
+
+		Call_Finish();
+	}
+
+	if (progress >= 1.0)
+	{
+		ShrinkTrailIntoNothing(trail, 0.33);
+		return;
+	}
+
+	RequestFrame(MovingTrail_MoveToTarg, ref);
+}
+
+stock int CreateTrail(char[] trail, int alpha, float lifetime=1.0, float startwidth=22.0, float endwidth=0.0, int rendermode = 4)
+{
+	int entIndex = CreateEntityByName("env_spritetrail");
+	if (entIndex > 0 && IsValidEntity(entIndex))
+	{
+		DispatchKeyValue(entIndex, "spritename", trail);
+		SetEntPropFloat(entIndex, Prop_Send, "m_flTextureRes", 0.00005);
+		
+		char sTemp[5];
+		IntToString(alpha, sTemp, sizeof(sTemp));
+		DispatchKeyValue(entIndex, "renderamt", sTemp);
+		
+		DispatchKeyValueFloat(entIndex, "lifetime", lifetime);
+		DispatchKeyValueFloat(entIndex, "startwidth", startwidth);
+		DispatchKeyValueFloat(entIndex, "endwidth", endwidth);
+
+		IntToString(rendermode, sTemp, sizeof(sTemp));
+		DispatchKeyValue(entIndex, "rendermode", sTemp);
+		
+		DispatchSpawn(entIndex);
+
+		return entIndex;
+	}
+
+	return -1;
+}
+
+stock void ShrinkTrailIntoNothing(int trail, float rate)
+{
+	DataPack pack = new DataPack();
+	RequestFrame(Shrink_Trail, pack);
+	WritePackCell(pack, EntIndexToEntRef(trail));
+	WritePackFloat(pack, rate);
+}
+
+stock void Shrink_Trail(DataPack pack)
+{
+	ResetPack(pack);
+	int entity = EntRefToEntIndex(ReadPackCell(pack));
+	float rate = ReadPackFloat(pack);
+
+	if (!IsValidEntity(entity))
+	{
+		delete pack;
+		return;
+	}
+	
+	float width = GetEntPropFloat(entity, Prop_Data, "m_flStartWidth");
+	width -= rate;
+	if (width <= 0.0)
+	{
+		width = 0.0;
+		CreateTimer(0.1, Timer_RemoveEntity, entity, TIMER_FLAG_NO_MAPCHANGE);
+		SetEntPropFloat(entity, Prop_Data, "m_flStartWidth", width);
+		return;
+	}
+
+	SetEntPropFloat(entity, Prop_Data, "m_flStartWidth", width);
+	SetEntPropFloat(entity, Prop_Data, "m_flEndWidth", 0.0);
+
+	RequestFrame(Shrink_Trail, pack);
+}
+
+stock void GetPointOnVerticalRing(float origin[3], float width, float output[3], int ring, int totalRings)
+{
+	float targAng[3];
+	targAng[2] = (360.0 / float(totalRings)) * float(ring);
+
+	float dir[3];
+	GetAngleVectors(targAng, dir, NULL_VECTOR, dir);
+	ScaleVector(dir, width);
+
+	AddVectors(origin, dir, output);
+}
+
+/**
+ * Spawns a TE ring, but with the special effect of being able to be tilted instead of always being flat, and can also be a partial circle instead of a full one.
+ * This works by creating 2 invisible parent entities, both on opposite sides of the ring, and then connecting them with the beam to form the ring.
+ * 
+ * @param pos		The position of the ring.
+ * @param ang		The angle of the ring.
+ * @param radius	The distance from the center of the ring to each parent entity.
+ * @param model		Sprite model index.
+ * @param halo		Halo model index.
+ * @param frameRate	Rate at which the sprite's animation should play, if it is an animated sprite.
+ * @param lifespan	How long should the TE beam exist for? Note that the parent entities will be automatically deleted after this duration passes.
+ * @param width		The beam's thickness.
+ * @param amplitude	Higher values make the beam jitter.
+ * @param color		RGBA color of the beam.
+ * @param speed		The speed at which the beam spins around the two points.
+ * @param flags		Beam flags.
+ * @param xOut		Optional parameter in which to store the first parent entity. This is useful for making the beam move.
+ * @param yOut		Optional parameter in which to store the second parent entity. This is useful for making the beam move.
+ * @param targets	Optional array of clients to whom the beam should be rendered. If null: render to all clients. This ArrayList is NOT automatically deleted, you must delete it yourself when you are done with it.
+ * @param delay		Optional duration to delay the rendering of the beam.
+ * 
+ * @return 	True if the ring was successfully spawned, false otherwise (both xOut and yOut will be invalid if this happens).
+ */
+stock bool SpawnRing_Controllable(float pos[3], float ang[3], float radius, int model, int halo = 0, int frameRate = 10, float lifespan = 5.0, float width = 10.0, float amplitude = 0.0, int color[4] = { 255, 255, 255, 255}, int speed = 2, int flags = 0, int &xOut = 0, int &yOut = 0, ArrayList targets = null, float delay = 0.0)
+{
+	if (!b_StocksPrecached)
+	{
+		CFStocks_ComplainAboutPrecache("SpawnRing_Controllable");
+		return false;
+	}
+
+	if (ang[0] == 0.0)	//Necessary to prevent the beam from freaking out, as it does not like both points having the same horizontal coordinates.
+		ang[0] = 1.0;
+
+	ang[0] += 90.0;
+
+	float xPos[3], yPos[3];
+	GetPointInDirection(pos, ang, radius, xPos);
+
+	ang[0] -= 180.0;
+	GetPointInDirection(pos, ang, radius, yPos);
+
+	xOut = Create_Dot(xPos, true, lifespan);
+	yOut = Create_Dot(yPos, true, lifespan);
+
+	if (!IsValidEntity(xOut) || !IsValidEntity(yOut))
+	{
+		RemoveEntity_AutoCheck(xOut);
+		RemoveEntity_AutoCheck(yOut);
+		return false;
+	}
+
+	if (targets != null)
+	{
+		for (int i = 0; i < GetArraySize(targets); i++)
+		{
+			int targ = GetArrayCell(targets, i);
+			if (IsValidClient(targ))
+			{
+				TE_SetupBeamRing(xOut, yOut, model, halo, 0, frameRate, lifespan, width, amplitude, color, speed, flags);
+				TE_SendToClient(targ, delay);
+			}
+		}
+	}
+	else
+	{
+		TE_SetupBeamRing(xOut, yOut, model, halo, 0, frameRate, lifespan, width, amplitude, color, speed, flags);
+		TE_SendToAll(delay);
+	}
+
+	return true;
+}
+
+//An extension of RemoveEntity which automatically checks to make sure the entity is valid before removing it.
+//This is more expensive than RemoveEntity, so use it wisely.
+stock void RemoveEntity_AutoCheck(int ent)
+{
+	if (IsValidEntity(ent))
+		RemoveEntity(ent);
+}
+
+stock int Create_Dot(float Loc[3], bool noclip = false, float duration = 0.0)
+{
+	if (!b_StocksPrecached)
+	{
+		CFStocks_ComplainAboutPrecache("Create_Dot");
+		return -1;
+	}
+
+	int prop = CreateEntityByName("prop_physics_override");
+	
+	if (IsValidEntity(prop))
+	{
+		DispatchKeyValue(prop, "model", DOT_POINT_MODEL);
+		
+		DispatchKeyValue(prop, "modelscale", "0.001");
+		
+		DispatchKeyValue(prop, "solid", "0"); 
+		
+		DispatchSpawn(prop);
+		
+		ActivateEntity(prop);
+		
+		SetEntProp(prop, Prop_Send, "m_fEffects", 32); //EF_NODRAW
+		
+		MakeObjectIntangible(prop);
+		
+		if(noclip)
+		{
+			SetEntityMoveType(prop, MOVETYPE_NOCLIP);
+		}
+
+		TeleportEntity(prop, Loc, NULL_VECTOR, NULL_VECTOR);
+
+		if (duration > 0.0)
+			CreateTimer(duration, Timer_RemoveEntity, EntIndexToEntRef(prop), TIMER_FLAG_NO_MAPCHANGE);
+				
+		SetEntityTransmitState(prop, FL_EDICT_FULLCHECK);
+		SetEdictFlags(prop, GetEdictFlags(prop)|FL_EDICT_ALWAYS);
+		
+		return prop;
+	}
+	else
+	{
+		return -1;
+	}
+}
+
+stock void MakeObjectIntangible(int entity)
+{
+	SetEntityCollisionGroup(entity, 1); //Dont Touch Anything.
+	SetEntProp(entity, Prop_Send, "m_usSolidFlags", 12); 
+	SetEntProp(entity, Prop_Data, "m_nSolidType", 6);
 }

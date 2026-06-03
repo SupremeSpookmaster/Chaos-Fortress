@@ -10,11 +10,12 @@
 #include "chaos_fortress/cf_killstreak.sp"
 #include "chaos_fortress/cf_damage.sp"
 #include "chaos_fortress/cf_buttons.sp"
-#include "chaos_fortress/cf_characters.sp"
 #include "chaos_fortress/cf_sounds.sp"
+#include "chaos_fortress/cf_characters.sp"
 #include "chaos_fortress/cf_weapons.sp"
 #include "chaos_fortress/cf_abilities.sp"
 #include "chaos_fortress/cf_animator.sp"
+#include "chaos_fortress/cf_status_effects.sp"
 
 bool b_InSpawn[2049][5];
 
@@ -64,6 +65,7 @@ public void CF_MakeNatives()
 	CFW_MakeNatives();
 	CFA_MakeNatives();
 	CFS_MakeNatives();
+	CFSE_MakeNatives();
 	
 	CreateNative("CF_IsEntityInSpawn", Native_CF_IsEntityInSpawn);
 }
@@ -88,6 +90,7 @@ public void CF_OnPluginStart()
 	CFA_MakeForwards();
 	CFS_OnPluginStart();
 	CFW_MakeForwards();
+	CFSE_MakeForwards();
 	
 	g_OnPlayerKilled = new GlobalForward("CF_OnPlayerKilled", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	g_OnPlayerKilled_Pre = new GlobalForward("CF_OnPlayerKilled_Pre", ET_Event, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_String, Param_String, Param_CellByRef, Param_Cell, Param_CellByRef, Param_CellByRef);
@@ -502,6 +505,57 @@ public int CF_GetCharacterLimit(char conf[255])
 	return limit;
 }
 
+public int CF_GetRoleLimit(char role[255], int client)
+{
+	GameRules = new ConfigMap("data/chaos_fortress/game_rules.cfg");
+
+	char path[255];
+	Format(path, sizeof(path), "game_rules.role_limits.%s", role);
+
+	ConfigMap subsection = GameRules.GetSection(path);
+	if (subsection == null)
+	{
+		DeleteCfg(GameRules);
+		return -1;
+	}
+
+	int req = GetIntFromCFGMap(subsection, "requirement", 0);
+
+	bool roundDown = GetBoolFromCFGMap(subsection, "round_down", false);
+
+	int min = GetIntFromCFGMap(subsection, "min_allowed", 1);
+	if (min < 0)
+		min = 0;
+
+	int max = GetIntFromCFGMap(subsection, "max_allowed", -1);
+
+	DeleteCfg(GameRules);
+
+	if (req <= 0)
+		return -1;
+
+	int allowed;
+
+	int numPlayers = 0;
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (IsValidClient(i) && (TF2_GetClientTeam(i) == TFTeam_Red || TF2_GetClientTeam(i) == TFTeam_Blue))
+			numPlayers++;
+	}
+
+	if (roundDown)
+		allowed = RoundToFloor(float(numPlayers) / float(req));
+	else
+		allowed = RoundFloat(float(numPlayers) / float(req));
+
+	if (allowed < min)
+		allowed = min;
+	if (allowed > max && max >= 0)
+		allowed = max;
+
+	return allowed;
+}
+
 public Action CF_PrintMessage(Handle timer, DataPack pack)
 {
 	ResetPack(pack);
@@ -716,6 +770,8 @@ public void Core_OnEntityDestroyed(int entity)
 	{
 		for (int i = 0; i < 4; i++)
 			b_InSpawn[entity][i] = false;
+
+		CFSE_RemoveAllEffectsFromEntity(entity);
 	}
 }
 

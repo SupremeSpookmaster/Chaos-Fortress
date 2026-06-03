@@ -4,8 +4,9 @@ GlobalForward g_ResistanceDamageForward;
 GlobalForward g_PostDamageForward;
 GlobalForward g_AllowStabForward;
 GlobalForward g_OnStab;
+GlobalForward g_OnTraceAttack;
 
-bool b_WasHeadshot[2048][2048];
+bool b_HeadshotUseCustomAttribs[2048][2048];
 
 public void CFDMG_MakeForwards()
 {
@@ -18,6 +19,7 @@ public void CFDMG_MakeForwards()
 	g_PostDamageForward = new GlobalForward("CF_OnTakeDamageAlive_Post", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Float, Param_Cell);
 	g_AllowStabForward = new GlobalForward("CF_OnCheckCanBackstab", ET_Ignore, Param_Cell, Param_Cell, Param_CellByRef, Param_CellByRef);
 	g_OnStab = new GlobalForward("CF_OnBackstab", ET_Ignore, Param_Cell, Param_Cell, Param_FloatByRef);
+	g_OnTraceAttack = new GlobalForward("CF_OnTraceAttack", ET_Event, Param_Cell, Param_CellByRef, Param_CellByRef, Param_Cell, Param_FloatByRef, Param_CellByRef, Param_CellByRef, Param_Cell, Param_CellByRef)
 }
 
 #if defined _pnpc_included_
@@ -29,7 +31,18 @@ public Action PNPC_OnPNPCTakeDamage(PNPC npc, float &damage, int weapon, int inf
 
 public void PNPC_OnMeleeHit(int attacker, int weapon, int target, float &damage, bool &crit, bool &canStab, bool &forceStab, bool &result)
 {
-	canStab = false;
+	CFDMG_CheckCanStab(attacker, target, forceStab, canStab);
+}
+
+public void PNPC_OnBackstab(int attacker, int victim, float &damage)
+{
+	CFDMG_OnBackstab(attacker, victim, damage);
+}
+
+#endif
+
+void CFDMG_CheckCanStab(int attacker, int target, bool &forceStab, bool &canStab)
+{
 	if (!IsPhysProp(target))
 	{
 		Call_StartForward(g_AllowStabForward);
@@ -43,7 +56,7 @@ public void PNPC_OnMeleeHit(int attacker, int weapon, int target, float &damage,
 	}
 }
 
-public void PNPC_OnBackstab(int attacker, int victim, float &damage)
+public void CFDMG_OnBackstab(int attacker, int victim, float &damage)
 {
 	Call_StartForward(g_OnStab);
 
@@ -53,8 +66,6 @@ public void PNPC_OnBackstab(int attacker, int victim, float &damage)
 
 	Call_Finish();
 }
-
-#endif
 
 public void CFDMG_OnEntityCreated(int entity, const char[] classname)
 {
@@ -80,10 +91,10 @@ public Action CFDMG_OnNonPlayerDamaged(int victim, int &attacker, int &inflictor
 	Action ReturnValue = Plugin_Continue;
 	Action newValue;
 
-	if (IsValidEntity(weapon) && IsValidEntity(victim) && IsValidEntity(attacker))
-		CFDMG_CalculateDMGFromCustAtts(victim, attacker, inflictor, damage, weapon, damagePosition);
-	
 	int damagecustom = 0;	//This is not used for anything, I only have it because I can't compile this without passing a variable and I really don't feel like restructuring this right now.
+	if (IsValidEntity(weapon) && IsValidEntity(victim) && IsValidEntity(attacker))
+		CFDMG_CalculateDMGFromCustAtts(victim, attacker, inflictor, damage, weapon, damagePosition, damagecustom);
+	
 	//First, we call PreDamage:
 	ReturnValue = CFDMG_CallDamageForward(g_PreDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
 	
@@ -151,26 +162,77 @@ public Action CFDMG_OnNonPlayerDamaged(int victim, int &attacker, int &inflictor
 
 public Action CFDMG_TraceAttack(int victim, int& attacker, int& inflictor, float& damage, int& damagetype, int& ammotype, int hitbox, int hitgroup)
 {
-	if (!IsValidClient(attacker))
+	if (!IsValidEntity(victim))
 		return Plugin_Continue;
 
-	int weapon = GetEntPropEnt(attacker, Prop_Send, "m_hActiveWeapon");
-	if (!IsValidEntity(weapon))
-		return Plugin_Continue;
+	int weapon = -1;
+	bool infIsNPC = false;
 
-	float mult = TF2CustAttr_GetFloat(weapon, "chaos fortress headshot multiplier", 1.0);
-	int effect = TF2CustAttr_GetInt(weapon, "chaos fortress headshot effects", 2);
-	if (hitgroup != HITGROUP_HEAD || !(mult != 1.0 || effect < 2))
-		return Plugin_Continue;
+	#if defined _pnpc_included_
+	infIsNPC = PNPC_IsNPC(inflictor);
+	#endif
 
-	b_WasHeadshot[victim][attacker] = true;
-	SetHeadshotIcon(effect);
-	hitgroup = HITGROUP_GENERIC;
+	if (!IsABuilding(inflictor, false) && !infIsNPC)
+	{
+		if (IsAProjectile(inflictor))
+			weapon = GetEntPropEnt(inflictor, Prop_Send, "m_hOriginalLauncher");
+		else if (IsValidClient(attacker))
+			weapon = GetEntPropEnt(attacker, Prop_Send, "m_hActiveWeapon")
+	}
+
+	bool wasHeadshot = (hitgroup == HITGROUP_HEAD);
+
+	Call_StartForward(g_OnTraceAttack);
+
+	Call_PushCell(victim);
+	Call_PushCellRef(attacker);
+	Call_PushCellRef(inflictor);
+	Call_PushCell(weapon);
+	Call_PushFloatRef(damage);
+	Call_PushCellRef(damagetype);
+	Call_PushCellRef(ammotype);
+	Call_PushCell(hitbox);
+	Call_PushCellRef(hitgroup);
+
+	Action result;
+	Call_Finish(result);
+
+	bool wasArrow = (IsValidEntity(inflictor) && IsAProjectile(inflictor));
+	bool CanHeadshot = false;
+	int effect = 2;
+
+	if (hitgroup == HITGROUP_HEAD)
+	{
+		//Check for CF's internal custom headshot attributes.
+		if (IsValidEntity(weapon))
+		{
+			float mult = TF2CustAttr_GetFloat(weapon, "chaos fortress headshot multiplier", 1.0);
+			effect = TF2CustAttr_GetInt(weapon, "chaos fortress headshot effects", 2);
+
+			if (mult != 1.0 || effect < 2)
+			{
+				if (IsValidEntity(attacker))
+					b_HeadshotUseCustomAttribs[victim][attacker] = true;
+
+				hitgroup = HITGROUP_GENERIC;	//Nullify the "real" headshot so we can cleanly apply our custom VFX and multipliers in the OnTakeDamageAlive hook later
+				result = Plugin_Changed;
+				CanHeadshot = true;
+			}
+		}
+
+		//Custom headshot attributes were not used, so check if someone used the forward to force a headshot under circumstances where a headshot would not normally occur.
+		if (!CanHeadshot && !wasHeadshot && hitgroup == HITGROUP_HEAD)
+			CanHeadshot = true;
+	}
+
+	//Either a headshot was forced when it normally shouldn't be possible, or we're using the custom headshot attributes, so modify the kill icon.
+	if (CanHeadshot)
+		SetHeadshotIcon(effect, wasArrow);
 	
-	return Plugin_Changed;
+	return result;
 }
 
-public void CFDMG_CalculateDMGFromCustAtts(int victim, int attacker, int inflictor, float &damage, int weapon, float damagePosition[3])
+void CFDMG_CalculateDMGFromCustAtts(int victim, int attacker, int inflictor, float &damage, int weapon, float damagePosition[3], int &damagecustom)
 {
 	float override = TF2CustAttr_GetFloat(weapon, "chaos fortress base damage override", -1.0);
 	if (override >= 0.0)
@@ -178,9 +240,10 @@ public void CFDMG_CalculateDMGFromCustAtts(int victim, int attacker, int inflict
 		damage = override;
 	}
 
-	if (b_WasHeadshot[victim][attacker])
+	if (b_HeadshotUseCustomAttribs[victim][attacker])
 	{
 		damage *= TF2CustAttr_GetFloat(weapon, "chaos fortress headshot multiplier", 1.0);
+		damagecustom |= TF_CUSTOM_HEADSHOT;
 
 		int effect = TF2CustAttr_GetInt(weapon, "chaos fortress headshot effects", 2);
 		if (effect == 1)
@@ -205,7 +268,7 @@ public void CFDMG_CalculateDMGFromCustAtts(int victim, int attacker, int inflict
 		}
 	}
 
-	if (!b_WasHeadshot[victim][attacker] || TF2CustAttr_GetInt(weapon, "chaos fortress custom headshot has falloff", 0) != 0)
+	if (!b_HeadshotUseCustomAttribs[victim][attacker] || TF2CustAttr_GetInt(weapon, "chaos fortress custom headshot has falloff", 0) != 0)
 	{
 		float falloffStart = TF2CustAttr_GetFloat(weapon, "chaos fortress falloff distance start", -1.0);
 		float falloffEnd = TF2CustAttr_GetFloat(weapon, "chaos fortress falloff distance end", -1.0);
@@ -223,13 +286,16 @@ public void CFDMG_CalculateDMGFromCustAtts(int victim, int attacker, int inflict
 
 				if (dist > falloffStart)
 				{
-					damage *= 1.0 - (((dist - falloffStart) / (falloffEnd - falloffStart)) * falloffMax);
+					if (dist >= falloffEnd)
+						damage *= (1.0 - falloffMax);
+					else
+						damage *= 1.0 - (((dist - falloffStart) / (falloffEnd - falloffStart)) * falloffMax);
 				}
 			}
 		}
 	}
 
-	b_WasHeadshot[victim][attacker] = false;
+	b_HeadshotUseCustomAttribs[victim][attacker] = false;
 }
 
 public void CFDMG_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int damagetype, int weapon, const float damageForce[3], const float damagePosition[3], int damagecustom)
@@ -271,8 +337,35 @@ public Action CFDMG_OnTakeDamageAlive(victim, &attacker, &inflictor, &Float:dama
 	Action ReturnValue = Plugin_Continue;
 	Action newValue;
 
+	bool usingCustomMeleeHitreg = false;
+
+	#if defined _pnpc_included_
+	usingCustomMeleeHitreg = PNPC_IsMeleeHitregEnabled();
+	#endif
+
+	if (!usingCustomMeleeHitreg && IsValidClient(victim) && weapon == GetPlayerWeaponSlot(attacker, 2))
+	{
+		bool canStab = damagecustom & TF_CUSTOM_BACKSTAB != 0, forceStab = false;
+		CFDMG_CheckCanStab(attacker, victim, forceStab, canStab);
+
+		if (canStab || forceStab)
+		{
+			CFDMG_OnBackstab(attacker, victim, damage);
+			ReturnValue = Plugin_Changed;
+
+			if (damagecustom & TF_CUSTOM_BACKSTAB == 0)
+				damagecustom |= TF_CUSTOM_BACKSTAB;
+		}
+		else if (damagecustom & TF_CUSTOM_BACKSTAB != 0)
+		{
+			damagecustom &= ~TF_CUSTOM_BACKSTAB;
+			damage = 0.0;
+			ReturnValue = Plugin_Changed;
+		}
+	}
+
 	if (IsValidEntity(weapon) && IsValidEntity(victim) && IsValidEntity(attacker))
-		CFDMG_CalculateDMGFromCustAtts(victim, attacker, inflictor, damage, weapon, damagePosition);
+		CFDMG_CalculateDMGFromCustAtts(victim, attacker, inflictor, damage, weapon, damagePosition, damagecustom);
 	
 	//First, we call PreDamage:
 	ReturnValue = CFDMG_CallDamageForward(g_PreDamageForward, victim, attacker, inflictor, damage, damagetype, weapon, damageForce, damagePosition, damagecustom);
@@ -330,6 +423,6 @@ public Action CFDMG_CallDamageForward(GlobalForward forwardToCall, victim, &atta
 	
 	Action ReturnValue;
 	Call_Finish(ReturnValue);
-	
+
 	return ReturnValue;
 }

@@ -2160,3 +2160,308 @@ native void CF_SetEntityBlocksLOS(int entity, bool status);
  * @param points		The number of points to give.
  */
 native void CF_GiveHealingPoints(int client, float points);
+
+/**
+ * Automatically runs a hull trace, and can damage or perform custom logic on all targets caught.
+ * The hull trace is automatically lag-compensated and also automatically takes line-of-sight into consideration.
+ * This intended primarily for use with lasers.
+ * 
+ * @param client		The client firing the laser.
+ * @param startPos		Origin of the laser.
+ * @param ang			Angle in which to fire the laser.
+ * @param width			Hull trace width. Can be set to 0.0 or below to use a ray instead of a hull.
+ * @param range			Hull trace length.
+ * @param damage		Damage to deal.
+ * @param damagetype	Damage type.
+ * @param weapon		The weapon which deals this laser's damage.
+ * @param inflictor		The inflictor which deals this laser's damage.
+ * @param plugin		The plugin which owns all optional functions called by this native.
+ * @param filterFunc	Optional function to filter out certain entities from being hit by the laser. Must take the target's index and the user's index in that order, and return a bool (true to allow the hit, false to prevent it). If this is left as INVALID_FUNCTION, the laser will automatically filter out anything that is not a valid enemy.
+ * @param onHitFunc		Optional function to call when the laser hits a target. This is called immediately BEFORE the laser deals damage. Must take the target's index and the user's index, in that order.
+ * @param drawLaserFunc	Optional function to call to draw the beam. Must take the user's index, the start vector of the beam, the end vector of the beam, the angle vector of the beam, and the beam's width (float), all in that order.
+ */
+native void CF_FireGenericLaser(int client, float startPos[3], float ang[3], float width, float range, float damage = 0.0, int damagetype = DMG_GENERIC, int weapon = -1, int inflictor = -1, char[] plugin = "", Function filterFunc = INVALID_FUNCTION, Function onHitFunc = INVALID_FUNCTION, Function drawLaserFunc = INVALID_FUNCTION);
+
+/**
+ * Sets the time until the client's next special resource regen tick, in seconds.
+ * 
+ * @param client		The client whose next regen tick to set.
+ * @param delay			The duration until the next regen tick will occur.
+ */
+native void CF_SetTimeUntilResourceRegen(int client, float delay);
+
+/**
+ * Gets the time until the client's next special resource regen tick, in seconds.
+ * 
+ * @param client		The client whose next regen tick to get.
+ * 
+ * @return				The duration until the next regen tick will occur.
+ */
+native float CF_GetTimeUntilResourceRegen(int client);
+
+/**
+ * Sets the time between special resource regen ticks for this client.
+ * If you only need to speed up or delay the next tick, use CF_SetTimeUntilResourceRegen instead.
+ * 
+ * @param client			The client to set the special resource regen interval of.
+ * @param interval			The desired special resource regen interval.
+ */
+native void CF_SetResourceRegenInterval(int client, float interval);
+
+/**
+ * Gets the time between special resource regen ticks for this client.
+ * 
+ * @param client			The client to get the special resource regen interval of.
+ * 
+ * @return			The time between special resource regen ticks.
+ */
+native float CF_GetResourceRegenInterval(int client);
+
+/**
+ * Checks if the given entity has the given status effect.
+ * This only checks for CUSTOM status effects, defined in the "status_effects" sections of individual character configs. Look at Kholdroz's CFG for an example.
+ * 
+ * @param entity			The entity to check.
+ * @param effect			The status effect to check for. This is case-sensitive!
+ * 
+ * @return	True if the given entity has the given status effect, false otherwise. Also returns false by default for invalid entities.
+ */
+native bool CF_HasStatusEffect(int entity, char[] effect);
+
+/**
+ * Applies a custom status effect to the given entity.
+ * 
+ * @param entity		The entity to apply the status effect to.
+ * @param effect		The status effect to apply.
+ * @param duration		The duration of the status effect. <= 0.0: infinite.
+ * @param applicant		The player/entity who applied the status effect.
+ * @param activeValue	Active Value to assign to the status effect once it is applied. See CF_GetStatusEffectActiveValue for an explanation of what the Active Value is, and how it is meant to be used.
+ * @param forced		If true: ignore any attempt by the CF_OnStatusEffectApplied_Pre forward to block it.
+ * @param replace		If true, and the status effect already exists: remove it, then apply this new version.
+ * 
+ * @return		True if the status effect was successfully applied, false otherwise. Instances which will return false include:
+ * 					 • A plugin blocked it via the CF_OnStatusEffectApplied_Pre forward.
+ * 					 • The status effect doesn't exist.
+ * 					 • The target was a non-player entity, and the status effect is configured to only allow players.
+ * 					 • The target is a player, but they are dead/spectating.
+ * 					 • The status effect already exists on the given entity, and "replace" was set to false.
+ */
+native bool CF_ApplyStatusEffect(int entity, char[] effect, float duration = 0.0, int applicant = -1, float activeValue = 0.0, bool forced = false, bool replace = false);
+
+/**
+ * Removes a custom status effect from the given entity.
+ * 
+ * @param entity			The entity to remove the effect from.
+ * @param effect			The status effect to remove.
+ * @param applicant			If this is specified: the status effect will only be removed if its current applicant matches this index. Leave as -1 to skip this check.
+ */
+native void CF_RemoveStatusEffect(int entity, char[] effect, int applicant = -1);
+
+/**
+ * Calls CF_RemoveStatusEffect on all positive status effects on the given entity.
+ * 
+ * @param entity			The entity to remove positive effects from.
+ * @param applicant			If this is specified: status effects will only be removed if their current applicant matches this index. Leave as -1 to skip this check.
+ */
+native void CF_RemoveAllPositiveEffects(int entity, int applicant = -1);
+
+/**
+ * Calls CF_RemoveStatusEffect on all negative status effects on the given entity.
+ * 
+ * @param entity			The entity to remove negative effects from.
+ * @param applicant			If this is specified: status effects will only be removed if their current applicant matches this index. Leave as -1 to skip this check.
+ */
+native void CF_RemoveAllNegativeEffects(int entity, int applicant = -1);
+
+/**
+ * Calls CF_RemoveStatusEffect on all status effects on the given entity.
+ * 
+ * @param entity			The entity to remove effects from.
+ * @param applicant			If this is specified: status effects will only be removed if their current applicant matches this index. Leave as -1 to skip this check.
+ */
+native void CF_RemoveAllStatusEffects(int entity, int applicant = -1);
+
+/**
+ * Retrieves a float value associated with the given status effect, as defined in the "status_effects" sections of individual character configs. Look at Kholdroz's CFG for an example.
+ * 
+ * @param effect		The effect to get the float value of.
+ * @param arg			The arg to retrieve.
+ * @param defaultValue	Default float value to return if the given arg is not found.
+ * 
+ * @return		The float value associated with the given arg of this status effect, or defaultValue if it is not found.
+ */
+native float CF_GetStatusEffectArgF(char[] effect, char[] arg, float defaultValue = 0.0);
+
+/**
+ * Retrieves an integer value associated with the given status effect, as defined in the "status_effects" sections of individual character configs. Look at Kholdroz's CFG for an example.
+ * 
+ * @param effect		The effect to get the integer value of.
+ * @param arg			The arg to retrieve.
+ * @param defaultValue	Default integer value to return if the given arg is not found.
+ * 
+ * @return		The integer value associated with the given arg of this status effect, or defaultValue if it is not found.
+ */
+native int CF_GetStatusEffectArgI(char[] effect, char[] arg, int defaultValue = 0);
+
+/**
+ * Retrieves a boolean value associated with the given status effect, as defined in the "status_effects" sections of individual character configs. Look at Kholdroz's CFG for an example.
+ * 
+ * @param effect		The effect to get the boolean value of.
+ * @param arg			The arg to retrieve.
+ * @param defaultValue	Default boolean value to return if the given arg is not found.
+ * 
+ * @return		The boolean value associated with the given arg of this status effect, or defaultValue if it is not found.
+ */
+native bool CF_GetStatusEffectArgB(char[] effect, char[] arg, bool defaultValue = false);
+
+/**
+ * Retrieves a string value associated with the given status effect, as defined in the "status_effects" sections of individual character configs. Look at Kholdroz's CFG for an example.
+ * 
+ * @param effect		The effect to get the string value of.
+ * @param arg			The arg to retrieve.
+ * @param output		Output buffer to store the result in.
+ * @param size			Size of the output buffer.
+ * @param defaultValue	Default value to return if the given arg is not found.
+ * 
+ * @return		The string value associated with the given arg of this status effect, or defaultValue if it is not found, stored in the given output buffer.
+ */
+native void CF_GetStatusEffectArgS(char[] effect, char[] arg, char[] output, int size, char[] defaultValue = "");
+
+/**
+ * Retrieves the current "Active Value" of this status effect on the given entity.
+ * "Active Value" - an arbitrary number used by plugins to perform custom operations using this status effect.
+ * For example: a bleed meter that deals a big chunk of damage at 100%. The "Active Value" would be used to track how full the meter is, ranging from 0.0 to represent 0% full, to 1.0 to represent 100%.
+ * 
+ * @param entity		The entity to find the status effect's Active Value on.
+ * @param effect		The status effect to retrieve the Active Value of.
+ * @param defaultValue	Default float value to return if the given status effect is not found.
+ */
+native float CF_GetStatusEffectActiveValue(int entity, char[] effect, float defaultValue = 0.0);
+
+/**
+ * Sets the current "Active Value" of this status effect on the given entity.
+ * See CF_GetStatusEffectActiveValue for an explanation of what the Active Value is, and how it is meant to be used.
+ * 
+ * @param entity		The entity to set the status effect's Active Value on.
+ * @param effect		The status effect to set the Active Value of.
+ * @param newValue		The value to set.
+ */
+native void CF_SetStatusEffectActiveValue(int entity, char[] effect, float newValue);
+
+/**
+ * Retrieves the entity which applied the status effect to the given entity, if an applicant was assigned.
+ * 
+ * @param entity		The entity whose status effects to check.
+ * @param effect		The effect to get the appliant of.
+ * 
+ * @return	The entity index of the status effect's applicant, or -1 if no applicant exists or the status effect was not active on the given entity.
+ */
+native int CF_GetStatusEffectApplicant(int entity, char[] effect);
+
+/**
+ * Sets the entity to be credited for applying the given status effect to the given entity.
+ * 
+ * @param entity		The entity whose status effects to modify.
+ * @param effect		The effect to set the appliant of.
+ * @param newApplicant	The entity to be credited for applying this status effect.
+ */
+native void CF_SetStatusEffectApplicant(int entity, char[] effect, int newApplicant);
+
+/**
+ * Gets the time at which the given status effect will naturally expire.
+ * 
+ * @param entity		The entity whose status effects to check.
+ * @param effect		The effect to get the expiration time of.
+ * 
+ * @return		The GameTime at which the given status effect is set to naturally expire, or 0.0 if the effect was not found or has no expiration time.
+ */
+native float CF_GetStatusEffectEndTime(int entity, char[] effect);
+
+/**
+ * Sets the time at which the given status effect will naturally expire.
+ * 
+ * @param entity		The entity whose status effects to modify.
+ * @param effect		The status effect to override the end time of.
+ * @param endTime		The new GameTime at which this status effect should be applied. 0.0 can be used to assign infinite duration.
+ */
+native void CF_SetStatusEffectEndTime(int entity, char[] effect, float endTime);
+
+/**
+ * Called before a custom status effect is applied.
+ * This is only called for CUSTOM status effects, defined in the "status_effects" sections of individual character configs. Look at Kholdroz's CFG for an example.
+ * 
+ * @param entity		The entity to which the status effect will be applied.
+ * @param effect		The status effect which will be applied.
+ * @param applicant		The entity/client responsible for applying the effect.
+ * @param result		Setting this to false and returning Plugin_Changed will prevent the status effect from being applied.
+ * 
+ * @return		Plugin_Continue if you did not change the result parameter, otherwise return Plugin_Changed.
+ */
+forward Action CF_OnStatusEffectApplied_Pre(int entity, char[] effect, int applicant, bool &result);
+
+/**
+ * Called after a custom status effect is applied.
+ * This is only called for CUSTOM status effects, defined in the "status_effects" sections of individual character configs. Look at Kholdroz's CFG for an example.
+ * 
+ * @param entity		The entity to which the status effect was applied.
+ * @param effect		The status effect which was applied.
+ * @param applicant		The entity/client responsible for applying the effect.
+ */
+forward void CF_OnStatusEffectApplied_Post(int entity, char[] effect, int applicant);
+
+/**
+ * Called when a custom status effect is removed.
+ * This is only called for CUSTOM status effects, defined in the "status_effects" sections of individual character configs. Look at Kholdroz's CFG for an example.
+ * 
+ * @param entity		The entity from which the status effect was removed.
+ * @param effect		The status effect which was removed.
+ * @param applicant		The entity/client which originally applied the effect.
+ */
+forward void CF_OnStatusEffectRemoved(int entity, char[] effect, int applicant);
+
+/**
+ * Called before a status effect's "Active Value" is changed.
+ * See CF_GetStatusEffectActiveValue for an explanation of what the Active Value is, and how it is meant to be used.
+ * 
+ * @param entity		The entity with the status effect.
+ * @param effect		The status effect whose Active Value is about to be changed.
+ * @param applicant		The entity responsible for applying the status effect.
+ * @param currentValue	The status effect's current Active Value.
+ * @param newValue		The number to which the Active Value will be changed. This can be modified.
+ * @param result		Set to false to prevent the Active Value from being changed.
+ * 
+ * @return		Plugin_Continue if you did not change newValue or result, otherwise return Plugin_Changed.
+ */
+forward Action CF_OnStatusEffectActiveValueChanged_Pre(int entity, char[] effect, int applicant, float currentValue, float &newValue, bool &result);
+
+/**
+ * Called after a status effect's "Active Value" is changed.
+ * See CF_GetStatusEffectActiveValue for an explanation of what the Active Value is, and how it is meant to be used.
+ * 
+ * @param entity		The entity with the status effect.
+ * @param effect		The status effect whose Active Value was changed.
+ * @param applicant		The entity responsible for applying the status effect.
+ * @param newValue		The status effect's new Active Value.
+ * 
+ * @return		Plugin_Continue if you did not change newValue or result, otherwise return Plugin_Changed.
+ */
+forward void CF_OnStatusEffectActiveValueChanged_Post(int entity, char[] effect, int applicant, float newValue);
+
+/**
+ * Called by CF's internal SDKHook_TraceAttack. This is called for clients, buildings, and NPCs.
+ * NOTE: CERTAIN WEAPONS/ENTITIES DO NOT CALL TRACEATTACK!
+ * Sources which do not call TraceAttack include most (not all) projectiles, and all sources of custom damage.
+ * 
+ * @param victim			The entity which was hit. This is guaranteed to be valid.
+ * @param attacker			The entity which dealt the damage.
+ * @param inflictor			The entity which inflicted the damage. EX: if a player is hit by a huntsman arrow, this would be the huntsman arrow, and the attacker would be whoever fired the huntsman arrow.
+ * @param weapon			The weapon which inflicted the damage. Defaults to -1 in cases where no weapon was used.
+ * @param damage			The damage which will be dealt.
+ * @param damagetype		Damage bits, such as DMG_BLAST.
+ * @param ammotype			Ammo type.
+ * @param hitbox			Hitbox index.
+ * @param hitgroup			The type of hitbox which was hit, such as HITGROUP_HEAD.
+ * 
+ * @return		Plugin_Changed if you changed anything, otherwise return Plugin_Continue.
+ */
+forward Action CF_OnTraceAttack(int victim, int &attacker, int &inflictor, int weapon, float &damage, int &damagetype, int &ammotype, int hitbox, int &hitgroup);

@@ -87,11 +87,22 @@ public void OnPluginStart()
 	FriendlyFire = FindConVar("mp_friendlyfire");
 }
 
+public const char Scythe_HomingSFX[][255] =
+{
+	"ui/hitsound_vortex1.wav",
+	"ui/hitsound_vortex2.wav",
+	"ui/hitsound_vortex3.wav",
+	"ui/hitsound_vortex4.wav",
+	"ui/hitsound_vortex5.wav"
+};
+
 public void OnMapStart()
 {
 	Shared_BEAM_Laser = PrecacheModel("materials/sprites/laser.vmt");
 	Shared_BEAM_Glow = PrecacheModel("sprites/glow02.vmt");
 	Shared_ROCKET = PrecacheModel(PARTICLE_ROCKET_MODEL);
+	
+	for (int i = 0; i < sizeof(Scythe_HomingSFX); i++) { PrecacheSound(Scythe_HomingSFX[i]); }
 
 	PrecacheSound("misc/halloween/spell_teleport.wav");
 	g_Ruina_BEAM_Combine_Black 	= PrecacheModel("materials/sprites/combineball_trail_black_1.vmt", true);
@@ -383,11 +394,43 @@ bool IsValidTarget(int attacker, int victim)
 	return true;
 }
 
+public bool Scythe_HomingTrace(int entity, int contentsmask, int client)
+{
+	return CF_IsValidTarget(entity, grabEnemyTeam(client));
+}
+
 void ScytheThrow(int client, char abilityName[255])
 {
 	//CF_SimulateSpellbookCast(client, _, CF_Spell_Teleport);
 
-	int target = GetClientAimTarget(client);
+	//TODO: Convert this to a CF native called CF_GetAimTarget that uses CF_IsValidTarget filters and can pass a custom trace filter
+	float startPos[3], ang[3], endPos[3], mins[3], maxs[3];
+	GetClientEyePosition(client, startPos);
+	GetClientEyeAngles(client, ang);
+	GetPointInDirection(startPos, ang, 9999.0, endPos);
+	CF_HasLineOfSight(startPos, endPos, _, endPos);
+	GenerateMinMax(5.0, mins, maxs);
+
+	CF_StartLagCompensation(client);
+	Handle trace = TR_TraceHullFilterEx(startPos, endPos, mins, maxs, MASK_SHOT_HULL, Scythe_HomingTrace, client);
+	CF_EndLagCompensation(client);
+
+	int target = -1;
+	if (TR_DidHit(trace))
+	{
+		target = TR_GetEntityIndex(trace);
+
+		if (IsValidEntity(target) && target > 0)
+		{
+			EmitSoundToClient(client, Scythe_HomingSFX[GetRandomInt(0, sizeof(Scythe_HomingSFX) - 1)], _, _, 110, _, _, GetRandomInt(90, 110));
+			EmitSoundToClient(client, Scythe_HomingSFX[GetRandomInt(0, sizeof(Scythe_HomingSFX) - 1)], _, _, 110, _, _, GetRandomInt(90, 110));
+		}
+		else
+			target = -1;
+	}
+
+	delete trace;
+
 	FireScythe(client, abilityName, target);
 	CF_ForceGesture(client);
 }

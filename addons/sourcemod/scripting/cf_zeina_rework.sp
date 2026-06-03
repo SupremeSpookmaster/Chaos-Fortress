@@ -636,11 +636,14 @@ int i_YoinkBeam[MAXPLAYERS + 1] = { -1, ... };
 int i_YoinkStartEnt[MAXPLAYERS + 1] = { -1, ... };
 int i_YoinkEndEnt[MAXPLAYERS + 1] = { -1, ... };
 
+float f_GrabStart[MAXPLAYERS + 1] = { 0.0, ... };
+
 bool b_Yoinking[MAXPLAYERS + 1] = { false, ... };
 
 public void Yoink_Activate(int client, char abilityName[255])
 {
 	b_Yoinking[client] = true;
+	f_GrabStart[client] = GetGameTime();
 	SDKHook(client, SDKHook_PreThink, Yoink_GrabLogic);
 
 	int target = Yoink_GetTarget(client);
@@ -684,16 +687,24 @@ public Action Yoink_GrabLogic(int client)
 		return Plugin_Stop;
 	}
 
-	float vecView[3], vecFwd[3], vecPos[3], vecVel[3];
+	float vecView[3], vecFwd[3], vecPos[3], vecVel[3], theirPos[3];
+	GetClientEyePosition(client, vecPos);
+	GetEntPropVector(target, Prop_Send, "m_vecOrigin", theirPos);
 	GetClientEyeAngles(client, vecView);
 	GetAngleVectors(vecView, vecFwd, NULL_VECTOR, NULL_VECTOR);
-	GetClientEyePosition(client, vecPos);
-	vecPos[0]+=vecFwd[0] * 60.0;
-	vecPos[1]+=vecFwd[1] * 60.0;
-	vecPos[2]+=vecFwd[2] * 60.0;
-	GetEntPropVector(target, Prop_Send, "m_vecOrigin", vecFwd);
-	SubtractVectors(vecPos, vecFwd, vecVel);
+	vecPos[0]+=vecFwd[0] * 80.0;
+	vecPos[1]+=vecFwd[1] * 80.0;
+	vecPos[2]+=vecFwd[2] * 80.0;
+	SubtractVectors(vecPos, theirPos, vecVel);
 	ScaleVector(vecVel, 10.0);
+
+	//Prevent grabbed targets from moving above 1200 HU/s, so Zeina players can't grief by whipping players around and giving them motion sickness.
+	//Also, ramp up the drag speed over the span of 1.2s after the target was grabbed, so the initial yank isn't as abrupt.
+	float len = GetVectorLength(vecVel);
+	float maxSpeed = fmin(1200.0, ((GetGameTime() - f_GrabStart[client]) / 1.2) * 1200.0);
+	if (len > maxSpeed)
+		ScaleVector(vecVel, maxSpeed / len);
+
 	TeleportEntity(target, NULL_VECTOR, NULL_VECTOR, vecVel);
 
 	return Plugin_Continue;
