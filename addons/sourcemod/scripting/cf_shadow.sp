@@ -41,29 +41,32 @@ stock void ResetToZero2(any[][] array, int length1, int length2)
 #define BACKSTAB						"backstab"
 #define STEALTH							"stealth"
 
-#define DRONE_MODEL						"models/chaos_fortress/drone_model/drone.mdl"
-#define DRONE_DESTROYED_1				"weapons/sentry_explode.wav"
-#define DRONE_DESTROYED_2				"player/medic_charged_death.wav"
-#define DRONE_GIB_1						"models/player/gibs/gibs_gear2.mdl"
-#define DRONE_GIB_2						"models/player/gibs/gibs_gear3.mdl"
-#define DRONE_GIB_3						"models/player/gibs/gibs_gear4.mdl"
-#define DRONE_GIB_4						"models/player/gibs/gibs_spring1.mdl"
-#define DRONE_GIB_5						"models/player/gibs/gibs_spring2.mdl"
-#define DRONE_PLACED					"player/recharged.wav"
+#define MODEL_DRONE						"models/chaos_fortress/drone_model/drone.mdl"
+#define MODEL_DRONE_GIB_1				"models/player/gibs/gibs_gear2.mdl"
+#define MODEL_DRONE_GIB_2				"models/player/gibs/gibs_gear3.mdl"
+#define MODEL_DRONE_GIB_3				"models/player/gibs/gibs_gear4.mdl"
+#define MODEL_DRONE_GIB_4				"models/player/gibs/gibs_spring1.mdl"
+#define MODEL_DRONE_GIB_5				"models/player/gibs/gibs_spring2.mdl"
 
-#define SOUND_UAV_FOUND 				"weapons/sentry_spot_client.wav"
-#define SOUND_UAV_FOUND_CLIENT 			"weapons/sentry_spot.wav"
-#define SOUND_CLOAK_BLOCKED				"buttons/combine_button_locked.wav"
-#define SOUND_STAB_NONLETHAL			"player/spy_shield_break.wav"
-#define SOUND_BOMB_PLANTED				"chaos_fortress/agent/plant_bomb.mp3"
+#define SND_DRONE_DESTROYED_1		"weapons/sentry_explode.wav"
+#define SND_DRONE_DESTROYED_2		"player/medic_charged_death.wav"
+#define SND_DRONE_PLACED			"player/recharged.wav"
+#define SND_UAV_FOUND 				"weapons/sentry_spot_client.wav"
+#define SND_UAV_FOUND_CLIENT		"weapons/sentry_spot.wav"
+#define SND_CLOAK_BLOCKED			"buttons/combine_button_locked.wav"
+#define SND_STAB_NONLETHAL			"player/spy_shield_break.wav"
+#define SND_BOMB_PLANTED			"chaos_fortress/agent/plant_bomb.mp3"
+#define SND_BOMB_PLANT_ERROR		"replay/replaydialog_warn.wav"
+#define SND_LASERGUN_IMPACT			"weapons/cow_mangler_explosion_charge_02.wav"
+#define SND_LASERGUN_SHOT			"weapons/cow_mangler_over_charge_shot.wav"
 
 static const char DroneGear_Gib[][255] =
 {
-	DRONE_GIB_1,
-	DRONE_GIB_2,
-	DRONE_GIB_3,
-	DRONE_GIB_4,
-	DRONE_GIB_5
+	MODEL_DRONE_GIB_1,
+	MODEL_DRONE_GIB_2,
+	MODEL_DRONE_GIB_3,
+	MODEL_DRONE_GIB_4,
+	MODEL_DRONE_GIB_5
 };
 
 static const char DroneDamaged[][] = {
@@ -80,6 +83,7 @@ static int Generic_Laser_BEAM_HitDetected[MAXENTITIES];
 static int Text_Owner[MAXENTITIES] = { -1, ... };
 
 static int BeamLaser;
+static int BeamLightning;
 
 static int GlowId[MAXENTITIES]={-1,...};
 static int BlueGlow[4] = {88, 150, 185, 255};
@@ -94,18 +98,24 @@ static bool M3Pressed[MAXTF2PLAYERS];
 
 public void OnMapStart()
 {
-	PrecacheModel(DRONE_MODEL, true);
+	CFStocks_Precache();
+
+	PrecacheModel(MODEL_DRONE, true);
 	for (int i = 0; i < sizeof(DroneGear_Gib); i++) { PrecacheModel(DroneGear_Gib[i]); }
 	BeamLaser = PrecacheModel("materials/sprites/laser.vmt");
+	BeamLightning = PrecacheModel("materials/sprites/lgtning.vmt");
 
-	PrecacheSound(DRONE_DESTROYED_1, true);
-	PrecacheSound(DRONE_DESTROYED_2, true);
-	PrecacheSound(SOUND_UAV_FOUND, true);
-	PrecacheSound(SOUND_UAV_FOUND_CLIENT, true);
-	PrecacheSound(SOUND_CLOAK_BLOCKED, true);
-	PrecacheSound(DRONE_PLACED, true);
-	PrecacheSound(SOUND_STAB_NONLETHAL, true);
-	PrecacheSound(SOUND_BOMB_PLANTED, true);
+	PrecacheSound(SND_DRONE_DESTROYED_1, true);
+	PrecacheSound(SND_DRONE_DESTROYED_2, true);
+	PrecacheSound(SND_UAV_FOUND, true);
+	PrecacheSound(SND_UAV_FOUND_CLIENT, true);
+	PrecacheSound(SND_CLOAK_BLOCKED, true);
+	PrecacheSound(SND_DRONE_PLACED, true);
+	PrecacheSound(SND_STAB_NONLETHAL, true);
+	PrecacheSound(SND_BOMB_PLANTED, true);
+	PrecacheSound(SND_BOMB_PLANT_ERROR, true);
+	PrecacheSound(SND_LASERGUN_IMPACT, true);
+	PrecacheSound(SND_LASERGUN_SHOT, true);
 	for (int i = 0; i < sizeof(DroneDamaged); i++) { PrecacheSound(DroneDamaged[i]); }
 
 	Zero(Generic_Laser_BEAM_HitDetected);
@@ -166,8 +176,11 @@ static void Bombs_Spawn(int client, char abilityName[255])
 	CF_BlockAbilitySlot(client, M3);
 }
 
-static void Bombs_PlantOnEntity(int entity, int owner)
+static void Bombs_PlantOnEntity(int entity, int owner, float &damage)
 {
+	if(damage < 1.0)
+		return;
+
 	if(HasABomb[entity] || !BombActive[owner] || GetTeam(entity) == GetTeam(owner))
 		return;
 	
@@ -175,14 +188,15 @@ static void Bombs_PlantOnEntity(int entity, int owner)
 	CF_WorldSpaceCenter(owner, Origin);
 	CF_WorldSpaceCenter(entity, EntLoc);
 	
-	float dist = GetVectorDistance(Origin, EntLoc);
-	float radius = CF_GetArgF(owner, SHADOW, BOMB, "plant_range", 350.0);
+	float dist 		=	GetVectorDistance(Origin, EntLoc);
+	float radius 	=	CF_GetArgF(owner, SHADOW, BOMB, "plant_range", 350.0);
+
 	if(dist > radius)
 		return;
 
 	if(BombsToPlace[owner] > 0)
 	{
-		EmitSoundToAll(SOUND_BOMB_PLANTED, owner);
+		EmitSoundToAll(SND_BOMB_PLANTED, owner);
 		HasABomb[entity] = true;
 		BombsToPlace[owner]--;
 		
@@ -298,7 +312,7 @@ static void Bombs_RequestFrame(DataPack pack)
 
 					if(CF_HasLineOfSight(Origin, TargetLocation, _, Origin) && dist <= BombRadius[owner])
 					{
-						SDKHooks_TakeDamage(i, owner, owner, BombDamage_AoE[owner], DMG_BLAST);
+						SDKHooks_TakeDamage(i, owner, owner, BombDamage_AoE[owner], DMG_BLAST|DMG_CRUSH);
 					}
 				}
 
@@ -316,12 +330,12 @@ static void Bombs_RequestFrame(DataPack pack)
 
 					if(CF_HasLineOfSight(Origin, TargetLocation, _, Origin) && dist <= BombRadius[owner])
 					{
-						SDKHooks_TakeDamage(i, owner, owner, BombDamage_Buildings_AoE[owner], DMG_BLAST);
+						SDKHooks_TakeDamage(i, owner, owner, BombDamage_Buildings_AoE[owner], DMG_BLAST|DMG_CRUSH);
 					}
 				}
 			}
 
-			SDKHooks_TakeDamage(entity, owner, owner, BombDamage[owner], DMG_BLAST);
+			SDKHooks_TakeDamage(entity, owner, owner, BombDamage[owner], DMG_BLAST|DMG_CRUSH);
 
 			delete pack;
 
@@ -534,7 +548,7 @@ enum struct UAV_Drone
 		GetClientEyeAngles(this.Owner, ang);
 		CF_WorldSpaceCenter(this.Owner, pos);
 
-		int Drone = SpawnPhysProp(this.Owner, DRONE_MODEL, pos, ang, NULL_VECTOR, TF2_GetClientTeam(this.Owner) == TFTeam_Red ? view_as<int>(TFTeam_Blue) : view_as<int>(TFTeam_Red), this.Durability, false, _, this.size, this.size * 2.0, true);
+		int Drone = SpawnPhysProp(this.Owner, MODEL_DRONE, pos, ang, NULL_VECTOR, TF2_GetClientTeam(this.Owner) == TFTeam_Red ? view_as<int>(TFTeam_Blue) : view_as<int>(TFTeam_Red), this.Durability, false, _, this.size, this.size * 2.0, true);
 		if (IsValidEntity(Drone))
 		{
 			SetEntProp(Drone, Prop_Data, "m_takedamage", 1, 1);
@@ -563,8 +577,8 @@ enum struct UAV_Drone
 			float pos[3]; GetAbsOrigin_main(Drone, pos);
 			SpawnParticle(pos, "rd_robot_explosion", 0.1);
 
-			EmitSoundToAll(DRONE_DESTROYED_1, Drone, _, _, _, _, GetRandomInt(80, 110), -1);
-			EmitSoundToAll(DRONE_DESTROYED_2, Drone, _, _, _, _, GetRandomInt(80, 110), -1);
+			EmitSoundToAll(SND_DRONE_DESTROYED_1, Drone, _, _, _, _, GetRandomInt(80, 110), -1);
+			EmitSoundToAll(SND_DRONE_DESTROYED_2, Drone, _, _, _, _, GetRandomInt(80, 110), -1);
 
 			for (int i = 0; i < GetRandomInt(4, 6); i++)
 			{
@@ -826,7 +840,7 @@ public void UAV_SpawnDrone(int client, char abilityName[255])
 
 					Uav.Target = target;
 
-					EmitSoundToClient(target, SOUND_UAV_FOUND_CLIENT);
+					EmitSoundToClient(target, SND_UAV_FOUND_CLIENT);
 				}
 				else
 				{
@@ -856,7 +870,7 @@ public void UAV_SpawnDrone(int client, char abilityName[255])
 
 				RequestFrame(UAV_Logic, client);
 
-				EmitSoundToClient(client, SOUND_UAV_FOUND);
+				EmitSoundToClient(client, SND_UAV_FOUND);
 			}
 		}
 	}
@@ -932,7 +946,7 @@ public void UAV_CheckRadius(int client, float StartPos[3], float maxDistance)
 					Glow.owner = client;
 					Glow.teamColor = true;
 					GlowId[enemies] = EntIndexToEntRef(Glow.Create());
-					EmitSoundToClient(enemies, SOUND_UAV_FOUND);
+					EmitSoundToClient(enemies, SND_UAV_FOUND);
 				}
 
 				if(IsTargetOutlined(enemies))
@@ -1230,6 +1244,11 @@ public void Penetrator_Trace(int client, char abilityName[255])
 	shootDist = CF_GetArgF(client, SHADOW, abilityName, "laser_range", 1200.0),
 	width = CF_GetArgF(client, SHADOW, abilityName, "laser_width_visual", 12.0) * 1.5;
 
+	float AOEDamage = CF_GetArgF(client, SHADOW, abilityName, "laser_impact_aoe_damage", 80.0);
+	float AOERad = CF_GetArgF(client, SHADOW, abilityName, "laser_impact_aoe_radius", 120.0);
+	float AOEFallOffStart = CF_GetArgF(client, SHADOW, abilityName, "laser_impact_aoe_falloffStart", 120.0);
+	float AOEFallOffMax = CF_GetArgF(client, SHADOW, abilityName, "laser_impact_aoe_falloffMax", 0.8);
+
 	float vecStart[3], vecAngles[3];
 
 	GetClientEyeAngles(client, vecAngles);
@@ -1261,7 +1280,21 @@ public void Penetrator_Trace(int client, char abilityName[255])
 	Laser.CleanEnumerator();
 	Laser.EnumerateGetEntities();
 	Queue Victims = Laser.GetEnumeratedEntityPop();
-			
+
+	float endLoc[3]; endLoc = Laser.End_Point;
+
+	EmitSoundToAll(SND_LASERGUN_SHOT, client, _, 90, _, _, GetRandomInt(90, 120), _, NewLoc);
+
+	SpawnShaker(endLoc, 275, 210, 2, 255, 0);
+	SpawnParticle(endLoc, TF2_GetClientTeam(client) == TFTeam_Red ? "drg_cow_explosioncore_charged" : "drg_cow_explosioncore_charged_blue", 0.25);
+	EmitSoundToAll(SND_LASERGUN_IMPACT, client, _, 90, _, _, GetRandomInt(90, 120), _, endLoc);
+
+	int weapon = GetPlayerWeaponSlot(client, 0);
+	if(!IsValidEntity(weapon))
+		weapon = client;
+
+	CF_GenericAOEDamage(client, weapon, weapon, AOEDamage, DMG_BLAST, AOERad, endLoc, AOEFallOffStart, AOEFallOffMax);
+
 	while(!Victims.Empty)
 	{
 		int victim = Victims.Pop();
@@ -1329,19 +1362,23 @@ public void Penetrator_Trace(int client, char abilityName[255])
 						Penetrations[client]++;
 					}
 				}
-				else if(InSpawnRoom)
+				else
 				{
-					PrintCenterText(client, "You hit a target inside their spawn room, no damage to them!");
+					PrintCenterText(client, "CANNOT DAMAGE TARGET IN SPAWN ROOM");
 				}
 			}
 		}
 	}
 	delete Victims;
-
+	
 	float beamLife = 0.15;
-	TE_SetupBeamPoints(Laser.Start_Point, Laser.End_Point, BeamLaser, 0, 0, 0, beamLife, width, width, 1, 0.0, TF2_GetClientTeam(client) == TFTeam_Red ? RedGlow : BlueGlow, 0);
+	TE_SetupBeamPoints(Laser.Start_Point, Laser.End_Point, BeamLaser, 0, 0, 0, beamLife, width, width, 1, 2.0, TF2_GetClientTeam(client) == TFTeam_Red ? RedGlow : BlueGlow, 0);
 	TE_SendToAll();
-	TE_SetupBeamPoints(Laser.Start_Point, Laser.End_Point, BeamLaser, 0, 0, 0, beamLife, width, width, 1, 0.0, TF2_GetClientTeam(client) == TFTeam_Red ? RedGlow : BlueGlow, 0);
+	TE_SetupBeamPoints(Laser.Start_Point, Laser.End_Point, BeamLaser, 0, 0, 0, beamLife, width, width, 1, 2.0, TF2_GetClientTeam(client) == TFTeam_Red ? RedGlow : BlueGlow, 0);
+	TE_SendToAll();	
+	TE_SetupBeamPoints(Laser.Start_Point, Laser.End_Point, BeamLightning, 0, 0, 0, beamLife, width, width, 1, 6.0, TF2_GetClientTeam(client) == TFTeam_Red ? RedGlow : BlueGlow, 0);
+	TE_SendToAll();	
+	TE_SetupBeamPoints(Laser.Start_Point, Laser.End_Point, BeamLightning, 0, 0, 0, beamLife, width, width, 1, 6.0, TF2_GetClientTeam(client) == TFTeam_Red ? RedGlow : BlueGlow, 0);
 	TE_SendToAll();	
 }
 
@@ -1466,7 +1503,7 @@ public void CF_OnBackstab(int attacker, int victim, float &damage)
 				if (f_StabDelay[attacker] > 0.0)
 					Stabs_ApplyMeleeCooldown(attacker, f_StabDelay[attacker]);
 
-				EmitSoundToAll(SOUND_STAB_NONLETHAL, attacker, _, _, _, _, GetRandomInt(90, 110));
+				EmitSoundToAll(SND_STAB_NONLETHAL, attacker, _, _, _, _, GetRandomInt(90, 110));
 			}
 		}
 	}
@@ -1709,14 +1746,31 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 	return ReturnValue;
 }
 
-public Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int weapon)
+public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
+	float damageForce[3], float damagePosition[3], int &damagecustom)
 {
-	if (!IsValidClient(attacker) || !IsABuilding(victim, true))
+	if(!IsValidClient(attacker) || !IsValidEntity(victim))
 		return Plugin_Continue;
 	
-	if(IsABuilding(victim, view_as<bool>(BombOnNPC[attacker])))
+	if(!BombsToPlace[attacker])
+		return Plugin_Continue;
+
+	// Our Bomb Plant explosion contains DMG_CRUSH.
+	if(damagetype & DMG_CRUSH)
+		return Plugin_Continue;
+
+	if(victim <= MaxClients)
 	{
-		Bombs_PlantOnEntity(victim, attacker);
+		PrintCenterText(attacker, "BOMB ONLY PLANTABLE ON BUILDABLES!");
+		EmitSoundToClient(attacker, SND_BOMB_PLANT_ERROR);
+	}
+	else
+	{
+		bool bBuildingOrNPC = (IsABuilding(victim, view_as<bool>(BombOnNPC[attacker])));
+		if(bBuildingOrNPC)
+		{
+			Bombs_PlantOnEntity(victim, attacker, damage);
+		}
 	}
 
 	return Plugin_Continue;
@@ -1902,8 +1956,8 @@ public Action CF_OnPlayerRunCmd(int client, int &buttons)
 						
 						PrintCenterText(client, "%s", buffer);
 
-						EmitSoundToClient(client, SOUND_CLOAK_BLOCKED);
-						EmitSoundToClient(client, SOUND_CLOAK_BLOCKED);
+						EmitSoundToClient(client, SND_CLOAK_BLOCKED);
+						EmitSoundToClient(client, SND_CLOAK_BLOCKED);
 
 						ButtonInitialDelay[client] = 0.5 + GetGameTime();
 					}
