@@ -188,7 +188,7 @@ static void Exposed_AppliedPost(int applicant, int target)
 	DataPack pack = new DataPack();
 	hExposedParticle[target] = CreateDataTimer(0.1, Timer_ExpireParticle, pack, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
 	pack.WriteCell(GetClientUserId(applicant));
-	pack.WriteCell(GetClientUserId(target));
+	pack.WriteCell(EntIndexToEntRef(target));
 
 	if (!Exposed[target] && bExposedFromOutter[applicant][target])
 	{
@@ -203,12 +203,12 @@ static Action Timer_ExpireParticle(Handle timer, DataPack pack)
 	pack.Reset();
 
 	int client = GetClientOfUserId(pack.ReadCell());
-	int target = GetClientOfUserId(pack.ReadCell());
+	int target = EntRefToEntIndex(pack.ReadCell());
 
 	bool bClientAlive = (IsValidMulti(client));
-	bool bTargetAlive = (IsValidMulti(target));
+	bool bValidEntity = (IsValidEntity(target));
 
-	if (!bClientAlive || !bTargetAlive)
+	if (!bClientAlive || !bValidEntity || (bValidEntity && target <= MaxClients && !IsPlayerAlive(target)))
 	{	
 		if (!bClientAlive)
 		{
@@ -1899,13 +1899,29 @@ public void OnEntityDestroyed(int entity)
 {
 	if (IsValidEntity(entity) && entity > 0 && entity <= MAXENTITIES)
 	{
+		/*
 		if (IsValidClient(BombOwner[entity]))
 		{
-			// CF_ApplyAbilityCooldown(BombOwner[entity], 12.0, M3, true);
-			// CF_UnblockAbilitySlot(BombOwner[entity], M3);
-			// BombPhase[BombOwner[entity]] = BOMB_IDLE;
+			CF_ApplyAbilityCooldown(BombOwner[entity], 12.0, M3, true);
+			CF_UnblockAbilitySlot(BombOwner[entity], M3);
+			BombPhase[BombOwner[entity]] = BOMB_IDLE;
+		}
+		
+		if (hExposedParticle[entity] && hExposedParticle[entity] != null)
+		{
+			delete hExposedParticle[entity];
+			hExposedParticle[entity] = null;
+		}
+		*/
+
+		int glow = EntRefToEntIndex(GlowId[entity]);
+		if (IsValidEntity(glow))
+		{
+			RemoveEntity(glow);
 		}
 
+		Exposed[entity] = false;
+		GlowId[entity] = -1;
 		BombOwner[entity] = -1;
 		BombPlantedOn[entity] = -1;
 		HasABomb[entity] = false;
