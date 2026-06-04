@@ -1258,6 +1258,16 @@ public void Penetrator_Initiate(int client, char abilityName[255])
 	Penetrator_Trace(client, abilityName);
 }
 
+bool Penetrator_AOE_Filter(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
+{
+	bool InSpawnRoom = CF_IsEntityInSpawn(victim, TF2_GetClientTeam(victim));
+	if (InSpawnRoom)
+	{
+		return false;
+	}
+	return true;
+}
+
 public void Penetrator_Trace(int client, char abilityName[255])
 {
 	Penetrations[client] = 0;
@@ -1320,7 +1330,7 @@ public void Penetrator_Trace(int client, char abilityName[255])
 
 	endLoc[2] += 5.0;
 
-	CF_GenericAOEDamage(client, weapon, weapon, AOEDamage, DMG_BLAST, AOERad, endLoc, AOEFallOffStart, AOEFallOffMax);
+	CF_GenericAOEDamage(client, weapon, weapon, AOEDamage, DMG_BLAST, AOERad, endLoc, AOEFallOffStart, AOEFallOffMax, false, _, _, SHADOW, Penetrator_AOE_Filter);
 
 	while(!Victims.Empty)
 	{
@@ -1906,7 +1916,7 @@ public void OnEntityDestroyed(int entity)
 			CF_UnblockAbilitySlot(BombOwner[entity], M3);
 			BombPhase[BombOwner[entity]] = BOMB_IDLE;
 		}
-		
+
 		if (hExposedParticle[entity] && hExposedParticle[entity] != null)
 		{
 			delete hExposedParticle[entity];
