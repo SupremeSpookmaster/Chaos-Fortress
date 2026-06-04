@@ -2591,6 +2591,86 @@ stock TE_SetupParticleEffect(const String:sParticleName[], ParticleAttachment_t:
 	TE_WriteNum("m_iEffectName", GetEffectIndex("ParticleEffect"));
 }
 
+stock void TE_SendToAllButMe(int client, float delay = 0.0)
+{
+	int total = 1;
+	int[] clients = new int[MaxClients];
+	for(int i=1; i <= MaxClients ; i++)
+	{
+		if(!IsValidClient(i))
+			continue;
+		
+		if(client == i)
+			continue;
+		
+		clients[total++] = i;
+	}
+	TE_Send(clients, total, delay);
+}
+
+stock void AddOverheadParticle(const char[] sParticleName, int entity, bool bHideFromUser = true, bool bShowToInflictorOnly, int inflictor)
+{
+	if (!IsValidClient(entity))
+		return;
+	
+	RemoveOverheadParticle(sParticleName, entity);
+
+	ParticleAttachment_t iAttachType = PATTACH_ABSORIGIN_FOLLOW;
+
+	TE_Start("EffectDispatch");
+	
+	TE_WriteNum("m_nHitBox", GetParticleEffectIndex(sParticleName));
+	
+	float Origin[3];
+
+	GetEntPropVector(entity, Prop_Data, "m_vecOrigin", Origin);
+
+	TE_WriteFloat("m_vOrigin[0]", Origin[0]);
+	TE_WriteFloat("m_vOrigin[1]", Origin[1]);
+	TE_WriteFloat("m_vOrigin[2]", Origin[2]);
+
+	float offset = 100.0;
+	TE_WriteFloat("m_vStart[0]", 0.0);
+	TE_WriteFloat("m_vStart[1]", 0.0);
+	TE_WriteFloat("m_vStart[2]", offset);
+
+	TE_WriteNum("entindex", entity);
+	
+	TE_WriteNum("m_fFlags", PARTICLE_DISPATCH_FROM_ENTITY);
+	TE_WriteNum("m_nDamageType", view_as<int>(iAttachType));
+	TE_WriteNum("m_nAttachmentIndex", -1);
+	
+	TE_WriteNum("m_iEffectName", GetEffectIndex("ParticleEffect"));
+
+	TE_WriteNum("m_bControlPoint1", entity);	
+
+	if(bShowToInflictorOnly)
+	{
+		if(IsValidClient(inflictor))
+		{
+			TE_SendToClient(inflictor);
+		}
+	}
+	else
+	{
+		if(!bHideFromUser)
+			TE_SendToAll();
+		else TE_SendToAllButMe(entity);
+	}
+}
+
+stock RemoveOverheadParticle(const char[] sParticleName, entity)
+{
+	if (!IsValidEntity(entity))
+		return;
+
+	TE_Start("EffectDispatch");
+	TE_WriteNum("entindex", entity);
+	TE_WriteNum("m_nHitBox", GetParticleEffectIndex(sParticleName));
+	TE_WriteNum("m_iEffectName", GetEffectIndex("ParticleEffectStop"));
+	TE_SendToAll();
+}
+
 stock int GetParticleEffectIndex(const char[] sEffectName)
 {
 	static int table = INVALID_STRING_TABLE;

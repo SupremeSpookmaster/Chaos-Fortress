@@ -25,7 +25,6 @@ stock void ResetToZero2(any[][] array, int length1, int length2)
 	}
 }
 
-
 #define MAXTF2PLAYERS 					32
 #define MAXENTITIES 					2048
 
@@ -127,6 +126,140 @@ public void OnPluginStart()
 	HookEvent("player_carryobject", OnObjectCarry);
 }
 
+////////////////////////////////
+///// 	PLAYER KILLED   ///////
+//////////////////////////////
+
+/*
+public void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int deadRinger)
+{
+	if (deadRinger)
+		return;
+
+}
+*/
+
+/////////////////////////////////
+//////   STATUS EFFECTS	 ///////
+///////////////////////////////
+
+#define STATUS_EXPOSED 			 "Exposed"
+#define PARTICLE_STATUS_MARKED	 "mark_for_death"
+#define SND_EXPOSED				 ""
+
+#define FL_STATUS_LINGER_TIME	0.5
+
+static Handle hExposedParticle[MAXTF2PLAYERS]={null,...};
+static bool  Exposed[MAXTF2PLAYERS]={false,...};
+static bool  bExposedFromOutter[MAXTF2PLAYERS][MAXTF2PLAYERS];
+static float Exposed_DMG_Melee[MAXTF2PLAYERS][MAXTF2PLAYERS];
+static float Exposed_DMG_Bullet[MAXTF2PLAYERS][MAXTF2PLAYERS];
+static float Exposed_DMG_Bullet_HS[MAXTF2PLAYERS][MAXTF2PLAYERS];
+static float Exposed_DMG_Any[MAXTF2PLAYERS][MAXTF2PLAYERS];
+
+static void Exposed_GetStatusArgs(int client, int victim)
+{
+	bExposedFromOutter[client][victim]	  = CF_GetStatusEffectArgB(STATUS_EXPOSED, "Exposed Outside Of Agent Drone", false);
+	Exposed_DMG_Melee[client][victim] 	  = CF_GetStatusEffectArgF(STATUS_EXPOSED, "Melee Vulnerability", 0.0);
+	Exposed_DMG_Bullet[client][victim] 	  = CF_GetStatusEffectArgF(STATUS_EXPOSED, "Bullet Vulnerability", 0.0);
+	Exposed_DMG_Bullet_HS[client][victim] = CF_GetStatusEffectArgF(STATUS_EXPOSED, "Bullet Headshot Vulnerability", 0.0);
+	Exposed_DMG_Any[client][victim] 	  = CF_GetStatusEffectArgF(STATUS_EXPOSED, "Vulnerability", 0.0);
+}
+
+static void Exposed_ApplyStatusEffect(int applicant, int target, float duration)
+{
+	bool bForcedEffect = true;
+	bool bReplaceExistingEffect = true;
+	CF_ApplyStatusEffect(target, STATUS_EXPOSED, duration, applicant, 0.0, bForcedEffect, bReplaceExistingEffect);
+}
+
+static void Exposed_AppliedPre(int applicant, int target)
+{
+	if (hExposedParticle[target] && hExposedParticle[target] != null)
+	{
+		delete hExposedParticle[target];
+		hExposedParticle[target] = null;
+	}
+
+	Exposed_GetStatusArgs(applicant, target);
+}
+static void Exposed_AppliedPost(int applicant, int target)
+{
+	DataPack pack = new DataPack();
+	hExposedParticle[target] = CreateDataTimer(0.1, Timer_ExpireParticle, pack, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
+	pack.WriteCell(GetClientUserId(applicant));
+	pack.WriteCell(GetClientUserId(target));
+	AddOverheadParticle(PARTICLE_STATUS_MARKED, target, _, true, applicant);
+}
+
+static Action Timer_ExpireParticle(Handle timer, DataPack pack)
+{
+	pack.Reset();
+
+	int client = GetClientOfUserId(pack.ReadCell());
+	int target = GetClientOfUserId(pack.ReadCell());
+
+	bool bClientAlive = (IsValidMulti(client));
+	bool bTargetAlive = (IsValidMulti(target));
+
+	if (!bClientAlive || !bTargetAlive)
+	{	
+		if (!bClientAlive)
+		{
+			CF_RemoveStatusEffect(target, STATUS_EXPOSED, client);
+		}
+
+		hExposedParticle[target] = null;
+		
+		return Plugin_Stop;
+	}
+
+	bool bOutlined = IsTargetOutlined(target);
+	if (bOutlined)
+		return Plugin_Continue;
+	
+	hExposedParticle[target] = null;
+
+	CF_SetStatusEffectActiveValue(target, STATUS_EXPOSED, FL_STATUS_LINGER_TIME);
+
+	return Plugin_Stop;
+}
+
+static void Exposed_ResetAll(int target)
+{
+	bool bRemoveParticle = true;
+	if (hExposedParticle[target] && hExposedParticle[target] != null)
+	{
+		bRemoveParticle = true;
+
+		delete hExposedParticle[target];
+		hExposedParticle[target] = null;
+	}
+
+	if (bRemoveParticle)
+	{
+		RemoveOverheadParticle(PARTICLE_STATUS_MARKED, target);
+	}
+}
+
+public Action CF_OnStatusEffectApplied_Pre(int entity, char[] effect, int applicant, bool &result)
+{
+	if (StrContains(effect, STATUS_EXPOSED, true) != -1)
+		Exposed_AppliedPre(applicant, entity);
+}
+
+public void CF_OnStatusEffectApplied_Post(int entity, char[] effect, int applicant)
+{
+	if (StrContains(effect, STATUS_EXPOSED, true) != -1)
+		Exposed_AppliedPost(applicant, entity);
+}
+
+public void CF_OnStatusEffectRemoved(int entity, char[] effect, int applicant)
+{
+	if (StrContains(effect, STATUS_EXPOSED, true) != -1)
+		Exposed_ResetAll(entity);
+}
+
 ////////////////////////
 //////   BOMB	///////
 //////////////////////
@@ -178,10 +311,10 @@ static void Bombs_Spawn(int client, char abilityName[255])
 
 static void Bombs_PlantOnEntity(int entity, int owner, float &damage)
 {
-	if(damage < 1.0)
+	if (damage < 1.0)
 		return;
 
-	if(HasABomb[entity] || !BombActive[owner] || GetTeam(entity) == GetTeam(owner))
+	if (HasABomb[entity] || !BombActive[owner] || GetTeam(entity) == GetTeam(owner))
 		return;
 	
 	float Origin[3], EntLoc[3];
@@ -191,10 +324,10 @@ static void Bombs_PlantOnEntity(int entity, int owner, float &damage)
 	float dist 		=	GetVectorDistance(Origin, EntLoc);
 	float radius 	=	CF_GetArgF(owner, SHADOW, BOMB, "plant_range", 350.0);
 
-	if(dist > radius)
+	if (dist > radius)
 		return;
 
-	if(BombsToPlace[owner] > 0)
+	if (BombsToPlace[owner] > 0)
 	{
 		EmitSoundToAll(SND_BOMB_PLANTED, owner);
 		HasABomb[entity] = true;
@@ -205,7 +338,7 @@ static void Bombs_PlantOnEntity(int entity, int owner, float &damage)
 		BombOwner[entity] = owner;
 		BombPlantedOn[owner] = EntIndexToEntRef(entity);
 
-		if(TF2_GetClientTeam(owner) == TFTeam_Blue)
+		if (TF2_GetClientTeam(owner) == TFTeam_Blue)
 		{
 			SetEntityRenderColor(entity, 3, 204, 255, 255);
 		}
@@ -227,15 +360,15 @@ static void Bombs_RequestFrame(DataPack pack)
 	int owner = pack.ReadCell();
 	int entity = EntRefToEntIndex(pack.ReadCell());
 
-	if(!IsValidClient(owner))
+	if (!IsValidClient(owner))
 	{	
 		delete pack;
 		return;
 	}
 
-	if(!IsValidEntity(entity))
+	if (!IsValidEntity(entity))
 	{	
-		if(BombPhase[owner] == BOMB_PLANTED)
+		if (BombPhase[owner] == BOMB_PLANTED)
 		{
 			BombPhase[owner] = BOMB_IDLE;
 			BombsToPlace[owner] = 0;
@@ -243,9 +376,9 @@ static void Bombs_RequestFrame(DataPack pack)
 			CF_UnblockAbilitySlot(owner, M3);
 		}
 		
-		if(BombPhase[owner] == BOMB_DETONATING)
+		if (BombPhase[owner] == BOMB_DETONATING)
 		{
-			if(BombDetonationTime[owner] > GetGameTime())
+			if (BombDetonationTime[owner] > GetGameTime())
 			{
 				BombPhase[owner] = BOMB_IDLE;
 				BombsToPlace[owner] = 0;
@@ -280,7 +413,7 @@ static void Bombs_RequestFrame(DataPack pack)
 		}
 		case BOMB_DETONATING:
 		{
-			if(BombDetonationTime[owner] <= GetGameTime())
+			if (BombDetonationTime[owner] <= GetGameTime())
 			{
 				BombPhase[owner] = BOMB_EXPLODING;
 			}
@@ -298,37 +431,37 @@ static void Bombs_RequestFrame(DataPack pack)
 
 			for(int i = 1; i <= MAXENTITIES; i++)
 			{
-				if(IsValidMulti(i))
+				if (IsValidMulti(i))
 				{
-					if(entity == i)
+					if (entity == i)
 						continue;
 
-					if(GetTeam(i) == GetTeam(owner))
+					if (GetTeam(i) == GetTeam(owner))
 						continue;
 
 					CF_WorldSpaceCenter(entity, Origin);
 					float TargetLocation[3]; CF_WorldSpaceCenter(i, TargetLocation);
 					float dist = GetVectorDistance(Origin, TargetLocation);
 
-					if(CF_HasLineOfSight(Origin, TargetLocation, _, Origin) && dist <= BombRadius[owner])
+					if (CF_HasLineOfSight(Origin, TargetLocation, _, Origin) && dist <= BombRadius[owner])
 					{
 						SDKHooks_TakeDamage(i, owner, owner, BombDamage_AoE[owner], DMG_BLAST|DMG_CRUSH);
 					}
 				}
 
-				if(IsABuilding(i, true))
+				if (IsABuilding(i, true))
 				{
-					if(entity == i)
+					if (entity == i)
 						continue;
 						
-					if(GetTeam(i) == GetTeam(owner))
+					if (GetTeam(i) == GetTeam(owner))
 						continue;
 					
 					CF_WorldSpaceCenter(entity, Origin);
 					float TargetLocation[3]; CF_WorldSpaceCenter(i, TargetLocation);
 					float dist = GetVectorDistance(Origin, TargetLocation);
 
-					if(CF_HasLineOfSight(Origin, TargetLocation, _, Origin) && dist <= BombRadius[owner])
+					if (CF_HasLineOfSight(Origin, TargetLocation, _, Origin) && dist <= BombRadius[owner])
 					{
 						SDKHooks_TakeDamage(i, owner, owner, BombDamage_Buildings_AoE[owner], DMG_BLAST|DMG_CRUSH);
 					}
@@ -353,14 +486,14 @@ static void Bombs_RequestFrame(DataPack pack)
 
 static void Bombs_TETracking(int owner, int ref)
 {
-	if(!IsValidClient(owner))
+	if (!IsValidClient(owner))
 		return;
 	
 	int entity = EntRefToEntIndex(ref);
-	if(!IsValidEntity(entity))
+	if (!IsValidEntity(entity))
 		return;
 
-	if(TETracker[owner] >= 3)
+	if (TETracker[owner] >= 3)
 	{
 		TETracker[owner] = 0;
 
@@ -380,10 +513,10 @@ public void OnObjectCarry(Event event, const char[] className, bool dontBroadcas
 	int building = event.GetInt("index");
 	//int builder = GetClientOfUserId(event.GetInt("userid"));
 
-	if(!HasABomb[building])
+	if (!HasABomb[building])
 		return;
 	
-	if(IsValidClient(BombOwner[building]))
+	if (IsValidClient(BombOwner[building]))
 		BombPhase[BombOwner[building]] = BOMB_IDLE;
 
 	BombOwner[building] = -1;
@@ -415,7 +548,7 @@ public void PrepareCloak(int client, char abilityName[255])
 static Action Cloak_Set(Handle timer, int id)
 {
 	int client = GetClientOfUserId(id);
-	if(!IsValidMulti(client))
+	if (!IsValidMulti(client))
 		return Plugin_Stop;
 
 	CloakActive[client] = true;
@@ -436,13 +569,13 @@ static Action Cloak_Set(Handle timer, int id)
 	
 	TF2_SetCloakLevel(client, StartCloak, true);
 
-	if(CloakMeter >= CloakMinUse[client])
+	if (CloakMeter >= CloakMinUse[client])
 	{
 		TF2_SetCloakLevel(client, StartCloak, true);
 		SetEntPropFloat(client, Prop_Send, "m_flStealthNextChangeTime", GetGameTime()+0.15);
 		CloakCanUse[client] = true;
 	}
-	else if(CloakMeter < CloakMinUse[client])
+	else if (CloakMeter < CloakMinUse[client])
 	{
 		TF2_SetCloakLevel(client, StartCloak, true);
 		ButtonInitialDelay[client] = 1.35 + GetGameTime();
@@ -457,7 +590,7 @@ static Action Cloak_Set(Handle timer, int id)
 
 static void Cloak_RequestFrame_Think(int client)
 {
-	if(!CloakActive[client] || !IsValidMulti(client))
+	if (!CloakActive[client] || !IsValidMulti(client))
 	{	
 		return;
 	}
@@ -465,16 +598,16 @@ static void Cloak_RequestFrame_Think(int client)
 	bool Cloaked = IsCloaked(client);
 	float CloakMeter = TF2_GetCloakLevel(client);
 
-	if(CloakMeter < CloakMinUse[client] && !Cloaked)
+	if (CloakMeter < CloakMinUse[client] && !Cloaked)
 	{
-		if(CloakCanUse[client])
+		if (CloakCanUse[client])
 			ButtonInitialDelay[client] = 1.35 + GetGameTime();
 		SetEntPropFloat(client, Prop_Send, "m_flStealthNextChangeTime", GetGameTime()+9999.0);
 		CloakCanUse[client] = false;
 	}
-	else if(CloakMeter >= CloakMinUse[client])
+	else if (CloakMeter >= CloakMinUse[client])
 	{
-		if(!CloakCanUse[client])
+		if (!CloakCanUse[client])
 			SetEntPropFloat(client, Prop_Send, "m_flStealthNextChangeTime", GetGameTime()+0.15);
 		CloakCanUse[client] = true;
 	}
@@ -486,7 +619,7 @@ static bool IsCloaked(int client)
 {
 	bool value;
 
-	if(TF2_IsPlayerInCondition(client, TFCond_Cloaked))
+	if (TF2_IsPlayerInCondition(client, TFCond_Cloaked))
 	{
 		value = true;
 	}
@@ -519,180 +652,13 @@ static float UAV_Health[MAXENTITIES]={0.0,...};
 static float UAV_EndPoint[MAXENTITIES][3];
 static float AgentCurrentLoc[MAXTF2PLAYERS][3];
 
-static bool Exposed[MAXTF2PLAYERS];
-static float Exposed_DMG_Melee;
-static float Exposed_DMG_Bullet;
-static float Exposed_DMG_Bullet_HS;
-
 #define DRONE_COLLISION_NOTHING		10
 #define DRONE_COLLISION_NON_PLAYER	26
-
-enum struct UAV_Drone
-{
-	int Owner;
-	int Target;
-	float ChaseWindup;
-	float size;
-	float Life;
-	float Durability;
-
-	void Spawn()
-	{
-		if(!IsValidClient(this.Owner))
-		{	
-			return;
-		}
-
-		float pos[3], ang[3];
-
-		GetClientEyeAngles(this.Owner, ang);
-		CF_WorldSpaceCenter(this.Owner, pos);
-
-		int Drone = SpawnPhysProp(this.Owner, MODEL_DRONE, pos, ang, NULL_VECTOR, TF2_GetClientTeam(this.Owner) == TFTeam_Red ? view_as<int>(TFTeam_Blue) : view_as<int>(TFTeam_Red), this.Durability, false, _, this.size, this.size * 2.0, true);
-		if (IsValidEntity(Drone))
-		{
-			SetEntProp(Drone, Prop_Data, "m_takedamage", 1, 1);
-			SetEntProp(Drone, Prop_Send, "m_nSkin", GetClientTeam(this.Owner)-2);
-			DispatchKeyValueFloat(Drone, "modelscale", this.size);
-			SDKUnhook(Drone, SDKHook_OnTakeDamage, Drone_UAVDamaged);
-			SDKHook(Drone, SDKHook_OnTakeDamage, Drone_UAVDamaged);
-
-			if(IsValidClient(this.Target))
-				UAVTarget[this.Owner] = this.Target;
-
-			UAV_Health[Drone] = this.Durability;
-
-			UAVDrone[this.Owner] = EntIndexToEntRef(Drone);
-
-			UAV_ChaseTargTimer[this.Owner] = GetGameTime() + this.ChaseWindup;
-			UAV_CurrentLifeSpan[this.Owner] = GetGameTime() + this.Life;
-		}
-	}
-
-	void Delete()
-	{
-		int Drone = EntRefToEntIndex(UAVDrone[this.Owner]);
-		if(IsValidEntity(Drone))
-		{
-			float pos[3]; GetAbsOrigin_main(Drone, pos);
-			SpawnParticle(pos, "rd_robot_explosion", 0.1);
-
-			EmitSoundToAll(SND_DRONE_DESTROYED_1, Drone, _, _, _, _, GetRandomInt(80, 110), -1);
-			EmitSoundToAll(SND_DRONE_DESTROYED_2, Drone, _, _, _, _, GetRandomInt(80, 110), -1);
-
-			for (int i = 0; i < GetRandomInt(4, 6); i++)
-			{
-				float randAng[3], randVel[3];
-				for (int vec = 0; vec < 3; vec++)
-				{
-					randAng[vec] = GetRandomFloat(0.0, 360.0);
-					
-					if (vec < 2)
-						randVel[vec] = GetRandomFloat(0.0, 360.0);
-					else
-						randVel[vec] = GetRandomFloat(200.0, 800.0);
-				}
-				
-				char model[255];
-				model = DroneGear_Gib[GetRandomInt(0, sizeof(DroneGear_Gib) - 1)];
-				int gear = SpawnPhysicsProp(model, 0, "0", 99999.0, true, 1.0, pos, randAng, randVel, 5.0);
-				
-				if (IsValidEntity(gear))
-				{
-					SetEntityCollisionGroup(gear, 1);
-					SetEntityRenderMode(gear, RENDER_TRANSALPHA);
-					RequestFrame(Toss_FadeOutGib, EntIndexToEntRef(gear));
-					SetEntityCollisionGroup(gear, 1);
-					SetEntProp(gear, Prop_Send, "m_iTeamNum", 0);
-				}
-			}
-			RemoveEntity(Drone);
-		}
-
-		UAVDrone[this.Owner] = -1;
-	}
-}
-
-enum struct iGlowEntity
-{
-	int entity;
-	int owner;
-	int color[4];
-	bool teamColor;
-	float lifeSpan;
-
-	int Create()
-	{
-		if(!IsValidClient(this.entity) || !IsPlayerAlive(this.entity))
-			return -1;
-
-		switch(this.teamColor)
-		{
-			case true:
-			{
-				if(TF2_GetClientTeam(this.entity) == TFTeam_Red)
-				{
-					this.color = RedGlow;
-				}
-				else
-				{
-					this.color = BlueGlow;
-				}
-			}
-		}
-		
-		int iGlow = TF2_CreateGlow_Custom(this.entity, this.color);
-		if(!IsValidEntity(iGlow))
-			return -1;
-
-		Exposed[this.entity] = true;
-
-		SetEntProp(iGlow, Prop_Send, "m_iTeamNum",  view_as<int>(TF2_GetClientTeam(this.entity)));
-
-		SetEntPropEnt(iGlow, Prop_Send, "m_hOwnerEntity", this.owner);
-
-		SetEdictFlags(iGlow, GetEdictFlags(iGlow)&(~FL_EDICT_ALWAYS));
-		SDKHook(iGlow, SDKHook_SetTransmit, CF_Agent_OutlineTransmit);
-
-		if(this.lifeSpan > 0.0)
-			CreateTimer(this.lifeSpan, Timer_RemoveEntity, EntIndexToEntRef(iGlow), TIMER_FLAG_NO_MAPCHANGE);
-		
-		return iGlow;
-	}
-	void ChangeColor(int icolor[4])
-	{
-		if(!IsValidClient(this.entity) || !IsPlayerAlive(this.entity))
-			return;
-
-		int iGlow = EntRefToEntIndex(GlowId[this.entity])
-		if(IsValidEntity(iGlow))
-		{
-			SetVariantColor(icolor);		
-			AcceptEntityInput(iGlow, "SetGlowColor");
-		}
-	}
-	void Delete()
-	{
-		int iGlow = EntRefToEntIndex(GlowId[this.entity])
-		if(IsValidEntity(iGlow))
-		{
-			RemoveEntity(iGlow);
-
-			GlowId[this.entity] = -1;
-		}
-		Exposed[this.entity] = false;
-	}
-}
 
 public void PrepareUAV(int client, char abilityName[255])
 {
 	UAVActive[client] = true;
 	UAVTarget[client] = -1;
-
-	Exposed_DMG_Melee = CF_GetArgF(client, SHADOW, abilityName, "exposed_melee_dmg", 0.0);
-	Exposed_DMG_Bullet = CF_GetArgF(client, SHADOW, abilityName, "exposed_bullet_dmg", 0.0);
-	Exposed_DMG_Bullet_HS = CF_GetArgF(client, SHADOW, abilityName, "exposed_bullet_headshot_dmg", 0.0);
-
 	UAV_Destroy(client);
 }
 
@@ -700,7 +666,7 @@ static void UAV_RemoveOutlines(int client)
 {
 	for(int i=1;i<=MaxClients;i++)
 	{
-		if(IsValidClient(i) && TargetOutlined[i][client]) 
+		if (IsValidClient(i) && TargetOutlined[i][client]) 
 		{
 			iGlowEntity Glow;
 			Glow.entity = i;
@@ -770,7 +736,7 @@ public void UAV_DealDamage(int drone, float damage)
 static void UAV_Destroyed(int drone)
 {
 	int owner = GetEntPropEnt(drone, Prop_Data, "m_hOwnerEntity");
-	if(!IsValidClient(owner))
+	if (!IsValidClient(owner))
 	{
 		UAV_Destroy(owner);
 		return;
@@ -781,7 +747,7 @@ static void UAV_Destroyed(int drone)
 
 public void UAV_SpawnDrone(int client, char abilityName[255])
 {
-	if(!UAVActive[client])
+	if (!UAVActive[client])
 		return;
 
 	UAV_Destroy(client);
@@ -821,13 +787,17 @@ public void UAV_SpawnDrone(int client, char abilityName[255])
 			// TE_SetupBeamPoints(AimTrace.Start_Point, AimTrace.End_Point, BeamLaser, 0, 0, 5, 3.0, 1.0, 10.0, 1, 15.0, {0, 255, 0, 120}, 0);	
 			// TE_SendToAll();
 
+			bool bEndLocOnly = true;
+
 			UAV_Drone Uav;
 			Uav.Owner = client;
 
-			if(IsValidMulti(target))	
+			if (IsValidMulti(target))	
 			{	
-				if(!Exposed[target])
+				if (!Exposed[target])
 				{
+					bEndLocOnly = false;
+
 					target = AimTrace.target;
 
 					iGlowEntity Glow;
@@ -839,15 +809,11 @@ public void UAV_SpawnDrone(int client, char abilityName[255])
 					lifespan = CF_GetArgF(client, SHADOW, abilityName, "uav_lifespan", 13.5);
 
 					Uav.Target = target;
-
-					EmitSoundToClient(target, SND_UAV_FOUND_CLIENT);
-				}
-				else
-				{
-					UAV_EndPoint[client] = AimTrace.End_Point;
 				}
 			}
-			else
+
+
+			if (bEndLocOnly)
 			{
 				UAV_EndPoint[client] = AimTrace.End_Point;
 			}
@@ -859,7 +825,7 @@ public void UAV_SpawnDrone(int client, char abilityName[255])
 			Uav.Spawn();
 
 			int Drone = EntRefToEntIndex(UAVDrone[client]);
-			if(IsValidEntity(Drone))
+			if (IsValidEntity(Drone))
 			{
 				UAV_Mode[client] = TARGETING;
 
@@ -883,17 +849,72 @@ public bool CanTarget(int enemy)
 
 public bool IsTargetOutlined(int entity)
 {
-	if(!Exposed[entity])
+	if (!Exposed[entity])
 		return false;
 	
 	return true;
 }
 
-public bool IsTargetOutlined_FromEnemy(int entity, int outliner)
+public bool FromEnemy_Outlined(int entity, int outliner)
 {
-	if(!TargetOutlined[entity][outliner])
+	if (!TargetOutlined[entity][outliner] && !CF_HasStatusEffect(entity, STATUS_EXPOSED))
 		return false;
 	
+	return true;
+}
+
+void Outlines_ChangeColorDist(int target, int outliner, float Dist_New, float ScanRadius)
+{
+	float Alpha = Dist_New / ScanRadius;
+	if (Alpha > 1.0)
+	{
+		Alpha = 1.0;
+	}
+
+	int color[4];
+	if (TF2_GetClientTeam(outliner) == TFTeam_Red)
+	{
+		color = BlueGlow;
+	}
+	else
+	{
+		color = RedGlow;
+	}
+
+	float opacity_Effectiveness = CF_GetArgF(outliner, SHADOW, UAV, "uav_outline_effectiveness", 0.1);
+	color[3] = RoundFloat(255.0 - (Alpha * ScanRadius * opacity_Effectiveness));
+	
+	if (color[3] > 255)
+	{
+		color[3] = 255;
+	}
+	if (color[3] < 88)
+	{
+		color[3] = 88;
+	}
+
+	iGlowEntity Glow;
+	Glow.entity = target;
+	Glow.ChangeColor(color);
+}
+
+void Outlines_FoundTarget(int target, int outliner)
+{
+	iGlowEntity Glow;
+	Glow.entity = target;
+	Glow.owner = outliner;
+	Glow.teamColor = true;
+	GlowId[target] = EntIndexToEntRef(Glow.Create());
+	EmitSoundToClient(target, SND_UAV_FOUND);
+}
+
+bool Outlines_AlreadyOutlined(int target, int outliner)
+{
+	if (!IsTargetOutlined(target))
+		return false;
+
+	UAV_DeleteOutline_Void(outliner, target);
+
 	return true;
 }
 
@@ -901,103 +922,67 @@ public void UAV_CheckRadius(int client, float StartPos[3], float maxDistance)
 {
 	float Player_Pos[3];
 
-	if(IsValidClient(UAVTarget[client]))
+	if (IsValidClient(UAVTarget[client]))
 	{
-		if(IsPlayerAlive(UAVTarget[client]))
+		if (IsPlayerAlive(UAVTarget[client]))
 		{
 			GetEntPropVector(UAVTarget[client], Prop_Send, "m_vecOrigin", Player_Pos);
 
-			for(int enemies = 1; enemies <= MaxClients; enemies++)
+			for (int enemies = 1; enemies <= MaxClients; enemies++)
 			{
-				if(!IsValidMulti(enemies)) //Dead or not valid, ignore
+				if (!IsValidMulti(enemies)) //Dead or not valid, ignore
 					continue;
 
-				if(GetTeam(client) == GetTeam(enemies)) //Our teammate, ignore
+				if (UAVTarget[client] == enemies) //Our current target, ignore
 					continue;
 
-				if(UAVTarget[client] == enemies) //Our current target, ignore
+				if (GetTeam(client) == GetTeam(enemies)) //Our teammate, ignore
 					continue;
 
 				float EnemOrigin[3];
 				GetEntPropVector(enemies, Prop_Send, "m_vecOrigin", EnemOrigin);
+				EnemOrigin[2] += 25.0;
 
 				float ScanRadius = CF_GetArgF(client, SHADOW, UAV, "uav_scan_radius_scan", 500.0);
 
 				float Dist_New = GetVectorDistance(Player_Pos, EnemOrigin);
-				if(Dist_New > ScanRadius)	//Out of reach? Ignore.
+				if (Dist_New > ScanRadius)	//Out of reach? Ignore.
 				{
-					switch(IsTargetOutlined_FromEnemy(enemies, client))
-					{
-						case true:
-						{
-							UAV_DeleteOutline_Void(client, enemies);
-						}
-					}
+					Outlines_AlreadyOutlined(enemies, client);
+
 					continue;
 				}
 
 				int outline = EntRefToEntIndex(GlowId[enemies]);
-				if(!IsValidEntity(outline) && !IsTargetOutlined(enemies) && !IsTargetOutlined_FromEnemy(enemies, client))
-				{
-					TargetOutlined[enemies][client] = true;
 
-					iGlowEntity Glow;
-					Glow.entity = enemies;
-					Glow.owner = client;
-					Glow.teamColor = true;
-					GlowId[enemies] = EntIndexToEntRef(Glow.Create());
-					EmitSoundToClient(enemies, SND_UAV_FOUND);
+				bool bAlreadyOutlined = IsTargetOutlined(enemies);
+				bool bOutlineValid = IsValidEntity(outline);
+
+				if (bOutlineValid && bAlreadyOutlined)
+				{
+					Outlines_ChangeColorDist(enemies, client, Dist_New, ScanRadius);
 				}
 
-				if(IsTargetOutlined(enemies))
+				if (!bOutlineValid && !bAlreadyOutlined)
 				{
-					outline = EntRefToEntIndex(GlowId[enemies]);
-					if(IsValidEntity(outline))
-					{
-						float Alpha = Dist_New / ScanRadius;
-						if(Alpha > 1.0)
-						{
-							Alpha = 1.0;
-						}
-
-						int color[4];
-						if(TF2_GetClientTeam(client) == TFTeam_Red)
-						{
-							color = BlueGlow;
-						}
-						else
-						{
-							color = RedGlow;
-						}
-
-						float opacity_Effectiveness = CF_GetArgF(client, SHADOW, UAV, "uav_outline_effectiveness", 0.1);
-						color[3] = RoundFloat(255.0 - (Alpha * ScanRadius * opacity_Effectiveness));
-						
-						if(color[3] > 255)
-						{
-							color[3] = 255;
-						}
-						if(color[3] < 88)
-						{
-							color[3] = 88;
-						}
-
-						iGlowEntity Glow;
-						Glow.entity = enemies;
-						Glow.ChangeColor(color);
-					}
+					Outlines_FoundTarget(enemies, client);
+					PrintToConsoleAll("%N found by our drone! \\UAV_CheckRadius\\", UAVTarget[client]);
 				}
 			}
 		}
-		else UAV_CurrentLifeSpan[client] = 0.0;
+		else 
+		{
+			UAV_CurrentLifeSpan[client] = 0.0;
+			UAV_DeleteOutline_Void(client, UAVTarget[client]);
+		}
 	}
 	else 
 	{
-		if(!IsValidClient(UAVTarget[client]))
+		if (!IsValidClient(UAVTarget[client]))
 		{
 			UAVTarget[client] = CF_GetClosestTarget(StartPos, false, _, maxDistance, grabEnemyTeam(client), SHADOW, CanTarget);
 
-			if(IsValidMulti(UAVTarget[client]))
+			if (IsValidMulti(UAVTarget[client]))
 			{
 				UAV_CurrentLifeSpan[client] = GetGameTime() + CF_GetArgF(client, SHADOW, UAV, "uav_lifespan", 0.1);
 
@@ -1006,6 +991,8 @@ public void UAV_CheckRadius(int client, float StartPos[3], float maxDistance)
 				Glow.owner = client;
 				Glow.teamColor = true;
 				GlowId[UAVTarget[client]] = EntIndexToEntRef(Glow.Create());
+
+				PrintToConsoleAll("%N found by our drone! \\UAV_CheckRadius\\", UAVTarget[client]);
 			}
 		}
 	}
@@ -1015,37 +1002,28 @@ static void UAV_Logic(int client)
 {	
 	int DroneEntity = EntRefToEntIndex(UAVDrone[client]);	
 
-	if(!IsValidClient(client) || !UAVActive[client] || UAV_CurrentLifeSpan[client] <= GetGameTime() || !IsValidEntity(DroneEntity))
+	bool bOwnerValid = IsValidClient(client);
+	if (!bOwnerValid || !UAVActive[client] || UAV_CurrentLifeSpan[client] <= GetGameTime() || !IsValidEntity(DroneEntity))
 	{	
-		for(int enemies = 1; enemies <= MaxClients; enemies++)
+		for (int enemies = 1; enemies <= MaxClients; enemies++)
 		{
-			if(!IsValidMulti(enemies)) //Dead or not valid, ignore
+			if (!IsValidMulti(enemies) && enemies != client) //Dead or not valid, ignore
 				continue;
 
-			if(GetTeam(client) == GetTeam(enemies)) //Our teammate, ignore
+			if (UAVTarget[client] == enemies) //Our current target, ignore
 				continue;
 
-			if(UAVTarget[client] == enemies) //Our current target, ignore
+			if (GetTeam(client) == GetTeam(enemies)) //Our teammate, ignore
 				continue;
 
-			switch(IsTargetOutlined_FromEnemy(enemies, client))
-			{
-				case true:
-				{
-					iGlowEntity Glow;
-					Glow.entity = enemies;
-					Glow.Delete();
-
-					TargetOutlined[enemies][client] = false;
-				}
-			}
+			Outlines_AlreadyOutlined(enemies, client);
 		}
 
-		if(IsValidClient(UAVTarget[client]))
+		if (IsValidClient(UAVTarget[client]))
 		{
-			if(IsPlayerAlive(UAVTarget[client]))
+			if (IsPlayerAlive(UAVTarget[client]))
 			{
-				if(!IsTargetOutlined_FromEnemy(UAVTarget[client], client))
+				if (!FromEnemy_Outlined(UAVTarget[client], client))
 				{
 					TargetOutlined[UAVTarget[client]][client] = true;
 					OutlineCurrentFadeTime[client] = GetGameTime() + OutlineFadeTime[client];
@@ -1056,6 +1034,7 @@ static void UAV_Logic(int client)
 				iGlowEntity Glow;
 				Glow.entity = UAVTarget[client];
 				Glow.Delete();
+				UAVTarget[client] = -1;
 			}
 		}
 		else
@@ -1067,6 +1046,11 @@ static void UAV_Logic(int client)
 		UAV_Destroy(client);
 
 		return;
+	}
+
+	if (bOwnerValid && !IsPlayerAlive(client) && UAV_CurrentLifeSpan[client] > GetGameTime())
+	{
+		UAV_RemoveOutlines(client);
 	}
 	
 	float Range = CF_GetArgF(client, SHADOW, UAV, "uav_hover_range", 125.0), 
@@ -1081,9 +1065,9 @@ static void UAV_Logic(int client)
 	Origin[3], 
 	Loc[3];
 
-	if(IsValidClient(UAVTarget[client]))
+	if (IsValidClient(UAVTarget[client]))
 	{
-		if(IsPlayerAlive(UAVTarget[client]))
+		if (IsPlayerAlive(UAVTarget[client]))
 			GetEntPropVector(UAVTarget[client], Prop_Send, "m_vecOrigin", Player_Pos);
 	}
 	else
@@ -1093,7 +1077,7 @@ static void UAV_Logic(int client)
 
 	Origin = AgentCurrentLoc[client];
 	
-	if(UAV_ChaseTargTimer[client] <= GetGameTime())
+	if (UAV_ChaseTargTimer[client] <= GetGameTime())
 	{
 		Move_Vector_Towards_Target(Origin, Player_Pos, Loc, Speed);
 	}
@@ -1109,19 +1093,19 @@ static void UAV_Logic(int client)
 	Player_Pos = Loc;	//our end point
 	Player_Pos[2]+=50.0;
 
-	if(Spin_angle != 0.0)
+	if (Spin_angle != 0.0)
 	{
 		UAV_SpinAngle[client] +=Spin_angle;
 
-		if(UAV_SpinAngle[client]>360.0)
+		if (UAV_SpinAngle[client]>360.0)
 			UAV_SpinAngle[client]=0.0;
 	}
 
-	for(int i=0 ; i < UAV_AMOUNT ; i++)
+	for (int i=0 ; i < UAV_AMOUNT ; i++)
 	{
 		float tempAngles[3], Direction[3], EndLoc[3], Multi;
 
-		if(i%2!=0)
+		if (i%2!=0)
 		{
 			Multi = 1.0;
 		}
@@ -1130,13 +1114,13 @@ static void UAV_Logic(int client)
 			Multi = -1.0;
 		}
 		
-		if(Spin_angle != 0.0)
+		if (Spin_angle != 0.0)
 		{	
 			tempAngles[0] = 0.0;
 			tempAngles[1] = (UAV_SpinAngle[client] + (float(i) * (360.0/UAV_AMOUNT)))*Multi;
 			tempAngles[2] = 0.0;
 
-			if(tempAngles[2]>360.0)
+			if (tempAngles[2]>360.0)
 				tempAngles[2]-=360.0;
 		}
 
@@ -1149,7 +1133,7 @@ static void UAV_Logic(int client)
 		int colors[4];
 		UAV_Loc[2] += 5.0;
 
-		if(TF2_GetClientTeam(client) == TFTeam_Red)
+		if (TF2_GetClientTeam(client) == TFTeam_Red)
 		{
 			colors = RedGlow;
 		}
@@ -1172,7 +1156,7 @@ static void UAV_Logic(int client)
 		GetVectorAngles(buffer_ang, buffer_ang);
 
 		float Dist = GetVectorDistance(EndLoc, UAV_Loc);
-		if(Dist>75.0)
+		if (Dist>75.0)
 		{
 			MoveEntity(DroneEntity, EndLoc, buffer_ang, true);
 		}
@@ -1290,8 +1274,10 @@ public void Penetrator_Trace(int client, char abilityName[255])
 	EmitSoundToAll(SND_LASERGUN_IMPACT, client, _, 90, _, _, GetRandomInt(90, 120), _, endLoc);
 
 	int weapon = GetPlayerWeaponSlot(client, 0);
-	if(!IsValidEntity(weapon))
+	if (!IsValidEntity(weapon))
 		weapon = client;
+
+	endLoc[2] += 5.0;
 
 	CF_GenericAOEDamage(client, weapon, weapon, AOEDamage, DMG_BLAST, AOERad, endLoc, AOEFallOffStart, AOEFallOffMax);
 
@@ -1306,12 +1292,12 @@ public void Penetrator_Trace(int client, char abilityName[255])
 			GetAbsOrigin_main(client, playerPos);
 			GetAbsOrigin_main(victim, enemyPos);
 
-			if(IsValidEntity(victim) && victim > MaxClients)
+			if (IsValidEntity(victim) && victim > MaxClients)
 			{
 				float fallOff_Start = CF_GetArgF(client, SHADOW, abilityName, "laser_falloff_start", 1.0), 
 				fallOff_End = CF_GetArgF(client, SHADOW, abilityName, "laser_falloff_end", 0.35), 
 				fallOff_MaxDist = CF_GetArgF(client, SHADOW, abilityName, "laser_falloff_maxDistance", 1250.0);
-				if(fallOff_Start < 1.0)
+				if (fallOff_Start < 1.0)
 				{
 					totalDamage *= CalculateFallOff(playerPos, enemyPos, fallOff_Start, fallOff_End, fallOff_MaxDist);
 				}
@@ -1319,15 +1305,15 @@ public void Penetrator_Trace(int client, char abilityName[255])
 				SDKHooks_TakeDamage(victim, Laser.client, Laser.client, totalDamage, Laser.damagetype, -1, NULL_VECTOR);
 			}
 
-			if(IsValidMulti(victim))
+			if (IsValidMulti(victim))
 			{
 				bool InSpawnRoom = CF_IsEntityInSpawn(victim, TF2_GetClientTeam(victim));
 
-				if(!InSpawnRoom)
+				if (!InSpawnRoom)
 				{	
 					bool IgnoreLoSPenalty = TargetOutlined[victim][client] && PenaltyIngore;
 
-					if(!CF_HasLineOfSight(playerPos, enemyPos, _, playerPos, client) && !IgnoreLoSPenalty)
+					if (!CF_HasLineOfSight(playerPos, enemyPos, _, playerPos, client) && !IgnoreLoSPenalty)
 					{
 						float dmgChange = CF_GetArgF(client, SHADOW, abilityName, "laser_damage_penalty_multi_los", 0.5);
 						totalDamage *= dmgChange;
@@ -1336,23 +1322,23 @@ public void Penetrator_Trace(int client, char abilityName[255])
 					float fallOff_Start = CF_GetArgF(client, SHADOW, abilityName, "laser_falloff_start", 1.0), 
 					fallOff_End = CF_GetArgF(client, SHADOW, abilityName, "laser_falloff_end", 0.35), 
 					fallOff_MaxDist = CF_GetArgF(client, SHADOW, abilityName, "laser_falloff_maxDistance", 1250.0);
-					if(fallOff_Start < 1.0)
+					if (fallOff_Start < 1.0)
 					{
 						totalDamage *= CalculateFallOff(playerPos, enemyPos, fallOff_Start, fallOff_End, fallOff_MaxDist);
 					}
 
 					bool Invuln = IsInvuln(victim);
 
-					if(!MaxPenetrations)
+					if (!MaxPenetrations)
 					{
-						if(Invuln)
+						if (Invuln)
 							continue;
 
 						SDKHooks_TakeDamage(victim, Laser.client, Laser.client, totalDamage, Laser.damagetype, -1, NULL_VECTOR);
 					}
-					else if(MaxPenetrations > 0)
+					else if (MaxPenetrations > 0)
 					{
-						if(Penetrations[client] >= MaxPenetrations || Invuln)
+						if (Penetrations[client] >= MaxPenetrations || Invuln)
 						{
 							continue;
 						}
@@ -1445,7 +1431,7 @@ public Action Stabs_DoMeleeStunSequence(Handle timely, DataPack pack)
 	ResetPack(pack);
 	int viewmodel = EntRefToEntIndex(ReadPackCell(pack));
 
-	if(viewmodel != INVALID_ENT_REFERENCE)
+	if (viewmodel != INVALID_ENT_REFERENCE)
 	{
 		int animation = 38;
 		switch(ReadPackCell(pack))
@@ -1562,9 +1548,9 @@ public void PrepareStealth(int client, char abilityName[255])
 
 public void TF2_OnConditionAdded(int client, TFCond cond)
 {
-	if(CloakActive[client])
+	if (CloakActive[client])
 	{
-		if(cond == TFCond_Cloaked)
+		if (cond == TFCond_Cloaked)
 		{
 			CF_DoAbilitySlot(client, CloakSlot[client][0]);
 			CF_PlayRandomSound(client, client, "sound_cloaked");
@@ -1575,16 +1561,16 @@ public void TF2_OnConditionAdded(int client, TFCond cond)
 
 public void TF2_OnConditionRemoved(int client, TFCond cond)
 {
-	if(CloakActive[client])
+	if (CloakActive[client])
 	{
-		if(cond == TFCond_Cloaked)
+		if (cond == TFCond_Cloaked)
 		{
 			float CloakMeter = TF2_GetCloakLevel(client);
 			CF_DoAbilitySlot(client, CloakSlot[client][1]);
 			CF_PlayRandomSound(client, client, "sound_decloak");
-			if(CloakMeter < CloakMinUse[client])
+			if (CloakMeter < CloakMinUse[client])
 			{
-				if(CloakCanUse[client])
+				if (CloakCanUse[client])
 				{
 					ButtonInitialDelay[client] = 1.35 + GetGameTime();
 					SetEntPropFloat(client, Prop_Send, "m_flStealthNextChangeTime", GetGameTime()+9999.0);
@@ -1598,7 +1584,7 @@ public void TF2_OnConditionRemoved(int client, TFCond cond)
 
 static void EquipAgent(int client)
 {
-	if(!IsValidClient(client))
+	if (!IsValidClient(client))
 		return;
 
 	if (CF_HasAbility(client, SHADOW, BOMB))
@@ -1630,7 +1616,6 @@ static void EquipAgent(int client)
 static void ResetAgent(int client)
 {
 	UAV_Destroy(client);
-	UAV_RemoveOutlines(client);
 	
 	BombActive[client] = false;
 	UAVActive[client] = false;
@@ -1638,9 +1623,9 @@ static void ResetAgent(int client)
 	UAVTarget[client] = -1;
 	
 	int entity = EntRefToEntIndex(BombPlantedOn[client]);
-	if(IsValidEntity(entity))
+	if (IsValidEntity(entity))
 	{
-		if(BombOwner[entity] == client)
+		if (BombOwner[entity] == client)
 		{
 			SetEntityRenderColor(entity, 255, 255, 255, 255);
 
@@ -1685,7 +1670,7 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 	
 	if (StealthActive[attacker])
 	{
-		if(IsBehindAndFacingTarget(attacker, victim))
+		if (IsBehindAndFacingTarget(attacker, victim))
 		{
 			bool ignoreCD = Stealth_AllowUltGainCD[attacker];
 			float newDmg = 0.0;
@@ -1693,18 +1678,18 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 			float hsBonus = StealthDmgBonus[attacker][1], 
 			normalBonus = StealthDmgBonus[attacker][0];
 
-			if(damagecustom == TF_CUSTOM_HEADSHOT)
+			if (damagecustom == TF_CUSTOM_HEADSHOT)
 			{
 				CF_GiveUltCharge(attacker, StealthUltGain_HS[attacker], CF_ResourceType_Percentage, ignoreCD);
 
-				if(hsBonus > 0.0)
+				if (hsBonus > 0.0)
 					newDmg += hsBonus;
 			}
-			else if(damagetype & DMG_BULLET)
+			else if (damagetype & DMG_BULLET)
 			{
 				CF_GiveUltCharge(attacker, StealthUltGain[attacker], CF_ResourceType_Percentage, ignoreCD);
 
-				if(normalBonus > 0.0)
+				if (normalBonus > 0.0)
 					newDmg += normalBonus;
 			}
 
@@ -1713,29 +1698,39 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 			ReturnValue = Plugin_Changed;
 		}
 	}
-	bool bIsExposed = IsTargetOutlined_FromEnemy(victim, attacker);
-	if(bIsExposed)
+	bool bExposedByAgent = FromEnemy_Outlined(victim, attacker);
+	bool bExposedOutter = bExposedFromOutter[attacker][victim];
+
+	if (CF_HasStatusEffect(victim, STATUS_EXPOSED))
 	{
 		float flBonus = 0.0;
-		float flMelee = Exposed_DMG_Melee;
-		float flBullet = Exposed_DMG_Bullet;
-		float flHeadshot = Exposed_DMG_Bullet_HS;
+		float flMelee = Exposed_DMG_Melee[attacker][victim];
+		float flBullet = Exposed_DMG_Bullet[attacker][victim];
+		float flHeadshot = Exposed_DMG_Bullet_HS[attacker][victim];
+		float flAny = Exposed_DMG_Any[attacker][victim];
 
-		if(damagetype & DMG_CLUB)
+		if (bExposedByAgent)
 		{
-			flBonus += flMelee;
+			if (damagetype & DMG_CLUB)
+			{
+				flBonus += flMelee;
+			}
+
+			if (damagecustom == TF_CUSTOM_HEADSHOT)
+			{
+				flBonus += flBullet;
+			}
+			else if (damagetype & DMG_BULLET)
+			{
+				flBonus += flHeadshot;
+			}
+		}
+		else if (bExposedOutter)
+		{
+			flBonus += flAny;
 		}
 
-		if(damagecustom == TF_CUSTOM_HEADSHOT)
-		{
-			flBonus += flBullet;
-		}
-		else if(damagetype & DMG_BULLET)
-		{
-			flBonus += flHeadshot;
-		}
-
-		if(flBonus > 0.0)
+		if (flBonus > 0.0)
 		{
 			damage *= (1.0 + flBonus);
 
@@ -1749,17 +1744,17 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
 	float damageForce[3], float damagePosition[3], int &damagecustom)
 {
-	if(!IsValidClient(attacker) || !IsValidEntity(victim))
+	if (!IsValidClient(attacker) || !IsValidEntity(victim))
 		return Plugin_Continue;
 	
-	if(!BombsToPlace[attacker])
+	if (!BombsToPlace[attacker])
 		return Plugin_Continue;
 
 	// Our Bomb Plant explosion contains DMG_CRUSH.
-	if(damagetype & DMG_CRUSH)
+	if (damagetype & DMG_CRUSH)
 		return Plugin_Continue;
 
-	if(victim <= MaxClients)
+	if (victim <= MaxClients)
 	{
 		PrintCenterText(attacker, "BOMB ONLY PLANTABLE ON BUILDABLES!");
 		EmitSoundToClient(attacker, SND_BOMB_PLANT_ERROR);
@@ -1767,7 +1762,7 @@ public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor
 	else
 	{
 		bool bBuildingOrNPC = (IsABuilding(victim, view_as<bool>(BombOnNPC[attacker])));
-		if(bBuildingOrNPC)
+		if (bBuildingOrNPC)
 		{
 			Bombs_PlantOnEntity(victim, attacker, damage);
 		}
@@ -1786,27 +1781,28 @@ public Action CF_OnFakeMediShieldDamaged(int shield, int attacker, int inflictor
 
 static void UAV_ChangeOutlineColor(int client, int target)
 {
-	if(!IsValidMulti(client) || !IsValidMulti(target))
+	if (!IsValidMulti(client) || !IsValidMulti(target))
 	{
 		UAV_DeleteOutline_Void(client, target);
 		return;
 	}
 
 	bool Outlined = TargetOutlined[target][client];
-	if(!Outlined)
+	if (!Outlined)
 	{
+		PrintCenterTextAll("%N IS NOT OUTLINED BY %N", target, client);
 		return;
 	}
 
-	if(UAV_OutlineColorDelay[client] < GetGameTime())
+	if (UAV_OutlineColorDelay[client] < GetGameTime())
 	{
 		UAV_OutlineColorDelay[client] = GetGameTime() + 0.1;
 		
 		int outline = EntRefToEntIndex(GlowId[target]);
-		if(IsValidEntity(outline))
+		if (IsValidEntity(outline))
 		{
 			int glow[4];
-			if(TF2_GetClientTeam(target) == TFTeam_Red)
+			if (TF2_GetClientTeam(target) == TFTeam_Red)
 			{
 				glow = RedGlow;
 			}
@@ -1823,7 +1819,7 @@ static void UAV_ChangeOutlineColor(int client, int target)
 			Glow.entity = target;
 			Glow.ChangeColor(color);
 
-			if(color[3] < 50)
+			if (color[3] < 50)
 			{
 				TargetOutlined[target][client] = false;
 
@@ -1831,7 +1827,7 @@ static void UAV_ChangeOutlineColor(int client, int target)
 				Glow2.entity = target;
 				Glow2.Delete();
 
-				if(UAVTarget[client] == target)
+				if (UAVTarget[client] == target)
 					UAVTarget[client] = -1;
 
 				return;
@@ -1848,15 +1844,15 @@ static void UAV_DeleteOutline_Void(int client, int target)
 	Glow.entity = target;
 	Glow.Delete();
 
-	if(UAVTarget[client] == target)
+	if (UAVTarget[client] == target)
 		UAVTarget[client] = -1;
 }
 
 public void OnEntityDestroyed(int entity)
 {
-	if(IsValidEntity(entity) && entity > 0 && entity <= MAXENTITIES)
+	if (IsValidEntity(entity) && entity > 0 && entity <= MAXENTITIES)
 	{
-		if(IsValidClient(BombOwner[entity]))
+		if (IsValidClient(BombOwner[entity]))
 		{
 			// CF_ApplyAbilityCooldown(BombOwner[entity], 12.0, M3, true);
 			// CF_UnblockAbilitySlot(BombOwner[entity], M3);
@@ -1871,7 +1867,7 @@ public void OnEntityDestroyed(int entity)
 
 public void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, int &b, int &a)
 {
-	if(!CF_HasAbility(client, SHADOW, BOMB))
+	if (!CF_HasAbility(client, SHADOW, BOMB))
 		return;
 	
 	int phase = BombPhase[client];
@@ -1890,35 +1886,35 @@ public void CF_OnHUDDisplayed(int client, char HUDText[255], int &r, int &g, int
 
 public Action CF_OnPlayerRunCmd(int client, int &buttons)
 {
-	if(!IsValidMulti(client) || !CF_HasAbility(client, SHADOW, BOMB))
+	if (!IsValidMulti(client) || !CF_HasAbility(client, SHADOW, BOMB))
 		return Plugin_Continue;
 
 	char buffer[255];
 	bool m2 = (buttons & IN_ATTACK2) != 0;
 	bool m3 = (buttons & IN_ATTACK3) != 0;
 
-	if(IsValidMulti(UAVTarget[client]))
+	if (IsValidMulti(UAVTarget[client]))
 	{
 		UAV_ChangeOutlineColor(client, UAVTarget[client]);
 	}
 	
 	int entity = EntRefToEntIndex(BombPlantedOn[client]);
-	if(IsValidEntity(entity))
+	if (IsValidEntity(entity))
 	{
-		if(BombOwner[entity] == client)
+		if (BombOwner[entity] == client)
 		{
 			switch(BombPhase[client])
 			{
 				case BOMB_PLANTED:
 				{
-					if(!m3 && M3Pressed[client])
+					if (!m3 && M3Pressed[client])
 					{
 						BombPhase[client] = BOMB_DETONATING;
 						float time = CF_GetArgF(client, SHADOW, BOMB, "bomb_detonation_time", 1.5);
 						BombDetonationTime[client] = time + GetGameTime();
 
 
-						if(TF2_GetClientTeam(client) == TFTeam_Blue)
+						if (TF2_GetClientTeam(client) == TFTeam_Blue)
 						{
 							SetEntityRenderColor(entity, 3, 204, 175, 255);
 						}
@@ -1938,13 +1934,13 @@ public Action CF_OnPlayerRunCmd(int client, int &buttons)
 		M3Pressed[client] = m3;
 	}
 
-	if(CF_HasAbility(client, SHADOW, CLOAK))
+	if (CF_HasAbility(client, SHADOW, CLOAK))
 	{
 		bool Cloaked = IsCloaked(client);
 
-		if(ButtonInitialDelay[client] < GetGameTime())
+		if (ButtonInitialDelay[client] < GetGameTime())
 		{
-			if(!m2 && M2Pressed[client] && (!Cloaked || !TF2_IsPlayerInCondition(client, TFCond_CloakFlicker)))
+			if (!m2 && M2Pressed[client] && (!Cloaked || !TF2_IsPlayerInCondition(client, TFCond_CloakFlicker)))
 			{
 				switch(CloakCanUse[client])
 				{
@@ -1973,7 +1969,7 @@ public Action CF_OnPlayerRunCmd(int client, int &buttons)
 
 public Action CF_OnM3Used(int client)
 {
-	if(BombPhase[client] != BOMB_IDLE)
+	if (BombPhase[client] != BOMB_IDLE)
 	{
 		return Plugin_Handled;
 	}
@@ -2012,7 +2008,7 @@ public Action CF_Agent_OutlineTransmit(int entity, int client)
 			{
 				case true:
 				{
-					if(GetTeam(client) != GetTeam(entity))
+					if (GetTeam(client) != GetTeam(entity))
 					{
 						// only transmit to teammates!
 						return Plugin_Handled;
@@ -2159,9 +2155,9 @@ stock void Get_Fake_Forward_Vec(float Range, float vecAngles[3], float Vec_Targe
 
 void MoveEntity(int entity, float loc[3], float Ang[3], bool old=false)
 {
-	if(IsValidEntity(entity))	
+	if (IsValidEntity(entity))	
 	{
-		if(old)
+		if (old)
 		{
 			//the version bellow creates some "funny" movements/interactions..
 			float vecView[3], vecFwd[3], Entity_Loc[3], vecVel[3];
@@ -2190,7 +2186,7 @@ void MoveEntity(int entity, float loc[3], float Ang[3], bool old=false)
 			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", flRocketPos);
 			float Ratio = (GetVectorDistance(loc, flRocketPos))/250.0;
 
-			if(Ratio<0.075)
+			if (Ratio<0.075)
 				Ratio=0.075;
 
 			float flSpeedInit = 1250.0*Ratio;
@@ -2236,7 +2232,7 @@ stock void Proper_To_Groud_Clip(float vecHull[3], float StepHeight = 300.0, floa
 	vecorigin[1] = originalPostionTrace[1];
 
 	float VecCalc = (vecorigin[2] - startPostionTrace[2]);
-	if(VecCalc > (StepHeight - (vecHull[2] + 2.0)) || VecCalc > (StepHeight - (vecHull[2] + 2.0)) ) //This means it was inside something, in this case, we take the normal non traced position.
+	if (VecCalc > (StepHeight - (vecHull[2] + 2.0)) || VecCalc > (StepHeight - (vecHull[2] + 2.0)) ) //This means it was inside something, in this case, we take the normal non traced position.
 	{
 		vecorigin[2] = originalPostionTrace[2];
 	}
@@ -2272,9 +2268,9 @@ public void Toss_FadeOutGib(int ref)
 }
 public bool TraceWorldOrValidTarget(int entity, int mask, int client)
 {
-	if(IsValidClient(entity)) //Valid clients
+	if (IsValidClient(entity)) //Valid clients
 	{
-		if(IsPlayerAlive(entity) && GetTeam(entity) != GetTeam(client)) //Enemies only.
+		if (IsPlayerAlive(entity) && GetTeam(entity) != GetTeam(client)) //Enemies only.
 		{
 			return true;
 		}
@@ -2309,7 +2305,7 @@ stock int TF2_CreateGlow_Custom(int iEnt, int Color[4])
 	DispatchKeyValue(iEnt, "targetname", strName);
 	
 	int ent = CreateEntityByName("tf_glow");
-	if(IsValidEntity(ent))
+	if (IsValidEntity(ent))
 	{
 		DispatchKeyValue(ent, "targetname", "RainbowGlow");
 		DispatchKeyValue(ent, "target", strName);
@@ -2333,12 +2329,12 @@ stock int TF2_CreateGlow_Custom(int iEnt, int Color[4])
 
 stock float TF2_GetCloakLevel(int client)
 {
-	if(!IsValidClient(client))
+	if (!IsValidClient(client))
 		return -1.0;
 
 	float value;
 
-	if(GetEntPropFloat(client, Prop_Send, "m_flCloakMeter"))
+	if (GetEntPropFloat(client, Prop_Send, "m_flCloakMeter"))
 	{
 		value = GetEntPropFloat(client, Prop_Send, "m_flCloakMeter");
 	}
@@ -2348,7 +2344,7 @@ stock float TF2_GetCloakLevel(int client)
 
 stock void TF2_SetCloakLevel(int client, float amount, bool cap = false)
 {
-	if(!IsValidClient(client))
+	if (!IsValidClient(client))
 		return;
 
 	if (GetEntPropFloat(client, Prop_Send, "m_flCloakMeter"))
@@ -2368,7 +2364,7 @@ stock void TF2_SetCloakLevel(int client, float amount, bool cap = false)
 
 stock void TF2_AddCloakLevel(int client, float amount, bool cap = false)
 {
-	if(!IsValidClient(client))
+	if (!IsValidClient(client))
 		return;
 
 	TF2_SetCloakLevel(client, (TF2_GetCloakLevel(client) + amount), cap);
@@ -2376,7 +2372,7 @@ stock void TF2_AddCloakLevel(int client, float amount, bool cap = false)
 
 stock void TF2_RemoveCloakLevel(int client, float amount, bool cap = false)
 {
-	if(!IsValidClient(client))
+	if (!IsValidClient(client))
 		return;
 		
 	TF2_SetCloakLevel(client, (TF2_GetCloakLevel(client) - amount), cap);
@@ -2402,7 +2398,7 @@ enum struct Generic_Laser_Trace
 
 	void DoForwardTrace_Basic(float Dist=-1.0, TraceEntityFilter Func_Trace = INVALID_FUNCTION)
 	{
-		if(Func_Trace==INVALID_FUNCTION)
+		if (Func_Trace==INVALID_FUNCTION)
 			Func_Trace = Generic_Laser_BEAM_TraceWallsOnly;
 
 		this.target = -1;
@@ -2419,12 +2415,12 @@ enum struct Generic_Laser_Trace
 			TR_GetEndPosition(Loc, trace);
 
 			int TracedEntity = TR_GetEntityIndex(trace);
-			if(TracedEntity > 0 && TracedEntity <= MaxClients)
+			if (TracedEntity > 0 && TracedEntity <= MaxClients)
 			{
 				this.target = TracedEntity;
 			}
 
-			if(Dist !=-1.0)
+			if (Dist !=-1.0)
 			{
 				ConformLineDistance(Loc, startPoint, Loc, Dist);
 			}
@@ -2442,21 +2438,21 @@ enum struct Generic_Laser_Trace
 	}
 	void DoForwardTrace_Custom(float Angles[3], float startPoint[3], float Dist=-1.0, TraceEntityFilter Func_Trace = INVALID_FUNCTION)
 	{
-		if(Func_Trace==INVALID_FUNCTION)
+		if (Func_Trace==INVALID_FUNCTION)
 			Func_Trace = Generic_Laser_BEAM_TraceWallsOnly;
 
 		float Loc[3];
-		if(this.client !=-1)
+		if (this.client !=-1)
 			CF_StartLagCompensation(this.client);
 		Handle trace = TR_TraceRayFilterEx(startPoint, Angles, 11, RayType_Infinite, Func_Trace, this.client);
-		if(this.client !=-1)
+		if (this.client !=-1)
 			CF_EndLagCompensation(this.client);
 		if (TR_DidHit(trace))
 		{
 			TR_GetEndPosition(Loc, trace);
 			delete trace;
 
-			if(Dist !=-1.0)
+			if (Dist !=-1.0)
 			{
 				ConformLineDistance(Loc, startPoint, Loc, Dist);
 			}
@@ -2478,17 +2474,17 @@ enum struct Generic_Laser_Trace
 
 	void EnumerateGetEntities(TraceEntityFilter Hull_TraceFunc = INVALID_FUNCTION)
 	{
-		if(Hull_TraceFunc==INVALID_FUNCTION)
+		if (Hull_TraceFunc==INVALID_FUNCTION)
 			Hull_TraceFunc = Generic_Laser_BEAM_TraceUsers;
 
 		float hullMin[3], hullMax[3];
 		this.SetHull(hullMin, hullMax);
 		
-		if(this.client !=-1)
+		if (this.client !=-1)
 			CF_StartLagCompensation(this.client);
 		Handle trace = TR_TraceHullFilterEx(this.Start_Point, this.End_Point, hullMin, hullMax, 1073741824, Hull_TraceFunc, this.client);	// 1073741824 is CONTENTS_LADDER?
 		delete trace;
-		if(this.client !=-1)
+		if (this.client !=-1)
 			CF_EndLagCompensation(this.client);
 	}
 	Queue GetEnumeratedEntityPop()
@@ -2499,7 +2495,7 @@ enum struct Generic_Laser_Trace
 		{
 			//so we don't have to loop through max ents worth of ents when we only have 1 valid
 			int victim = Generic_Laser_BEAM_HitDetected[loop];
-			if(victim)
+			if (victim)
 				Victims.Push(victim);
 		}
 
@@ -2518,9 +2514,9 @@ enum struct Generic_Laser_Trace
 			if (victim)
 			{
 				this.trace_hit_enemy=true;
-				if(this.player_check)
+				if (this.player_check)
 				{
-					if(Attack_Function && Attack_Function != INVALID_FUNCTION)
+					if (Attack_Function && Attack_Function != INVALID_FUNCTION)
 					{	
 						Call_StartFunction(null, Attack_Function);
 						Call_PushCell(this.client);
@@ -2537,7 +2533,7 @@ enum struct Generic_Laser_Trace
 
 					SDKHooks_TakeDamage(victim, this.client, this.client, this.Damage, this.damagetype, -1, NULL_VECTOR, playerPos);
 
-					if(Attack_Function && Attack_Function != INVALID_FUNCTION)
+					if (Attack_Function && Attack_Function != INVALID_FUNCTION)
 					{	
 						Call_StartFunction(null, Attack_Function);
 						Call_PushCell(this.client);
@@ -2553,7 +2549,7 @@ enum struct Generic_Laser_Trace
 	}
 	void SetHull(float hullMin[3], float hullMax[3])
 	{
-		if(this.Custom_Hull[0] != 0.0 || this.Custom_Hull[1] != 0.0 || this.Custom_Hull[2] != 0.0)
+		if (this.Custom_Hull[0] != 0.0 || this.Custom_Hull[1] != 0.0 || this.Custom_Hull[2] != 0.0)
 		{
 			hullMin[0] = -this.Custom_Hull[0];
 			hullMin[1] = -this.Custom_Hull[1];
@@ -2576,7 +2572,7 @@ stock float CalculateFallOff(float StartLoc[3], float EndLoc[3], float falloffst
 	//FF2Dbg("Input damage: %f", Damage);
 	if (dist > falloffstart)
 	{
-		if(dist > maxDist)
+		if (dist > maxDist)
 			return falloffmax;
 
 		float diff = dist - falloffstart;
@@ -2593,7 +2589,7 @@ stock bool Generic_Laser_BEAM_TraceWallsOnly(int entity, int contentsMask, int c
 }
 stock bool Generic_Laser_BEAM_TraceWallAndEnemies(int entity, int contentsMask, int client)
 {
-	if(CF_IsValidTarget(entity, grabEnemyTeam(client)))
+	if (CF_IsValidTarget(entity, grabEnemyTeam(client)))
 		return true;
 		
 
@@ -2604,15 +2600,15 @@ bool Generic_Laser_BEAM_TraceUsers(int entity, int contentsMask, int client)
 {
 	if (IsValidEntity(entity))
 	{
-		if(client == -1 || CF_IsValidTarget(entity, grabEnemyTeam(client)))
+		if (client == -1 || CF_IsValidTarget(entity, grabEnemyTeam(client)))
 		{
 			for(int i=0 ; i < MAXENTITIES ; i++)
 			{
 				//don't retrace the same entity!
-				if(Generic_Laser_BEAM_HitDetected[i] == entity)
+				if (Generic_Laser_BEAM_HitDetected[i] == entity)
 					break;
 					
-				if(!Generic_Laser_BEAM_HitDetected[i])
+				if (!Generic_Laser_BEAM_HitDetected[i])
 				{
 					i_traced_ents_amt++;	//so we don't have to loop through max ents worth of ents when we only have 1 valid
 					Generic_Laser_BEAM_HitDetected[i] = entity;
@@ -2708,5 +2704,186 @@ stock void ConformLineDistance(float result[3], const float src[3], const float 
 		result[0] = ConformAxisValue(src[0], dst[0], distCorrectionFactor);
 		result[1] = ConformAxisValue(src[1], dst[1], distCorrectionFactor);
 		result[2] = ConformAxisValue(src[2], dst[2], distCorrectionFactor);
+	}
+}
+
+/////////////////////////////
+///// ENUMS STRUCTURES /////
+///////////////////////////
+
+enum struct UAV_Drone
+{
+	int Owner;
+	int Target;
+	float ChaseWindup;
+	float size;
+	float Life;
+	float Durability;
+
+	void Spawn()
+	{
+		if (!IsValidClient(this.Owner))
+		{	
+			return;
+		}
+
+		float pos[3], ang[3];
+
+		GetClientEyeAngles(this.Owner, ang);
+		CF_WorldSpaceCenter(this.Owner, pos);
+
+		int Drone = SpawnPhysProp(this.Owner, MODEL_DRONE, pos, ang, NULL_VECTOR, TF2_GetClientTeam(this.Owner) == TFTeam_Red ? view_as<int>(TFTeam_Blue) : view_as<int>(TFTeam_Red), this.Durability, false, _, this.size, this.size * 2.0, true);
+		if (IsValidEntity(Drone))
+		{
+			SetEntProp(Drone, Prop_Data, "m_takedamage", 1, 1);
+			SetEntProp(Drone, Prop_Send, "m_nSkin", GetClientTeam(this.Owner)-2);
+			DispatchKeyValueFloat(Drone, "modelscale", this.size);
+			SDKUnhook(Drone, SDKHook_OnTakeDamage, Drone_UAVDamaged);
+			SDKHook(Drone, SDKHook_OnTakeDamage, Drone_UAVDamaged);
+
+			if (IsValidClient(this.Target))
+			{	
+				UAVTarget[this.Owner] = this.Target;
+				Outlines_FoundTarget(this.Target, this.Owner);
+			}
+
+			UAV_Health[Drone] = this.Durability;
+
+			UAVDrone[this.Owner] = EntIndexToEntRef(Drone);
+
+			UAV_ChaseTargTimer[this.Owner] = GetGameTime() + this.ChaseWindup;
+			UAV_CurrentLifeSpan[this.Owner] = GetGameTime() + this.Life;
+		}
+	}
+
+	void Delete()
+	{
+		int Drone = EntRefToEntIndex(UAVDrone[this.Owner]);
+		if (IsValidEntity(Drone))
+		{
+			float pos[3]; GetAbsOrigin_main(Drone, pos);
+			SpawnParticle(pos, "rd_robot_explosion", 0.1);
+
+			EmitSoundToAll(SND_DRONE_DESTROYED_1, Drone, _, _, _, _, GetRandomInt(80, 110), -1);
+			EmitSoundToAll(SND_DRONE_DESTROYED_2, Drone, _, _, _, _, GetRandomInt(80, 110), -1);
+
+			for (int i = 0; i < GetRandomInt(4, 6); i++)
+			{
+				float randAng[3], randVel[3];
+				for (int vec = 0; vec < 3; vec++)
+				{
+					randAng[vec] = GetRandomFloat(0.0, 360.0);
+					
+					if (vec < 2)
+						randVel[vec] = GetRandomFloat(0.0, 360.0);
+					else
+						randVel[vec] = GetRandomFloat(200.0, 800.0);
+				}
+				
+				char model[255];
+				model = DroneGear_Gib[GetRandomInt(0, sizeof(DroneGear_Gib) - 1)];
+				int gear = SpawnPhysicsProp(model, 0, "0", 99999.0, true, 1.0, pos, randAng, randVel, 5.0);
+				
+				if (IsValidEntity(gear))
+				{
+					SetEntityCollisionGroup(gear, 1);
+					SetEntityRenderMode(gear, RENDER_TRANSALPHA);
+					RequestFrame(Toss_FadeOutGib, EntIndexToEntRef(gear));
+					SetEntityCollisionGroup(gear, 1);
+					SetEntProp(gear, Prop_Send, "m_iTeamNum", 0);
+				}
+			}
+			RemoveEntity(Drone);
+		}
+
+		UAVDrone[this.Owner] = -1;
+	}
+}
+
+
+enum struct iGlowEntity
+{
+	int entity;
+	int owner;
+	int color[4];
+	bool teamColor;
+	float lifeSpan;
+
+	int Create()
+	{
+		if (!IsValidClient(this.entity) || !IsPlayerAlive(this.entity))
+			return -1;
+		
+		if (Exposed[this.entity])
+			return -1;
+
+		switch(this.teamColor)
+		{
+			case true:
+			{
+				if (TF2_GetClientTeam(this.entity) == TFTeam_Red)
+				{
+					this.color = RedGlow;
+				}
+				else
+				{
+					this.color = BlueGlow;
+				}
+			}
+		}
+		
+		int iGlow = TF2_CreateGlow_Custom(this.entity, this.color);
+		if (!IsValidEntity(iGlow))
+			return -1;
+
+		if (!Exposed[this.entity])
+			Exposed_ApplyStatusEffect(this.owner, this.entity, 0.0);
+
+		Exposed[this.entity] = true;
+
+		SetEntProp(iGlow, Prop_Send, "m_iTeamNum",  view_as<int>(TF2_GetClientTeam(this.entity)));
+
+		SetEntPropEnt(iGlow, Prop_Send, "m_hOwnerEntity", this.owner);
+
+		SetEdictFlags(iGlow, GetEdictFlags(iGlow)&(~FL_EDICT_ALWAYS));
+		SDKHook(iGlow, SDKHook_SetTransmit, CF_Agent_OutlineTransmit);
+
+		if (this.lifeSpan > 0.0)
+			CreateTimer(this.lifeSpan, Timer_RemoveEntity, EntIndexToEntRef(iGlow), TIMER_FLAG_NO_MAPCHANGE);
+		
+		return iGlow;
+	}
+	void ChangeColor(int icolor[4])
+	{
+		if (!IsValidClient(this.entity) || !IsPlayerAlive(this.entity))
+			return;
+
+		int iGlow = EntRefToEntIndex(GlowId[this.entity])
+		if (IsValidEntity(iGlow))
+		{
+			SetVariantColor(icolor);		
+			AcceptEntityInput(iGlow, "SetGlowColor");
+		}
+	}
+	void Delete()
+	{
+		int owner = -1;
+
+		int iGlow = EntRefToEntIndex(GlowId[this.entity])
+		if (IsValidEntity(iGlow))
+		{	
+			owner = GetEntPropEnt(iGlow, Prop_Send, "m_hOwnerEntity");
+			RemoveEntity(iGlow);
+
+			GlowId[this.entity] = -1;
+		}
+
+		if (CF_HasStatusEffect(this.entity, STATUS_EXPOSED))
+		{
+			CF_RemoveStatusEffect(this.entity, STATUS_EXPOSED, owner);
+		}
+
+		TargetOutlined[this.entity][owner] = false;
+		Exposed[this.entity] = false;
 	}
 }
