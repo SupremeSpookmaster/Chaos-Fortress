@@ -58,6 +58,11 @@ stock void ResetToZero2(any[][] array, int length1, int length2)
 #define SND_BOMB_PLANT_ERROR		"replay/replaydialog_warn.wav"
 #define SND_LASERGUN_IMPACT			"weapons/cow_mangler_explosion_charge_02.wav"
 #define SND_LASERGUN_SHOT			"weapons/cow_mangler_over_charge_shot.wav"
+#define SND_EXPOSED				 	"weapons/samurai/tf_marked_for_death_indicator.wav"
+
+#define PARTICLE_STATUS_MARKED		"mark_for_death"
+
+#define STATUS_EXPOSED				"Exposed"
 
 static const char DroneGear_Gib[][255] =
 {
@@ -115,6 +120,7 @@ public void OnMapStart()
 	PrecacheSound(SND_BOMB_PLANT_ERROR, true);
 	PrecacheSound(SND_LASERGUN_IMPACT, true);
 	PrecacheSound(SND_LASERGUN_SHOT, true);
+	PrecacheSound(SND_EXPOSED, true);
 	for (int i = 0; i < sizeof(DroneDamaged); i++) { PrecacheSound(DroneDamaged[i]); }
 
 	Zero(Generic_Laser_BEAM_HitDetected);
@@ -143,16 +149,13 @@ public void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int deadR
 //////   STATUS EFFECTS	 ///////
 ///////////////////////////////
 
-#define STATUS_EXPOSED 			 "Exposed"
-#define PARTICLE_STATUS_MARKED	 "mark_for_death"
-#define SND_EXPOSED				 ""
-
 #define FL_STATUS_LINGER_TIME	0.5
 
 static Handle hExposedParticle[MAXTF2PLAYERS]={null,...};
 static bool  Exposed[MAXENTITIES]={false,...};
 static bool  bExposedFromOutter[MAXENTITIES][MAXENTITIES];
 static float Exposed_DMG_Melee[MAXENTITIES][MAXENTITIES];
+static float Exposed_DMG_Laser[MAXTF2PLAYERS]={0.0,...};
 static float Exposed_DMG_Bullet[MAXENTITIES][MAXENTITIES];
 static float Exposed_DMG_Bullet_HS[MAXENTITIES][MAXENTITIES];
 static float Exposed_DMG_Any[MAXENTITIES][MAXENTITIES];
@@ -186,13 +189,34 @@ static void Exposed_AppliedPre(int applicant, int target)
 static void Exposed_AppliedPost(int applicant, int target)
 {
 	DataPack pack = new DataPack();
-	hExposedParticle[target] = CreateDataTimer(0.1, Timer_ExpireParticle, pack, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
+	hExposedParticle[target] = CreateDataTimer(0.11, Timer_ExpireParticle, pack, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
 	pack.WriteCell(GetClientUserId(applicant));
 	pack.WriteCell(EntIndexToEntRef(target));
 
-	if (!Exposed[target] && bExposedFromOutter[applicant][target])
+	bool bAllowText = false;
+	bool bOutterSource = bExposedFromOutter[applicant][target];
+
+	char nsSound[255];
+	char nsText[255];
+
+	nsSound = SND_EXPOSED;
+	nsText = "YOU ARE EXPOSED YOU TAKE MORE DAMAGE FROM AGENT SHADOW";
+
+	if (!Exposed[target] && bOutterSource)
 	{
 		Exposed[target] = true;
+	}
+
+	if(bOutterSource)
+		nsText = "YOU ARE EXPOSED YOU TAKE MORE DAMAGE FROM ALL SOURCES";
+
+	if(IsValidClient(target))
+	{
+		if(nsSound[0])
+			EmitSoundToClient(target, nsSound, _, _, _, _, _, GetRandomInt(90, 110));
+		
+		if(bAllowText && nsText[0])
+			PrintCenterText(target, "!!! %s !!!", nsText);
 	}
 
 	AddOverheadParticle(PARTICLE_STATUS_MARKED, target, _, true, applicant);
@@ -1260,7 +1284,10 @@ public void Penetrator_Initiate(int client, char abilityName[255])
 
 bool Penetrator_AOE_Filter(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
 {
-	bool InSpawnRoom = (victim > 0 && CF_IsEntityInSpawn(victim, view_as<TFTeam>(GetTeam(victim))));
+	if(!IsValidEntity(victim))
+		return false;
+
+	bool InSpawnRoom = (CF_IsEntityInSpawn(victim, view_as<TFTeam>(GetTeam(victim))));
 	if (InSpawnRoom)
 	{
 		return false;
@@ -1283,6 +1310,8 @@ public void Penetrator_Trace(int client, char abilityName[255])
 	float AOERad = CF_GetArgF(client, SHADOW, abilityName, "laser_impact_aoe_radius", 120.0);
 	float AOEFallOffStart = CF_GetArgF(client, SHADOW, abilityName, "laser_impact_aoe_falloffStart", 120.0);
 	float AOEFallOffMax = CF_GetArgF(client, SHADOW, abilityName, "laser_impact_aoe_falloffMax", 0.8);
+
+	Exposed_DMG_Laser[client] = CF_GetStatusEffectArgF(STATUS_EXPOSED, "Ult Laser Vulnerability", 0.0);
 
 	float vecStart[3], vecAngles[3];
 
@@ -1358,6 +1387,8 @@ public void Penetrator_Trace(int client, char abilityName[255])
 
 			if (IsValidMulti(victim))
 			{
+				bool bExposed = Exposed[victim];
+
 				bool InSpawnRoom = CF_IsEntityInSpawn(victim, TF2_GetClientTeam(victim));
 
 				if (!InSpawnRoom)
@@ -1385,6 +1416,9 @@ public void Penetrator_Trace(int client, char abilityName[255])
 						if (Invuln)
 							continue;
 
+						if(bExposed)
+							totalDamage *= (1.0 + Exposed_DMG_Laser[client]);
+
 						SDKHooks_TakeDamage(victim, Laser.client, Laser.client, totalDamage, Laser.damagetype, -1, NULL_VECTOR);
 					}
 					else if (MaxPenetrations > 0)
@@ -1393,6 +1427,9 @@ public void Penetrator_Trace(int client, char abilityName[255])
 						{
 							continue;
 						}
+
+						if(bExposed)
+							totalDamage *= (1.0 + Exposed_DMG_Laser[client]);
 
 						SDKHooks_TakeDamage(victim, Laser.client, Laser.client, totalDamage, Laser.damagetype, -1, NULL_VECTOR);
 
