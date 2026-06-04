@@ -219,7 +219,7 @@ static void Exposed_AppliedPost(int applicant, int target)
 			PrintCenterText(target, "!!! %s !!!", nsText);
 	}
 
-	AddOverheadParticle(PARTICLE_STATUS_MARKED, target, _, true, applicant);
+	AddOverheadParticle(PARTICLE_STATUS_MARKED, target, _, false, applicant);
 }
 
 static Action Timer_ExpireParticle(Handle timer, DataPack pack)
@@ -863,7 +863,7 @@ public void UAV_SpawnDrone(int client, char abilityName[255])
 				TeleportEntity(Drone, AgentCurrentLoc[client]);
 				SetEntityCollisionGroup(Drone, DRONE_COLLISION_NON_PLAYER);
 
-				CF_ApplyAbilityCooldown(client, cooldown, REL, true, true);
+				// CF_ApplyAbilityCooldown(client, cooldown, REL, true, true);
 
 				RequestFrame(UAV_Logic, client);
 
