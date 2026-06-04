@@ -1260,7 +1260,7 @@ public void Penetrator_Initiate(int client, char abilityName[255])
 
 bool Penetrator_AOE_Filter(int victim, int &attacker, int &inflictor, int &weapon, float &damage)
 {
-	bool InSpawnRoom = CF_IsEntityInSpawn(victim, TF2_GetClientTeam(victim));
+	bool InSpawnRoom = (victim > 0 && CF_IsEntityInSpawn(victim, view_as<TFTeam>(GetTeam(victim))));
 	if (InSpawnRoom)
 	{
 		return false;
