@@ -90,7 +90,7 @@ static int RedGlow[4] = {185, 75, 59, 255};
 
 static float OutlineFadeTime[MAXTF2PLAYERS]={0.0,...};
 static float OutlineCurrentFadeTime[MAXTF2PLAYERS]={0.0,...};
-static bool TargetOutlined[MAXTF2PLAYERS][MAXTF2PLAYERS];
+static bool OutlinedByOwner[MAXTF2PLAYERS][MAXTF2PLAYERS];
 
 static bool M2Pressed[MAXTF2PLAYERS];
 static bool M3Pressed[MAXTF2PLAYERS];
@@ -189,6 +189,12 @@ static void Exposed_AppliedPost(int applicant, int target)
 	hExposedParticle[target] = CreateDataTimer(0.1, Timer_ExpireParticle, pack, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
 	pack.WriteCell(GetClientUserId(applicant));
 	pack.WriteCell(GetClientUserId(target));
+
+	if (!Exposed[target] && bExposedFromOutter[applicant][target])
+	{
+		Exposed[target] = true;
+	}
+
 	AddOverheadParticle(PARTICLE_STATUS_MARKED, target, _, true, applicant);
 }
 
@@ -220,7 +226,7 @@ static Action Timer_ExpireParticle(Handle timer, DataPack pack)
 	
 	hExposedParticle[target] = null;
 
-	CF_SetStatusEffectActiveValue(target, STATUS_EXPOSED, FL_STATUS_LINGER_TIME);
+	CF_RemoveStatusEffect(target, STATUS_EXPOSED, client);
 
 	return Plugin_Stop;
 }
@@ -666,13 +672,13 @@ static void UAV_RemoveOutlines(int client)
 {
 	for(int i=1;i<=MaxClients;i++)
 	{
-		if (IsValidClient(i) && TargetOutlined[i][client]) 
+		if (IsValidClient(i) && OutlinedByOwner[i][client]) 
 		{
 			iGlowEntity Glow;
 			Glow.entity = i;
 			Glow.Delete();
 
-			TargetOutlined[i][client] = false;
+			OutlinedByOwner[i][client] = false;
 		}
 	}
 }
@@ -809,9 +815,10 @@ public void UAV_SpawnDrone(int client, char abilityName[255])
 					lifespan = CF_GetArgF(client, SHADOW, abilityName, "uav_lifespan", 13.5);
 
 					Uav.Target = target;
+
+					EmitSoundToClient(target, SND_UAV_FOUND_CLIENT);
 				}
 			}
-
 
 			if (bEndLocOnly)
 			{
@@ -857,7 +864,7 @@ public bool IsTargetOutlined(int entity)
 
 public bool FromEnemy_Outlined(int entity, int outliner)
 {
-	if (!TargetOutlined[entity][outliner] && !CF_HasStatusEffect(entity, STATUS_EXPOSED))
+	if (!OutlinedByOwner[entity][outliner])
 		return false;
 	
 	return true;
@@ -900,12 +907,15 @@ void Outlines_ChangeColorDist(int target, int outliner, float Dist_New, float Sc
 
 void Outlines_FoundTarget(int target, int outliner)
 {
+	if(!IsValidMulti(target) || !IsValidMulti(outliner))
+		return;
+		
 	iGlowEntity Glow;
 	Glow.entity = target;
 	Glow.owner = outliner;
 	Glow.teamColor = true;
 	GlowId[target] = EntIndexToEntRef(Glow.Create());
-	EmitSoundToClient(target, SND_UAV_FOUND);
+	EmitSoundToClient(target, SND_UAV_FOUND_CLIENT);
 }
 
 bool Outlines_AlreadyOutlined(int target, int outliner)
@@ -958,15 +968,15 @@ public void UAV_CheckRadius(int client, float StartPos[3], float maxDistance)
 				bool bAlreadyOutlined = IsTargetOutlined(enemies);
 				bool bOutlineValid = IsValidEntity(outline);
 
-				if (bOutlineValid && bAlreadyOutlined)
-				{
-					Outlines_ChangeColorDist(enemies, client, Dist_New, ScanRadius);
-				}
-
 				if (!bOutlineValid && !bAlreadyOutlined)
 				{
 					Outlines_FoundTarget(enemies, client);
-					PrintToConsoleAll("%N found by our drone! \\UAV_CheckRadius\\", UAVTarget[client]);
+					// PrintToConsoleAll("%N !bOutlineValid && !bAlreadyOutlined \\UAV_CheckRadius\\", UAVTarget[client]);
+				}
+				else if (bOutlineValid && bAlreadyOutlined)
+				{
+					Outlines_ChangeColorDist(enemies, client, Dist_New, ScanRadius);
+					// PrintToConsoleAll("%N bOutlineValid && bAlreadyOutlined \\UAV_CheckRadius\\", UAVTarget[client]);
 				}
 			}
 		}
@@ -992,9 +1002,63 @@ public void UAV_CheckRadius(int client, float StartPos[3], float maxDistance)
 				Glow.teamColor = true;
 				GlowId[UAVTarget[client]] = EntIndexToEntRef(Glow.Create());
 
-				PrintToConsoleAll("%N found by our drone! \\UAV_CheckRadius\\", UAVTarget[client]);
+				// PrintToConsoleAll("%N found by our drone! \\UAV_CheckRadius\\", UAVTarget[client]);
 			}
 		}
+	}
+}
+
+static void UAV_CheckAllButOurTarget(int client)
+{
+	for (int enemies = 1; enemies <= MaxClients; enemies++)
+	{
+		if (!IsValidMulti(enemies) && enemies != client) //Dead or not valid, ignore
+			continue;
+
+		if (UAVTarget[client] == enemies) //Our current target, ignore
+			continue;
+
+		if (GetTeam(client) == GetTeam(enemies)) //Our teammate, ignore
+			continue;
+
+		bool already = Outlines_AlreadyOutlined(enemies, client);
+
+		// PrintToConsoleAll("%N already outlined? %b \\UAV_Logic\\", enemies, already);
+
+		if (already)
+		{
+			// PrintToConsoleAll("%N outline removed \\UAV_Logic\\", enemies);
+		}
+	}
+}
+
+static void Outlined_DoDecay(int client, int target, bool alive)
+{
+	bool bOutlined = FromEnemy_Outlined(target, client);
+	
+	int outline = EntRefToEntIndex(GlowId[target]);
+	if (!IsValidEntity(outline))
+		return;
+
+	// PrintToConsoleAll("\\Outlined_DoDecay\\");
+
+	if (alive && !bOutlined)
+	{
+		OutlinedByOwner[target][client] = true;
+		OutlineCurrentFadeTime[client] = GetGameTime() + OutlineFadeTime[client];
+		// PrintToConsoleAll("%N outline is decaying now \\Outlined_DoDecay\\", target);
+	}
+	
+	if (!alive)
+	{
+		iGlowEntity Glow;
+		Glow.entity = target;
+		Glow.Delete();
+		OutlinedByOwner[target][client] = false;
+		Exposed[target] = false;
+		UAVTarget[client] = -1;
+
+		// PrintToConsoleAll("%N no longer alive, remove outlines \\Outlined_DoDecay\\", target);
 	}
 }
 
@@ -1005,37 +1069,14 @@ static void UAV_Logic(int client)
 	bool bOwnerValid = IsValidClient(client);
 	if (!bOwnerValid || !UAVActive[client] || UAV_CurrentLifeSpan[client] <= GetGameTime() || !IsValidEntity(DroneEntity))
 	{	
-		for (int enemies = 1; enemies <= MaxClients; enemies++)
-		{
-			if (!IsValidMulti(enemies) && enemies != client) //Dead or not valid, ignore
-				continue;
-
-			if (UAVTarget[client] == enemies) //Our current target, ignore
-				continue;
-
-			if (GetTeam(client) == GetTeam(enemies)) //Our teammate, ignore
-				continue;
-
-			Outlines_AlreadyOutlined(enemies, client);
-		}
+		bool alive;
+		UAV_CheckAllButOurTarget(client);
 
 		if (IsValidClient(UAVTarget[client]))
 		{
-			if (IsPlayerAlive(UAVTarget[client]))
-			{
-				if (!FromEnemy_Outlined(UAVTarget[client], client))
-				{
-					TargetOutlined[UAVTarget[client]][client] = true;
-					OutlineCurrentFadeTime[client] = GetGameTime() + OutlineFadeTime[client];
-				}
-			}
-			else
-			{
-				iGlowEntity Glow;
-				Glow.entity = UAVTarget[client];
-				Glow.Delete();
-				UAVTarget[client] = -1;
-			}
+			alive = IsPlayerAlive(UAVTarget[client]);
+			Outlined_DoDecay(client, UAVTarget[client], alive);
+			// PrintToConsoleAll("%N is valid! \\UAV_Logic\\", UAVTarget[client]);
 		}
 		else
 		{
@@ -1311,7 +1352,7 @@ public void Penetrator_Trace(int client, char abilityName[255])
 
 				if (!InSpawnRoom)
 				{	
-					bool IgnoreLoSPenalty = TargetOutlined[victim][client] && PenaltyIngore;
+					bool IgnoreLoSPenalty = OutlinedByOwner[victim][client] && PenaltyIngore;
 
 					if (!CF_HasLineOfSight(playerPos, enemyPos, _, playerPos, client) && !IgnoreLoSPenalty)
 					{
@@ -1634,6 +1675,10 @@ static void ResetAgent(int client)
 			BombPlantedOn[client] = -1;
 		}
 	}
+
+	iGlowEntity Glow;
+	Glow.entity = client;
+	Glow.Delete();
 }
 
 public void CF_OnCharacterCreated(int client)
@@ -1698,36 +1743,35 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 			ReturnValue = Plugin_Changed;
 		}
 	}
-	bool bExposedByAgent = FromEnemy_Outlined(victim, attacker);
-	bool bExposedOutter = bExposedFromOutter[attacker][victim];
 
-	if (CF_HasStatusEffect(victim, STATUS_EXPOSED))
+	bool bIsExposed = Exposed[victim];
+	if (bIsExposed)
 	{
+		bool bExposedOutter = bExposedFromOutter[attacker][victim];
+
 		float flBonus = 0.0;
 		float flMelee = Exposed_DMG_Melee[attacker][victim];
 		float flBullet = Exposed_DMG_Bullet[attacker][victim];
 		float flHeadshot = Exposed_DMG_Bullet_HS[attacker][victim];
 		float flAny = Exposed_DMG_Any[attacker][victim];
 
-		if (bExposedByAgent)
+		if (damagetype & DMG_CLUB)
 		{
-			if (damagetype & DMG_CLUB)
-			{
-				flBonus += flMelee;
-			}
-
-			if (damagecustom == TF_CUSTOM_HEADSHOT)
-			{
-				flBonus += flBullet;
-			}
-			else if (damagetype & DMG_BULLET)
-			{
-				flBonus += flHeadshot;
-			}
+			flBonus += flMelee;
 		}
-		else if (bExposedOutter)
+
+		if (damagecustom == TF_CUSTOM_HEADSHOT)
 		{
-			flBonus += flAny;
+			flBonus += flBullet;
+		}
+		else if (damagetype & DMG_BULLET)
+		{
+			flBonus += flHeadshot;
+		}
+
+		if (bExposedOutter)
+		{
+			flBonus = flAny;
 		}
 
 		if (flBonus > 0.0)
@@ -1736,6 +1780,8 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 
 			ReturnValue = Plugin_Changed;
 		}
+
+		// PrintToChatAll("%N HIT BY %N : BONUS -> (%.1f)", victim, attacker, flBonus);
 	}
 	
 	return ReturnValue;
@@ -1756,7 +1802,7 @@ public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor
 
 	if (victim <= MaxClients)
 	{
-		PrintCenterText(attacker, "BOMB ONLY PLANTABLE ON BUILDABLES!");
+		// PrintCenterText(attacker, "BOMB ONLY PLANTABLE ON BUILDABLES!");
 		EmitSoundToClient(attacker, SND_BOMB_PLANT_ERROR);
 	}
 	else
@@ -1787,10 +1833,10 @@ static void UAV_ChangeOutlineColor(int client, int target)
 		return;
 	}
 
-	bool Outlined = TargetOutlined[target][client];
+	bool Outlined = OutlinedByOwner[target][client];
 	if (!Outlined)
 	{
-		PrintCenterTextAll("%N IS NOT OUTLINED BY %N", target, client);
+		// PrintCenterTextAll("%N IS NOT OUTLINED BY %N", target, client);
 		return;
 	}
 
@@ -1821,14 +1867,13 @@ static void UAV_ChangeOutlineColor(int client, int target)
 
 			if (color[3] < 50)
 			{
-				TargetOutlined[target][client] = false;
+				OutlinedByOwner[target][client] = false;
 
 				iGlowEntity Glow2;
 				Glow2.entity = target;
 				Glow2.Delete();
 
-				if (UAVTarget[client] == target)
-					UAVTarget[client] = -1;
+				Exposed[target] = false;
 
 				return;
 			}
@@ -1838,14 +1883,16 @@ static void UAV_ChangeOutlineColor(int client, int target)
 
 static void UAV_DeleteOutline_Void(int client, int target)
 {
-	TargetOutlined[target][client] = false;
+	OutlinedByOwner[target][client] = false;
 
 	iGlowEntity Glow;
 	Glow.entity = target;
 	Glow.Delete();
 
-	if (UAVTarget[client] == target)
-		UAVTarget[client] = -1;
+	Exposed[target] = false;
+
+	// if (UAVTarget[client] == target)
+	// 	UAVTarget[client] = -1;
 }
 
 public void OnEntityDestroyed(int entity)
@@ -1893,9 +1940,15 @@ public Action CF_OnPlayerRunCmd(int client, int &buttons)
 	bool m2 = (buttons & IN_ATTACK2) != 0;
 	bool m3 = (buttons & IN_ATTACK3) != 0;
 
-	if (IsValidMulti(UAVTarget[client]))
+	int enemy = UAVTarget[client];
+	if (IsValidClient(enemy))
 	{
-		UAV_ChangeOutlineColor(client, UAVTarget[client]);
+		if (!IsPlayerAlive(enemy) || !Exposed[enemy])
+		{
+			UAVTarget[client] = -1;
+		}
+		else
+			UAV_ChangeOutlineColor(client, enemy);
 	}
 	
 	int entity = EntRefToEntIndex(BombPlantedOn[client]);
@@ -2587,14 +2640,14 @@ stock bool Generic_Laser_BEAM_TraceWallsOnly(int entity, int contentsMask, int c
 {
 	return !entity;
 }
-stock bool Generic_Laser_BEAM_TraceWallAndEnemies(int entity, int contentsMask, int client)
-{
-	if (CF_IsValidTarget(entity, grabEnemyTeam(client)))
-		return true;
-		
 
-	return !entity;
-}
+// stock bool Generic_Laser_BEAM_TraceWallAndEnemies(int entity, int contentsMask, int client)
+// {
+// 	if (CF_IsValidTarget(entity, grabEnemyTeam(client)))
+// 		return true;
+
+// 	return !entity;
+// }
 
 bool Generic_Laser_BEAM_TraceUsers(int entity, int contentsMask, int client)
 {
@@ -2744,7 +2797,6 @@ enum struct UAV_Drone
 			if (IsValidClient(this.Target))
 			{	
 				UAVTarget[this.Owner] = this.Target;
-				Outlines_FoundTarget(this.Target, this.Owner);
 			}
 
 			UAV_Health[Drone] = this.Durability;
@@ -2867,23 +2919,13 @@ enum struct iGlowEntity
 	}
 	void Delete()
 	{
-		int owner = -1;
-
 		int iGlow = EntRefToEntIndex(GlowId[this.entity])
 		if (IsValidEntity(iGlow))
 		{	
-			owner = GetEntPropEnt(iGlow, Prop_Send, "m_hOwnerEntity");
 			RemoveEntity(iGlow);
 
 			GlowId[this.entity] = -1;
 		}
-
-		if (CF_HasStatusEffect(this.entity, STATUS_EXPOSED))
-		{
-			CF_RemoveStatusEffect(this.entity, STATUS_EXPOSED, owner);
-		}
-
-		TargetOutlined[this.entity][owner] = false;
-		Exposed[this.entity] = false;
+	
 	}
 }
