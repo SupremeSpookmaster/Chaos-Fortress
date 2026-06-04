@@ -150,12 +150,12 @@ public void CF_OnPlayerKilled(int victim, int inflictor, int attacker, int deadR
 #define FL_STATUS_LINGER_TIME	0.5
 
 static Handle hExposedParticle[MAXTF2PLAYERS]={null,...};
-static bool  Exposed[MAXTF2PLAYERS]={false,...};
-static bool  bExposedFromOutter[MAXTF2PLAYERS][MAXTF2PLAYERS];
-static float Exposed_DMG_Melee[MAXTF2PLAYERS][MAXTF2PLAYERS];
-static float Exposed_DMG_Bullet[MAXTF2PLAYERS][MAXTF2PLAYERS];
-static float Exposed_DMG_Bullet_HS[MAXTF2PLAYERS][MAXTF2PLAYERS];
-static float Exposed_DMG_Any[MAXTF2PLAYERS][MAXTF2PLAYERS];
+static bool  Exposed[MAXENTITIES]={false,...};
+static bool  bExposedFromOutter[MAXENTITIES][MAXENTITIES];
+static float Exposed_DMG_Melee[MAXENTITIES][MAXENTITIES];
+static float Exposed_DMG_Bullet[MAXENTITIES][MAXENTITIES];
+static float Exposed_DMG_Bullet_HS[MAXENTITIES][MAXENTITIES];
+static float Exposed_DMG_Any[MAXENTITIES][MAXENTITIES];
 
 static void Exposed_GetStatusArgs(int client, int victim)
 {
