@@ -325,21 +325,21 @@ static void PrepareBombs(int client, char abilityName[255])
 	CF_UnblockAbilitySlot(client, M3);
 
 	BombsAmount[client] = CF_GetArgI(client, SHADOW, abilityName, "bombs_amount", 1);
-	BombDamage[client] = CF_GetArgF(client, SHADOW, abilityName, "bomb_damage", 250.0);
-	BombDamage_AoE[client] = CF_GetArgF(client, SHADOW, abilityName, "bomb_damage_aoe", 100.0);
-	BombDamage_Buildings_AoE[client] = CF_GetArgF(client, SHADOW, abilityName, "bomb_damage_aoe_buildings", 300.0);
-	BombRadius[client] = CF_GetArgF(client, SHADOW, abilityName, "bomb_radius", 100.0);
 	BombOnNPC[client] = CF_GetArgI(client, SHADOW, abilityName, "plant_on_npc", 0);
 	BombCooldown[client] = CF_GetArgF(client, SHADOW, abilityName, "bomb_cooldown", 12.0);
 }
 
 static void Bombs_Spawn(int client, char abilityName[255])
 {
+	BombDamage[client] = CF_GetArgF(client, SHADOW, abilityName, "bomb_damage", 250.0);
+	BombDamage_AoE[client] = CF_GetArgF(client, SHADOW, abilityName, "bomb_damage_aoe", 100.0);
+	BombDamage_Buildings_AoE[client] = CF_GetArgF(client, SHADOW, abilityName, "bomb_damage_aoe_buildings", 300.0);
+	BombRadius[client] = CF_GetArgF(client, SHADOW, abilityName, "bomb_radius", 100.0);
 	BombsToPlace[client] = CF_GetArgI(client, SHADOW, abilityName, "bombs_amount", 1);
 	CF_BlockAbilitySlot(client, M3);
 }
 
-static void Bombs_PlantOnEntity(int entity, int owner, float &damage)
+static void Bombs_PlantOnEntity(int entity, int owner)
 {
 	if (HasABomb[entity] || !BombActive[owner] || GetTeam(entity) == GetTeam(owner))
 		return;
@@ -1842,17 +1842,12 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 	return ReturnValue;
 }
 
-public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
-	float damageForce[3], float damagePosition[3], int &damagecustom)
+public Action CF_OnTakeDamageAlive_Post(int victim, int attacker, int inflictor, float damage, int weapon)
 {
 	if (!IsValidClient(attacker) || !IsValidEntity(victim))
 		return Plugin_Continue;
 	
 	if (!BombsToPlace[attacker])
-		return Plugin_Continue;
-
-	// Our Bomb Plant explosion contains DMG_CRUSH.
-	if (damagetype & DMG_CRUSH)
 		return Plugin_Continue;
 
 	if (victim <= MaxClients)
@@ -1865,7 +1860,7 @@ public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor
 		bool bBuildingOrNPC = (IsABuilding(victim, view_as<bool>(BombOnNPC[attacker])));
 		if (bBuildingOrNPC)
 		{
-			Bombs_PlantOnEntity(victim, attacker, damage);
+			Bombs_PlantOnEntity(victim, attacker);
 		}
 	}
 
