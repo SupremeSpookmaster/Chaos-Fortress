@@ -341,9 +341,6 @@ static void Bombs_Spawn(int client, char abilityName[255])
 
 static void Bombs_PlantOnEntity(int entity, int owner, float &damage)
 {
-	if (damage < 1.0)
-		return;
-
 	if (HasABomb[entity] || !BombActive[owner] || GetTeam(entity) == GetTeam(owner))
 		return;
 	
@@ -503,6 +500,11 @@ static void Bombs_RequestFrame(DataPack pack)
 			}
 
 			SDKHooks_TakeDamage(entity, owner, owner, BombDamage[owner], DMG_BLAST);
+
+			if(IsValidEntity(entity)) // Check if the entity is still alive after it supposedly took damage
+			{
+				SetEntityRenderColor(entity, 255, 255, 255, 255);
+			}
 
 			delete pack;
 
