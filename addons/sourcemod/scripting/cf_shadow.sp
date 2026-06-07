@@ -475,7 +475,7 @@ static void Bombs_RequestFrame(DataPack pack)
 					TargetLocation[2] += 5.0;
 					float dist = GetVectorDistance(Origin, TargetLocation);
 
-					if (CF_HasLineOfSight(Origin, TargetLocation, _, Origin) && dist <= BombRadius[owner])
+					if (/*CF_HasLineOfSight(Origin, TargetLocation, _, Origin) && */dist <= BombRadius[owner])
 					{
 						SDKHooks_TakeDamage(i, owner, owner, BombDamage_AoE[owner], DMG_BLAST);
 					}
@@ -495,7 +495,7 @@ static void Bombs_RequestFrame(DataPack pack)
 					TargetLocation[2] += 5.0;
 					float dist = GetVectorDistance(Origin, TargetLocation);
 
-					if (CF_HasLineOfSight(Origin, TargetLocation, _, Origin) && dist <= BombRadius[owner])
+					if (/*CF_HasLineOfSight(Origin, TargetLocation, _, Origin) && */dist <= BombRadius[owner])
 					{
 						SDKHooks_TakeDamage(i, owner, owner, BombDamage_Buildings_AoE[owner], DMG_BLAST);
 					}
