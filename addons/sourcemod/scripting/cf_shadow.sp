@@ -471,6 +471,8 @@ static void Bombs_RequestFrame(DataPack pack)
 
 					CF_WorldSpaceCenter(entity, Origin);
 					float TargetLocation[3]; CF_WorldSpaceCenter(i, TargetLocation);
+					Origin[2] += 5.0;
+					TargetLocation[2] += 5.0;
 					float dist = GetVectorDistance(Origin, TargetLocation);
 
 					if (CF_HasLineOfSight(Origin, TargetLocation, _, Origin) && dist <= BombRadius[owner])
@@ -489,6 +491,8 @@ static void Bombs_RequestFrame(DataPack pack)
 					
 					CF_WorldSpaceCenter(entity, Origin);
 					float TargetLocation[3]; CF_WorldSpaceCenter(i, TargetLocation);
+					Origin[2] += 5.0;
+					TargetLocation[2] += 5.0;
 					float dist = GetVectorDistance(Origin, TargetLocation);
 
 					if (CF_HasLineOfSight(Origin, TargetLocation, _, Origin) && dist <= BombRadius[owner])
@@ -789,7 +793,7 @@ public void UAV_SpawnDrone(int client, char abilityName[255])
 	float lifespan = CF_GetArgF(client, SHADOW, abilityName, "uav_lifespan_idle", 13.5);
 	float size = CF_GetArgF(client, SHADOW, abilityName, "uav_model_size", 1.0);
 	float fadeTime = CF_GetArgF(client, SHADOW, abilityName, "uav_outline_fadetime", 3.0);
-	float cooldown = CF_GetArgF(client, SHADOW, abilityName, "uav_cooldown", 25.0);
+	// float cooldown = CF_GetArgF(client, SHADOW, abilityName, "uav_cooldown", 25.0);
 	float durability = CF_GetArgF(client, SHADOW, abilityName, "uav_health", 175.0);
 	float traceDistance = CF_GetArgF(client, SHADOW, abilityName, "uav_placement_range", 1200.0);
 
