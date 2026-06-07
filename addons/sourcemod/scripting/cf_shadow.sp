@@ -9,16 +9,16 @@
 
 stock void ResetToZero(any[] array, int length)
 {
-	for(int i; i<length; i++)
+	for (int i; i<length; i++)
 	{
 		array[i] = 0;
 	}
 }
 stock void ResetToZero2(any[][] array, int length1, int length2)
 {
-	for(int a; a<length1; a++)
+	for (int a; a<length1; a++)
 	{
-		for(int b; b<length2; b++)
+		for (int b; b<length2; b++)
 		{
 			array[a][b] = 0;
 		}
@@ -56,6 +56,7 @@ stock void ResetToZero2(any[][] array, int length1, int length2)
 #define SND_STAB_NONLETHAL			"player/spy_shield_break.wav"
 #define SND_BOMB_PLANTED			"chaos_fortress/agent/plant_bomb.mp3"
 #define SND_BOMB_PLANT_ERROR		"replay/replaydialog_warn.wav"
+#define SND_BOMB_PLANT_INDICATOR	"misc/halloween/hwn_bomb_flash.wav"
 #define SND_LASERGUN_IMPACT			"weapons/cow_mangler_explosion_charge_02.wav"
 #define SND_LASERGUN_SHOT			"weapons/cow_mangler_over_charge_shot.wav"
 #define SND_EXPOSED				 	"weapons/samurai/tf_marked_for_death_indicator.wav"
@@ -118,6 +119,7 @@ public void OnMapStart()
 	PrecacheSound(SND_STAB_NONLETHAL, true);
 	PrecacheSound(SND_BOMB_PLANTED, true);
 	PrecacheSound(SND_BOMB_PLANT_ERROR, true);
+	PrecacheSound(SND_BOMB_PLANT_INDICATOR, true);
 	PrecacheSound(SND_LASERGUN_IMPACT, true);
 	PrecacheSound(SND_LASERGUN_SHOT, true);
 	PrecacheSound(SND_EXPOSED, true);
@@ -171,6 +173,9 @@ static void Exposed_GetStatusArgs(int client, int victim)
 
 static void Exposed_ApplyStatusEffect(int applicant, int target, float duration)
 {
+	if (CF_HasStatusEffect(target, STATUS_EXPOSED))
+		return;
+		
 	bool bForcedEffect = true;
 	bool bReplaceExistingEffect = false;
 	CF_ApplyStatusEffect(target, STATUS_EXPOSED, duration, applicant, 0.0, bForcedEffect, bReplaceExistingEffect);
@@ -308,6 +313,7 @@ static float BombDamage[MAXTF2PLAYERS]={0.0,...};
 static float BombDamage_AoE[MAXTF2PLAYERS]={0.0,...};
 static float BombDamage_Buildings_AoE[MAXTF2PLAYERS]={0.0,...};
 static float BombRadius[MAXTF2PLAYERS]={0.0,...};
+static float BombPlantRange[MAXTF2PLAYERS]={0.0,...};
 
 enum
 {
@@ -336,6 +342,7 @@ static void Bombs_Spawn(int client, char abilityName[255])
 	BombDamage_Buildings_AoE[client] = CF_GetArgF(client, SHADOW, abilityName, "bomb_damage_aoe_buildings", 300.0);
 	BombRadius[client] = CF_GetArgF(client, SHADOW, abilityName, "bomb_radius", 100.0);
 	BombsToPlace[client] = CF_GetArgI(client, SHADOW, abilityName, "bombs_amount", 1);
+	BombPlantRange[client] = CF_GetArgF(client, SHADOW, abilityName, "plant_range", 350.0);
 	CF_BlockAbilitySlot(client, M3);
 }
 
@@ -344,41 +351,48 @@ static void Bombs_PlantOnEntity(int entity, int owner)
 	if (HasABomb[entity] || !BombActive[owner] || GetTeam(entity) == GetTeam(owner))
 		return;
 	
+	if (!BombsToPlace[owner])
+		return;
+
 	float Origin[3], EntLoc[3];
 	CF_WorldSpaceCenter(owner, Origin);
 	CF_WorldSpaceCenter(entity, EntLoc);
 	
 	float dist 		=	GetVectorDistance(Origin, EntLoc);
-	float radius 	=	CF_GetArgF(owner, SHADOW, BOMB, "plant_range", 350.0);
+	float radius 	=	BombPlantRange[owner];
 
 	if (dist > radius)
+	{	
+		EmitSoundToClient(owner, SND_BOMB_PLANT_ERROR);
+		PrintCenterText(owner, "OUT OF REACH TO PLANT A BOMB");
+
 		return;
-
-	if (BombsToPlace[owner] > 0)
-	{
-		EmitSoundToAll(SND_BOMB_PLANTED, owner);
-		HasABomb[entity] = true;
-		BombsToPlace[owner]--;
-		
-		BombPhase[owner] = BOMB_PLANTED;
-
-		BombOwner[entity] = owner;
-		BombPlantedOn[owner] = EntIndexToEntRef(entity);
-
-		if (TF2_GetClientTeam(owner) == TFTeam_Blue)
-		{
-			SetEntityRenderColor(entity, 3, 204, 255, 255);
-		}
-		else
-		{
-			SetEntityRenderColor(entity, 255, 65, 84, 255);
-		}
-		
-		DataPack pack = new DataPack();
-		pack.WriteCell(owner);
-		pack.WriteCell(EntIndexToEntRef(entity));
-		RequestFrame(Bombs_RequestFrame, pack);
 	}
+
+	EmitSoundToAll(SND_BOMB_PLANTED, owner);
+	EmitSoundToClient(owner, SND_BOMB_PLANT_INDICATOR);
+
+	HasABomb[entity] = true;
+	BombsToPlace[owner]--;
+	
+	BombPhase[owner] = BOMB_PLANTED;
+
+	BombOwner[entity] = owner;
+	BombPlantedOn[owner] = EntIndexToEntRef(entity);
+
+	if (TF2_GetClientTeam(owner) == TFTeam_Blue)
+	{
+		SetEntityRenderColor(entity, 3, 204, 255, 255);
+	}
+	else
+	{
+		SetEntityRenderColor(entity, 255, 65, 84, 255);
+	}
+	
+	DataPack pack = new DataPack();
+	pack.WriteCell(owner);
+	pack.WriteCell(EntIndexToEntRef(entity));
+	RequestFrame(Bombs_RequestFrame, pack);
 }
 
 static void Bombs_RequestFrame(DataPack pack)
@@ -453,53 +467,12 @@ static void Bombs_RequestFrame(DataPack pack)
 			BombPhase[owner] = BOMB_IDLE;
 			HasABomb[entity] = false;
 
-			float Origin[3]; CF_WorldSpaceCenter(entity, Origin);
+			float Origin[3];
+			GetEntPropVector(entity, Prop_Send, "m_vecOrigin", Origin);
+
+			Bombs_DoRadiusAttack(entity, owner, Origin);
+
 			SpawnSpriteExplosion(Origin, 1);
-
-			for(int i = 1; i <= MAXENTITIES; i++)
-			{
-				if (IsValidMulti(i))
-				{
-					if (entity == i)
-						continue;
-
-					if (GetTeam(i) == GetTeam(owner))
-						continue;
-
-					CF_WorldSpaceCenter(entity, Origin);
-					float TargetLocation[3]; CF_WorldSpaceCenter(i, TargetLocation);
-					Origin[2] += 5.0;
-					TargetLocation[2] += 5.0;
-					float dist = GetVectorDistance(Origin, TargetLocation);
-
-					if (/*CF_HasLineOfSight(Origin, TargetLocation, _, Origin) && */dist <= BombRadius[owner])
-					{
-						SDKHooks_TakeDamage(i, owner, owner, BombDamage_AoE[owner], DMG_BLAST);
-					}
-				}
-
-				if (IsABuilding(i, true))
-				{
-					if (entity == i)
-						continue;
-						
-					if (GetTeam(i) == GetTeam(owner))
-						continue;
-					
-					CF_WorldSpaceCenter(entity, Origin);
-					float TargetLocation[3]; CF_WorldSpaceCenter(i, TargetLocation);
-					Origin[2] += 5.0;
-					TargetLocation[2] += 5.0;
-					float dist = GetVectorDistance(Origin, TargetLocation);
-
-					if (/*CF_HasLineOfSight(Origin, TargetLocation, _, Origin) && */dist <= BombRadius[owner])
-					{
-						SDKHooks_TakeDamage(i, owner, owner, BombDamage_Buildings_AoE[owner], DMG_BLAST);
-					}
-				}
-			}
-
-			SDKHooks_TakeDamage(entity, owner, owner, BombDamage[owner], DMG_BLAST);
 
 			if(IsValidEntity(entity)) // Check if the entity is still alive after it supposedly took damage
 			{
@@ -520,6 +493,59 @@ static void Bombs_RequestFrame(DataPack pack)
 	delete pack;
 }
 
+static void Bombs_DoRadiusAttack(int entity, int owner, float StartPoint[3])
+{
+	if (!IsValidClient(owner))
+		return;
+		
+	for (int i = 1; i <= MAXENTITIES; i++)
+	{
+		if (IsValidMulti(i))
+		{
+			if (entity == i)
+				continue;
+
+			if (GetTeam(i) == GetTeam(owner))
+				continue;
+
+			float TargetLocation[3]; 
+			GetEntPropVector(i, Prop_Send, "m_vecOrigin", TargetLocation);
+
+			StartPoint[2] += 10.0;
+			TargetLocation[2] += 10.0;
+
+			float dist = GetVectorDistance(StartPoint, TargetLocation);
+			if (CF_HasLineOfSight(StartPoint, TargetLocation, _, StartPoint) && dist <= BombRadius[owner])
+			{
+				SDKHooks_TakeDamage(i, owner, owner, BombDamage_AoE[owner], DMG_BLAST);
+			}
+		}
+
+		if (IsABuilding(i, true))
+		{
+			if (entity == i)
+				continue;
+				
+			if (GetTeam(i) == GetTeam(owner))
+				continue;
+			
+			float TargetLocation[3];
+			GetEntPropVector(i, Prop_Send, "m_vecOrigin", TargetLocation);
+
+			StartPoint[2] += 10.0;
+			TargetLocation[2] += 10.0;
+
+			float dist = GetVectorDistance(StartPoint, TargetLocation);
+			if (CF_HasLineOfSight(StartPoint, TargetLocation, _, StartPoint) && dist <= BombRadius[owner])
+			{
+				SDKHooks_TakeDamage(i, owner, owner, BombDamage_Buildings_AoE[owner], DMG_BLAST);
+			}
+		}
+	}
+
+	SDKHooks_TakeDamage(entity, owner, owner, BombDamage[owner], DMG_BLAST);
+}
+
 static void Bombs_TETracking(int owner, int ref)
 {
 	if (!IsValidClient(owner))
@@ -533,12 +559,13 @@ static void Bombs_TETracking(int owner, int ref)
 	{
 		TETracker[owner] = 0;
 
-		float Origin[3]; CF_WorldSpaceCenter(entity, Origin);
+		float Origin[3]; GetEntPropVector(entity, Prop_Send, "m_vecOrigin", Origin);
+		Origin[2] += 5.0;
 
 		int color[4]; color = TF2_GetClientTeam(owner) == TFTeam_Blue ? BlueGlow : RedGlow;
 
 		float radius = BombRadius[owner] * 2.0;
-		SpawnRing(Origin, 0.1, 0.0, 0.0, -25.0, BeamLaser, 0, color[0], color[1], color[2], color[3], 1, 0.11, 7.5, 1.0, 1, radius);
+		SpawnRing(Origin, 0.1, 0.0, 0.0, 0.0, BeamLaser, 0, color[0], color[1], color[2], color[3], 1, 0.11, 7.5, 1.0, 1, radius);
 	}
 
 	TETracker[owner]++;
@@ -702,7 +729,7 @@ public void PrepareUAV(int client, char abilityName[255])
 
 static void UAV_RemoveOutlines(int client)
 {
-	for(int i=1;i<=MaxClients;i++)
+	for (int i=1;i<=MaxClients;i++)
 	{
 		if (IsValidClient(i) && OutlinedByOwner[i][client]) 
 		{
@@ -947,7 +974,6 @@ void Outlines_FoundTarget(int target, int outliner)
 	Glow.owner = outliner;
 	Glow.teamColor = true;
 	GlowId[target] = EntIndexToEntRef(Glow.Create());
-	EmitSoundToClient(target, SND_UAV_FOUND_CLIENT);
 }
 
 bool Outlines_AlreadyOutlined(int target, int outliner)
@@ -2721,7 +2747,7 @@ bool Generic_Laser_BEAM_TraceUsers(int entity, int contentsMask, int client)
 	{
 		if (client == -1 || CF_IsValidTarget(entity, grabEnemyTeam(client)))
 		{
-			for(int i=0 ; i < MAXENTITIES ; i++)
+			for (int i=0 ; i < MAXENTITIES ; i++)
 			{
 				//don't retrace the same entity!
 				if (Generic_Laser_BEAM_HitDetected[i] == entity)
@@ -2955,7 +2981,10 @@ enum struct iGlowEntity
 			return -1;
 
 		if (!Exposed[this.entity])
+		{	
 			Exposed_ApplyStatusEffect(this.owner, this.entity, 0.0);
+			EmitSoundToClient(this.entity, SND_UAV_FOUND_CLIENT);
+		}
 
 		Exposed[this.entity] = true;
 
