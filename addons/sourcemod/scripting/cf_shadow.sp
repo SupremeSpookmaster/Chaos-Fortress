@@ -578,7 +578,7 @@ public void PrepareCloak(int client, char abilityName[255])
 static Action Cloak_Set(Handle timer, int id)
 {
 	int client = GetClientOfUserId(id);
-	if (!IsValidMulti(client))
+	if (!IsValidMulti(client) || !CF_HasAbility(client, SHADOW, CLOAK))
 		return Plugin_Stop;
 
 	CloakActive[client] = true;
@@ -620,8 +620,10 @@ static Action Cloak_Set(Handle timer, int id)
 
 static void Cloak_RequestFrame_Think(int client)
 {
-	if (!CloakActive[client] || !IsValidMulti(client))
+	if (!CloakActive[client] || !IsValidMulti(client) || !CF_HasAbility(client, SHADOW, CLOAK))
 	{	
+		CloakActive[client] = false;
+		
 		return;
 	}
 
