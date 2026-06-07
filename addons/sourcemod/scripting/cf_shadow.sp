@@ -175,7 +175,7 @@ static void Exposed_ApplyStatusEffect(int applicant, int target, float duration)
 {
 	if (CF_HasStatusEffect(target, STATUS_EXPOSED))
 		return;
-		
+
 	bool bForcedEffect = true;
 	bool bReplaceExistingEffect = false;
 	CF_ApplyStatusEffect(target, STATUS_EXPOSED, duration, applicant, 0.0, bForcedEffect, bReplaceExistingEffect);
@@ -371,7 +371,8 @@ static void Bombs_PlantOnEntity(int entity, int owner)
 
 	EmitSoundToAll(SND_BOMB_PLANTED, owner);
 	EmitSoundToClient(owner, SND_BOMB_PLANT_INDICATOR);
-
+	PrintCenterText(owner, "SUCCESSFULLY ATTACHED A BOMB");
+	
 	HasABomb[entity] = true;
 	BombsToPlace[owner]--;
 	
