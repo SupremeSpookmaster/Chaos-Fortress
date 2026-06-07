@@ -172,7 +172,7 @@ static void Exposed_GetStatusArgs(int client, int victim)
 static void Exposed_ApplyStatusEffect(int applicant, int target, float duration)
 {
 	bool bForcedEffect = true;
-	bool bReplaceExistingEffect = true;
+	bool bReplaceExistingEffect = false;
 	CF_ApplyStatusEffect(target, STATUS_EXPOSED, duration, applicant, 0.0, bForcedEffect, bReplaceExistingEffect);
 }
 
