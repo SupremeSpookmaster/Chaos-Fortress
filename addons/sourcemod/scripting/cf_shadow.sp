@@ -475,7 +475,7 @@ static void Bombs_RequestFrame(DataPack pack)
 
 					if (CF_HasLineOfSight(Origin, TargetLocation, _, Origin) && dist <= BombRadius[owner])
 					{
-						SDKHooks_TakeDamage(i, owner, owner, BombDamage_AoE[owner], DMG_BLAST|DMG_CRUSH);
+						SDKHooks_TakeDamage(i, owner, owner, BombDamage_AoE[owner], DMG_BLAST);
 					}
 				}
 
@@ -493,12 +493,12 @@ static void Bombs_RequestFrame(DataPack pack)
 
 					if (CF_HasLineOfSight(Origin, TargetLocation, _, Origin) && dist <= BombRadius[owner])
 					{
-						SDKHooks_TakeDamage(i, owner, owner, BombDamage_Buildings_AoE[owner], DMG_BLAST|DMG_CRUSH);
+						SDKHooks_TakeDamage(i, owner, owner, BombDamage_Buildings_AoE[owner], DMG_BLAST);
 					}
 				}
 			}
 
-			SDKHooks_TakeDamage(entity, owner, owner, BombDamage[owner], DMG_BLAST|DMG_CRUSH);
+			SDKHooks_TakeDamage(entity, owner, owner, BombDamage[owner], DMG_BLAST);
 
 			delete pack;
 
@@ -1851,7 +1851,7 @@ public Action CF_OnTakeDamageAlive_Pre(int victim, int &attacker, int &inflictor
 
 	if (victim <= MaxClients)
 	{
-		// PrintCenterText(attacker, "BOMB ONLY PLANTABLE ON BUILDABLES!");
+		PrintCenterText(attacker, "BOMB ONLY PLANTABLE ON BUILDABLES!");
 		EmitSoundToClient(attacker, SND_BOMB_PLANT_ERROR);
 	}
 	else
