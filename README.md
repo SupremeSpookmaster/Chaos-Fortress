@@ -1,5 +1,6 @@
-# NOTICE: THIS PROJECT IS DEPRECATED!
-***Chaos Fortress*** is a very lightweight mod which relies on very little gamedata. This makes it extremely stable, meaning it *should* remain fully functional, even when not maintained. That being said, I have become very busy in my personal life, and have also moved onto indie game development, so I will no longer be able to maintain this project.
+# NOTICE: THIS PROJECT IS ABANDONED!
+***Chaos Fortress*** is a very lightweight mod which relies on very little gamedata. This makes it extremely stable, meaning it *should* remain fully functional, even when not actively maintained. That being said, I have become very busy in my personal life, and have also moved onto indie game development, meaning I no longer have time to develop this mod. As I am the sole developer, this means ***Chaos Fortress*** is effectively abandoned.
+
 <img width="1706" height="794" alt="cf logo render 8" src="https://github.com/user-attachments/assets/6d72d425-d265-4943-83ab-e133c3ce7b03" />
 ***Chaos Fortress*** is just like normal TF2, but with a twist: instead of playing as one of the nine mercenaries, players step into the shoes of one of many custom characters, each with their own unique kit. Some of these characters are designed to function like suped-up versions of the nine mercenaries, while others act more as wildcards, going their own directions entirely. To top it all off, all of these characters have access to powerful Ultimate Abilities, which charge very slowly over time, or by meeting certain conditions such as dealing damage or healing allies. As for developers, CF is incredibly dev-friendly, coming packed with countless forwards and natives to make the creation of new custom characters a breeze.
  
