@@ -1,4 +1,4 @@
-# NOTICE: THIS PROJECT IS ABANDONED!
+# NOTICE: THIS PROJECT IS ABANDONED! (But it *should* still work)
 ***Chaos Fortress*** is a very lightweight mod which relies on very little gamedata. This makes it extremely stable, meaning it *should* remain fully functional, even when not actively maintained. That being said, I have become very busy in my personal life, and have also moved onto indie game development, meaning I no longer have time to develop this mod. As I am the sole developer, this means ***Chaos Fortress*** is effectively abandoned.
 
 <img width="1706" height="794" alt="cf logo render 8" src="https://github.com/user-attachments/assets/6d72d425-d265-4943-83ab-e133c3ce7b03" />
