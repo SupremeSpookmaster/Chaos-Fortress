@@ -2593,6 +2593,8 @@ stock TE_SetupParticleEffect(const String:sParticleName[], ParticleAttachment_t:
 
 stock void TE_SendToAllButMe(int client, float delay = 0.0)
 {
+	int[] clients = new int[MaxClients+1];
+	int total = 0;
 	for(int i=1; i <= MaxClients ; i++)
 	{
 		if(!IsValidClient(i))
@@ -2600,9 +2602,10 @@ stock void TE_SendToAllButMe(int client, float delay = 0.0)
 		
 		if(client == i)
 			continue;
-		
-		TE_SendToClient(i, delay);
+
+		clients[total++] = i;
 	}
+	TE_Send(clients, total, delay);
 }
 
 stock void AddOverheadParticle(const char[] sParticleName, int entity, bool bHideFromUser = true, bool bShowToInflictorOnly, int inflictor)
