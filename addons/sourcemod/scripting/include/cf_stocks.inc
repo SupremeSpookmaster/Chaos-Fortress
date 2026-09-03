@@ -2608,7 +2608,47 @@ stock void TE_SendToAllButMe(int client, float delay = 0.0)
 	TE_Send(clients, total, delay);
 }
 
-stock void AddOverheadParticle(const char[] sParticleName, int entity, bool bHideFromUser = true, bool bShowToInflictorOnly, int inflictor)
+static const float TFViewVectors[] = 
+{
+	72.0,		// UNDEFINED
+
+	65.0,		// SCOUT
+	75.0,		// SNIPER,
+	68.0,		// SOLDIER,
+	68.0,		// DEMOMAN,
+	75.0,		// MEDIC,
+	75.0,		// HEAVY,
+	68.0,		// PYRO,
+	75.0,		// SPY,
+	68.0 		// ENGINEER,
+};
+
+stock float ModelScale(int client)
+{
+	return GetEntPropFloat(client, Prop_Send, "m_flModelScale");
+}
+
+stock float[] GetClassEyeHeight(int client)
+{
+	float vEyeHeight[3];
+
+	TFClassType TFClass = TF2_GetPlayerClass(client);
+
+	vEyeHeight[2] += TFViewVectors[view_as<TFClassType>(TFClass)];
+	ScaleVector(vEyeHeight, ModelScale(client));
+
+	return vEyeHeight;
+}
+
+stock float GetOverheadEffectPosition(int client)
+{
+	float vOverheadPos[3];
+	vOverheadPos = GetClassEyeHeight(client);
+	vOverheadPos[2] += 20.0;
+	return vOverheadPos[2];
+}
+
+stock void AddOverheadParticle(const char[] sParticleName, int entity, bool bHideFromUser = true, bool bShowToInflictorOnly, int inflictor, float offsetZ = 100.0)
 {
 	if (!IsValidClient(entity))
 		return;
@@ -2629,10 +2669,9 @@ stock void AddOverheadParticle(const char[] sParticleName, int entity, bool bHid
 	TE_WriteFloat("m_vOrigin[1]", Origin[1]);
 	TE_WriteFloat("m_vOrigin[2]", Origin[2]);
 
-	float offset = 100.0;
 	TE_WriteFloat("m_vStart[0]", 0.0);
 	TE_WriteFloat("m_vStart[1]", 0.0);
-	TE_WriteFloat("m_vStart[2]", offset);
+	TE_WriteFloat("m_vStart[2]", offsetZ);
 
 	TE_WriteNum("entindex", entity);
 	

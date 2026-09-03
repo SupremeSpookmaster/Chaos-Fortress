@@ -161,6 +161,7 @@ static float Exposed_DMG_Laser[MAXTF2PLAYERS]={0.0,...};
 static float Exposed_DMG_Bullet[MAXENTITIES][MAXENTITIES];
 static float Exposed_DMG_Bullet_HS[MAXENTITIES][MAXENTITIES];
 static float Exposed_DMG_Any[MAXENTITIES][MAXENTITIES];
+static int iExposed_Particle[MAXENTITIES]={-1,...};
 
 static void Exposed_GetStatusArgs(int client, int victim)
 {
@@ -189,11 +190,18 @@ static void Exposed_AppliedPre(int applicant, int target)
 		hExposedParticle[target] = null;
 	}
 
+	int iEffect = EntRefToEntIndex(iExposed_Particle[target]);
+	if (IsValidEntity(iEffect))
+		RemoveEntity(iExposed_Particle[target]);
+
+	iExposed_Particle[target] = -1;
+
 	Exposed_GetStatusArgs(applicant, target);
 }
+
 static void Exposed_AppliedPost(int applicant, int target)
 {
-	DataPack pack = new DataPack();
+	DataPack pack;
 	hExposedParticle[target] = CreateDataTimer(0.11, Timer_ExpireParticle, pack, TIMER_FLAG_NO_MAPCHANGE|TIMER_REPEAT);
 	pack.WriteCell(GetClientUserId(applicant));
 	pack.WriteCell(EntIndexToEntRef(target));
@@ -224,7 +232,16 @@ static void Exposed_AppliedPost(int applicant, int target)
 			PrintCenterText(target, "!!! %s !!!", nsText);
 	}
 
-	AddOverheadParticle(PARTICLE_STATUS_MARKED, target, _, false, applicant);
+	bool bTe = false;
+	if (!bTe)
+	{
+		int iEffect = CF_AttachParticle(target, PARTICLE_STATUS_MARKED, "", .preserve = false, .lifespan = 0.0, .xOff = 0.0, .yOff = 0.0, .zOff = GetOverheadEffectPosition(target));
+		iExposed_Particle[target] = EntIndexToEntRef(iEffect);
+	}
+	else 
+	{
+		AddOverheadParticle(PARTICLE_STATUS_MARKED, target, _, false, applicant);
+	}
 }
 
 static Action Timer_ExpireParticle(Handle timer, DataPack pack)
@@ -274,6 +291,12 @@ static void Exposed_ResetAll(int target)
 	if (bRemoveParticle)
 	{
 		RemoveOverheadParticle(PARTICLE_STATUS_MARKED, target);
+
+		int iEffect = EntRefToEntIndex(iExposed_Particle[target]);
+		if (IsValidEntity(iEffect))
+			RemoveEntity(iExposed_Particle[target]);
+
+		iExposed_Particle[target] = -1;
 	}
 }
 
