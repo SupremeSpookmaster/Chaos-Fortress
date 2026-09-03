@@ -1867,11 +1867,11 @@ public Action CF_OnTakeDamageAlive_Bonus(int victim, int &attacker, int &inflict
 
 		if (damagecustom == TF_CUSTOM_HEADSHOT)
 		{
-			flBonus += flBullet;
+			flBonus += flHeadshot;
 		}
 		else if (damagetype & DMG_BULLET)
 		{
-			flBonus += flHeadshot;
+			flBonus += flBullet;
 		}
 
 		if (bExposedOutter)
